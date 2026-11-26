@@ -55,7 +55,7 @@ ARG OFFLINE_NPM_REGISTRY=https://registry.npmjs.org
 
 COPY assets/wheels /tmp/harbor-wheels
 RUN sha256sum /tmp/harbor-wheels/harbor_migration_toolkit-0.1.0-py3-none-any.whl | \
-    grep -F "f1deaf90e2294713642a06e17cf779614de126c44332906920809a0bb2f6a6d4" && \
+    grep -F "93932ed01824b3035a5e6b63eeb4f5371ba0749eb322b383349952a35ca805a9" && \
     python3 -m pip install --no-index --find-links=/tmp/harbor-wheels --break-system-packages harbor-migration-toolkit==0.1.0
 
 COPY assets/base-repo.tar.gz /tmp/base-repo.tar.gz
