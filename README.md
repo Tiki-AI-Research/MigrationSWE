@@ -1,8 +1,8 @@
 # MigrationSWE
 
-40 repository migration tasks, testing both the migration and compatibility with the original implementation.
+MigrationSWE is a benchmark for evaluating how well coding agents complete framework migrations, dependency upgrades, and cross-language rewrites while preserving existing behavior. It includes 40 tasks from 38 open-source repositories across Go, JavaScript, TypeScript, Python, and Rust.
 
-[Run tasks](#quick-start) · [Leaderboard](#2-leaderboard) · [Task design](#3-task-design) · [Evaluation method](#4-evaluation-method) · [Results by task](#6-results-by-task) · [Error analysis](#7-error-analysis) · [Full report](https://tikiai.co/benchmarks/migration-swe)
+[Run tasks](#quick-start) · [Leaderboard](#2-leaderboard) · [Task design](#3-task-design) · [Evaluation method](#4-evaluation-method) · [Results by task](#6-results-by-task) · [Error analysis](#7-error-analysis) · [Full report](https://tikiai.co/benchmarks/migration-swe) · [License](#license)
 
 ## Quick start
 
@@ -63,8 +63,6 @@ Tests check the migration against the original behavior. An Express-to-Fastify t
 ## 2. Leaderboard
 
 Each row is a model, reasoning effort, and harness combination, run four times on each of the 40 tasks (160 runs). Rows are sorted by pass@1, with ties broken by model name. Average cost is in USD and includes failed runs.
-
-Scores and cost estimates use the same data, prices, and exchange rates as the [HTML report](../migration-report.html).
 
 | Model · effort | Harness | pass@1 | pass@4 | pass^4 | Avg. steps | Avg. tokens | Avg. cost / rollout | Tasks passed |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -206,3 +204,7 @@ The examples alone do not show how common each failure cause is. More cases appe
 
 - [HumanEval](https://arxiv.org/abs/2107.03374): the pass@k estimator.
 - [τ-bench](https://arxiv.org/abs/2406.12045): repeated-run reliability and pass^k.
+
+## License
+
+tikiai licenses the original MigrationSWE materials under Apache-2.0. Bundled upstream source, upstream-derived changes, and third-party assets are governed by their applicable licenses. [Apache-2.0 license](LICENSE) · [License scope](PROVENANCE.md#license-scope) · [Task source table](PROVENANCE.md#task-sources) · [Third-party notices](THIRD_PARTY_NOTICES.md)
