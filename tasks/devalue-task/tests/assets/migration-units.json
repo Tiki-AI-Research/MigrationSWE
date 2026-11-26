@@ -1,0 +1,523 @@
+{
+  "schema_version": "migration-units:v3",
+  "units": [
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU001",
+      "kind": "manifest",
+      "requirement_ids": [
+        "R012",
+        "R013",
+        "R015",
+        "R021"
+      ],
+      "source_locators": [
+        {
+          "path": "package.json",
+          "type": "manifest"
+        }
+      ],
+      "target_condition": "package.json declares version 6.0.0, updates toolchain devDependencies, declares an engines.node lower bound of Node.js 22.17 or newer, and no longer depends on devalue 4.3.3.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU002",
+      "kind": "manifest",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_locators": [
+        {
+          "path": "pnpm-lock.yaml",
+          "type": "manifest"
+        }
+      ],
+      "target_condition": "The lockfile resolves the package at version 6.0.0 with no residual 4.3.3 resolution.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU003",
+      "kind": "entrypoint",
+      "requirement_ids": [
+        "R004",
+        "R013",
+        "R015"
+      ],
+      "source_locators": [
+        {
+          "path": "index.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public package entry exports uneval, parse, unflatten, stringify, stringifyAsync, defaultStringifyOperations, defaultParseOperations, DevalueError, and filterArrayIndices with unchanged names; the internal entry file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU004",
+      "kind": "api",
+      "requirement_ids": [
+        "R001",
+        "R002",
+        "R007",
+        "R008",
+        "R010",
+        "R017",
+        "R018",
+        "R023"
+      ],
+      "source_locators": [
+        {
+          "path": "src/stringify.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public package API exposes stringify and stringifyAsync with unchanged flattened payload semantics, including cyclic, repeated, and special-value handling, synchronous rejection, and rejection handling that leaves no reached thenable unhandled; private module layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU005",
+      "kind": "api",
+      "requirement_ids": [
+        "R003",
+        "R007",
+        "R008",
+        "R011",
+        "R022"
+      ],
+      "source_locators": [
+        {
+          "path": "src/parse.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public package API exposes parse and unflatten with revival equivalence, reference identity, rejection of malformed, out-of-range, and __proto__ payloads, and rejection of view backing stores replaced by a reviver with anything other than an ArrayBuffer or SharedArrayBuffer; private module layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU006",
+      "kind": "api",
+      "requirement_ids": [
+        "R004",
+        "R008",
+        "R018",
+        "R024",
+        "R025"
+      ],
+      "source_locators": [
+        {
+          "path": "src/uneval.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public uneval API returns equivalent executable JavaScript source, including IIFE wrapping for cyclic values, single emission of repeated long strings and BigInts with every position referenced, boxed-wrapper identity, and exact array length and hole reproduction when the prototype chain supplies an index; helper modules and their names are implementation details.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU007",
+      "kind": "api",
+      "requirement_ids": [
+        "R005",
+        "R006"
+      ],
+      "source_locators": [
+        {
+          "path": "src/stringify.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The migrated public entry exports frozen defaultStringifyOperations and defaultParseOperations; declaration syntax and private module layout are not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU008",
+      "kind": "api",
+      "requirement_ids": [
+        "R006",
+        "R011"
+      ],
+      "source_locators": [
+        {
+          "path": "src/utils.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public entry exports DevalueError with observable name, path, value, and root semantics and filterArrayIndices with payload-validation behavior; private helper implementation details are not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU009",
+      "kind": "api",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_locators": [
+        {
+          "path": "index.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The package continues to declare its public TypeScript types with unchanged importable signatures; the private declaration file layout is not constrained.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU010",
+      "kind": "api",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_locators": [
+        {
+          "path": "src/stringify.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The migrated public serialization API round-trips all documented binary value types; private codec module layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU011",
+      "kind": "directory",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_locators": [
+        {
+          "path": "src",
+          "type": "directory"
+        }
+      ],
+      "target_condition": "All instruction-defined public APIs and observable behaviors remain available; the internal source module set is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU012",
+      "kind": "directory",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source_locators": [
+        {
+          "path": "test",
+          "type": "directory"
+        }
+      ],
+      "target_condition": "The candidate test layout is executable from the declared package scripts and retains serialization and deserialization regression coverage; no reference-only test file or runner configuration is required.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU013",
+      "kind": "file",
+      "requirement_ids": [
+        "R001",
+        "R008",
+        "R009",
+        "R010",
+        "R011",
+        "R017"
+      ],
+      "source_locators": [
+        {
+          "path": "test/test.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Regression coverage verifies stringify payload shape, special-value round-trips, sparse arrays, synchronous rejection, invalid-payload rejection, and sync/async agreement; test file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU014",
+      "kind": "file",
+      "requirement_ids": [
+        "R005",
+        "R006"
+      ],
+      "source_locators": [
+        {
+          "path": "test/test.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Regression coverage verifies that the default operation maps remain frozen, exported, and overridable; test file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU015",
+      "kind": "file",
+      "requirement_ids": [
+        "R003",
+        "R011"
+      ],
+      "source_locators": [
+        {
+          "path": "test/test.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Regression coverage verifies parse/unflatten equivalence and rejection of malformed payloads; test file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU016",
+      "kind": "file",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_locators": [
+        {
+          "path": "test/test.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Regression coverage verifies binary value encoding used by special-value round-trips; test file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU017",
+      "kind": "file",
+      "requirement_ids": [
+        "R006",
+        "R011"
+      ],
+      "source_locators": [
+        {
+          "path": "test/test.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Regression coverage verifies DevalueError fields, filterArrayIndices, and payload rejection helpers; test file layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU018",
+      "kind": "configuration",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_locators": [
+        {
+          "path": "tsconfig.json",
+          "type": "file"
+        }
+      ],
+      "target_condition": "tsconfig.json remains compatible with the migrated package's public type surface.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU021",
+      "kind": "configuration",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_locators": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "type": "file"
+        }
+      ],
+      "target_condition": ".github/workflows/ci.yml runs the migrated package's test and type-check workflows.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU022",
+      "kind": "file",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_locators": [
+        {
+          "path": "README.md",
+          "type": "file"
+        },
+        {
+          "path": "CHANGELOG.md",
+          "type": "file"
+        }
+      ],
+      "target_condition": "README.md and CHANGELOG.md remain present; no release-note content is required.",
+      "validation_methods": [
+        "static"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU024",
+      "kind": "api",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source_locators": [
+        {
+          "path": "src/uneval.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The public uneval API accepts the 6.0.0 (value, js) replacer, renders tagged-template fragments recursively with shared identity, rejects non-fragment results with TypeError, and reserves identifiers written in template strings; helper module layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU025",
+      "kind": "api",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_locators": [
+        {
+          "path": "src/utils.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "stringify, stringifyAsync and uneval produce well-formed UTF-8 transportable output for unpaired UTF-16 surrogates at every nesting level and key position, while well-formed pairs keep their characters; private module layout is not constrained.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU026",
+      "kind": "api",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_locators": [
+        {
+          "path": "index.js",
+          "type": "file"
+        }
+      ],
+      "target_condition": "The package ships TypeScript declarations through its declared type entry that export JavaScriptFragment, JavaScriptTag and UnevalReplacer with the 6.0.0 shapes; the private declaration layout and generating tool remain unconstrained.",
+      "validation_methods": [
+        "static",
+        "runtime"
+      ]
+    }
+  ]
+}

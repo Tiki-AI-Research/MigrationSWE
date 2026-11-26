@@ -1,0 +1,26 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-SKELETON-0001",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "shared_corpus_required": true,
+  "fixtures": {
+    "label_config": "fixtures/skeleton/labeler.yml",
+    "event_pull_request": "fixtures/skeleton/event.json",
+    "changed_files": "fixtures/skeleton/changed_files.json"
+  },
+  "consumers": {
+    "source": "source/skeleton/manifest.json",
+    "target": "target/skeleton/manifest.json"
+  },
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "target_build_command": ["go", "build", "./..."],
+    "target_test_command": ["go", "test", "./..."],
+    "source_test_command": ["git", "diff", "--exit-code"],
+    "exclude_privileged_or_blocking_cases": true
+  }
+}

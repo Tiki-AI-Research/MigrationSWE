@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "migration-case-observation-inventory:v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "p2p_policy", "groups", "migration_units", "coverage_reasons", "normalization_policy"],
+  "properties": {
+    "schema_version": {"const": "migration-case-observation-inventory:v2"},
+    "p2p_policy": {"type": "string", "minLength": 1},
+    "groups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["P2P", "F2P", "DIFFERENTIAL", "STATE"],
+      "properties": {
+        "P2P": {"type": "array", "items": {"$ref": "#/$defs/atomic"}},
+        "F2P": {"type": "array", "items": {"$ref": "#/$defs/atomic"}},
+        "DIFFERENTIAL": {"type": "array", "items": {"type": "object"}},
+        "STATE": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "migration_units": {"type": "array", "items": {"type": "object"}},
+    "coverage_reasons": {"type": "array", "items": {"type": "object"}},
+    "normalization_policy": {"type": "object"}
+  },
+  "$defs": {
+    "atomic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "contract_requirement_ids", "atomic_claim", "family", "coverage", "source_expectation", "target_expectation", "evidence_refs", "projection_signature", "fingerprint"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["P2P", "F2P"]},
+        "contract_requirement_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "atomic_claim": {"type": "string", "minLength": 1},
+        "family": {"type": "string", "minLength": 1},
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["surface", "scenario", "input_class", "projection"],
+          "properties": {
+            "surface": {"type": "string", "minLength": 1},
+            "scenario": {"type": "string", "minLength": 1},
+            "input_class": {"type": "string", "minLength": 1},
+            "projection": {"type": "string", "minLength": 1}
+          }
+        },
+        "source_expectation": {"enum": ["PASS", "FAIL"]},
+        "target_expectation": {"const": "PASS"},
+        "evidence_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^EVIDENCE-[0-9]{5}$"}},
+        "projection_signature": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "reason": {"type": "string"}
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "kind": "DIFFERENTIAL",
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "shared_corpus_required": true,
+  "fixtures": {
+    "label_config": "fixtures/batches/BATCH-DIFFERENTIAL-0001/labeler.yml",
+    "event_pull_request": "fixtures/batches/BATCH-DIFFERENTIAL-0001/event.json",
+    "changed_files": "fixtures/batches/BATCH-DIFFERENTIAL-0001/changed_files.json"
+  },
+  "consumers": {
+    "source": "source/batches/BATCH-DIFFERENTIAL-0001/manifest.json",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0001/manifest.json"
+  },
+  "observations": [
+    "DIFF-001",
+    "DIFF-002",
+    "DIFF-003",
+    "DIFF-004",
+    "DIFF-005",
+    "DIFF-006",
+    "DIFF-007",
+    "DIFF-008",
+    "DIFF-009",
+    "DIFF-010",
+    "DIFF-011",
+    "DIFF-012",
+    "DIFF-013",
+    "DIFF-014",
+    "DIFF-015",
+    "DIFF-016",
+    "DIFF-017",
+    "DIFF-018",
+    "DIFF-019",
+    "DIFF-020",
+    "DIFF-021",
+    "DIFF-022",
+    "DIFF-023",
+    "DIFF-024",
+    "DIFF-025",
+    "DIFF-026",
+    "DIFF-027"
+  ],
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "target_build_command": [
+      "timeout",
+      "300",
+      "go",
+      "build",
+      "./..."
+    ],
+    "target_test_command": [
+      "timeout",
+      "600",
+      "go",
+      "test",
+      "./..."
+    ],
+    "source_test_command": [
+      "timeout",
+      "600",
+      "sh",
+      "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh"
+    ],
+    "exclude_privileged_or_blocking_cases": true
+  }
+}

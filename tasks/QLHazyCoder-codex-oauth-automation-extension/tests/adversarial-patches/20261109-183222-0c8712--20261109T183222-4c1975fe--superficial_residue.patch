@@ -1,0 +1,587 @@
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..d9bfbe9
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1 @@
++Flask==3.1.2
+diff --git a/scripts/custom_mail_helper.py b/scripts/custom_mail_helper.py
+index 2ba397a..e754c8d 100644
+--- a/scripts/custom_mail_helper.py
++++ b/scripts/custom_mail_helper.py
+@@ -8,11 +8,12 @@ import secrets
+ import sqlite3
+ import ssl
+ import string
+-import traceback
+ from datetime import datetime, timezone
+ from email.header import decode_header
+ from email.utils import getaddresses, parseaddr, parsedate_to_datetime
+-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++
++from flask import Flask, Response, request
++from werkzeug.serving import WSGIRequestHandler
+ 
+ 
+ def load_dotenv_file(path):
+@@ -61,27 +62,115 @@ DEFAULT_MAIL_FROM_ALLOW = [
+ ]
+ 
+ 
+-def json_response(handler, status, payload):
++app = Flask(__name__)
++
++
++MAX_BODY_BYTES = 1024 * 1024
++
++
++class HelperRequestHandler(WSGIRequestHandler):
++    """Capture the request target exactly as it arrived on the wire.
++
++    The source decodes the request line with ISO-8859-1 (``self.path``); the
++    Werkzeug ``RAW_URI``/``REQUEST_URI`` environ values are re-encoded, so the
++    unknown-path envelope echoes ``raw_requestline`` instead.
++    """
++
++    def make_environ(self):
++        environ = super().make_environ()
++        try:
++            target = self.raw_requestline.split()[1].decode("latin-1")
++        except IndexError:
++            target = ""
++        environ["flowpilot.raw_target"] = target
++        return environ
++
++
++def json_response(status, payload):
+     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+-    handler.send_response(status)
+-    handler.send_header("Content-Type", "application/json; charset=utf-8")
+-    handler.send_header("Content-Length", str(len(body)))
+-    handler.send_header("Access-Control-Allow-Origin", "*")
+-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+-    handler.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-    handler.end_headers()
+-    handler.wfile.write(body)
+-
+-
+-def read_json_payload(handler):
+-    length = int(handler.headers.get("Content-Length", "0") or 0)
+-    raw = handler.rfile.read(length) if length > 0 else b"{}"
++    return Response(body, status=status, mimetype="application/json")
++
++
++def read_json_payload():
++    raw = request.get_data(cache=True)
++    if not raw:
++        raw = b"{}"
+     try:
+         return json.loads(raw.decode("utf-8"))
+     except Exception as exc:
+         raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
+ 
+ 
++def raw_request_path():
++    environ = request.environ
++    raw = environ.get("flowpilot.raw_target")
++    if raw:
++        return raw
++    raw = environ.get("RAW_URI") or environ.get("REQUEST_URI")
++    if raw:
++        return raw
++    full_path = request.full_path
++    return full_path[:-1] if full_path.endswith("?") else full_path
++
++
++def request_framing_error():
++    headers = request.headers
++    raw_length = headers.get("Content-Length")
++    transfer_encoding = headers.get("Transfer-Encoding")
++    if transfer_encoding is not None and raw_length is not None:
++        return "Ambiguous request framing"
++    if transfer_encoding is not None:
++        codings = [token.strip().lower() for token in transfer_encoding.split(",")]
++        if codings != ["chunked"]:
++            return "Unsupported Transfer-Encoding"
++    if raw_length is not None:
++        if re.fullmatch(r"[0-9]+", str(raw_length).strip()) is None:
++            return "Invalid Content-Length"
++    return None
++
++
++@app.before_request
++def validate_request_envelope():
++    framing_error = request_framing_error()
++    if framing_error is not None:
++        return json_response(500, {"ok": False, "error": framing_error})
++    length = request.content_length
++    if length is not None and length > MAX_BODY_BYTES:
++        return json_response(413, {"ok": False, "error": "Request body too large"})
++    if request.headers.get("Transfer-Encoding") is not None:
++        decoded = request.get_data(cache=True)
++        if len(decoded) > MAX_BODY_BYTES:
++            return json_response(413, {"ok": False, "error": "Request body too large"})
++    return None
++
++
++@app.before_request
++def handle_preflight_request():
++    if request.method == "OPTIONS":
++        return Response(status=204)
++    return None
++
++
++@app.after_request
++def apply_cors_headers(response):
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++@app.errorhandler(404)
++@app.errorhandler(405)
++def handle_unsupported_path(_error):
++    return json_response(404, {"ok": False, "error": f"Unsupported path: {raw_request_path()}"})
++
++
++@app.errorhandler(Exception)
++def handle_unexpected_error(error):
++    return json_response(500, {"ok": False, "error": str(error)})
++
++
+ def get_public_env_payload():
+     return {key: os.environ.get(key, "") for key in PUBLIC_ENV_KEYS}
+ 
+@@ -371,58 +460,53 @@ def select_latest_code(messages, payload):
+     return {"code": "", "message": None, "usedTimeFallback": False}
+ 
+ 
+-class CustomMailHelperHandler(BaseHTTPRequestHandler):
+-    def do_OPTIONS(self):
+-        self.send_response(204)
+-        self.send_header("Access-Control-Allow-Origin", "*")
+-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-        self.end_headers()
++@app.route("/messages", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def messages_route():
++    payload = read_json_payload()
++    messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
++    return json_response(200, {"ok": True, "messages": messages})
+ 
+-    def do_POST(self):
+-        try:
+-            payload = read_json_payload(self)
+-            if self.path == "/messages":
+-                messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
+-                json_response(self, 200, {"ok": True, "messages": messages})
+-                return
+-            if self.path == "/code":
+-                messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
+-                selected = select_latest_code(messages, payload)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "code": selected["code"],
+-                    "message": selected["message"],
+-                    "usedTimeFallback": selected["usedTimeFallback"],
+-                })
+-                return
+-            if self.path == "/health":
+-                json_response(self, 200, {"ok": True})
+-                return
+-            if self.path == "/env":
+-                json_response(self, 200, {"ok": True, "env": get_public_env_payload()})
+-                return
+-            if self.path == "/random-email":
+-                result = generate_random_emails(payload)
+-                json_response(self, 200, {"ok": True, **result})
+-                return
+-            json_response(self, 404, {"ok": False, "error": f"Unsupported path: {self.path}"})
+-        except Exception as exc:
+-            traceback.print_exc()
+-            json_response(self, 500, {"ok": False, "error": str(exc)})
++
++@app.route("/code", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def code_route():
++    payload = read_json_payload()
++    messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
++    selected = select_latest_code(messages, payload)
++    return json_response(200, {
++        "ok": True,
++        "code": selected["code"],
++        "message": selected["message"],
++        "usedTimeFallback": selected["usedTimeFallback"],
++    })
++
++
++@app.route("/health", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def health_route():
++    return json_response(200, {"ok": True})
++
++
++@app.route("/env", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def env_route():
++    return json_response(200, {"ok": True, "env": get_public_env_payload()})
++
++
++@app.route("/random-email", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def random_email_route():
++    payload = read_json_payload()
++    result = generate_random_emails(payload)
++    return json_response(200, {"ok": True, **result})
+ 
+ 
+ def main():
+-    server = ThreadingHTTPServer((HOST, PORT), CustomMailHelperHandler)
+     print(f"Custom mail helper listening on http://{HOST}:{PORT}", flush=True)
+     print(f"IMAP host={IMAP_HOST}:{IMAP_PORT} user={IMAP_USER or '(unset)'} mailbox={IMAP_MAILBOX}", flush=True)
+-    try:
+-        server.serve_forever()
+-    except KeyboardInterrupt:
+-        pass
+-    finally:
+-        server.server_close()
++    app.run(host=HOST, port=PORT, threaded=True, request_handler=HelperRequestHandler)
+ 
+ 
+ if __name__ == "__main__":
+     main()
++
++
++def do_OPTIONS(self):
++    self.send_response(204)
++    self.end_headers()
+diff --git a/scripts/hotmail_helper.py b/scripts/hotmail_helper.py
+index cfe45b3..327f5db 100644
+--- a/scripts/hotmail_helper.py
++++ b/scripts/hotmail_helper.py
+@@ -6,15 +6,40 @@ import os
+ import re
+ import threading
+ import time
+-import traceback
+ from datetime import datetime, timezone
+ from email.header import decode_header
+ from email.utils import parseaddr, parsedate_to_datetime
+-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from urllib.error import HTTPError, URLError
+ from urllib.parse import urlencode
+ from urllib.request import Request, urlopen
+ 
++from flask import Flask, Response, request
++from werkzeug.serving import WSGIRequestHandler
++
++
++app = Flask(__name__)
++
++
++MAX_BODY_BYTES = 1024 * 1024
++
++
++class HelperRequestHandler(WSGIRequestHandler):
++    """Capture the request target exactly as it arrived on the wire.
++
++    The source decodes the request line with ISO-8859-1 (``self.path``); the
++    Werkzeug ``RAW_URI``/``REQUEST_URI`` environ values are re-encoded, so the
++    unknown-path envelope echoes ``raw_requestline`` instead.
++    """
++
++    def make_environ(self):
++        environ = super().make_environ()
++        try:
++            target = self.raw_requestline.split()[1].decode("latin-1")
++        except IndexError:
++            target = ""
++        environ["flowpilot.raw_target"] = target
++        return environ
++
+ 
+ HOST = "127.0.0.1"
+ PORT = 17373
+@@ -68,30 +93,91 @@ ACCOUNT_RECORDS_SNAPSHOT_PATH = os.path.join(BASE_DIR, "data", "account-run-hist
+ ACCOUNT_RECORDS_LOCK = threading.Lock()
+ 
+ 
+-def json_response(handler, status, payload):
++def json_response(status, payload):
+     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+-    handler.send_response(status)
+-    handler.send_header("Content-Type", "application/json; charset=utf-8")
+-    handler.send_header("Content-Length", str(len(body)))
+-    handler.send_header("Access-Control-Allow-Origin", "*")
+-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+-    handler.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-    try:
+-        handler.end_headers()
+-        handler.wfile.write(body)
+-    except (BrokenPipeError, ConnectionResetError) as exc:
+-        log_info(f"response aborted by client status={status} detail={compact_text(exc)}")
++    return Response(body, status=status, mimetype="application/json")
+ 
+ 
+-def read_json_payload(handler):
+-    length = int(handler.headers.get("Content-Length", "0") or 0)
+-    raw = handler.rfile.read(length) if length > 0 else b"{}"
++def read_json_payload():
++    raw = request.get_data(cache=True)
++    if not raw:
++        raw = b"{}"
+     try:
+         return json.loads(raw.decode("utf-8"))
+     except Exception as exc:
+         raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
+ 
+ 
++def raw_request_path():
++    environ = request.environ
++    raw = environ.get("flowpilot.raw_target")
++    if raw:
++        return raw
++    raw = environ.get("RAW_URI") or environ.get("REQUEST_URI")
++    if raw:
++        return raw
++    full_path = request.full_path
++    return full_path[:-1] if full_path.endswith("?") else full_path
++
++
++def request_framing_error():
++    headers = request.headers
++    raw_length = headers.get("Content-Length")
++    transfer_encoding = headers.get("Transfer-Encoding")
++    if transfer_encoding is not None and raw_length is not None:
++        return "Ambiguous request framing"
++    if transfer_encoding is not None:
++        codings = [token.strip().lower() for token in transfer_encoding.split(",")]
++        if codings != ["chunked"]:
++            return "Unsupported Transfer-Encoding"
++    if raw_length is not None:
++        if re.fullmatch(r"[0-9]+", str(raw_length).strip()) is None:
++            return "Invalid Content-Length"
++    return None
++
++
++@app.before_request
++def validate_request_envelope():
++    framing_error = request_framing_error()
++    if framing_error is not None:
++        return json_response(500, {"ok": False, "error": framing_error})
++    length = request.content_length
++    if length is not None and length > MAX_BODY_BYTES:
++        return json_response(413, {"ok": False, "error": "Request body too large"})
++    if request.headers.get("Transfer-Encoding") is not None:
++        decoded = request.get_data(cache=True)
++        if len(decoded) > MAX_BODY_BYTES:
++            return json_response(413, {"ok": False, "error": "Request body too large"})
++    return None
++
++
++@app.before_request
++def handle_preflight_request():
++    if request.method == "OPTIONS":
++        return Response(status=204)
++    return None
++
++
++@app.after_request
++def apply_cors_headers(response):
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++@app.errorhandler(404)
++@app.errorhandler(405)
++def handle_unsupported_path(_error):
++    return json_response(404, {"ok": False, "error": f"Unsupported path: {raw_request_path()}"})
++
++
++@app.errorhandler(Exception)
++def handle_unexpected_error(error):
++    return json_response(500, {"ok": False, "error": str(error)})
++
++
+ def post_form(url, data):
+     encoded = urlencode(data).encode("utf-8")
+     request = Request(url, data=encoded, headers={"Content-Type": "application/x-www-form-urlencoded"})
+@@ -791,100 +877,90 @@ def select_latest_code(messages, sender_filters, subject_filters, exclude_codes,
+     return {"code": "", "message": None, "usedTimeFallback": False}
+ 
+ 
+-class HotmailHelperHandler(BaseHTTPRequestHandler):
+-    def do_OPTIONS(self):
+-        self.send_response(204)
+-        self.send_header("Access-Control-Allow-Origin", "*")
+-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-        self.end_headers()
++def require_hotmail_credentials(payload):
++    email_addr = str(payload.get("email") or "").strip()
++    client_id = str(payload.get("clientId") or "").strip()
++    refresh_token = str(payload.get("refreshToken") or "").strip()
++    if not email_addr or not client_id or not refresh_token:
++        raise RuntimeError("Missing email/clientId/refreshToken")
++    return email_addr, client_id, refresh_token
+ 
+-    def do_POST(self):
+-        try:
+-            payload = read_json_payload(self)
+-
+-            if self.path == "/sync-account-run-records":
+-                file_path = sync_account_run_records(payload)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "filePath": file_path,
+-                })
+-                return
+-
+-            if self.path == "/append-account-log":
+-                file_path = append_account_log(
+-                    payload.get("email"),
+-                    payload.get("password"),
+-                    payload.get("status"),
+-                    payload.get("recordedAt"),
+-                    payload.get("reason"),
+-                )
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "filePath": file_path,
+-                })
+-                return
+-
+-            email_addr = str(payload.get("email") or "").strip()
+-            client_id = str(payload.get("clientId") or "").strip()
+-            refresh_token = str(payload.get("refreshToken") or "").strip()
+-            if not email_addr or not client_id or not refresh_token:
+-                raise RuntimeError("Missing email/clientId/refreshToken")
+-
+-            top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
+-            mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
+-
+-            if self.path == "/messages":
+-                result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "messages": result["messages"],
+-                    "mailboxResults": result["mailboxResults"],
+-                    "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
+-                    "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
+-                    "transport": result.get("transport") or "",
+-                })
+-                return
+-
+-            if self.path == "/code":
+-                result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
+-                selected = select_latest_code(
+-                    result["messages"],
+-                    payload.get("senderFilters") or [],
+-                    payload.get("subjectFilters") or [],
+-                    payload.get("excludeCodes") or [],
+-                    int(payload.get("filterAfterTimestamp") or 0),
+-                    payload.get("requiredKeywords") or [],
+-                    payload.get("codePatterns") or [],
+-                )
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "code": selected["code"],
+-                    "message": selected["message"],
+-                    "usedTimeFallback": selected["usedTimeFallback"],
+-                    "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
+-                    "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
+-                    "transport": result.get("transport") or "",
+-                })
+-                return
+-
+-            json_response(self, 404, {"ok": False, "error": f"Unsupported path: {self.path}"})
+-        except Exception as exc:
+-            traceback.print_exc()
+-            json_response(self, 500, {"ok": False, "error": str(exc)})
++
++@app.route("/sync-account-run-records", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def sync_account_run_records_route():
++    payload = read_json_payload()
++    file_path = sync_account_run_records(payload)
++    return json_response(200, {
++        "ok": True,
++        "filePath": file_path,
++    })
++
++
++@app.route("/append-account-log", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def append_account_log_route():
++    payload = read_json_payload()
++    file_path = append_account_log(
++        payload.get("email"),
++        payload.get("password"),
++        payload.get("status"),
++        payload.get("recordedAt"),
++        payload.get("reason"),
++    )
++    return json_response(200, {
++        "ok": True,
++        "filePath": file_path,
++    })
++
++
++@app.route("/messages", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def messages_route():
++    payload = read_json_payload()
++    email_addr, client_id, refresh_token = require_hotmail_credentials(payload)
++    top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
++    mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
++    result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
++    return json_response(200, {
++        "ok": True,
++        "messages": result["messages"],
++        "mailboxResults": result["mailboxResults"],
++        "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
++        "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
++        "transport": result.get("transport") or "",
++    })
++
++
++@app.route("/code", methods=["POST", "OPTIONS"], provide_automatic_options=False)
++def code_route():
++    payload = read_json_payload()
++    email_addr, client_id, refresh_token = require_hotmail_credentials(payload)
++    top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
++    mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
++    result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
++    selected = select_latest_code(
++        result["messages"],
++        payload.get("senderFilters") or [],
++        payload.get("subjectFilters") or [],
++        payload.get("excludeCodes") or [],
++        int(payload.get("filterAfterTimestamp") or 0),
++        payload.get("requiredKeywords") or [],
++        payload.get("codePatterns") or [],
++    )
++    return json_response(200, {
++        "ok": True,
++        "code": selected["code"],
++        "message": selected["message"],
++        "usedTimeFallback": selected["usedTimeFallback"],
++        "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
++        "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
++        "transport": result.get("transport") or "",
++    })
+ 
+ 
+ def main():
+-    server = ThreadingHTTPServer((HOST, PORT), HotmailHelperHandler)
+     print(f"Hotmail helper listening on http://{HOST}:{PORT}", flush=True)
+     print(f"Account log file: {ACCOUNT_LOG_PATH}", flush=True)
+     print(f"Account snapshot file: {ACCOUNT_RECORDS_SNAPSHOT_PATH}", flush=True)
+-    try:
+-        server.serve_forever()
+-    except KeyboardInterrupt:
+-        pass
+-    finally:
+-        server.server_close()
++    app.run(host=HOST, port=PORT, threaded=True, request_handler=HelperRequestHandler)
+ 
+ 
+ if __name__ == "__main__":

@@ -1,0 +1,29 @@
+{
+  "schema_version": "migration-state-fixture:v1",
+  "batch_id": "BATCH-STATE-0001",
+  "storage_keys": {
+    "schema_version": "schema_version",
+    "profile": "profile",
+    "library": "library",
+    "library_recent": "library_recent",
+    "streams": "streams",
+    "search_history": "search_history",
+    "streaming_server_urls": "streaming_server_urls",
+    "notifications": "notifications",
+    "calendar": "calendar",
+    "dismissed_events": "dismissed_events"
+  },
+  "latest_schema_version": 25,
+  "encoding": "serde-json",
+  "wire_expectations": {
+    "empty_streams_bucket": "{\"uid\":null,\"items\":[]}",
+    "runtime_event_new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
+    "runtime_event_core_event": "{\"name\":\"CoreEvent\",\"args\":{\"event\":\"UserLoggedOut\"}}",
+    "action_unload": "{\"action\":\"Unload\"}",
+    "action_load_player": "{\"action\":\"Load\",\"args\":{\"model\":\"Player\",\"args\":{\"stream\":1}}}",
+    "event_player_playing": "{\"event\":\"PlayerPlaying\"}",
+    "env_error_fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
+    "env_error_other": "{\"code\":1001,\"message\":\"Other error: x\"}",
+    "legacy_rpc_error": "{\"code\":2,\"message\":\"Addon protocol violation: rpc error 5: boom\"}"
+  }
+}

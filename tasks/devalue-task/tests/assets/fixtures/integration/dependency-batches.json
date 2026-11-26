@@ -1,0 +1,90 @@
+{
+  "batch_id": "BATCH-INTEGRATION-0001",
+  "kind": "integration-dependency-registry",
+  "batches": [
+    {
+      "batch_id": "BATCH-SKELETON-0001",
+      "kind": "SKELETON",
+      "shared": [],
+      "runners": [],
+      "fixtures": [],
+      "files": [
+        "shared/skeleton/README.md",
+        "source/skeleton/README.md",
+        "target/skeleton/README.md",
+        "fixtures/skeleton/README.md"
+      ]
+    },
+    {
+      "batch_id": "BATCH-P2P-0001",
+      "kind": "P2P",
+      "shared": [
+        "shared/batches/BATCH-P2P-0001/harness.mjs",
+        "shared/primitive-encoding.mjs",
+        "shared/typescript.cjs"
+      ],
+      "runners": [
+        "source/batches/BATCH-P2P-0001/run.mjs",
+        "target/batches/BATCH-P2P-0001/run.mjs"
+      ],
+      "fixtures": [
+        "fixtures/batches/BATCH-P2P-0001/matrix.mjs"
+      ]
+    },
+    {
+      "batch_id": "BATCH-P2P-0002",
+      "kind": "P2P",
+      "shared": [
+        "shared/batches/BATCH-P2P-0002/observations.js"
+      ],
+      "runners": [
+        "source/batches/BATCH-P2P-0002/run.js",
+        "target/batches/BATCH-P2P-0002/run.js"
+      ],
+      "fixtures": [
+        "fixtures/batches/BATCH-P2P-0002/malformed-payloads.json"
+      ]
+    },
+    {
+      "batch_id": "BATCH-P2P-0003",
+      "kind": "P2P",
+      "shared": [],
+      "runners": [
+        "source/batches/BATCH-P2P-0003/public-api.test.js",
+        "target/batches/BATCH-P2P-0003/public-api.test.js"
+      ],
+      "fixtures": []
+    },
+    {
+      "batch_id": "BATCH-F2P-0001",
+      "kind": "F2P",
+      "shared": [
+        "shared/batches/BATCH-F2P-0001/dependency-resolution.js"
+      ],
+      "runners": [
+        "source/batches/BATCH-F2P-0001/dependency-resolution.test.js",
+        "target/batches/BATCH-F2P-0001/dependency-resolution.test.js"
+      ],
+      "fixtures": [
+        "fixtures/batches/BATCH-F2P-0001/expected-dependency-resolution.json"
+      ]
+    },
+    {
+      "batch_id": "BATCH-F2P-0002",
+      "kind": "F2P",
+      "shared": [
+        "shared/batches/BATCH-F2P-0002/run.mjs",
+        "shared/batches/BATCH-F2P-0002/type-surface/tsconfig.json",
+        "shared/batches/BATCH-F2P-0002/type-surface/g1.ts",
+        "shared/batches/BATCH-F2P-0002/type-surface/g2.ts",
+        "shared/batches/BATCH-F2P-0002/type-surface/g3.ts",
+        "shared/batches/BATCH-F2P-0002/type-surface/g4.ts",
+        "shared/batches/BATCH-F2P-0002/type-surface/g5.ts",
+        "shared/batches/BATCH-F2P-0002/type-surface/g6.ts",
+        "shared/typescript.cjs"
+      ],
+      "runners": [],
+      "fixtures": []
+    }
+  ]
+}

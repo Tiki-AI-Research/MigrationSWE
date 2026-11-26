@@ -1,0 +1,128 @@
+{
+  "schema_version": "migration-f2p-manifest/v1",
+  "task_id": "richardgirg-express-fileupload-20260909092636-c2cf52-r2",
+  "base_commit": "20269154bb9aab9672e7ff7ca500349e5d23fb5c",
+  "payload": "tests/verifier/test.patch -> test/_koa_migration_cases.js",
+  "runner": "node test/_koa_migration_cases.js <node>",
+  "exit_semantics": {
+    "0": "pass",
+    "1": "candidate failure",
+    "3": "case watchdog timeout",
+    "4": "unknown node (infrastructure error)"
+  },
+  "baseline_state": "all 21 nodes fail on the frozen base commit",
+  "oracle_state": "all 21 nodes pass with solution.patch applied",
+  "nodes": [
+    {
+      "id": "koa_single_memory",
+      "unit": "koa_entry_and_context",
+      "capability": "Koa context receives parsed files and aliases, clears a prior body for file-only uploads, and continues after an upstream response"
+    },
+    {
+      "id": "koa_repeated_values",
+      "unit": "koa_entry_and_context",
+      "capability": "Repeated field and file names accumulate as arrays in Koa mode"
+    },
+    {
+      "id": "koa_no_files",
+      "unit": "koa_entry_and_context",
+      "capability": "Requests without files expose null on ctx.request.files and ctx.req.files"
+    },
+    {
+      "id": "koa_empty_and_zero_byte",
+      "unit": "koa_entry_and_context",
+      "capability": "Empty-filename zero-byte submissions create no file object or temp artifact"
+    },
+    {
+      "id": "koa_bypass",
+      "unit": "koa_bypass_rules",
+      "capability": "Non-multipart and bodyless requests and GET/HEAD/DELETE/OPTIONS/CONNECT/TRACE bypass parsing without replacing upstream body/files, including noncanonical multipart header spellings; malformed boundary inputs reach Koa error handling with one error and no downstream or temporary artifacts; Express preserves frozen eligibility, bypassing requests rejected by the frozen guard without consuming the stream, replacing body/files, emitting errors or creating temporary artifacts, while malformed multipart requests accepted by that guard surface one error without downstream or temporary artifacts"
+    },
+    {
+      "id": "koa_bypass_methods",
+      "unit": "koa_bypass_rules",
+      "capability": "HEAD/DELETE/OPTIONS bypass multipart parsing in Koa mode"
+    },
+    {
+      "id": "koa_missing_content_length",
+      "unit": "koa_bypass_rules",
+      "capability": "Positive Content-Length and chunked multipart requests parse in Koa for all native-valid Content-Type variants, including case-insensitive boundary parameter names, spaces/tabs, quoted or escaped boundary values and duplicate parameter precedence; Express preserves the frozen base commit's eligibility, parsing frozen-eligible variants and bypassing the others without consuming the request, replacing upstream body/files, emitting errors or creating temporary artifacts; parsed requests retain original boundary values and verify repeated fields/files, nested aliases, sizes, contents, checksums and persistence against native Busboy; abortion, native write failure and handler rejection await real descriptor closure and temporary cleanup, using noncanonical native-valid headers in Koa and frozen-eligible headers in Express"
+    },
+    {
+      "id": "koa_nested",
+      "unit": "koa_nested_and_safety",
+      "capability": "parseNested resolves nested field and file trees in Koa mode"
+    },
+    {
+      "id": "koa_malformed",
+      "unit": "koa_nested_and_safety",
+      "capability": "Prototype-pollution keys are rejected without dropping legitimate nested keys"
+    },
+    {
+      "id": "koa_temporary_move",
+      "unit": "koa_temp_file_lifecycle",
+      "capability": "Temp-file mode exposes tempFilePath and mv() moves then removes the temp file"
+    },
+    {
+      "id": "koa_limit_cleanup",
+      "unit": "koa_temp_file_lifecycle",
+      "capability": "abortOnLimit closes every native temporary-file descriptor and removes all temporary files before response finish, including with a handler, delayed file open and independently gated native close operations in both orders"
+    },
+    {
+      "id": "koa_abort_cleanup",
+      "unit": "koa_temp_file_lifecycle",
+      "capability": "Client abort, request errors and multipart parse errors release every native temporary-file descriptor and unlink all temporary files before Koa rejection or Express error forwarding; real fs.close gates and fstat checks cover two files, delayed opening and both close orders; direct handler destruction before/after opening must await close without hanging on a missing finish event, cleanup is idempotent, and open errors do not masquerade as close"
+    },
+    {
+      "id": "koa_limit_abort",
+      "unit": "koa_limit_semantics",
+      "capability": "abortOnLimit answers 413 with responseOnLimit and never runs downstream"
+    },
+    {
+      "id": "koa_limit_continue",
+      "unit": "koa_limit_semantics",
+      "capability": "abortOnLimit=false marks truncated, awaits Koa and Express limit handlers, and calls downstream exactly once even when upstream or a handler commits headers or ends the response; Koa temporary files remain readable throughout downstream execution, then all remaining request-owned temporary files and descriptors are cleaned before middleware settlement, including untruncated files in a limited request, without deleting mv destinations or other requests' files; ordinary successful uploads and frozen Express persistence are preserved; response and multi-file matrices cover Koa two/three-parameter handlers, Express, persistence, success, abortion and errors; real Express routers preserve callback next('route')/next('router') only after parsing, persistence and handler completion, suppress routing on abort, and distinguish routing controls from thrown/rejected strings and ordinary errors; Koa noopNext never forwards Express routing arguments"
+    },
+    {
+      "id": "koa_limit_handler",
+      "unit": "koa_limit_semantics",
+      "capability": "Two-parameter limitHandler receives (ctx, noopNext) and owns the response"
+    },
+    {
+      "id": "koa_legacy_limit_handler",
+      "unit": "koa_limit_semantics",
+      "capability": "Three-parameter limitHandler receives (req, res, guarded next)"
+    },
+    {
+      "id": "koa_limit_handler_sent_headers",
+      "unit": "koa_limit_semantics",
+      "capability": "Committed response headers and preassigned response bodies, including null, are not overwritten, with or without limitHandler"
+    },
+    {
+      "id": "koa_timeout",
+      "unit": "koa_error_propagation",
+      "capability": "uploadTimeout rejects with 'Upload timeout for ...' and stops downstream only after every native temporary-file descriptor closes and all temporary files are removed, including delayed opening and independently gated close operations in both orders; non-aborting limited uploads time out when stalled but continue while receiving data, expose persisted files during Koa downstream, and remove remaining request temporary files before successful middleware settlement"
+    },
+    {
+      "id": "koa_write_failure",
+      "unit": "koa_error_propagation",
+      "capability": "Filesystem write failures surface as Koa or Express errors instead of success; native fs.write failures retain error identity and wait for every real descriptor close and unlink, including delayed opening and both close orders"
+    },
+    {
+      "id": "koa_limit_handler_throws",
+      "unit": "koa_error_propagation",
+      "capability": "Koa and Express limitHandler errors propagate and clean up; aborting handlers never run downstream; aborting and non-aborting Express callback errors await the handler Promise, preserve the original truthy non-routing value and first callback error even after later callbacks or handler rejection, and retain status/statusCode, headers and code without coercion, prototype inspection or thenable assimilation; non-aborting multi-file requests select the first callback error by callback chronology rather than handler invocation or completion order, await its own handler, and preserve it against other file callbacks and rejections; raw request errors, abortion and timeout interrupt pending callback handlers promptly and clean every temporary file without a second callback; falsy callbacks continue normally; thrown/rejected opaque or falsy values safely become errors and settle after cleanup, while native errors from another realm retain identity; complete and stalled uploads are covered; native two-file handler rejection retains error identity and awaits actual descriptor closure and unlink before settlement, with delayed opening and both close orders; Express callback errors delivered after synchronous handler return or Promise completion but before multipart completion must still propagate exactly once and clean up; matrices cover Content-Length/chunked, frozen-eligible canonical/noncanonical MIME headers in Express, original opaque callback values, completed versus pending multi-file error owners, independently gated native descriptor close operations, real HTTP parsing and non-error/post-settlement controls"
+    },
+    {
+      "id": "koa_downstream_next_throws",
+      "unit": "koa_error_propagation",
+      "capability": "Koa downstream errors, including socket-like error messages, propagate and temporary files are cleaned up; native two-file rejection retains error identity and awaits actual descriptor closure and unlink before settlement, with delayed opening and both close orders"
+    }
+  ],
+  "differential_evidence": {
+    "asset": "assets/differential_baseline.json",
+    "recorder": "case/authoring/record_differential_baseline.py",
+    "reproduce": "python3 case/authoring/record_differential_baseline.py --repo <base checkout> --solution-patch case/solution/solution.patch",
+    "note": "per-node baseline/oracle matrix recorded by running the hidden payload; re-run without --write to assert it still holds"
+  }
+}

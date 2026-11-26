@@ -1,0 +1,25 @@
+{
+  "schema_version": "migration-asset-skeleton:v1",
+  "batch_id": "BATCH-SKELETON-0001",
+  "scope": "shared",
+  "migration": {
+    "category": "language",
+    "source": {"name": "Rust", "language_name": "Rust", "version": "2018", "language_version": "2018"},
+    "target": {"name": "Go", "language_name": "Go", "version": "1.23.0", "language_version": "1.23.0"}
+  },
+  "shared_corpus_required": true,
+  "harness_entries": {"source": "source/runner", "target": "target/runner"},
+  "harness_owner": "INTEGRATION",
+  "placeholder_paths": {"{assets}": "/assets", "{report}": "/logs/result.json", "{repo}": "/workspace/repo"},
+  "dependencies": {"manifest": "dependency-manifest.json", "mount": "/assets/dependencies", "mode": "read-only"},
+  "protection": {
+    "immutable_paths": [
+      "url/tests/urltestdata.json",
+      "url/tests/setters_tests.json",
+      "idna/tests/IdnaTestV2.txt",
+      "idna/tests/punycode_tests.json",
+      "idna/tests/bad_punycode_tests.json"
+    ]
+  },
+  "notes": "Skeleton only. The source/runner and target/runner entrypoints are created solely by the INTEGRATION batch and MUST NOT be created by this batch."
+}

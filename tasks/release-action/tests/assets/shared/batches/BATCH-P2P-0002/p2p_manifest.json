@@ -1,0 +1,123 @@
+{
+  "schema_version": "migration-p2p-manifest:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "migration": {
+    "category": "language",
+    "source": "TypeScript",
+    "target": "Go"
+  },
+  "value_projection": {
+    "kind": "status-wrapper",
+    "value": { "result": "PASS" },
+    "note": "Both sides emit the identical normalized wrapper {result: PASS|FAIL} for each observation; no side-specific concrete value is compared."
+  },
+  "source": {
+    "repo": "/input/source",
+    "runner": "vitest",
+    "timeout_sec": 600
+  },
+  "target": {
+    "repo": "/input/target",
+    "runner": "go test",
+    "timeout_sec": 600
+  },
+  "observations": [
+    {
+      "id": "P2P-040",
+      "requirement_ids": ["R001", "R011", "R014", "R022", "R023", "R024", "R026", "R027", "R028", "R035"],
+      "source_probe": { "file": "__tests__/ArtifactUploader.test.ts", "test": "throws error from replace" },
+      "target_probe": { "go_test": "TestArtifactUploader" }
+    },
+    {
+      "id": "P2P-031",
+      "requirement_ids": ["R008"],
+      "source_probe": { "file": "__tests__/Inputs.test.ts", "test": "returns token" },
+      "target_probe": { "go_test": "TestInputsToken" }
+    },
+    {
+      "id": "P2P-025",
+      "requirement_ids": ["R018"],
+      "source_probe": { "file": "__tests__/ArtifactPathValidator.test.ts", "test": null },
+      "target_probe": { "go_test": "TestArtifactPathValidator" }
+    },
+    {
+      "id": "P2P-026",
+      "requirement_ids": ["R002"],
+      "source_probe": { "file": "__tests__/Outputs.test.ts", "test": null },
+      "target_probe": { "go_test": "TestOutputs" }
+    },
+    {
+      "id": "P2P-027",
+      "requirement_ids": ["R016"],
+      "source_probe": { "file": "__tests__/ReleaseValidator.test.ts", "test": null },
+      "target_probe": { "go_test": "TestReleaseValidator" }
+    },
+    {
+      "id": "P2P-028",
+      "requirement_ids": ["R017"],
+      "source_probe": { "file": "__tests__/ArtifactGlobber.test.ts", "test": null },
+      "target_probe": { "go_test": "TestArtifactGlobber" }
+    },
+    {
+      "id": "P2P-029",
+      "requirement_ids": ["R013"],
+      "source_probe": { "file": "__tests__/Action.test.ts", "test": "creates release if no release exists to update" },
+      "target_probe": { "go_test": "TestAction" }
+    },
+    {
+      "id": "P2P-030",
+      "requirement_ids": ["R021"],
+      "source_probe": { "file": "__tests__/ArtifactUploader.test.ts", "test": "abort when upload failed with 5xx response after 3 attempts" },
+      "target_probe": { "go_test": "TestArtifactUploader" }
+    },
+    {
+      "id": "P2P-032",
+      "requirement_ids": ["R027"],
+      "source_probe": { "file": "__tests__/Action.test.ts", "test": "publishes immutable release when immutableCreate is true and createdDraft is false" },
+      "target_probe": { "go_test": "TestAction" }
+    },
+    {
+      "id": "P2P-033",
+      "requirement_ids": ["R004"],
+      "source_probe": { "file": "__tests__/Inputs.test.ts", "test": null },
+      "target_probe": { "go_test": "TestInputsBooleans" }
+    },
+    {
+      "id": "P2P-034",
+      "requirement_ids": ["R031"],
+      "source_probe": { "file": "__tests__/Integration.test.ts", "test": null },
+      "target_probe": { "go_test": "TestAction" }
+    },
+    {
+      "id": "P2P-035",
+      "requirement_ids": ["R026"],
+      "source_probe": { "file": "__tests__/Action.test.ts", "test": "updates release with static body when generateReleaseNotes is true but omitBodyDuringUpdate is true" },
+      "target_probe": { "go_test": "TestInputsUpdatedReleaseBodyAndName" }
+    },
+    {
+      "id": "P2P-036",
+      "requirement_ids": ["R001"],
+      "source_probe": { "file": "__tests__/Integration.test.ts", "test": null },
+      "target_probe": { "go_test": "TestAction" }
+    },
+    {
+      "id": "P2P-037",
+      "requirement_ids": ["R010"],
+      "source_probe": { "file": "__tests__/Inputs.test.ts", "test": "returns owner from context" },
+      "target_probe": { "go_test": "TestInputsOwnerRepoAndOptional" }
+    },
+    {
+      "id": "P2P-038",
+      "requirement_ids": ["R035"],
+      "source_probe": { "file": null, "test": null, "full_suite": true },
+      "target_probe": { "go_test": null, "full_suite": true }
+    },
+    {
+      "id": "P2P-039",
+      "requirement_ids": ["R025"],
+      "source_probe": { "file": "__tests__/Action.test.ts", "test": "creates release with combined body and generated release notes" },
+      "target_probe": { "go_test": "TestAction" }
+    }
+  ]
+}

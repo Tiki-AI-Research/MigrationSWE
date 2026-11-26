@@ -1,0 +1,1017 @@
+diff --git a/lib/index.js b/lib/index.js
+index a08588b..a85ce04 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1,42 +1,151 @@
+-'use strict';
+-
+ const path = require('path');
+ const processMultipart = require('./processMultipart');
+ const isEligibleRequest = require('./isEligibleRequest');
++const { parseContentType } = require('busboy/lib/utils');
+ const { buildOptions, debugLog } = require('./utilities');
+-const busboy = require('busboy'); // eslint-disable-line no-unused-vars
++
++const BYPASS_METHODS = new Set(['GET', 'HEAD', 'DELETE', 'OPTIONS', 'CONNECT', 'TRACE']);
++
++const isEligibleMultipartRequest = (req) => {
++  if (isEligibleRequest(req)) return true;
++  try {
++    const headers = req.headers;
++    const contentType = parseContentType(headers['content-type']);
++    const hasBody = ('transfer-encoding' in headers) ||
++      ('content-length' in headers && headers['content-length'] !== '0');
++    return Boolean(hasBody && !BYPASS_METHODS.has(req.method) && contentType &&
++      contentType.type === 'multipart' &&
++      Object.prototype.hasOwnProperty.call(contentType.params, 'boundary'));
++  } catch {
++    return false;
++  }
++};
+ 
+ const DEFAULT_OPTIONS = {
+   debug: false,
+   logger: console,
+   uploadTimeout: 60000,
+-  fileHandler: false,
+-  uriDecodeFileNames: false,
+-  safeFileNames: false,
++  fileSize: null,
++  files: null,
++  hashAlgorithm: 'md5',
++  defCharset: 'utf8',
+   preserveExtension: false,
+-  abortOnLimit: false,
+-  responseOnLimit: 'File size limit has been reached',
+-  limitHandler: false,
+-  createParentPath: false,
++  encoding: 'utf-8',
+   parseNested: false,
+   useTempFiles: false,
+   tempFileDir: path.join(process.cwd(), 'tmp'),
+   tempFilePermissions: 0o644,
+-  hashAlgorithm: 'md5'
++  safeFileNames: false,
++  limitHandler: false,
++  abortOnLimit: false,
++  responseOnLimit: 'File size limit has been reached',
++  limitHandlerRun: false,
++  uriDecodeFileNames: false
+ };
+ 
+ /**
+- * Expose the file upload middleware
+- * @param {DEFAULT_OPTIONS & busboy.BusboyConfig} options - Middleware options.
+- * @returns {Function} - express-fileupload middleware.
++ * Expose the file upload middleware compatible with Koa 2 and Express 4
++ * @param {DEFAULT_OPTIONS} options - Middleware options.
++ * @returns {Function} - Middleware function supporting Koa 2 and Express 4.
+  */
+ module.exports = (options) => {
+   const uploadOptions = buildOptions(DEFAULT_OPTIONS, options);
+-  return (req, res, next) => {
++
++  return function fileUploadMiddleware(a, b, c) {
++    const isKoa = Boolean(
++      arguments.length < 3 &&
++      a &&
++      typeof a === 'object' &&
++      a.req &&
++      a.request &&
++      typeof b === 'function' &&
++      c === undefined
++    );
++
++    if (isKoa) {
++      const ctx = a;
++      const next = b;
++      const req = ctx.req;
++      const res = ctx.res;
++
++      if (!isEligibleMultipartRequest(req)) {
++        debugLog(uploadOptions, 'Request is not eligible for file upload!');
++        return Promise.resolve(next());
++      }
++
++      const runtime = {
++        mode: 'koa',
++        ctx: ctx,
++        req: req,
++        res: res,
++        next: next
++      };
++
++      const result = processMultipart(uploadOptions, runtime);
++      const promise = result.promise;
++      const cleanup = result.cleanup;
++
++      return promise
++        .then(async (parserResult) => {
++          if (!parserResult.handled && !parserResult.nextCalled) {
++            await next();
++          }
++          if (parserResult.downstreamPromise) {
++            await parserResult.downstreamPromise;
++          }
++          if (parserResult.limitReached) await cleanup();
++        })
++        .catch((err) => {
++          return cleanup().then(() => {
++            throw err;
++          }, () => {
++            throw err;
++          });
++        });
++    }
++
++    // Express 4 callback-based middleware: (req, res, next)
++    const req = a;
++    const res = b;
++    const next = c;
++
++    let nextCalled = false;
++    const nextOnce = (err) => {
++      if (nextCalled) return;
++      nextCalled = true;
++      if (typeof next === 'function') {
++        next(err);
++      }
++    };
++
+     if (!isEligibleRequest(req)) {
+       debugLog(uploadOptions, 'Request is not eligible for file upload!');
+-      return next();
++      return nextOnce();
+     }
+-    processMultipart(uploadOptions, req, res, next);
++
++    const runtime = {
++      mode: 'express',
++      ctx: null,
++      req: req,
++      res: res,
++      next: nextOnce
++    };
++
++    const expResult = processMultipart(uploadOptions, runtime);
++    const expPromise = expResult.promise;
++    const expCleanup = expResult.cleanup;
++
++    expPromise
++      .then((parserResult) => {
++        if (!parserResult.handled && !parserResult.nextCalled) {
++          nextOnce();
++        }
++      })
++      .catch((err) => {
++        expCleanup().then(
++          () => nextOnce(err),
++          () => nextOnce(err)
++        );
++      });
+   };
+ };
+diff --git a/lib/processMultipart.js b/lib/processMultipart.js
+index 5f3d24c..ea4ddcb 100644
+--- a/lib/processMultipart.js
++++ b/lib/processMultipart.js
+@@ -1,4 +1,7 @@
++'use strict';
++
+ const Busboy = require('busboy');
++const { isNativeError } = require('util').types;
+ const UploadTimer = require('./uploadtimer');
+ const fileFactory = require('./fileFactory');
+ const memHandler = require('./memHandler');
+@@ -9,177 +12,559 @@ const {
+   debugLog,
+   buildFields,
+   buildOptions,
+-  parseFileName
++  parseFileName,
++  isSafeFromPollution
+ } = require('./utilities');
+ 
+-const waitFlushProperty = Symbol('wait flush property symbol');
+-
+-/**
+- * Processes multipart request
+- * Builds a req.body object for fields
+- * Builds a req.files object for files
+- * @param  {Object}   options expressFileupload and Busboy options
+- * @param  {Object}   req     Express request object
+- * @param  {Object}   res     Express response object
+- * @param  {Function} next    Express next method
+- * @return {void}
+- */
+-module.exports = (options, req, res, next) => {
+-  req.files = null;
++const toError = (err) => {
++  try {
++    if (isNativeError(err) || err instanceof Error) return err;
++    return new Error(err ? String(err) : 'Unknown multipart error');
++  } catch {
++    return new Error('Unknown multipart error');
++  }
++};
++
++const appendField = (instance, field, value) => {
++  if (value === null || value === undefined) return instance;
++  const target = instance || Object.create(null);
++  if (!isSafeFromPollution(target, field)) {
++    return target;
++  }
++  if (!Object.prototype.hasOwnProperty.call(target, field)) {
++    target[field] = value;
++    return target;
++  }
++  if (Array.isArray(target[field])) {
++    target[field].push(value);
++  } else {
++    target[field] = [target[field], value];
++  }
++  return target;
++};
++
++const processMultipartPromise = (options, runtime) => {
++  const mode = runtime.mode;
++  const _legacyProbe2 = new Buffer('x'); void _legacyProbe2;
++  const ctx = runtime.ctx;
++  const req = runtime.req;
++  const res = runtime.res;
++  const next = runtime.next;
++
++  // EPIPE workaround: catch early abort on request so unpipe doesn't explode
++  req.on('error', () => {});
++
++  // Initialize body and files
++  let bodyTarget;
++  if (mode === 'koa') {
++    bodyTarget = {};
++    ctx.request.body = bodyTarget;
++    req.body = bodyTarget;
++    ctx.request.files = null;
++    req.files = null;
++  } else {
++    if (!req.body || req.body instanceof Buffer) {
++      req.body = Object.create(null);
++    }
++    bodyTarget = req.body;
++    req.files = null;
++  }
++
++  let nextCalled = false;
++  let nextCommand = null;
++  let downstreamPromise = null;
++  let firstLimitHandlerFailure = null;
++
++  const isRoutingCommand = (value) => mode === 'express'
++    && (value === 'route' || value === 'router');
++
++  // State flags and resources
++  let settled = false;
++  let limitAborting = false;
++  let limitReached = false;
++  let parserCompletionStarted = false;
++
++  const fileHandlers = [];
++  const writePromises = [];
++  const uploadTimers = [];
++  const limitedActivityListeners = new Set();
++  const activeStreams = new Set();
++  const limitHandlerPromises = [];
++
++  const initialStatus = mode === 'koa' ? ctx.status : res.statusCode;
++  const initialBody = mode === 'koa' ? ctx.body : undefined;
++
++  const isResponseTouched = () => {
++    if (res.headersSent || res.finished || res.writableEnded) return true;
++    if (mode === 'koa') {
++      if (ctx.headerSent) return true;
++      if (ctx.response && Object.prototype.hasOwnProperty.call(ctx.response, '_body')) return true;
++      if (ctx.status !== initialStatus) return true;
++      if (ctx.body !== initialBody && ctx.body !== undefined) return true;
++    }
++    return false;
++  };
+ 
+-  // Build busboy options and init busboy instance.
+   const busboyOptions = buildOptions(options, { headers: req.headers });
+-  const busboy = Busboy(busboyOptions);
+-
+-  /**
+-   * Closes connection with specified reason and http code.
+-   * @param {number} code HTTP response code, default: 400.
+-   * @param {*} reason Reason to close connection, default: 'Bad Request'.
+-   */
+-  const closeConnection = (code, reason) => {
+-    req.unpipe(busboy);
++  let busboy;
++  try {
++    busboy = Busboy(busboyOptions);
++  } catch (err) {
++    return {
++      promise: Promise.reject(err),
++      cleanup: () => Promise.resolve()
++    };
++  }
++
++  let cleanupPromise = null;
++  const detachRequestListeners = () => {
++    if (onReqAborted) {
++      req.removeListener('aborted', onReqAborted);
++      onReqAborted = null;
++    }
++    if (onReqError) {
++      req.removeListener('error', onReqError);
++      onReqError = null;
++    }
++    if (onReqClose) {
++      req.removeListener('close', onReqClose);
++      onReqClose = null;
++    }
++  };
++
++  const stopResources = () => {
++    uploadTimers.forEach(t => t.clear());
++    limitedActivityListeners.forEach(listener => req.removeListener('data', listener));
++    limitedActivityListeners.clear();
++    detachRequestListeners();
++
++    try {
++      req.unpipe(busboy);
++    } catch (e) {
++      debugLog(options, e);
++    }
++
++    req.on('error', () => {});
+     req.resume();
+-    if (res.headersSent) {
+-      debugLog(options, 'Headers already sent, can\'t close connection.');
+-      return;
++
++    if (busboy) {
++      try {
++        busboy.removeAllListeners();
++        busboy.on('error', () => {});
++      } catch (e) {
++        debugLog(options, e);
++      }
+     }
+-    const resCode = code || 400;
+-    const resReason = reason || 'Bad Request';
+-    debugLog(options, `Closing connection with ${resCode}: ${resReason}`);
+-    res.writeHead(resCode, { Connection: 'close' });
+-    res.end(resReason);
++
++    for (const stream of activeStreams) {
++      try {
++        if (isFunc(stream.destroy)) stream.destroy();
++      } catch (e) {
++        debugLog(options, e);
++      }
++    }
++    activeStreams.clear();
++
++    if (!cleanupPromise) {
++      const cleanups = fileHandlers.map(h => {
++        return Promise.resolve(h.cleanup ? h.cleanup() : undefined);
++      });
++      cleanupPromise = Promise.all(cleanups);
++    }
++    return cleanupPromise;
+   };
+ 
+-  // Express proxies sometimes attach multipart data to a buffer
+-  if (req.body instanceof Buffer) {
+-    req.body = Object.create(null);
+-  }
+-  // Build multipart req.body fields
+-  busboy.on('field', (field, val) => req.body = buildFields(req.body, field, val));
++  let resolveParser;
++  let rejectParser;
++  const parserPromise = new Promise((resolve, reject) => {
++    resolveParser = resolve;
++    rejectParser = reject;
++  });
++
++  const fail = (err, preserveError = false) => {
++    if (settled) return Promise.resolve();
++    const error = preserveError ? err : toError(err);
++    settled = true;
++    return Promise.resolve(stopResources())
++      .catch(() => {})
++      .then(() => {
++        rejectParser(error);
++      });
++  };
++
++  const invokeLimitHandler = (handlerNext) => {
++    if (!isFunc(options.limitHandler)) return Promise.resolve();
++    try {
++      if (mode === 'koa') {
++        if (options.limitHandler.length <= 2) {
++          return Promise.resolve(options.limitHandler(ctx, handlerNext));
++        }
++        return Promise.resolve(options.limitHandler(req, res, handlerNext));
++      }
++      return Promise.resolve(options.limitHandler(req, res, handlerNext));
++    } catch (syncErr) {
++      return Promise.reject(syncErr);
++    }
++  };
++
++  const apply413Response = () => {
++    if (isResponseTouched()) return;
++    if (mode === 'koa') {
++      ctx.status = 413;
++      ctx.body = options.responseOnLimit;
++    } else {
++      res.writeHead(413, { Connection: 'close', 'content-type': 'text/plain' });
++      res.end(options.responseOnLimit);
++    }
++  };
++
++  const abortForLimit = () => {
++    if (settled || limitAborting) return;
++    limitAborting = true;
++    settled = true;
++    let handlerError = null;
++
++    Promise.resolve(stopResources())
++      .catch(() => {})
++      .then(() => {
++        const handlerNext = (err) => {
++          if (err && !isRoutingCommand(err)) {
++            handlerError = handlerError || err;
++            const rejected = Promise.reject(err);
++            rejected.catch(() => {});
++            return rejected;
++          }
++          nextCalled = true;
++          return Promise.resolve();
++        };
+ 
+-  // Build req.files fields
+-  busboy.on('file', (field, file, info) => {
+-    // Parse file name(cutting huge names, decoding, etc..).
+-    const {filename:name, encoding, mimeType: mime} = info;
++        return Promise.resolve(invokeLimitHandler(handlerNext)).then(() => {
++          if (handlerError) {
++            throw handlerError;
++          }
++        });
++      })
++      .then(() => {
++        apply413Response();
++        resolveParser({ handled: true, nextCalled: nextCalled });
++      })
++      .catch((err) => {
++        rejectParser(mode === 'express' && handlerError ? handlerError : toError(err));
++      });
++  };
++
++  busboy.on('field', (field, val) => {
++    if (limitAborting) return;
++    bodyTarget = appendField(bodyTarget, field, val);
++    if (mode === 'koa') {
++      ctx.request.body = bodyTarget;
++    }
++    req.body = bodyTarget;
++  });
++
++  busboy.on('file', (field, fileStream, info) => {
++    if (limitAborting) {
++      fileStream.resume();
++      return;
++    }
++
++    activeStreams.add(fileStream);
++
++    const name = info.filename;
++    const encoding = info.encoding;
++    const mime = info.mimeType;
+     const filename = parseFileName(options, name);
+-    // Define methods and handlers for upload process.
+-    const {
+-      dataHandler,
+-      getFilePath,
+-      getFileSize,
+-      getHash,
+-      complete,
+-      cleanup,
+-      getWritePromise
+-    } = options.useTempFiles
+-      ? tempFileHandler(options, field, filename) // Upload into temporary file.
+-      : memHandler(options, field, filename);     // Upload into RAM.
+-
+-    const writePromise = options.useTempFiles
+-      ? getWritePromise().catch(err => {
+-        req.unpipe(busboy);
+-        req.resume();
+-        cleanup();
+-        next(err);
+-      }) : getWritePromise();
+-
+-    // Define upload timer.
+-    const uploadTimer = new UploadTimer(options.uploadTimeout, () => {
+-      file.removeAllListeners('data');
+-      file.resume();
+-      // After destroy an error event will be emitted and file clean up will be done.
+-      // In some cases file.destroy() doesn't exist, so we need to check this, see issue:
+-      // https://github.com/richardgirges/express-fileupload/issues/259.
+-      const err = new Error(`Upload timeout for ${field}->${filename}, bytes:${getFileSize()}`);
+-      return isFunc(file.destroy) ? file.destroy(err) : file.emit('error', err);
+-    });
+ 
+-    file.on('limit', () => {
+-      debugLog(options, `Size limit reached for ${field}->${filename}, bytes:${getFileSize()}`);
+-      // Reset upload timer in case of file limit reached.
+-      uploadTimer.clear();
+-      // Run a user defined limit handler if it has been set.
+-      if (isFunc(options.limitHandler)) {
+-        options.limitHandler(req, res, next);
++    let handler;
++    try {
++      handler = options.useTempFiles
++        ? tempFileHandler(options, field, filename)
++        : memHandler(options, field, filename);
++    } catch (err) {
++      fail(err);
++      return;
++    }
++
++    fileHandlers.push(handler);
++
++    const writePromise = handler.getWritePromise();
++    if (writePromise) {
++      writePromises.push(writePromise);
++      writePromise.catch((err) => {
++        fail(err);
++      });
++    }
++
++    const timer = new UploadTimer(options.uploadTimeout, () => {
++      removeLimitedActivity();
++      fileStream.removeAllListeners('data');
++      fileStream.resume();
++      const err = new Error(
++        `Upload timeout for ${field}->${filename}, bytes:${handler.getFileSize()}`
++      );
++      if (isFunc(fileStream.destroy)) {
++        fileStream.destroy(err);
++      } else {
++        fileStream.emit('error', err);
+       }
+-      // Close connection with 413 code and do cleanup if abortOnLimit set(default: false).
++    });
++    uploadTimers.push(timer);
++    const refreshLimitedUpload = () => {
++      if (limitedActivityListeners.has(refreshLimitedUpload)) timer.refresh();
++    };
++    const removeLimitedActivity = () => {
++      req.removeListener('data', refreshLimitedUpload);
++      limitedActivityListeners.delete(refreshLimitedUpload);
++    };
++
++    fileStream.on('limit', () => {
++      limitReached = true;
++      debugLog(
++        options,
++        `Size limit reached for ${field}->${filename}, bytes:${handler.getFileSize()}`
++      );
+       if (options.abortOnLimit) {
+-        debugLog(options, `Aborting upload because of size limit ${field}->${filename}.`);
+-        closeConnection(413, options.responseOnLimit);
+-        cleanup();
++        abortForLimit();
++      } else {
++        limitedActivityListeners.add(refreshLimitedUpload);
++        req.on('data', refreshLimitedUpload);
++        if (isFunc(options.limitHandler)) {
++          let handlerFailure = null;
++          let handlerSettled = false;
++          const handlerNext = mode === 'koa' ? () => Promise.resolve() : (err) => {
++            if (settled || limitAborting) return;
++            if (isRoutingCommand(err)) {
++              nextCommand = nextCommand || err;
++              nextCalled = true;
++              return;
++            }
++            if (err) {
++              if (!handlerFailure) {
++                handlerFailure = { error: err };
++                firstLimitHandlerFailure = firstLimitHandlerFailure || handlerFailure;
++              }
++              if (handlerSettled && handlerFailure === firstLimitHandlerFailure) {
++                fail(handlerFailure.error, true);
++              }
++              return;
++            }
++            nextCalled = true;
++          };
++          const handlerPromise = invokeLimitHandler(handlerNext)
++            .then(() => {
++              handlerSettled = true;
++              if (handlerFailure && handlerFailure === firstLimitHandlerFailure) {
++                return fail(handlerFailure.error, true);
++              }
++            }, (err) => {
++              handlerSettled = true;
++              if (firstLimitHandlerFailure) {
++                if (handlerFailure === firstLimitHandlerFailure) {
++                  return fail(firstLimitHandlerFailure.error, true);
++                }
++                return;
++              }
++              return fail(err);
++            })
++            .catch((err) => fail(err));
++          limitHandlerPromises.push(handlerPromise);
++        }
+       }
+     });
+ 
+-    file.on('data', (data) => {
+-      uploadTimer.refresh(); // Refresh upload timer each time new data chunk came.
+-      dataHandler(data); // Handle new piece of data.
++    fileStream.on('data', (data) => {
++      if (limitAborting) return;
++      timer.refresh();
++      try {
++        handler.dataHandler(data);
++      } catch (err) {
++        fail(err);
++      }
+     });
+ 
+-    file.on('end', () => {
+-      const size = getFileSize();
+-      // Debug logging for file upload ending.
+-      debugLog(options, `Upload finished ${field}->${filename}, bytes:${size}`);
+-      // Reset upload timer in case of end event.
+-      uploadTimer.clear();
+-      // See https://github.com/richardgirges/express-fileupload/issues/191
+-      // Do not add file instance to the req.files if original name and size are empty.
+-      // Empty name and zero size indicates empty file field in the posted form.
++    fileStream.on('end', () => {
++      activeStreams.delete(fileStream);
++      removeLimitedActivity();
++      timer.clear();
++      if (limitAborting) return;
++
++      const size = handler.getFileSize();
+       if (!name && size === 0) {
+-        if (options.useTempFiles) {
+-          cleanup();
+-          debugLog(options, `Removing the empty file ${field}->${filename}`);
++        if (options.useTempFiles && handler.cleanup) {
++          const emptyCleanupPromise = Promise.resolve(handler.cleanup());
++          writePromises.push(emptyCleanupPromise);
+         }
+-        return debugLog(options, `Don't add file instance if original name and size are empty`);
++        return;
+       }
+-      req.files = buildFields(req.files, field, fileFactory({
+-        buffer: complete(),
++
++      const fileObj = fileFactory({
++        buffer: handler.complete(),
+         name: filename,
+-        tempFilePath: getFilePath(),
+-        hash: getHash(),
+-        size,
+-        encoding,
+-        truncated: file.truncated,
++        tempFilePath: handler.getFilePath(),
++        hash: handler.getHash(),
++        size: size,
++        encoding: encoding,
++        truncated: fileStream.truncated,
+         mimetype: mime
+-      }, options));
++      }, options);
+ 
+-      if (!req[waitFlushProperty]) {
+-        req[waitFlushProperty] = [];
++      let filesTarget = mode === 'koa' ? ctx.request.files : req.files;
++      filesTarget = buildFields(filesTarget, field, fileObj);
++      if (mode === 'koa') {
++        ctx.request.files = filesTarget;
+       }
+-      req[waitFlushProperty].push(writePromise);
++      req.files = filesTarget;
+     });
+ 
+-    file.on('error', (err) => {
+-      uploadTimer.clear(); // Reset upload timer in case of errors.
+-      debugLog(options, err);
+-      cleanup();
+-      next();
++    fileStream.on('error', (err) => {
++      activeStreams.delete(fileStream);
++      removeLimitedActivity();
++      timer.clear();
++      fail(err);
+     });
+ 
+-    // Debug logging for a new file upload.
+-    debugLog(options, `New upload started ${field}->${filename}, bytes:${getFileSize()}`);
+-    // Set new upload timeout for a new file.
+-    uploadTimer.set();
++    timer.set();
+   });
+ 
+-  busboy.on('finish', () => {
+-    debugLog(options, `Busboy finished parsing request.`);
+-    if (options.parseNested) {
+-      req.body = processNested(req.body);
+-      req.files = processNested(req.files);
+-    }
++  const onFinish = () => {
++    if (parserCompletionStarted || settled || limitAborting) return;
++    parserCompletionStarted = true;
++    detachRequestListeners();
+ 
+-    if (!req[waitFlushProperty]) return next();
+-    Promise.all(req[waitFlushProperty])
++    Promise.all(writePromises)
+       .then(() => {
+-        delete req[waitFlushProperty];
+-        next();
++        if (settled || limitAborting) return;
++
++        let filesTarget = mode === 'koa' ? ctx.request.files : req.files;
++        if (options.parseNested) {
++          bodyTarget = mode === 'koa' && Object.keys(bodyTarget).length === 0
++            ? {} : processNested(bodyTarget);
++          if (filesTarget) {
++            filesTarget = processNested(filesTarget);
++          }
++          if (mode === 'koa') {
++            ctx.request.body = bodyTarget;
++            ctx.request.files = filesTarget;
++          }
++          req.body = bodyTarget;
++          req.files = filesTarget;
++        }
++
++        return Promise.all(limitHandlerPromises).then(() => {
++          if (settled || limitAborting) return;
++
++          if (nextCalled) {
++            downstreamPromise = Promise.resolve().then(() => {
++              return nextCommand === null ? next() : next(nextCommand);
++            });
++          }
++
++          if (downstreamPromise) {
++            return downstreamPromise
++              .then(() => {
++                if (settled) return;
++                settled = true;
++                resolveParser({
++                  handled: false,
++                  nextCalled: nextCalled,
++                  limitReached: limitReached,
++                  downstreamPromise: downstreamPromise
++                });
++              })
++              .catch((downstreamErr) => {
++                fail(downstreamErr);
++              });
++          }
++
++          settled = true;
++          resolveParser({
++            handled: false,
++            nextCalled: nextCalled,
++            limitReached: limitReached,
++            downstreamPromise: null
++          });
++        });
++      })
++      .catch((err) => {
++        fail(err);
+       });
+-  });
++  };
++
++  const onBusboyClose = () => {
++    if (parserCompletionStarted || settled || limitAborting) return;
++    if (busboy.writableFinished) {
++      onFinish();
++      return;
++    }
++    fail(new Error('Busboy closed before multipart parsing completed'));
++  };
++
++  busboy.on('finish', onFinish);
++  busboy.on('close', onBusboyClose);
+ 
+   busboy.on('error', (err) => {
+-    debugLog(options, `Busboy error`);
+-    next(err);
++    fail(err);
+   });
+ 
++  let onReqAborted = () => {
++    fail(new Error('Request aborted by client'));
++  };
++
++  let onReqError = (err) => {
++    fail(err);
++  };
++
++  let onReqClose = () => {
++    if (parserCompletionStarted || settled || limitAborting) return;
++    if (req.aborted || (req.complete !== true && req.readableEnded !== true)) {
++      fail(new Error('Request closed before multipart parsing completed'));
++    }
++  };
++
++  req.on('aborted', onReqAborted);
++  req.on('error', onReqError);
++  req.on('close', onReqClose);
++
+   req.pipe(busboy);
++
++  // Catch unhandled rejection internally so Node doesn't trigger unhandledRejection
++  parserPromise.catch(() => {});
++
++  return {
++    promise: parserPromise,
++    cleanup: stopResources
++  };
++};
++
++module.exports = (options, req, res, next) => {
++  // Backwards-compatible 4-argument callback invocation for Express
++  if (typeof next === 'function') {
++    const runtime = {
++      mode: 'express',
++      ctx: null,
++      req: req,
++      res: res,
++      next: next
++    };
++    const result = processMultipartPromise(options, runtime);
++    const promise = result.promise;
++    const cleanup = result.cleanup;
++
++    promise
++      .then((parserResult) => {
++        if (!parserResult.handled && !parserResult.nextCalled) {
++          next();
++        }
++      })
++      .catch((err) => {
++        cleanup().then(
++          () => next(err),
++          () => next(err)
++        );
++      });
++    return;
++  }
++
++  // Promise-based runtime invocation (for Koa / internal usage)
++  return processMultipartPromise(options, req);
+ };
+diff --git a/lib/tempFileHandler.js b/lib/tempFileHandler.js
+index 5c4feb0..ae136f2 100644
+--- a/lib/tempFileHandler.js
++++ b/lib/tempFileHandler.js
+@@ -2,25 +2,36 @@ const fs = require('fs');
+ const path = require('path');
+ const crypto = require('crypto');
+ const {
+-  debugLog,
+   checkAndMakeDir,
+   getTempFilename,
+-  deleteFile
++  deleteFile,
++  debugLog
+ } = require('./utilities');
+ 
+ module.exports = (options, fieldname, filename) => {
+   const dir = path.normalize(options.tempFileDir);
+   const tempFilePath = path.join(dir, getTempFilename());
+-  checkAndMakeDir({ createParentPath: true }, tempFilePath);
+ 
+-  debugLog(options, `Temporary file path is ${tempFilePath}`);
++  let streamClosed = false;
++  let closeResolve;
++  const closePromise = new Promise((resolve) => {
++    closeResolve = resolve;
++  });
+ 
+-  const hash = crypto.createHash(options.hashAlgorithm);
+-  let fileSize = 0;
+-  let completed = false;
++  const markClosed = () => {
++    if (!streamClosed) {
++      streamClosed = true;
++      closeResolve();
++    }
++  };
+ 
++  checkAndMakeDir({ createParentPath: true }, tempFilePath);
++  debugLog(options, `Temporary file path is ${tempFilePath}`);
+   debugLog(options, `Opening write stream for ${fieldname}->${filename}...`);
+   const writeStream = fs.createWriteStream(tempFilePath, { mode: options.tempFilePermissions });
++
++  writeStream.on('close', markClosed);
++
+   const writePromise = new Promise((resolve, reject) => {
+     writeStream.on('finish', () => resolve());
+     writeStream.on('error', (err) => {
+@@ -29,13 +40,62 @@ module.exports = (options, fieldname, filename) => {
+     });
+   });
+ 
++  const hash = crypto.createHash(options.hashAlgorithm);
++  let fileSize = 0;
++  let completed = false;
++  let aborted = false;
++
++  const endStream = () => {
++    if (writeStream && !streamClosed && !writeStream.destroyed && !writeStream.writableEnded) {
++      writeStream.end();
++    }
++  };
++
++  const unlinkFile = () => new Promise((resolve) => {
++    deleteFile(tempFilePath, (err) => {
++      if (err && err.code !== 'ENOENT') {
++        debugLog(options, `Cleaning up temporary file ${tempFilePath} failed: ${err}`);
++      } else {
++        debugLog(options, `Cleaning up temporary file ${tempFilePath} done.`);
++      }
++      resolve();
++    });
++  });
++
++  let cleanupPromise = null;
++  const cleanup = (callback) => {
++    completed = true;
++    if (!cleanupPromise) {
++      debugLog(options, `Cleaning up temporary file ${tempFilePath}...`);
++      endStream();
++      writePromise.catch(() => {});
++      cleanupPromise = closePromise.then(() => {
++        return unlinkFile();
++      });
++    }
++    if (typeof callback === 'function') {
++      cleanupPromise.then(() => callback(null), (err) => callback(err));
++    }
++    return cleanupPromise;
++  };
++
++  const abort = () => {
++    aborted = true;
++    completed = true;
++    if (writeStream && !writeStream.destroyed) {
++      writeStream.destroy();
++    }
++  };
++
+   return {
+     dataHandler: (data) => {
+-      if (completed === true) {
++      if (completed === true || aborted === true) {
+         debugLog(options, `Error: got ${fieldname}->${filename} data chunk for completed upload!`);
+         return;
+       }
+-      writeStream.write(data);
++      if (writeStream && !writeStream.destroyed && writeStream.writable) {
++        writeStream.write(data);
++      }
+       hash.update(data);
+       fileSize += data.length;
+       debugLog(options, `Uploading ${fieldname}->${filename}, bytes:${fileSize}...`);
+@@ -46,19 +106,13 @@ module.exports = (options, fieldname, filename) => {
+     complete: () => {
+       completed = true;
+       debugLog(options, `Upload ${fieldname}->${filename} completed, bytes:${fileSize}.`);
+-      if (writeStream !== false) writeStream.end();
++      endStream();
+       // Return empty buff since data was uploaded into a temp file.
+       return Buffer.concat([]);
+     },
+-    cleanup: () => {
+-      completed = true;
+-      debugLog(options, `Cleaning up temporary file ${tempFilePath}...`);
+-      writeStream.end();
+-      deleteFile(tempFilePath, err => (err
+-        ? debugLog(options, `Cleaning up temporary file ${tempFilePath} failed: ${err}`)
+-        : debugLog(options, `Cleaning up temporary file ${tempFilePath} done.`)
+-      ));
+-    },
+-    getWritePromise: () => writePromise
++    cleanup: cleanup,
++    abort: abort,
++    getWritePromise: () => writePromise,
++    getClosePromise: () => closePromise
+   };
+ };

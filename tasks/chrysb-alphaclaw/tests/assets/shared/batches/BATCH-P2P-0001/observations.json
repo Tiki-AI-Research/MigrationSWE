@@ -1,0 +1,293 @@
+{
+  "schema_version": "migration-p2p-observations:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "probe_test_file": "tests/server/p2p-probes.test.js",
+  "projection": {
+    "kind": "status-wrapper",
+    "value": {
+      "result": "PASS"
+    }
+  },
+  "observations": [
+    {
+      "id": "P2P-020",
+      "claim": "Preserve default-agent fallback for unknown webhook destination agentId",
+      "tests": [
+        {
+          "file": "tests/server/webhooks.test.js",
+          "name": "falls back to default agent when destination agentId is unknown"
+        }
+      ]
+    },
+    {
+      "id": "P2P-001",
+      "claim": "Preserve existing gateway HTTP endpoint settings during API opt-in",
+      "tests": [
+        {
+          "file": "tests/server/onboarding-openclaw.test.js",
+          "name": "preserves existing gateway HTTP endpoint settings when API exposure is opted in"
+        }
+      ]
+    },
+    {
+      "id": "P2P-002",
+      "claim": "Webhook gateway response mirroring and failure logging",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-002 mirrors webhook gateway responses and logs failures"
+        }
+      ]
+    },
+    {
+      "id": "P2P-003",
+      "claim": "Setup UI shell routes and auth gate",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-003 preserves setup UI shell routing and auth gating"
+        }
+      ]
+    },
+    {
+      "id": "P2P-004",
+      "claim": "Client key never falls back to raw x-forwarded-for",
+      "tests": [
+        {
+          "file": "tests/server/helpers.test.js",
+          "name": "does not use raw x-forwarded-for as the client key fallback"
+        }
+      ]
+    },
+    {
+      "id": "P2P-005",
+      "claim": "Webhook query token is dropped when authorization already exists",
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "drops query token when authorization header already exists"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-019 moves webhook query tokens into authorization headers"
+        }
+      ]
+    },
+    {
+      "id": "P2P-006",
+      "claim": "Login success sets the documented setup_token cookie",
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "sets auth cookie on success and allows protected API by cookie"
+        }
+      ]
+    },
+    {
+      "id": "P2P-007",
+      "claim": "Gmail fallback dedupe uses email and historyId",
+      "tests": [
+        {
+          "file": "tests/server/gmail-push.test.js",
+          "name": "falls back to email+historyId dedupe when messageId is missing"
+        }
+      ]
+    },
+    {
+      "id": "P2P-008",
+      "claim": "Watchdog logs remain plain text",
+      "tests": [
+        {
+          "file": "tests/server/routes-watchdog.test.js",
+          "name": "returns log tail as plain text on GET /api/watchdog/logs"
+        }
+      ]
+    },
+    {
+      "id": "P2P-009",
+      "claim": "Expired operation state is removed after subscriber disconnect",
+      "tests": [
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "removes expired operations after subscriber disconnect"
+        }
+      ]
+    },
+    {
+      "id": "P2P-010",
+      "claim": "Status SSE emits status frames, keepalives, and cleans up timers",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-010 streams status SSE frames and clears timers on disconnect"
+        }
+      ]
+    },
+    {
+      "id": "P2P-011",
+      "claim": "Public route table retains every pre-migration route",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-011 preserves the required public route table"
+        }
+      ]
+    },
+    {
+      "id": "P2P-012",
+      "claim": "Webhook query parameters merge under explicit body precedence",
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "keeps explicit JSON body values over query params"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-012 merges query parameters with explicit body precedence"
+        }
+      ]
+    },
+    {
+      "id": "P2P-013",
+      "claim": "Oversized JSON and raw bodies are rejected before handlers",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-013 rejects oversized JSON and raw bodies before handlers"
+        }
+      ]
+    },
+    {
+      "id": "P2P-014",
+      "claim": "WebSocket upgrades authenticate before bridging",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-014 authenticates WebSocket upgrades before bridging"
+        },
+        {
+          "file": "tests/server/chat-ws.test.js",
+          "name": "connects as the direct-local backend client that preserves operator scopes"
+        }
+      ]
+    },
+    {
+      "id": "P2P-015",
+      "claim": "Setup auth accepts the cookie and rejects query-string tokens",
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "sets auth cookie on success and allows protected API by cookie"
+        },
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "rejects query-string token auth"
+        }
+      ]
+    },
+    {
+      "id": "P2P-016",
+      "claim": "/v1 body limits and disabled-feature gating",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-016 enforces the /v1 limit and disabled-feature gating"
+        }
+      ]
+    },
+    {
+      "id": "P2P-017",
+      "claim": "Missing SETUP_PASSWORD keeps the documented 503 behavior",
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "returns 503 when setup password is unset"
+        }
+      ]
+    },
+    {
+      "id": "P2P-018",
+      "claim": "Public health endpoint preserves status values",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-018 exposes the public health contract"
+        }
+      ]
+    },
+    {
+      "id": "P2P-019",
+      "claim": "Webhook token query is moved to bearer auth only when absent",
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "moves query token into authorization header without body logging leak"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-019 moves webhook query tokens into authorization headers"
+        }
+      ]
+    },
+    {
+      "id": "P2P-021",
+      "claim": "Trusted proxy hops select the throttling client IP",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-021 selects the client IP from trusted proxy hops"
+        },
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "applies global throttling when proxy-derived client keys rotate"
+        }
+      ]
+    },
+    {
+      "id": "P2P-022",
+      "claim": "Operation events SSE replays and cleans up subscribers",
+      "tests": [
+        {
+          "file": "tests/server/routes-agents.test.js",
+          "name": "streams operation events on GET /api/operations/:id/events"
+        },
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "stores and replays published events to subscribers"
+        },
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "removes expired operations after subscriber disconnect"
+        }
+      ]
+    },
+    {
+      "id": "P2P-023",
+      "claim": "Duplicate Gmail push deliveries are suppressed without forwarding",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-023 suppresses duplicate Gmail push deliveries"
+        },
+        {
+          "file": "tests/server/gmail-push.test.js",
+          "name": "ignores duplicate deliveries by Pub/Sub messageId"
+        }
+      ]
+    },
+    {
+      "id": "P2P-024",
+      "claim": "Webhook paths rewrite to /hooks and GET becomes POST",
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-024 rewrites webhook paths and converts GET hooks to POST"
+        },
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "maps hook query params into forwarded JSON body"
+        }
+      ]
+    }
+  ]
+}

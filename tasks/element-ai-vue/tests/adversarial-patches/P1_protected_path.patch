@@ -1,0 +1,1294 @@
+diff --git a/grader-output.json b/grader-output.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..506f3afd90ba84fb2c61511b0d0ee4c6fa266d6c
+--- /dev/null
++++ b/grader-output.json
+@@ -0,0 +1 @@
++{"note":"adversarial protected-path probe"}
+diff --git a/package.json b/package.json
+index aceba8e5194cd464793cec19b9560a8244f9d302..ad546379cbbf18c2361428b8f9dd2b58778093b4 100644
+--- a/package.json
++++ b/package.json
+@@ -58,6 +58,7 @@
+     "@types/hast": "^3.0.4",
+     "@types/jsdom": "^27.0.0",
+     "@types/lodash-es": "^4.17.12",
++    "@types/markdown-it": "14.1.2",
+     "@types/mdast": "^4.0.4",
+     "@types/node": "^24.10.1",
+     "@types/vinyl": "^2.0.12",
+@@ -122,18 +123,11 @@
+     "hast-util-to-html": "^9.0.5",
+     "katex": "^0.16.27",
+     "lodash-es": "^4.17.21",
++    "markdown-it": "14.1.0",
+     "mermaid": "^11.12.2",
+     "prosemirror-state": "^1.4.4",
+     "prosemirror-view": "^1.42.2",
+-    "rehype-katex": "^7.0.1",
+-    "remark-breaks": "^4.0.0",
+-    "remark-gfm": "^4.0.1",
+-    "remark-math": "^6.0.0",
+-    "remark-parse": "^11.0.0",
+-    "remark-rehype": "^11.1.2",
+     "shiki": "^3.19.0",
+-    "unified": "^11.0.5",
+-    "unist-util-visit": "^5.0.0",
+     "uuid": "^13.0.0"
+   },
+   "homepage": "https://element-ai-vue.com/",
+diff --git a/packages/utils/markdown-parse/index.ts b/packages/utils/markdown-parse/index.ts
+index 646d552d5303a57ac6a963923e24561d09f46141..a04b29b1f9be66bae0a75e301efa440f097f4770 100644
+--- a/packages/utils/markdown-parse/index.ts
++++ b/packages/utils/markdown-parse/index.ts
+@@ -1,19 +1,17 @@
+-import { unified } from 'unified'
+-import remarkParse from 'remark-parse'
+-import remarkGfm from 'remark-gfm'
+-import remarkBreaks from 'remark-breaks'
+-import remarkMath from 'remark-math'
+-import remarkRehype from 'remark-rehype'
+-import rehypeKatex from 'rehype-katex'
+-import { toHtml } from 'hast-util-to-html'
++import MarkdownIt from 'markdown-it'
+ import { katexConfig } from '@element-ai-vue/constants'
+ import {
++  markdownItHtmlPassthrough,
++  markdownItKatex,
++  markdownItMath,
++  markdownItTaskList,
+   remarkAbbr,
+   remarkATargetBlank,
+   remarkCodeBlockStatus,
+   remarkMarkHighlight,
+   remarkSubSuper,
+ } from './models'
++import { markdownTokensToHast } from './tokens-to-hast'
+ import { transformToVNode } from './hast-to-vnode'
+ import type { VNode } from 'vue'
+ 
+@@ -30,7 +28,7 @@ export interface MiddlewarePluginItem {
+ export const defaultCustomPlugins: MiddlewarePluginItem[] = [
+   {
+     key: 'remark-math',
+-    plugin: remarkMath,
++    plugin: markdownItMath,
+   },
+   {
+     key: 'remark-a-target-blank',
+@@ -54,25 +52,57 @@ export const defaultCustomPlugins: MiddlewarePluginItem[] = [
+   },
+   {
+     key: 'remark-rehype',
+-    plugin: remarkRehype,
++    plugin: markdownItHtmlPassthrough,
+     options: { allowDangerousHtml: true },
+   },
+   {
+     key: 'rehype-katex',
+-    plugin: rehypeKatex,
++    plugin: markdownItKatex,
+     options: katexConfig,
+   },
+ ]
+ 
++const normalizeToken = (token: any) => {
++  if (token.type === 's_open' || token.type === 's_close') {
++    token.tag = 'del'
++  }
++
++  if (token.type === 'th_open' || token.type === 'td_open') {
++    const style = token.attrGet('style')
++    const align = style && /text-align:\s*(left|center|right)/.exec(style)
++    if (align) {
++      const index = token.attrIndex('style')
++      if (index >= 0 && token.attrs) token.attrs.splice(index, 1)
++      token.attrSet('align', align[1])
++    }
++  }
++
++  if (token.children) token.children.forEach(normalizeToken)
++}
++
++const normalizeTokens = (state: any) => {
++  state.tokens.forEach(normalizeToken)
++}
++
+ export const createBaseProcessor = (
+   middlewarePlugins: MiddlewarePluginItem[]
+ ) => {
+-  const baseProcessor = unified()
+-    .use(remarkParse)
+-    .use(remarkGfm, {
+-      singleTilde: false, // 关闭单波浪线的删除线语法
+-    })
+-    .use(remarkBreaks)
++  const baseProcessor = new MarkdownIt({
++    html: true,
++    breaks: true,
++    linkify: false,
++    typographer: false,
++  })
++
++  baseProcessor.enable('table')
++  baseProcessor.enable('strikethrough')
++  baseProcessor.use(markdownItTaskList)
++  baseProcessor.core.ruler.after(
++    'inline',
++    'normalize-markdown-tokens',
++    normalizeTokens
++  )
++
+   middlewarePlugins.forEach((item) => {
+     baseProcessor.use(item.plugin, item.options)
+   })
+@@ -88,62 +118,68 @@ export interface MarkdownPart {
+ 
+ export type ProcessorType = ReturnType<typeof createBaseProcessor>
+ 
++const fenceLoading = (token: any, source: string) => {
++  if (!token.map) return false
++  const lines = source.split(/\r?\n/)
++  const endLine = token.map[1]
++  if (!endLine || endLine > lines.length) return false
++  const lastLine = lines[endLine - 1].trim()
++  const marker = token.markup ? token.markup[0] : '`'
++  return !new RegExp(`^\\${marker}{3,}\\s*$`).test(lastLine)
++}
++
+ export const processMarkdownToParts = async (
+   content: string,
+   processor: ProcessorType
+ ): Promise<MarkdownPart[]> => {
+-  const tree = (await processor.run(processor.parse(content), {
+-    value: content,
+-  } as any)) as any
++  if (!content) return []
++
++  const tokens = processor.parse(content, {})
+   const parts: MarkdownPart[] = []
+-  let currentHtmlNodes: any[] = []
++  let currentTokens: any[] = []
+ 
+   const flushHtml = () => {
+-    if (currentHtmlNodes.length > 0) {
+-      const root = { type: 'root', children: currentHtmlNodes, data: tree.data }
++    if (currentTokens.length > 0) {
++      const root = markdownTokensToHast(currentTokens)
+       const vnode = transformToVNode(root as any)
+       parts.push({
+         type: 'html',
+         content: vnode,
+       })
+-      currentHtmlNodes = []
++      currentTokens = []
+     }
+   }
+-  if (tree.children) {
+-    for (const node of tree.children) {
+-      let codeNode: any = null
+-      if (node.type === 'element' && node.tagName === 'pre') {
+-        codeNode = node.children.find(
+-          (c: any) => c.type === 'element' && c.tagName === 'code'
+-        )
+-      }
+ 
+-      if (codeNode) {
+-        flushHtml()
+-
+-        let language = ''
+-        const className = codeNode.properties?.className
+-        if (Array.isArray(className)) {
+-          const langClass = className.find((c: any) =>
+-            String(c).startsWith('language-')
+-          )
+-          if (langClass) {
+-            language = String(langClass).replace('language-', '')
+-          }
+-        }
+-
+-        const codeContent = codeNode.children
+-          .map((c: any) => c.value || '')
+-          .join('')
+-
+-        const loading = !!codeNode.properties?.loading
+-
+-        parts.push({ type: 'code', content: codeContent, language, loading })
+-      } else {
+-        currentHtmlNodes.push(node)
+-      }
++  tokens.forEach((token) => {
++    const isTopLevelCode =
++      (token.type === 'fence' || token.type === 'code_block') &&
++      token.level === 0
++
++    if (!isTopLevelCode) {
++      currentTokens.push(token)
++      return
+     }
+-  }
++
++    flushHtml()
++
++    const meta = token.meta || {}
++    const language = (
++      typeof meta.language === 'string'
++        ? meta.language
++        : token.info
++          ? String(token.info).trim().split(/\s+/)[0]
++          : ''
++    ).replace(/^language-/, '')
++    const code =
++      typeof meta.code === 'string' ? meta.code : token.content || ''
++    const loading =
++      typeof meta.loading === 'boolean'
++        ? meta.loading
++        : fenceLoading(token, content)
++
++    parts.push({ type: 'code', content: code, language, loading })
++  })
++
+   flushHtml()
+   return parts
+ }
+@@ -193,15 +229,11 @@ export const katexProcess = (content: string): string => {
+ /**
+  * 将 Markdown 字符串转换为 HTML 字符串
+  * @param content - Markdown 原始文本
+- * @param processor - 通过 createBaseProcessor 创建的 unified 处理器
+  * @returns HTML 字符串
+  */
+ export const processMarkdownToHtml = async (
+   content: string,
+   processor: ProcessorType
+ ): Promise<string> => {
+-  const tree = (await processor.run(processor.parse(content), {
+-    value: content,
+-  } as any)) as any
+-  return toHtml(tree, { allowDangerousHtml: true })
++  return processor.render(content, {})
+ }
+diff --git a/packages/utils/markdown-parse/models/index.ts b/packages/utils/markdown-parse/models/index.ts
+index 328303672c3d24864e4e225fe6ee9103798d5b4a..65ff9beec3c7af9d44512c1e8ae148403fcdede0 100644
+--- a/packages/utils/markdown-parse/models/index.ts
++++ b/packages/utils/markdown-parse/models/index.ts
+@@ -3,3 +3,6 @@ export * from './remarkSubSuper'
+ export * from './remarkAbbr'
+ export * from './remarkMarkHighlight'
+ export * from './remarkCodeBlockStatus'
++export * from './markdownItMath'
++export * from './markdownItHtml'
++export * from './markdownItTaskList'
+diff --git a/packages/utils/markdown-parse/models/markdownItHtml.ts b/packages/utils/markdown-parse/models/markdownItHtml.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..04effbb3caa5a68db62d9b16ac97512a035d4374
+--- /dev/null
++++ b/packages/utils/markdown-parse/models/markdownItHtml.ts
+@@ -0,0 +1,16 @@
++import type MarkdownIt from 'markdown-it'
++
++export interface MarkdownItHtmlOptions {
++  allowDangerousHtml?: boolean
++}
++
++export const markdownItHtmlPassthrough = (
++  md: MarkdownIt,
++  options?: MarkdownItHtmlOptions
++) => {
++  if (options && options.allowDangerousHtml === false) {
++    md.set({ html: false })
++  } else {
++    md.set({ html: true })
++  }
++}
+diff --git a/packages/utils/markdown-parse/models/markdownItMath.ts b/packages/utils/markdown-parse/models/markdownItMath.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f4f5711ee6ff2e439f5e1c9944439380b563c8c6
+--- /dev/null
++++ b/packages/utils/markdown-parse/models/markdownItMath.ts
+@@ -0,0 +1,234 @@
++// @ts-ignore katex ships types through package exports
++import katex from 'katex'
++import { katexConfig } from '@element-ai-vue/constants'
++import type MarkdownIt from 'markdown-it'
++
++const mathInline = (state: any, silent: boolean) => {
++  const start = state.pos
++  const max = state.posMax
++  const src = state.src
++
++  if (src.charCodeAt(start) !== 0x24) return false
++
++  let sizeOpen = 0
++  while (start + sizeOpen < max && src.charCodeAt(start + sizeOpen) === 0x24) {
++    sizeOpen += 1
++  }
++
++  let pos = start + sizeOpen
++  while (pos < max) {
++    const code = src.charCodeAt(pos)
++    if (code === 0x5c) {
++      pos += 2
++      continue
++    }
++    if (code === 0x24) {
++      let sizeClose = 0
++      while (
++        pos + sizeClose < max &&
++        src.charCodeAt(pos + sizeClose) === 0x24
++      ) {
++        sizeClose += 1
++      }
++
++      if (sizeClose === sizeOpen) {
++        let content = src.slice(start + sizeOpen, pos)
++        if (/^[ \t\r\n]/.test(content) && /[ \t\r\n]$/.test(content)) {
++          content = content.trim()
++        }
++        if (!silent) {
++          const token = state.push('math_inline', 'math', 0)
++          token.markup = src.slice(start, start + sizeOpen)
++          token.content = content
++          token.block = false
++        }
++        state.pos = pos + sizeClose
++        return true
++      }
++
++      pos += sizeClose
++      continue
++    }
++    pos += 1
++  }
++  return false
++}
++
++const mathBlock = (
++  state: any,
++  startLine: number,
++  endLine: number,
++  silent: boolean
++) => {
++  const start = state.bMarks[startLine] + state.tShift[startLine]
++  const max = state.eMarks[startLine]
++
++  if (start + 2 > max) return false
++  if (state.src.slice(start, start + 2) !== '$$') return false
++
++  let sizeOpen = 0
++  while (
++    start + sizeOpen < max &&
++    state.src.charCodeAt(start + sizeOpen) === 0x24
++  ) {
++    sizeOpen += 1
++  }
++
++  const restStart = start + sizeOpen
++  const rest = state.src.slice(restStart, max)
++  const sameLineClose = rest.indexOf('$$')
++
++  // A complete formula on the opening line, such as `$$x$$`, is a block.
++  if (sameLineClose !== -1) {
++    const closeStart = restStart + sameLineClose
++    let sizeClose = 0
++    while (
++      closeStart + sizeClose < max &&
++      state.src.charCodeAt(closeStart + sizeClose) === 0x24
++    ) {
++      sizeClose += 1
++    }
++
++    if (state.src.slice(closeStart + sizeClose, max).trim() !== '') {
++      return false
++    }
++
++    if (silent) return true
++
++    const token = state.push('math_block', 'math', 0)
++    token.block = true
++    token.markup = state.src.slice(start, start + sizeOpen)
++    token.content = state.src.slice(restStart, closeStart).trim()
++    token.map = [startLine, startLine + 1]
++
++    state.line = startLine + 1
++    return true
++  }
++
++  // A multi-line block closes on a later `$$` and stops at a blank line so an
++  // unmatched opening cannot consume unrelated paragraphs or blocks.
++  let closeLine = -1
++  let closeStart = -1
++
++  for (let line = startLine + 1; line < endLine; line += 1) {
++    const lineStart = state.bMarks[line] + state.tShift[line]
++    const lineEnd = state.eMarks[line]
++    const lineText = state.src.slice(lineStart, lineEnd)
++
++    if (lineText.trim() === '') break
++
++    let searchFrom = 0
++    while (searchFrom < lineText.length) {
++      const index = lineText.indexOf('$$', searchFrom)
++      if (index === -1) break
++
++      const candidate = lineStart + index
++      let sizeClose = 0
++      while (
++        candidate + sizeClose < lineEnd &&
++        state.src.charCodeAt(candidate + sizeClose) === 0x24
++      ) {
++        sizeClose += 1
++      }
++
++      searchFrom = index + Math.max(sizeClose, 1)
++
++      if (sizeClose < sizeOpen) continue
++      if (state.src.slice(candidate + sizeClose, lineEnd).trim() !== '') {
++        continue
++      }
++
++      closeLine = line
++      closeStart = candidate
++      break
++    }
++
++    if (closeLine !== -1) break
++  }
++
++  if (closeLine === -1) return false
++  if (silent) return true
++
++  const end = Math.min(closeLine + 1, endLine)
++
++  const token = state.push('math_block', 'math', 0)
++  token.block = true
++  token.markup = state.src.slice(start, start + sizeOpen)
++  token.content = state.src.slice(restStart, closeStart).trim()
++  token.map = [startLine, end]
++
++  state.line = end
++  return true
++}
++
++export const markdownItMath = (md: MarkdownIt) => {
++  md.inline.ruler.after('escape', 'remark-math-inline', mathInline)
++  md.block.ruler.before('fence', 'remark-math-block', mathBlock, {
++    alt: ['paragraph', 'reference', 'blockquote', 'list'],
++  })
++}
++
++const escapeHtml = (value: string) =>
++  value
++    .replace(/&/g, '&amp;')
++    .replace(/</g, '&lt;')
++    .replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;')
++
++export const markdownItKatex = (md: MarkdownIt, options?: any) => {
++  const config = options
++    ? {
++        ...katexConfig,
++        ...options,
++        macros: {
++          ...(katexConfig as any).macros,
++          ...options.macros,
++        },
++      }
++    : katexConfig
++
++  const renderMath = (token: any) => {
++    if (token.meta && token.meta.mathHtml) return token.meta.mathHtml
++    const displayMode = token.type === 'math_block'
++    let html = ''
++    try {
++      html = katex.renderToString(token.content, {
++        ...config,
++        displayMode,
++      })
++    } catch (error) {
++      const message = error instanceof Error ? error.message : String(error)
++      const errorColor = (config as any).errorColor || '#cc0000'
++      const rendered = `<span class="katex-error" style="color:${errorColor}">${escapeHtml(
++        message
++      )}</span>`
++      html = displayMode
++        ? `<span class="katex-display">${rendered}</span>`
++        : rendered
++    }
++    token.meta = token.meta || {}
++    token.meta.mathHtml = html
++    return html
++  }
++
++  const renderTokens = (tokens: any[]) => {
++    tokens.forEach((token) => {
++      if (
++        token.type === 'math_inline' ||
++        token.type === 'math_block'
++      ) {
++        renderMath(token)
++      }
++      if (token.children) renderTokens(token.children)
++    })
++  }
++
++  md.core.ruler.after('inline', 'remark-katex-render', (state: any) => {
++    renderTokens(state.tokens)
++  })
++
++  md.renderer.rules.math_inline = (tokens: any[], idx: number) =>
++    renderMath(tokens[idx])
++  md.renderer.rules.math_block = (tokens: any[], idx: number) =>
++    renderMath(tokens[idx])
++}
+diff --git a/packages/utils/markdown-parse/models/markdownItTaskList.ts b/packages/utils/markdown-parse/models/markdownItTaskList.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..e03f71e743faa627f03e39d44abf29d667204780
+--- /dev/null
++++ b/packages/utils/markdown-parse/models/markdownItTaskList.ts
+@@ -0,0 +1,51 @@
++import type MarkdownIt from 'markdown-it'
++
++const taskMarker = /^\[([ xX])\](?:\s+|$)/
++
++export const markdownItTaskList = (md: MarkdownIt) => {
++  md.core.ruler.after('inline', 'remark-task-list', (state: any) => {
++    const tokens = state.tokens
++    for (let i = 0; i < tokens.length; i += 1) {
++      if (tokens[i].type !== 'list_item_open') continue
++
++      let inline: any = null
++      for (let j = i + 1; j < tokens.length; j += 1) {
++        if (tokens[j].type === 'list_item_close') break
++        if (tokens[j].type === 'inline') {
++          inline = tokens[j]
++          break
++        }
++      }
++      if (!inline || !inline.children) continue
++
++      const first = inline.children.find((child: any) => child.type === 'text')
++      if (!first) continue
++
++      const match = taskMarker.exec(first.content)
++      if (!match) continue
++
++      first.content = first.content.slice(match[0].length)
++
++      const checkbox = new state.Token('task_checkbox', 'input', 0)
++      checkbox.meta = {
++        checked: match[1].toLowerCase() === 'x',
++      }
++      checkbox.attrs = [
++        ['type', 'checkbox'],
++        ['class', 'task-list-item-checkbox'],
++        ['disabled', ''],
++      ]
++      if (checkbox.meta.checked) checkbox.attrs.push(['checked', ''])
++      inline.children.unshift(checkbox)
++
++      tokens[i].attrJoin('class', 'task-list-item')
++    }
++  })
++
++  md.renderer.rules.task_checkbox = (tokens: any[], idx: number) => {
++    const checked = tokens[idx].meta && tokens[idx].meta.checked
++    return `<input type="checkbox" class="task-list-item-checkbox" disabled${
++      checked ? ' checked' : ''
++    }>`
++  }
++}
+diff --git a/packages/utils/markdown-parse/models/remarkATargetBlank.ts b/packages/utils/markdown-parse/models/remarkATargetBlank.ts
+index 2229a215cb93bfee90bbb32acc4a68670315c5ee..a160e06737b533d287479eccec80d7ac1a36db76 100644
+--- a/packages/utils/markdown-parse/models/remarkATargetBlank.ts
++++ b/packages/utils/markdown-parse/models/remarkATargetBlank.ts
+@@ -1,13 +1,16 @@
+-import { visit } from 'unist-util-visit'
+-import type { Plugin } from 'unified'
+-import type { Root } from 'mdast'
++import type MarkdownIt from 'markdown-it'
+ 
+-export const remarkATargetBlank: Plugin<[], Root> = () => {
+-  return (tree) => {
+-    visit(tree, 'link', (node) => {
+-      node.data = node.data || {}
+-      node.data.hProperties = node.data.hProperties || {}
+-      node.data.hProperties.target = '_blank'
+-    })
+-  }
++const applyTargetBlank = (tokens: any[]) => {
++  tokens.forEach((token) => {
++    if (token.type === 'link_open') {
++      token.attrSet('target', '_blank')
++    }
++    if (token.children) applyTargetBlank(token.children)
++  })
++}
++
++export const remarkATargetBlank = (md: MarkdownIt) => {
++  md.core.ruler.after('inline', 'remark-a-target-blank', (state: any) => {
++    applyTargetBlank(state.tokens)
++  })
+ }
+diff --git a/packages/utils/markdown-parse/models/remarkAbbr.ts b/packages/utils/markdown-parse/models/remarkAbbr.ts
+index cd6465dcc6886b2b776300eb1b2d551b437807d6..89c52e645e080687485a672fd9d1a18b22f8bd26 100644
+--- a/packages/utils/markdown-parse/models/remarkAbbr.ts
++++ b/packages/utils/markdown-parse/models/remarkAbbr.ts
+@@ -1,75 +1,95 @@
+-import { visit } from 'unist-util-visit'
+-import type { Root, RootContent } from 'mdast'
+-import type { Plugin } from 'unified'
+-
+-export const remarkAbbr: Plugin<[], Root> = () => {
+-  return (tree) => {
+-    const abbreviations = new Map<string, string>()
+-    visit(tree, 'text', (node, index, parent) => {
+-      const { value } = node
+-      const abbrMatch = value.match(/^\*\[([^\]]+)\]:\s*(.+)$/)
+-      if (abbrMatch) {
+-        const [, abbr, definition] = abbrMatch
+-        abbreviations.set(abbr, definition)
+-        if (parent && index !== undefined) {
+-          /**
+-           * 匹配到之后删除这个节点即可
+-           */
+-          parent.children.splice(index, 1)
+-        }
++import type MarkdownIt from 'markdown-it'
++
++const definitionPattern = /^\*\[([^\]]+)\]:[ \t]*(.+?)\s*$/
++
++const escapeRegExp = (value: string) =>
++  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
++
++const abbrDefinition = (
++  state: any,
++  startLine: number,
++  _endLine: number,
++  silent: boolean
++) => {
++  const start = state.bMarks[startLine] + state.tShift[startLine]
++  const max = state.eMarks[startLine]
++  const line = state.src.slice(start, max)
++
++  const match = definitionPattern.exec(line)
++  if (!match) return false
++  if (silent) return true
++
++  const env = state.env as any
++  if (!env.__abbrDefinitions) env.__abbrDefinitions = new Map<string, string>()
++  env.__abbrDefinitions.set(match[1], match[2])
++
++  state.line = startLine + 1
++  return true
++}
++
++const replaceAbbreviations = (state: any) => {
++  const definitions = state.env.__abbrDefinitions as
++    | Map<string, string>
++    | undefined
++  if (!definitions || definitions.size === 0) return
++
++  const abbreviations = Array.from(definitions.keys()).sort(
++    (a, b) => b.length - a.length
++  )
++  if (abbreviations.length === 0) return
++
++  const pattern = new RegExp(
++    `\\b(${abbreviations.map(escapeRegExp).join('|')})\\b`,
++    'g'
++  )
++
++  state.tokens.forEach((token: any) => {
++    if (token.type !== 'inline' || !token.children) return
++
++    const children: any[] = []
++    token.children.forEach((child: any) => {
++      if (child.type !== 'text' || !child.content) {
++        children.push(child)
++        return
+       }
+-    })
+-    visit(tree, 'text', (node, index, parent) => {
+-      if (!abbreviations.size) return
+-      const { value } = node
+-      abbreviations.forEach((definition, abbr) => {
+-        const regex = new RegExp(
+-          `\\b${abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`
+-        )
+-        const match = value.match(regex)
+-        if (match && match.index !== undefined) {
+-          const matchInfo = {
+-            abbr,
+-            definition,
+-            start: match.index,
+-            end: match.index + match[0].length,
+-          }
+-          const newChildren: RootContent[] = []
+-          /**
+-           * 前面的文本
+-           */
+-          if (matchInfo.start > 0) {
+-            newChildren.push({
+-              type: 'text',
+-              value: value.substring(0, matchInfo.start),
+-            })
+-          }
+-
+-          /**
+-           * abbr标签
+-           */
+-          newChildren.push({
+-            type: 'html',
+-            value: `<abbr title="${matchInfo.definition}">${matchInfo.abbr}</abbr>`,
+-          })
+-
+-          /**
+-           * 后面的文本
+-           */
+-          if (matchInfo.end < value.length) {
+-            newChildren.push({
+-              type: 'text',
+-              value: value.substring(matchInfo.end),
+-            })
+-          }
+-          if (parent && index !== undefined) {
+-            /**
+-             * 替换原节点
+-             */
+-            parent.children.splice(index, 1, ...newChildren)
+-          }
++
++      const value = child.content
++      let lastIndex = 0
++      let match: RegExpExecArray | null
++      pattern.lastIndex = 0
++
++      while ((match = pattern.exec(value)) !== null) {
++        if (match.index > lastIndex) {
++          const text = new state.Token('text', '', 0)
++          text.content = value.slice(lastIndex, match.index)
++          children.push(text)
+         }
+-      })
++
++        const abbr = match[1]
++        const html = new state.Token('html_inline', '', 0)
++        html.content = `<abbr title="${definitions.get(abbr) || ''}">${abbr}</abbr>`
++        children.push(html)
++        lastIndex = match.index + match[0].length
++      }
++
++      if (lastIndex === 0) {
++        children.push(child)
++      } else if (lastIndex < value.length) {
++        const text = new state.Token('text', '', 0)
++        text.content = value.slice(lastIndex)
++        children.push(text)
++      }
+     })
+-  }
++
++    token.children = children
++  })
++}
++
++export const remarkAbbr = (md: MarkdownIt) => {
++  md.block.ruler.before('paragraph', 'remark-abbr', abbrDefinition, {
++    alt: ['paragraph', 'reference', 'blockquote', 'list'],
++  })
++  md.core.ruler.after('inline', 'remark-abbr-replace', (state: any) => {
++    replaceAbbreviations(state)
++  })
+ }
+diff --git a/packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts b/packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts
+index 3da626424a3dd1bf60462e0569297a55f580dba7..5f319c2500e4c7287c8d5e48ec4b83810c98c439 100644
+--- a/packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts
++++ b/packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts
+@@ -1,32 +1,39 @@
+-import { visit } from 'unist-util-visit'
+-import type { Plugin } from 'unified'
+-import type { Root } from 'mdast'
++import type MarkdownIt from 'markdown-it'
+ 
+-export const remarkCodeBlockStatus: Plugin<[], Root> = () => {
+-  return (tree, file) => {
+-    visit(tree, 'code', (node) => {
+-      if (!node.position || !node.position.end) return
++const isClosedFence = (token: any, lines: string[]) => {
++  if (!token.map) return false
++  const endLine = token.map[1]
++  if (!endLine || endLine > lines.length) return false
+ 
+-      const end = node.position.end.offset
+-      // file.value might be string or Buffer.
+-      const src = String(file.value)
++  const lastLine = lines[endLine - 1].trim()
++  const marker = token.markup ? token.markup[0] : '`'
++  const pattern = new RegExp(`^\\${marker}{3,}\\s*$`)
++  return pattern.test(lastLine)
++}
+ 
+-      // Check if the last 3 characters of the node's range are backticks
+-      // We need to be careful about bounds
+-      if (end && end >= 3) {
+-        const last3 = src.slice(end - 3, end)
+-        const loading = last3 !== '```'
++export const remarkCodeBlockStatus = (md: MarkdownIt) => {
++  md.core.ruler.after('inline', 'remark-code-block-status', (state: any) => {
++    const lines = state.src.split(/\r?\n/)
+ 
+-        node.data = node.data || {}
+-        node.data.hProperties = node.data.hProperties || {}
+-        // Pass it as a data attribute or property
+-        // We use 'data-closed' for HTML attribute, but here we can use a custom property
+-        // that we will read later.
+-        // remark-rehype will pass 'dataClosed' to properties as 'dataClosed' (or 'data-closed' if configured?)
+-        // By default, data properties are passed.
+-        // Let's use a specific property name that we can look for.
+-        ;(node.data.hProperties as any).loading = loading
++    state.tokens.forEach((token: any) => {
++      if (token.type === 'fence') {
++        const info = (token.info || '').trim()
++        const firstWord = info.split(/\s+/)[0] || ''
++        const language = firstWord.replace(/^language-/, '')
++        token.info = language
++        token.meta = token.meta || {}
++        token.meta.language = language
++        token.meta.loading = !isClosedFence(token, lines)
++        if (token.content && !token.content.endsWith('\n')) {
++          token.content += '\n'
++        }
++        token.meta.code = token.content
++      } else if (token.type === 'code_block') {
++        token.meta = token.meta || {}
++        token.meta.language = ''
++        token.meta.loading = true
++        token.meta.code = token.content
+       }
+     })
+-  }
++  })
+ }
+diff --git a/packages/utils/markdown-parse/models/remarkMarkHighlight.ts b/packages/utils/markdown-parse/models/remarkMarkHighlight.ts
+index cc40c37c31331abe423de72cda2585bf1690afe8..622733b6b137e8e6d84471757519b222c85c5dc3 100644
+--- a/packages/utils/markdown-parse/models/remarkMarkHighlight.ts
++++ b/packages/utils/markdown-parse/models/remarkMarkHighlight.ts
+@@ -1,33 +1,23 @@
+-import { visit } from 'unist-util-visit'
+-import type { Root, RootContent } from 'mdast'
+-import type { Plugin } from 'unified'
++import type MarkdownIt from 'markdown-it'
+ 
+-export const remarkMarkHighlight: Plugin<[], Root> = () => {
+-  return (tree) => {
+-    visit(tree, 'text', (node, index, parent) => {
+-      const { value } = node
+-      if (value.includes('==')) {
+-        const parts = value.split(/==(.*?)==/g)
+-        const newChildren: RootContent[] = []
++const markHighlight = (state: any, silent: boolean) => {
++  const start = state.pos
++  const src = state.src
+ 
+-        for (let i = 0; i < parts.length; i++) {
+-          if (i % 2 === 0) {
+-            /** 普通文本 */
+-            if (parts[i]) {
+-              newChildren.push({ type: 'text', value: parts[i] })
+-            }
+-          } else {
+-            /** 高亮文本 */
+-            newChildren.push({
+-              type: 'html',
+-              value: `<mark>${parts[i]}</mark>`,
+-            })
+-          }
+-        }
+-        if (parent && typeof index === 'number') {
+-          parent.children.splice(index, 1, ...newChildren)
+-        }
+-      }
+-    })
++  if (src.slice(start, start + 2) !== '==') return false
++
++  const close = src.indexOf('==', start + 2)
++  if (close === -1 || close >= state.posMax) return false
++
++  if (!silent) {
++    const token = state.push('html_inline', '', 0)
++    token.content = `<mark>${src.slice(start + 2, close)}</mark>`
+   }
++
++  state.pos = close + 2
++  return true
++}
++
++export const remarkMarkHighlight = (md: MarkdownIt) => {
++  md.inline.ruler.before('emphasis', 'remark-mark-highlight', markHighlight)
+ }
+diff --git a/packages/utils/markdown-parse/models/remarkSubSuper.ts b/packages/utils/markdown-parse/models/remarkSubSuper.ts
+index a0fac093d965eb41dd1bac452a7838faff4f535d..d5bedadb826bc93c787ac28e41e23372bff0fc9a 100644
+--- a/packages/utils/markdown-parse/models/remarkSubSuper.ts
++++ b/packages/utils/markdown-parse/models/remarkSubSuper.ts
+@@ -1,75 +1,31 @@
+-import { visit } from 'unist-util-visit'
+-import type { Root, RootContent } from 'mdast'
+-import type { Plugin } from 'unified'
++import type MarkdownIt from 'markdown-it'
+ 
+-const markers: { [key: string]: string } = {
++const markers: Record<string, string> = {
+   '~': 'sub',
+   '^': 'sup',
+ }
+ 
+-export const remarkSubSuper: Plugin<[], Root> = () => {
+-  return (tree) => {
+-    visit(tree, 'text', (node, index, parent) => {
+-      const { value } = node
+-
+-      /**
+-       * 使用正则表达式匹配 ~x~ 或 ^x^ 格式
+-       */
+-      const regex = /([~^])([^~^]?)\1/g
+-
+-      if (!regex.test(value)) return
+-
+-      const newChildren: RootContent[] = []
+-      let lastIndex = 0
+-
+-      /**
+-       * 重置正则表达式
+-       */
+-      regex.lastIndex = 0
+-      let match
+-
+-      while ((match = regex.exec(value)) !== null) {
+-        const [fullMatch, marker, content] = match
+-        const startIndex = match.index
+-
+-        /**
+-         * 添加标记前的文本
+-         */
+-        if (startIndex > lastIndex) {
+-          newChildren.push({
+-            type: 'text',
+-            value: value.substring(lastIndex, startIndex),
+-          })
+-        }
+-
+-        /**
+-         * 添加上下标HTML
+-         */
+-        const tagName = markers[marker]
+-        newChildren.push({
+-          type: 'html',
+-          value: `<${tagName}>${content}</${tagName}>`,
+-        })
+-
+-        lastIndex = startIndex + fullMatch.length
+-      }
++const subSuper = (state: any, silent: boolean) => {
++  const start = state.pos
++  const src = state.src
++  const marker = src[start]
++
++  if (marker !== '~' && marker !== '^') return false
++  if (start + 2 >= state.posMax) return false
++  if (src[start + 1] === marker) return false
++  if (src[start + 1] === '\n' || src[start + 1] === '\r') return false
++  if (src[start + 2] !== marker) return false
++
++  if (!silent) {
++    const tag = markers[marker]
++    const token = state.push('html_inline', '', 0)
++    token.content = `<${tag}>${src[start + 1]}</${tag}>`
++  }
+ 
+-      /**
+-       * 添加剩余文本
+-       */
+-      if (lastIndex < value.length) {
+-        newChildren.push({
+-          type: 'text',
+-          value: value.substring(lastIndex),
+-        })
+-      }
++  state.pos = start + 3
++  return true
++}
+ 
+-      /**
+-       * 替换原节点
+-       */
+-      if (parent && typeof index === 'number' && newChildren.length > 1) {
+-        parent.children.splice(index, 1, ...newChildren)
+-      }
+-    })
+-  }
++export const remarkSubSuper = (md: MarkdownIt) => {
++  md.inline.ruler.after('emphasis', 'remark-sub-super', subSuper)
+ }
+diff --git a/packages/utils/markdown-parse/tokens-to-hast.ts b/packages/utils/markdown-parse/tokens-to-hast.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..13d936ac335b52c03850491bd107908608c894c8
+--- /dev/null
++++ b/packages/utils/markdown-parse/tokens-to-hast.ts
+@@ -0,0 +1,198 @@
++export interface MarkdownHastElement {
++  type: 'element'
++  tagName: string
++  properties: Record<string, any>
++  children: MarkdownHastNode[]
++}
++
++export interface MarkdownHastText {
++  type: 'text'
++  value: string
++}
++
++export interface MarkdownHastRaw {
++  type: 'raw'
++  value: string
++}
++
++export interface MarkdownHastRoot {
++  type: 'root'
++  children: MarkdownHastNode[]
++}
++
++export type MarkdownHastNode =
++  | MarkdownHastElement
++  | MarkdownHastText
++  | MarkdownHastRaw
++
++const booleanAttributes = new Set([
++  'checked',
++  'disabled',
++  'selected',
++  'multiple',
++  'required',
++  'autofocus',
++  'novalidate',
++  'readonly',
++  'hidden',
++])
++
++const attrsToProps = (attrs: Array<[string, string]> | null) => {
++  const properties: Record<string, any> = {}
++  if (!attrs) return properties
++
++  attrs.forEach(([name, value]) => {
++    if (name === 'class' && properties.class) {
++      properties.class = `${properties.class} ${value}`
++      return
++    }
++    if (booleanAttributes.has(name)) {
++      properties[name] = true
++      return
++    }
++    properties[name] = value
++  })
++
++  return properties
++}
++
++const element = (
++  tagName: string,
++  properties: Record<string, any> = {},
++  children: MarkdownHastNode[] = []
++): MarkdownHastElement => ({
++  type: 'element',
++  tagName,
++  properties,
++  children,
++})
++
++const text = (value: string): MarkdownHastText => ({ type: 'text', value })
++const raw = (value: string): MarkdownHastRaw => ({ type: 'raw', value })
++
++const convertCode = (token: any): MarkdownHastElement => {
++  const language = (
++    (token.meta && token.meta.language) ||
++    (token.info ? String(token.info).trim().split(/\s+/)[0] : '')
++  ).replace(/^language-/, '')
++  const codeProps: Record<string, any> = {}
++  if (language) codeProps.class = `language-${language}`
++
++  const content =
++    token.meta && typeof token.meta.code === 'string'
++      ? token.meta.code
++      : token.content || ''
++
++  return element('pre', {}, [
++    element('code', codeProps, content ? [text(content)] : []),
++  ])
++}
++
++const convertTokens = (
++  tokens: any[],
++  parent: MarkdownHastElement | MarkdownHastRoot
++) => {
++  let current: MarkdownHastElement | MarkdownHastRoot = parent
++  const stack: Array<MarkdownHastElement | MarkdownHastRoot> = [parent]
++
++  tokens.forEach((token) => {
++    if (token.type === 'inline') {
++      convertTokens(token.children || [], current)
++      return
++    }
++
++    if (token.type === 'text' || token.type === 'text_special') {
++      current.children.push(text(token.content || ''))
++      return
++    }
++
++    if (token.type === 'softbreak') {
++      current.children.push(element('br'))
++      return
++    }
++
++    if (token.type === 'hardbreak') {
++      current.children.push(element('br'))
++      return
++    }
++
++    if (token.type === 'html_block' || token.type === 'html_inline') {
++      current.children.push(raw(token.content || ''))
++      return
++    }
++
++    if (token.type === 'code_inline') {
++      current.children.push(
++        element('code', {}, token.content ? [text(token.content)] : [])
++      )
++      return
++    }
++
++    if (token.type === 'fence' || token.type === 'code_block') {
++      current.children.push(convertCode(token))
++      return
++    }
++
++    if (token.type === 'math_inline' || token.type === 'math_block') {
++      const html = token.meta && token.meta.mathHtml
++      current.children.push(raw(html || token.content || ''))
++      return
++    }
++
++    if (token.type === 'image') {
++      const properties = attrsToProps(token.attrs)
++      properties.alt = token.content || ''
++      current.children.push(element('img', properties))
++      return
++    }
++
++    if (token.type === 'task_checkbox') {
++      current.children.push(
++        element('input', {
++          type: 'checkbox',
++          class: 'task-list-item-checkbox',
++          disabled: true,
++          checked: !!(token.meta && token.meta.checked),
++        })
++      )
++      return
++    }
++
++    if (
++      (token.type === 'paragraph_open' || token.type === 'paragraph_close') &&
++      token.hidden
++    ) {
++      return
++    }
++
++    if (token.type === 's_open' || token.type === 's_close') {
++      token.tag = 'del'
++    }
++
++    if (token.nesting === 1) {
++      const node = element(token.tag, attrsToProps(token.attrs))
++      current.children.push(node)
++      stack.push(node)
++      current = node
++      return
++    }
++
++    if (token.nesting === -1) {
++      if (stack.length > 1) {
++        stack.pop()
++        current = stack[stack.length - 1]
++      }
++      return
++    }
++
++    if (token.tag) {
++      current.children.push(element(token.tag, attrsToProps(token.attrs)))
++    }
++  })
++}
++
++export const markdownTokensToHast = (tokens: any[]): MarkdownHastRoot => {
++  const root: MarkdownHastRoot = { type: 'root', children: [] }
++  convertTokens(tokens, root)
++  return root
++}
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index cbb3b9638148b690beeebd183383fda7efdebe13..ef753d280838ccdd38ddbea6ecec9976bb3c8546 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -104,6 +104,9 @@ importers:
+       lodash-es:
+         specifier: ^4.17.21
+         version: 4.17.21
++      markdown-it:
++        specifier: 14.1.0
++        version: 14.1.0
+       mermaid:
+         specifier: ^11.12.2
+         version: 11.12.2
+@@ -113,33 +116,9 @@ importers:
+       prosemirror-view:
+         specifier: ^1.42.2
+         version: 1.42.2
+-      rehype-katex:
+-        specifier: ^7.0.1
+-        version: 7.0.1
+-      remark-breaks:
+-        specifier: ^4.0.0
+-        version: 4.0.0
+-      remark-gfm:
+-        specifier: ^4.0.1
+-        version: 4.0.1
+-      remark-math:
+-        specifier: ^6.0.0
+-        version: 6.0.0
+-      remark-parse:
+-        specifier: ^11.0.0
+-        version: 11.0.0
+-      remark-rehype:
+-        specifier: ^11.1.2
+-        version: 11.1.2
+       shiki:
+         specifier: ^3.19.0
+         version: 3.19.0
+-      unified:
+-        specifier: ^11.0.5
+-        version: 11.0.5
+-      unist-util-visit:
+-        specifier: ^5.0.0
+-        version: 5.0.0
+       uuid:
+         specifier: ^13.0.0
+         version: 13.0.0
+@@ -219,6 +198,9 @@ importers:
+       '@types/lodash-es':
+         specifier: ^4.17.12
+         version: 4.17.12
++      '@types/markdown-it':
++        specifier: 14.1.2
++        version: 14.1.2
+       '@types/mdast':
+         specifier: ^4.0.4
+         version: 4.0.4

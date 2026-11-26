@@ -1,0 +1,81 @@
+{
+  "schema_version": "migration-public-contract/v1",
+  "task_id": "richardgirg-express-fileupload-20260909092636-c2cf52-r2",
+  "base_commit": "20269154bb9aab9672e7ff7ca500349e5d23fb5c",
+  "source": "express-fileupload@1.5.2 lib/index.js default option object + README, frozen at the base commit",
+  "recorded_at": "2026-09-22T00:00:00Z",
+  "description": "Frozen baseline of the public contract the migration must preserve. ``preserved_express_checks`` must hold for *every* legitimate candidate (migrated or not) and is what the hard gate enforces; ``target_koa_checks`` describe the Koa surface the completion verifier measures. ``gated_koa_checks`` lists the subset of target checks that are observable public defaults and therefore also gate a candidate that actually exercises the Koa path. The gate loads this file instead of an inline tuple so the contract cannot silently drift with the implementation.",
+  "express_surface": {
+    "module_exports": "(options) => (req, res, next) middleware",
+    "dual_signature": [
+      "(req, res, next)",
+      "(ctx, next)"
+    ],
+    "file_object_properties": [
+      "name",
+      "data",
+      "size",
+      "encoding",
+      "tempFilePath",
+      "truncated",
+      "mimetype",
+      "md5",
+      "mv"
+    ],
+    "option_defaults": {
+      "debug": false,
+      "useTempFiles": false,
+      "tempFileDir": "path.join(process.cwd(), 'tmp')",
+      "tempFilePermissions": 420,
+      "parseNested": false,
+      "safeFileNames": false,
+      "preserveExtension": false,
+      "abortOnLimit": false,
+      "responseOnLimit": "File size limit has been reached",
+      "createParentPath": false,
+      "uploadTimeout": 60000,
+      "limitHandler": null
+    }
+  },
+  "preserved_express_checks": [
+    "factory_is_function",
+    "factory_returns_middleware",
+    "express_bypass_calls_next",
+    "debug_default_false",
+    "logger_default_console",
+    "express_upload_preserved",
+    "express_response_on_limit_default_text",
+    "default_upload_timeout_preserved"
+  ],
+  "target_koa_checks": [
+    "koa_bypass_returns_promise",
+    "default_use_temp_files_false",
+    "default_parse_nested_false",
+    "default_filename_rules_preserved",
+    "default_temp_file_dir_used",
+    "default_temp_file_permissions",
+    "default_abort_on_limit_false",
+    "default_response_on_limit_text",
+    "default_create_parent_path_false",
+    "default_hash_algorithm_md5",
+    "explicit_options_override_defaults"
+  ],
+  "gated_koa_checks": [
+    "default_temp_file_permissions"
+  ],
+  "option_defaults_check_map": {
+    "debug": "debug_default_false",
+    "useTempFiles": "default_use_temp_files_false",
+    "tempFileDir": "default_temp_file_dir_used",
+    "tempFilePermissions": "default_temp_file_permissions",
+    "parseNested": "default_parse_nested_false",
+    "safeFileNames": "default_filename_rules_preserved",
+    "preserveExtension": "default_filename_rules_preserved",
+    "abortOnLimit": "default_abort_on_limit_false",
+    "responseOnLimit": "express_response_on_limit_default_text",
+    "createParentPath": "default_create_parent_path_false",
+    "uploadTimeout": "default_upload_timeout_preserved",
+    "limitHandler": "default_abort_on_limit_false"
+  },
+  "option_defaults_check_map_note": "Every express_surface.option_defaults key is mapped to the probe check that observes it. Keys whose check id is listed in preserved_express_checks gate the candidate; the rest are recorded by the target-Koa registry. limitHandler is observed through the default size-limit behaviour (no custom handler, no abort). The hard gate refuses to score when a key has no mapping or a mapping names an unregistered check (QC items 53/56)."
+}

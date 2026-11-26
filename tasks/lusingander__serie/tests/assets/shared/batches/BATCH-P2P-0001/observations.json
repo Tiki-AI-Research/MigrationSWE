@@ -1,0 +1,539 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "relation": "equal_after_normalization",
+  "normalization": {
+    "value_shape": {
+      "result": "PASS"
+    },
+    "rule": "Each side runs the repository-native checks selected below and reports the same status wrapper for every observation; the wrapper is emitted only for checks that actually passed."
+  },
+  "observations": [
+    {
+      "id": "P2P-001",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::merge_"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-002",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-003",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_path": "src/main.rs",
+      "target_path": "cmd/serie-core/main.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "config::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-004",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-005",
+      "requirement_ids": [
+        "R031"
+      ],
+      "source_path": "Cargo.toml",
+      "target_path": "go.mod",
+      "source_probe": {
+        "kind": "structural",
+        "check": "source-protected-files"
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-change-scope"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "requirement_ids": [
+        "R017"
+      ],
+      "source_path": "src/tests/mailmap.rs",
+      "target_path": "core/repository_test.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "mailmap_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-007",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-008",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-009",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-010",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_path": "src/config.rs",
+      "target_path": "core/config.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "config::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-011",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-012",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-013",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-014",
+      "requirement_ids": [
+        "R024"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-015",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::stash_"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-016",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-017",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/serie.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-018",
+      "requirement_ids": [
+        "R027"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/serie.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": []
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-019",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_path": "src/app.rs",
+      "target_path": "src/app.rs",
+      "source_probe": {
+        "kind": "structural",
+        "check": "source-protected-files"
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-protected-paths"
+      }
+    },
+    {
+      "id": "P2P-020",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::branch_"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-021",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-022",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_path": "src/tests/graph.rs",
+      "target_path": "core/graph_test.go",
+      "source_probe": {
+        "kind": "structural",
+        "check": "source-protected-files"
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-test-wiring"
+      }
+    },
+    {
+      "id": "P2P-023",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-024",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_path": "src/tests/graph.rs",
+      "target_path": "src/tests/graph.rs",
+      "source_probe": {
+        "kind": "structural",
+        "check": "source-protected-files"
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-protected-tests"
+      }
+    },
+    {
+      "id": "P2P-025",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_path": "src/graph/calc.rs",
+      "target_path": "core/graph.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-026",
+      "requirement_ids": [
+        "R033"
+      ],
+      "source_path": "config.schema.json",
+      "target_path": "config.schema.json",
+      "source_probe": {
+        "kind": "structural",
+        "check": "source-protected-files"
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-schema-compat"
+      }
+    },
+    {
+      "id": "P2P-027",
+      "requirement_ids": [
+        "R005"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-028",
+      "requirement_ids": [
+        "R032"
+      ],
+      "source_path": "src/app.rs",
+      "target_path": "src/app.rs",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": []
+      },
+      "target_probe": {
+        "kind": "structural",
+        "check": "target-rust-baseline"
+      }
+    },
+    {
+      "id": "P2P-029",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    },
+    {
+      "id": "P2P-030",
+      "requirement_ids": [
+        "R006"
+      ],
+      "source_path": "src/git.rs",
+      "target_path": "core/repository.go",
+      "source_probe": {
+        "kind": "cargo-test",
+        "filters": [
+          "graph_tests::head_"
+        ]
+      },
+      "target_probe": {
+        "kind": "go-test",
+        "tests": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "batch_id": "BATCH-P2P-0002",
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "kind": "P2P",
+  "schema_version": "migration-asset-fragment:v2",
+  "static_asset": "feincms/static/feincms/jquery-1.11.3.min.js",
+  "allowed_change_scope": [
+    "feincms/admin/filters.py",
+    "feincms/extensions/datepublisher.py",
+    "setup.cfg",
+    "tox.ini",
+    ".pre-commit-config.yaml"
+  ],
+  "projection_contract": {
+    "relation": "equal_after_normalization",
+    "description": "Each observation exposes a concrete, execution-derived projection that is byte-identical on the source and target sides after normalisation; bare control statuses such as {\"result\": \"PASS\"} are never emitted. Every probe reads the repository with the Python standard library only, so the projection is stable regardless of which repository runtime is installed.",
+    "source_and_target": "both sides must really PASS; the projection is computed by executing the shared probe against the repository on each side"
+  },
+  "observations": [
+    {
+      "observation_id": "P2P-025",
+      "contract_requirement_ids": ["R011"],
+      "surface": "content type render(**kwargs) contract",
+      "source_path": "feincms/models.py",
+      "probe": "render_contract",
+      "projection_keys": [
+        "models_compiles",
+        "render_defined",
+        "accepts_var_keyword",
+        "dispatches_region_method",
+        "raises_not_implemented"
+      ],
+      "executes": "AST-parses feincms/models.py, locates the content-type base render function and checks its **kwargs signature, its render_<region> dispatch and its NotImplementedError fallback"
+    },
+    {
+      "observation_id": "P2P-026",
+      "contract_requirement_ids": ["R025"],
+      "surface": "test:tests/testapp/tests/test_template_change_e2e.py#test_double_submission_protection",
+      "source_path": "tests/testapp/tests/test_template_change_e2e.py",
+      "probe": "template_change",
+      "projection_keys": [
+        "e2e_test_defined",
+        "script_present",
+        "click_trigger_present",
+        "selector_fix_present",
+        "disable_attr_present",
+        "disable_after_click"
+      ],
+      "executes": "checks the non-Playwright double-submission fix in feincms/static/feincms/item_editor.js and the browser test definition in the e2e module (the Playwright case itself is excluded because it needs a privileged browser)"
+    },
+    {
+      "observation_id": "P2P-027",
+      "contract_requirement_ids": ["R021"],
+      "surface": "test:feincms/static/feincms/jquery-1.11.3.min.js#<",
+      "source_path": "feincms/static/feincms/jquery-1.11.3.min.js",
+      "probe": "static_asset",
+      "projection_keys": ["sha256", "present"],
+      "executes": "sha256 of the repository static asset"
+    },
+    {
+      "observation_id": "P2P-028",
+      "contract_requirement_ids": ["R023"],
+      "surface": "Python floor and tox Python matrix",
+      "source_path": "tox.ini",
+      "probe": "python_support",
+      "projection_keys": ["python_requires", "python_environments"],
+      "executes": "parses setup.cfg [options] and tox.ini envlist"
+    },
+    {
+      "observation_id": "P2P-029",
+      "contract_requirement_ids": ["R019"],
+      "surface": "public FeinCMS capabilities and contracts",
+      "source_path": "feincms/__init__.py",
+      "probe": "public_imports",
+      "projection_keys": [
+        "settings_is_lazy",
+        "settings_type",
+        "handler_defined",
+        "parent_filter_defined",
+        "category_filter_defined",
+        "field_list_filter_registered",
+        "item_editor_defined",
+        "tree_editor_defined",
+        "raw_content_render_defined",
+        "modules_compile"
+      ],
+      "executes": "AST-parses and byte-compiles the public FeinCMS modules and verifies that the preserved public symbols remain defined and registered"
+    },
+    {
+      "observation_id": "P2P-030",
+      "contract_requirement_ids": ["R025"],
+      "surface": "test:tests/testapp/tests/test_page.py#test_24_admin_redirects",
+      "source_path": "tests/testapp/tests/test_page.py",
+      "probe": "admin_redirects",
+      "projection_keys": [
+        "test_class_defined",
+        "test_present",
+        "test_module_compiles",
+        "response_add_defined",
+        "admin_module_compiles"
+      ],
+      "executes": "AST-parses tests/testapp/tests/test_page.py for PagesTestCase.test_24_admin_redirects and verifies the admin response_add behaviour it exercises"
+    },
+    {
+      "observation_id": "P2P-031",
+      "contract_requirement_ids": ["R005"],
+      "surface": "declared Python support range and migration change scope",
+      "source_path": "setup.cfg",
+      "probe": "metadata_scope",
+      "projection_keys": [
+        "python_requires",
+        "classifier_versions",
+        "change_scope_confined"
+      ],
+      "executes": "parses setup.cfg metadata and inspects the git working tree"
+    }
+  ]
+}

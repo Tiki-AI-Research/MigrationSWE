@@ -1,0 +1,2693 @@
+{
+  "coverage_reasons": [
+    {
+      "path": ".gitignore",
+      "reason": "non-text-source",
+      "status": "excluded"
+    },
+    {
+      "path": ".prettierrc",
+      "reason": "non-text-source",
+      "status": "excluded"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "reason": "non-text-source",
+      "status": "excluded"
+    },
+    {
+      "path": "README.md",
+      "reason": "non-text-source",
+      "status": "excluded"
+    }
+  ],
+  "groups": {
+    "DIFFERENTIAL": [],
+    "F2P": [
+      {
+        "atomic_claim": "The lockfile resolves devalue 6.0.0 and contains no devalue 4.3.3 entry.",
+        "contract_requirement_ids": [
+          "R012"
+        ],
+        "coverage": {
+          "input_class": "pnpm-lock.yaml at the migrated revision",
+          "projection": "resolved devalue version and absence of a 4.3.3 resolution",
+          "scenario": "resolve the frozen dependency graph from the lockfile",
+          "surface": "source:pnpm-lock.yaml"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00088"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:5bf02e46683ea1f2870cce05ffdb789e651e5cae54752916021b36023994948d",
+        "id": "F2P-001",
+        "kind": "F2P",
+        "projection_signature": "sha256:2cca245589e4188a3e21921cf63ac675c95f389e86412aff1a1d8e80a9738d8d",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "package.json declares a Node.js engine floor at or above 22.17.",
+        "contract_requirement_ids": [
+          "R021"
+        ],
+        "coverage": {
+          "input_class": "package.json at the migrated revision",
+          "projection": "declared engines.node lower bound",
+          "scenario": "inspect package metadata for the Node.js engine floor",
+          "surface": "package.json engines.node"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00092"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:1d409e6bff3f6eae6880c1191ad5ecb6badd38ee3d91c4961abd81a83b4add01",
+        "id": "F2P-005",
+        "kind": "F2P",
+        "projection_signature": "sha256:c4b62e04b3448a721a0920fc4304a54dce1384d2057748ebc925fd70a0fb2698",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "parse and unflatten reject a null-prototype object payload carrying a non-string key.",
+        "contract_requirement_ids": [
+          "R011"
+        ],
+        "coverage": {
+          "input_class": "malformed unflatten payload containing a null-prototype object and a non-string key",
+          "projection": "rejection of non-string keys while preserving string-key decoding",
+          "scenario": "call unflatten with a non-string key and then with a valid string key",
+          "surface": "runtime:unflatten"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00093"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:4f025111e1d3b47b5f7881c88b1d8b71d98c2c7bbce9eacd22536ecd0e4d4734",
+        "id": "F2P-006",
+        "kind": "F2P",
+        "projection_signature": "sha256:609b40d569517094f610b86f1904efd2e11ad6f00be4fda9c16e02f0e810995d",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Node.js Buffers serialize as Uint8Array values containing only their visible bytes through stringify, stringifyAsync and uneval, without emitting the shared allocation pool.",
+        "contract_requirement_ids": [
+          "R018"
+        ],
+        "coverage": {
+          "input_class": "Node.js Buffers drawn from a shared allocation pool, including subarray and empty views and repeated references",
+          "projection": "payload and uneval source contain only each Buffer's visible bytes, and repeated references stay identical after parse",
+          "scenario": "serialize Buffers with stringify, stringifyAsync and uneval, then revive them and compare bytes and identity",
+          "surface": "runtime:stringify,stringifyAsync,uneval"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00501"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:e45bf21b718813d9fdd34a72f854b4f70fa935e742b79a4f028a379e8633a285",
+        "id": "F2P-007",
+        "kind": "F2P",
+        "projection_signature": "sha256:84bc1be6dd50631e3cf4765ae4c29bbff0c564da76bd79b07241ca18b73ee870",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval passes a js tag to the replacer, renders tagged-template holes recursively, and keeps shared-reference identity across replaced and plain values.",
+        "contract_requirement_ids": [
+          "R019"
+        ],
+        "coverage": {
+          "input_class": "a graph with two custom values that share one plain object and a list that repeats that object",
+          "projection": "the evaluator receives a callable js tag, the evaluated source rebuilds both custom values, and every reference to the shared object resolves to one instance",
+          "scenario": "call uneval with a replacer that returns tagged-template fragments containing a nested fragment",
+          "surface": "source:uneval replacer tagged-template contract"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00601"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:e1916c36041a9ed133e82270327d3175aa20b016148ac7f2fe8d5c1bb977a3a0",
+        "id": "F2P-008",
+        "kind": "F2P",
+        "projection_signature": "sha256:380dc672ca78da6c3fda29c06a270eea934315750cbf618a04063268b6f128f2",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval rejects every non-fragment replacer result with TypeError and falls back to normal serialization for undefined, null and false.",
+        "contract_requirement_ids": [
+          "R019"
+        ],
+        "coverage": {
+          "input_class": "replacer return values covering a string, number, boolean, plain object, array, function, symbol and bigint, plus undefined, null and false",
+          "projection": "TypeError for each disallowed result and an unchanged serialization for each documented fallback",
+          "scenario": "call uneval with a replacer that always returns one candidate result value",
+          "surface": "source:uneval replacer return-value contract"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00602"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:625ece72f87006511f3bce0dd52a8ffad06b1fa07cb4c487d637e62c853327f8",
+        "id": "F2P-009",
+        "kind": "F2P",
+        "projection_signature": "sha256:07842b509af81af9f85d6a054a3a974982c700bdd46ddf5742fe3cc151d56fcc",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Identifiers written in tagged-template strings are reserved so generated hoisted names cannot shadow fragment locals, including in nested templates.",
+        "contract_requirement_ids": [
+          "R019"
+        ],
+        "coverage": {
+          "input_class": "a fragment with local bindings named like generated names while a repeated long string is hoisted",
+          "projection": "the evaluated result keeps the repeated long string values and the fragment-local expressions unchanged",
+          "scenario": "call uneval with a replacer whose outer and nested templates declare identifiers",
+          "surface": "source:uneval generated identifier namespace"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00603"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:123aac16afd802b074825a2bad44e5e36c0c9054120c997791538262174fa361",
+        "id": "F2P-010",
+        "kind": "F2P",
+        "projection_signature": "sha256:ad286dc24e4e96482aaf85a0fb4ab966cdb782b2a43bc956841d7f10a0d277dc",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A custom replacement that cycles back into a Map is constructed exactly once, after the earlier entries exist, preserving its snapshot and the insertion order.",
+        "contract_requirement_ids": [
+          "R019"
+        ],
+        "coverage": {
+          "input_class": "a Map whose entry value is a custom-constructed object that captures the Map at construction time",
+          "projection": "constructor call count, captured prefix, insertion order, and identity links between the object and the Map",
+          "scenario": "call uneval on a graph where a replaced value refers back to its containing Map",
+          "surface": "source:uneval custom values inside cyclic collections"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00604"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:9ee08c5488d6488b2e1e4cb80751415699705c111bd70bc58f7a6a8289673c32",
+        "id": "F2P-011",
+        "kind": "F2P",
+        "projection_signature": "sha256:5cfc76849e9e79e6a72d130a2c3486a533b0a8c3648382854bdb0bd6a61fa981",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "stringify emits well-formed output for unpaired UTF-16 surrogates and round-trips them unchanged through UTF-8 transport.",
+        "contract_requirement_ids": [
+          "R020"
+        ],
+        "coverage": {
+          "input_class": "lone high and low surrogate strings, adjacent unpaired surrogates, and a well-formed pair",
+          "projection": "output is well-formed, survives an encode/decode transport unchanged, parses back to the original code units, and leaves a valid pair unescaped",
+          "scenario": "serialize each sample string and parse the transported payload",
+          "surface": "source:src/utils.js stringify_string"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00605"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:f14413a4281046a1df3f1c6e0d0c846e6ea046de3bcbd8d79d10b9ed5e332076",
+        "id": "F2P-012",
+        "kind": "F2P",
+        "projection_signature": "sha256:e04f22e9c35eac4b9bd5a2efb1e58d781e02b740cbb86fd21571a5cbefe258df",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval emits well-formed JavaScript source for unpaired UTF-16 surrogates and reproduces the original code units after UTF-8 transport.",
+        "contract_requirement_ids": [
+          "R020"
+        ],
+        "coverage": {
+          "input_class": "lone high and low surrogate strings, adjacent unpaired surrogates, and a well-formed pair",
+          "projection": "source is well-formed, survives transport, and evaluates to strings with identical UTF-16 code units",
+          "scenario": "call uneval on each sample string, transport the source, and evaluate it",
+          "surface": "source:src/uneval.js string encoding"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00606"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:5c8365983a8eb307f9fa38f4dbcaf5ced9b035381ac8e8ed45bda4ff42c2e833",
+        "id": "F2P-013",
+        "kind": "F2P",
+        "projection_signature": "sha256:68308ca32d849794f24d858d6e61b9c4c9b9f19c3ba4572e69beb04b6dbc95af",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "stringify and stringifyAsync keep unpaired surrogates safe in object keys, nested arrays and objects, Map entries and Set members.",
+        "contract_requirement_ids": [
+          "R020"
+        ],
+        "coverage": {
+          "input_class": "a nested value carrying lone surrogates in a property key, a nested array, a nested object, a Map key and value, and a Set member",
+          "projection": "both payloads are well-formed, survive UTF-8 transport, and parse back to the original keys, entries and code units",
+          "scenario": "serialize the nested value through both the synchronous and asynchronous paths and parse each payload",
+          "surface": "source:stringify and stringifyAsync nested container encoding"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00607"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:4c4941dbd1101d9eea055487f56f4785a618d7cb6535c39d2e7e81ec19a12a9c",
+        "id": "F2P-014",
+        "kind": "F2P",
+        "projection_signature": "sha256:b84e823b148a170da189a204a951e2a018e26ba08b9c589ab7f08dfa94955a9b",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval keeps unpaired surrogates safe in object keys, nested arrays and objects, Map entries and Set members.",
+        "contract_requirement_ids": [
+          "R020"
+        ],
+        "coverage": {
+          "input_class": "a nested value carrying lone surrogates in a property key, a nested array, a nested object, a Map key and value, and a Set member",
+          "projection": "the emitted source is well-formed, survives transport, and evaluates to the original nested keys, entries and code units",
+          "scenario": "call uneval on the nested value, transport the source, and evaluate it",
+          "surface": "source:uneval nested container encoding"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00608"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:15e4185fe4bff6b84150f32df06d05c386453a59aaa86d4e979d76eee88c2ac5",
+        "id": "F2P-015",
+        "kind": "F2P",
+        "projection_signature": "sha256:26e740ecde7fb82155807e5f5f70e55b143815fa3ea567a7de86082892c53528",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval inlines every value that occurs exactly once and keeps each fragment inside the scope of the fragment that encloses it.",
+        "contract_requirement_ids": [
+          "R019"
+        ],
+        "coverage": {
+          "input_class": "a value graph in which every object and array occurs exactly once, serialized through a replacer whose fragment nests another fragment",
+          "projection": "the emitted source declares no generated binding and evaluates to the original nested structure",
+          "scenario": "call uneval with a replacer on a singly-referenced graph, inspect the emitted source, and evaluate it",
+          "surface": "source:uneval inline emission"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00609"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:d649c62132809c37b9cc2fab1488cbcc04251c151c3a2497ac412c5990dd07f1",
+        "id": "F2P-016",
+        "kind": "F2P",
+        "projection_signature": "sha256:fa1806b7fa292f8481c80444a356584e6d9faaa27c24136eb107f7c2b45b633a",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "View revivers reject non-buffer backings and preserve real ArrayBuffer/SharedArrayBuffer backings for full and partial views.",
+        "contract_requirement_ids": [
+          "R022"
+        ],
+        "coverage": {
+          "input_class": "candidate-produced full/subview payloads for Uint8Array, Int32Array, Float64Array and DataView",
+          "projection": "parse/unflatten preserve the backing instance, offsets, lengths and bytes without coercing invalid backings",
+          "scenario": "View revivers reject non-buffer backings and preserve real ArrayBuffer/SharedArrayBuffer backings for full and partial views.",
+          "surface": "source:parse view reconstruction"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00610"
+        ],
+        "family": "source-span",
+        "id": "F2P-017",
+        "kind": "F2P",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS",
+        "fingerprint": "sha256:4d1113142404092f1db18001c2e86fe5bc40d6d33177b6a21240942ef1dba1ef",
+        "projection_signature": "sha256:11bae769e0320e025b92a7d62946ac502a8fab46bb00404c7f3dac1dd2f36c10",
+        "reason": "evidence-bound-atomic-observation"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00611"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:5d7d656cf65b13baf314497e299d3de66fd58f66c71569388625ad555897c9e4",
+        "id": "F2P-018",
+        "kind": "F2P",
+        "projection_signature": "sha256:0cc6b8dfc303184391294ad081354cd82cbabced088e956b3895606bcfa1f767",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00612"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:b39a2556ec16d2698a89476648a016b2fed217943dea5ef9aafb38a396eba3ad",
+        "id": "F2P-019",
+        "kind": "F2P",
+        "projection_signature": "sha256:180675a48a2dc8c12a2f2d3da44c7b1b0d3c5d96d2359d76f0045b0e9bd0fd85",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00613"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:673a9ac9e0d33953a935123c9e6a793f3ce37eac8c48815b9f7abab73016d5f6",
+        "id": "F2P-020",
+        "kind": "F2P",
+        "projection_signature": "sha256:2ad978b1a78f55c35e95695a52665ea9bb596c0322729c4f4736e27e566226d9",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00614"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:bb73500a6f1fc40711566312b654c5683c95a4594646d0bcf6339e6a91c5432d",
+        "id": "F2P-021",
+        "kind": "F2P",
+        "projection_signature": "sha256:c7189f81091776f89a92cf6298e0ce8228614ce870d35aabafa13df7189cb6f4",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00615"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:84ee0fe7f79901470d606773be58d7542ee87ea8a300e0b9e8a99ceff332d58f",
+        "id": "F2P-022",
+        "kind": "F2P",
+        "projection_signature": "sha256:d52365b3b2e8b9983d8ec2456ee40bb71c869d32d634fbf25a6ff88fa968d4f1",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+        "contract_requirement_ids": [
+          "R023"
+        ],
+        "coverage": {
+          "input_class": "thenables before/after/nested beside failures in objects, arrays and Map entries, including delayed, getter and reducer failures",
+          "projection": "the original rejection marker or the matching DevalueError path/value/root is preserved, with zero unhandled rejections; successful controls preserve special values and shared identity",
+          "scenario": "A settled stringifyAsync call preserves its actual failure and handles every reached thenable rejection without prescribing message text or traversal priority.",
+          "surface": "runtime:stringifyAsync rejection handling"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00616"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:19fb9a030dd4b8ba0e92db3358c7b4190922fe3d99374370f5e79d19432b073f",
+        "id": "F2P-023",
+        "kind": "F2P",
+        "projection_signature": "sha256:d78e248cc3203cfbfff6aa43db48786fcdfd159b48f503efcf780adc66a170ef",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval emits a repeated long string once per call and references it from every position in nested arrays and objects.",
+        "contract_requirement_ids": [
+          "R024"
+        ],
+        "coverage": {
+          "input_class": "an object graph that repeats one string of 128 characters or more at several depths inside arrays and objects",
+          "projection": "the emitted source contains the long string exactly once and every revived position holds the original value",
+          "scenario": "call uneval on the graph, count occurrences of the string in the source, and evaluate the source",
+          "surface": "runtime:uneval"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00617"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:8a03639570ce542e3d56f8403bdb4d21c3ad127235528f2a6ad20b676b074c63",
+        "id": "F2P-024",
+        "kind": "F2P",
+        "projection_signature": "sha256:0841579016f1f181a55a3a69bd520f946ddc295a4dcf53616dba538deda13548",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval emits a repeated long string once per call inside Map keys, Map values and Set member content while preserving entry order.",
+        "contract_requirement_ids": [
+          "R024"
+        ],
+        "coverage": {
+          "input_class": "a Map whose key and value repeat one long string and a Set whose member objects repeat the same string",
+          "projection": "the emitted source contains the long string exactly once, Map entries keep insertion order, and Set members keep their structure",
+          "scenario": "call uneval on the collections, count occurrences of the string, then evaluate the source and inspect Map order and Set membership",
+          "surface": "runtime:uneval Map and Set entries"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00618"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:d180a4376dc686314667947459137044ac95cc3a2e508aedb7347e28615aef13",
+        "id": "F2P-025",
+        "kind": "F2P",
+        "projection_signature": "sha256:2f302cbea5ac0fd153b1b672a1058589f8b61323b859582b0779bab61b9b1f12",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Every repeated BigInt, including two occurrences of a short BigInt, is emitted once and referenced at every position.",
+        "contract_requirement_ids": [
+          "R024"
+        ],
+        "coverage": {
+          "input_class": "short and long BigInts repeated two or more times at the top level and in nested objects",
+          "projection": "one literal occurrence and unchanged revived values",
+          "scenario": "Every repeated BigInt, including two occurrences of a short BigInt, is emitted once and referenced at every position.",
+          "surface": "runtime:uneval BigInt values"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00619"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:4cc71234b462bc3425ed9e6bafc4c886f98098fa3d01718beec2f3f15e34a7b7",
+        "id": "F2P-026",
+        "kind": "F2P",
+        "projection_signature": "sha256:893b3c1ca92db81b7efe388c0ddb8430c7608b5afc6801ef0f2f93f3f4d1252c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval emits the primitive value of a repeated boxed string once, keeps wrapper identity, and still restores unwrapped occurrences.",
+        "contract_requirement_ids": [
+          "R024"
+        ],
+        "coverage": {
+          "input_class": "an object that repeats one boxed String and also repeats its unwrapped primitive value",
+          "projection": "the emitted source contains the wrapped string exactly once, both boxed positions revive as one String wrapper, and the unwrapped positions revive as primitives",
+          "scenario": "call uneval on the object, count occurrences of the string, and evaluate the source to compare wrapper identity and values",
+          "surface": "runtime:uneval boxed primitives"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00620"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:c63ddab231659833853b31cfb0766f438f7567ea8d452c8d32f1501a86298b46",
+        "id": "F2P-027",
+        "kind": "F2P",
+        "projection_signature": "sha256:aa6c8719e1b4a89f14f53d0a3748e7365aaa395a3195f0fd7ce96443c9cab524",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval reproduces declared length and holes for an array whose prototype supplies a non-own trailing index, without emitting that inherited value.",
+        "contract_requirement_ids": [
+          "R025"
+        ],
+        "coverage": {
+          "input_class": "an array with declared length 3, two own elements and a prototype-supplied index 2",
+          "projection": "the revived array keeps length 3 with index 2 as a hole, owns only indices 0 and 1, and does not expose the inherited value",
+          "scenario": "call uneval on the array and evaluate the emitted source to inspect length, own keys and index 2",
+          "surface": "runtime:uneval array reconstruction"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00621"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:d4d18849b2f8f8880ec259aaa2a15572db140aa1d249887b0b95c4a81a98907e",
+        "id": "F2P-028",
+        "kind": "F2P",
+        "projection_signature": "sha256:3a8a17f2a4db45a30210202a6e0f3825b4522c7f3161a6a98e1482f8c580897b",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval emits a repeated BigInt once per call across Map keys, Map values and Set member content.",
+        "contract_requirement_ids": [
+          "R024"
+        ],
+        "coverage": {
+          "input_class": "a Map whose key and value repeat one BigInt and a Set whose member objects repeat the same BigInt",
+          "projection": "the emitted source contains the BigInt literal exactly once and the revived Map and Set keep their entries",
+          "scenario": "call uneval on the collections, count occurrences of the BigInt literal, and evaluate the source to inspect the Map and Set",
+          "surface": "runtime:uneval Map and Set BigInt entries"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00622"
+        ],
+        "family": "source-runtime",
+        "fingerprint": "sha256:52ecac448ca7bf1af6804fa017840021c83a46fe1ac28956da875d7d4a077c4e",
+        "id": "F2P-029",
+        "kind": "F2P",
+        "projection_signature": "sha256:cc80abe434f62281237fb51847b523284413559b9f5c9a533c6d4b93316d828c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "The package's declared type entry exports JavaScriptFragment, so a strict TypeScript consumer can import it and use it as a type.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that imports JavaScriptFragment from the package by its published name",
+          "projection": "the import resolves through the declared type entry and the name can be used as a type without a diagnostic",
+          "scenario": "compile a consumer fixture that imports and uses JavaScriptFragment against the package's declared type entry",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00623"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:db34ad942fce67eaa4279a9f01faf5ba60e416ad3188a328588d967322abfe26",
+        "gate_id": "F2P-030",
+        "id": "F2P-030",
+        "kind": "F2P",
+        "projection_signature": "sha256:3e6e7d94b64f79531f1c28a6f7a8e2e89b81f22a4beb6722723d99b80c3a64f0",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "JavaScriptTag is exported and a tagged-template call on it produces a JavaScriptFragment while its holes accept arbitrary values.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that imports JavaScriptTag and JavaScriptFragment and calls the tag with number, string, boolean, null, undefined, bigint and symbol holes",
+          "projection": "the tagged-template call is accepted and its result is assignable to JavaScriptFragment",
+          "scenario": "compile a consumer fixture that calls a declared JavaScriptTag with heterogeneous holes and assigns the result to JavaScriptFragment",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00624"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:8b2f8f964882e0b371234d1ed75e8d1e0fd1cb38de1d8e7211b5fd25c72c57a9",
+        "gate_id": "F2P-031",
+        "id": "F2P-031",
+        "kind": "F2P",
+        "projection_signature": "sha256:c12f1fa49d60f6377fbc8558cce6a7c6def5db82576416803f2f2cfe96b36cfe",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "UnevalReplacer is exported with a (value, js) signature whose JavaScriptFragment result is accepted.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that annotates a replacer as UnevalReplacer and returns a tagged fragment",
+          "projection": "the annotated replacer type-checks and its js parameter is the exported JavaScriptTag type",
+          "scenario": "compile a consumer fixture that assigns a fragment-returning function to UnevalReplacer",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00625"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:05297bc7b0ec667e91939587f87d1851d6c3d253de208f5d4e6ac696e7b60fbc",
+        "gate_id": "F2P-032",
+        "id": "F2P-032",
+        "kind": "F2P",
+        "projection_signature": "sha256:7e900e4938622dce7e8cc9ac4571da82a993b369c66aa66cf1f5883287741ffd",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "UnevalReplacer accepts undefined, null, false and no return value as normal-serialization fallbacks.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that assigns replacers returning undefined, null, false and nothing",
+          "projection": "all four fallback forms are accepted without a diagnostic",
+          "scenario": "compile a consumer fixture with four UnevalReplacer assignments covering the documented fallbacks",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00626"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:5dfab69fca4b8322523b1b9eaf4ff3aba8cc93c4a3e9e8d685dbcff7d1430708",
+        "gate_id": "F2P-033",
+        "id": "F2P-033",
+        "kind": "F2P",
+        "projection_signature": "sha256:fd27f80ba12c81425e7d79a63279786658501b5c75492929612c7be63083a404",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "UnevalReplacer rejects strings, numbers, true, plain objects and functions at the type level.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that assigns replacers returning a string, a number, true, a plain object and a function",
+          "projection": "every invalid return produces the expected compile-time error and each required suppression is consumed",
+          "scenario": "compile a consumer fixture whose invalid replacer results each carry a required type error",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00627"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:01980d67f51df0f8fdc88e19ebe87f8271c065d6c566c07b8ba801c58cc51147",
+        "gate_id": "F2P-034",
+        "id": "F2P-034",
+        "kind": "F2P",
+        "projection_signature": "sha256:af482e8d9f5182f4e3b5ccc9826d1e951c74f32943fdd9d9632c08ed4d380410",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "JavaScriptFragment is opaque and JavaScriptTag is callable only as a tagged template.",
+        "contract_requirement_ids": [
+          "R026"
+        ],
+        "coverage": {
+          "input_class": "a strict TypeScript consumer that calls the tag with a plain string and assigns an object literal to JavaScriptFragment",
+          "projection": "both misuses produce a compile-time error while a genuine fragment stays usable as a type",
+          "scenario": "compile a consumer fixture whose forged fragment and non-template tag call each carry a required type error",
+          "surface": "declared type entry:public type surface"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00628"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:94f04942f25764c2ed727cb0c8a430816667b044851a9755c3a416866ed52322",
+        "gate_id": "F2P-035",
+        "id": "F2P-035",
+        "kind": "F2P",
+        "projection_signature": "sha256:e77b929fe9f5d01c977562f85d9042015413bdfb5890a88005ec2a98c6e8377c",
+        "reason": "evidence-bound-atomic-observation",
+        "requirement_ids": [
+          "R026"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Every documented public export remains importable and callable, so the listed behaviors stay observable with no regression.",
+        "contract_requirement_ids": [
+          "R001",
+          "R002",
+          "R003",
+          "R004",
+          "R005",
+          "R006",
+          "R007",
+          "R008",
+          "R009",
+          "R010",
+          "R011",
+          "R013",
+          "R014",
+          "R016",
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "documented public exports and their minimal valid arguments",
+          "projection": "all imports resolve and every representative call produces its documented behavior without throwing",
+          "scenario": "import the documented public exports from the package entry point and invoke a minimal representative call on each",
+          "surface": "source:src/constants.js"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00128",
+          "EVIDENCE-00139",
+          "EVIDENCE-00163",
+          "EVIDENCE-00203",
+          "EVIDENCE-00204",
+          "EVIDENCE-00219",
+          "EVIDENCE-00229",
+          "EVIDENCE-00230",
+          "EVIDENCE-00235",
+          "EVIDENCE-00236",
+          "EVIDENCE-00247",
+          "EVIDENCE-00256",
+          "EVIDENCE-00260",
+          "EVIDENCE-00261",
+          "EVIDENCE-00280",
+          "EVIDENCE-00286"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:a441ea0725b98580897fc324e41922d948fc1862cfc74d6a612e01c2e06b5885",
+        "id": "P2P-037",
+        "kind": "F2P",
+        "projection_signature": "sha256:dc2c7766b5b7327fd0af6fa44572ff2a1d2f084c1ba9a598c8e3fd681e0b8477",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "No listed value type, reference pattern or rejection case regresses after migration.",
+        "contract_requirement_ids": [
+          "R016"
+        ],
+        "coverage": {
+          "input_class": "all listed value types, reference patterns and rejection cases",
+          "projection": "per-case outcome parity with the source package",
+          "scenario": "re-run the listed value, reference and rejection matrix against the migrated package",
+          "surface": "symbol:a"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00406",
+          "EVIDENCE-00407",
+          "EVIDENCE-00408",
+          "EVIDENCE-00409",
+          "EVIDENCE-00410",
+          "EVIDENCE-00411",
+          "EVIDENCE-00415",
+          "EVIDENCE-00416",
+          "EVIDENCE-00418",
+          "EVIDENCE-00419",
+          "EVIDENCE-00420",
+          "EVIDENCE-00421",
+          "EVIDENCE-00422",
+          "EVIDENCE-00423",
+          "EVIDENCE-00424",
+          "EVIDENCE-00425",
+          "EVIDENCE-00426",
+          "EVIDENCE-00427",
+          "EVIDENCE-00448",
+          "EVIDENCE-00449",
+          "EVIDENCE-00452",
+          "EVIDENCE-00462",
+          "EVIDENCE-00463",
+          "EVIDENCE-00469",
+          "EVIDENCE-00480",
+          "EVIDENCE-00481",
+          "EVIDENCE-00482",
+          "EVIDENCE-00483",
+          "EVIDENCE-00484",
+          "EVIDENCE-00485",
+          "EVIDENCE-00486",
+          "EVIDENCE-00487",
+          "EVIDENCE-00488",
+          "EVIDENCE-00489",
+          "EVIDENCE-00490",
+          "EVIDENCE-00491",
+          "EVIDENCE-00492",
+          "EVIDENCE-00493",
+          "EVIDENCE-00494",
+          "EVIDENCE-00497",
+          "EVIDENCE-00498",
+          "EVIDENCE-00499",
+          "EVIDENCE-00500"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:01386e22ac3b9844f004eda59bf5bd02cec809efb931da2b89c4cb7e15d7b25c",
+        "id": "P2P-001",
+        "kind": "F2P",
+        "projection_signature": "sha256:8037a33bf2b19fa6f8d2fa2a12a96b8c7b2984f72b737663d32c3dd3d4c6d726",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "DataView values round-trip through stringify/parse and uneval with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R008",
+          "R016"
+        ],
+        "coverage": {
+          "input_class": "a DataView value",
+          "projection": "value semantics equivalence after round-trip",
+          "scenario": "round-trip a DataView value through stringify/parse and uneval",
+          "surface": "round-trip behavior for built-in and platform value types"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00068"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:0b7a3d6dc24177b319666725e6defac8e05c9dcaa25c5dae8d8e64d84b87ef58",
+        "id": "P2P-003",
+        "kind": "F2P",
+        "projection_signature": "sha256:dd61da9717509c8a0b54b0a585c79dbdef395a8f20bd2e1caa6779a53caeef0b",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Every listed value type, reference pattern, and rejection case remains covered with no regression.",
+        "contract_requirement_ids": [
+          "R016"
+        ],
+        "coverage": {
+          "input_class": "all value types, reference patterns, and rejection cases enumerated by the contract",
+          "projection": "preservation of every enumerated case",
+          "scenario": "run the enumerated type, reference-pattern, and rejection matrix through stringify/parse",
+          "surface": "symbol:fixtures"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00339",
+          "EVIDENCE-00387",
+          "EVIDENCE-00388",
+          "EVIDENCE-00389",
+          "EVIDENCE-00390",
+          "EVIDENCE-00391",
+          "EVIDENCE-00392",
+          "EVIDENCE-00393",
+          "EVIDENCE-00394",
+          "EVIDENCE-00395",
+          "EVIDENCE-00396",
+          "EVIDENCE-00397",
+          "EVIDENCE-00398",
+          "EVIDENCE-00399",
+          "EVIDENCE-00400",
+          "EVIDENCE-00401",
+          "EVIDENCE-00402",
+          "EVIDENCE-00403"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:0cdb580e7236ba18a650debdaffd58a708b4b3ae1ea0b22e5d3e5834aea5db16",
+        "id": "P2P-004",
+        "kind": "F2P",
+        "projection_signature": "sha256:07d6ecad2d2772344f6da2c51c7df0f6bc7751a3d943914dad0424d0132a6d7a",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "The base64 buffer path round-trips ArrayBuffer bytes equivalently.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "ArrayBuffer bytes including empty and non-ASCII data",
+          "projection": "decoded bytes equal the original bytes",
+          "scenario": "encode then decode representative bytes on the buffer path",
+          "surface": "symbol:buffer"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00096",
+          "EVIDENCE-00099",
+          "EVIDENCE-00100",
+          "EVIDENCE-00103",
+          "EVIDENCE-00104",
+          "EVIDENCE-00110",
+          "EVIDENCE-00111",
+          "EVIDENCE-00112",
+          "EVIDENCE-00113",
+          "EVIDENCE-00115"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:0f8f99890327e702c1836e6e029aff30de31049ee3e6744e892e2f66438c6370",
+        "id": "P2P-005",
+        "kind": "F2P",
+        "projection_signature": "sha256:ddf4870f139012f47f327bf146e5c4fafad393da0193d464c175775fb10223cd",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "BigInt, Date, RegExp, Map, Set, ArrayBuffer, TypedArray, DataView, URL, URLSearchParams and Temporal values survive stringify/parse with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "container of structured and binary built-in values",
+          "projection": "each revived value is the expected type with equivalent contents",
+          "scenario": "Round-trip a container holding each structured and binary built-in value through stringify and parse.",
+          "surface": "symbol:base64"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00142",
+          "EVIDENCE-00143",
+          "EVIDENCE-00150",
+          "EVIDENCE-00157",
+          "EVIDENCE-00164",
+          "EVIDENCE-00198"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:143fd5364986d957a3dd05368fdc05b8959a92d8b2aa195dff50943f5b882be4",
+        "id": "P2P-006",
+        "kind": "F2P",
+        "projection_signature": "sha256:31223580ed034561ca467b7fa19643dfe0dcd7f847dfdad34c510fb11530580c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "DevalueError exposes name, path, value and root, and filterArrayIndices stays importable.",
+        "contract_requirement_ids": [
+          "R006"
+        ],
+        "coverage": {
+          "input_class": "inputs that make serialization fail",
+          "projection": "error field values and export availability",
+          "scenario": "raise a DevalueError and import filterArrayIndices from the entry point",
+          "surface": "symbol:descriptor"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00459",
+          "EVIDENCE-00460",
+          "EVIDENCE-00461",
+          "EVIDENCE-00467",
+          "EVIDENCE-00468"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:2f0a2e2fe2edbfac0492ad9bce58df7aaa9cc6976e366d690f1eedf61ae9349e",
+        "id": "P2P-009",
+        "kind": "F2P",
+        "projection_signature": "sha256:d08c4689439ca6fcb41b610a4749972e9da2fb35d6238431d280e86506712ab8",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "The configured unit test command still runs the shipped base64 test suite.",
+        "contract_requirement_ids": [
+          "R014"
+        ],
+        "coverage": {
+          "input_class": "the shipped unit test suite",
+          "projection": "test command exit status and reported results",
+          "scenario": "run the package unit test script",
+          "surface": "scripts:test"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00086"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:35932c608282fc3c2b25563d264103c054f9c502aef1f6052ff00f8d653baac6",
+        "id": "P2P-010",
+        "kind": "F2P",
+        "projection_signature": "sha256:9f94619ebd84c90e6e3b652df722d2e93bd1cb4a6129abf10c29a23468ee623d",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Sparse array decoding does not allocate memory proportional to the declared length.",
+        "contract_requirement_ids": [
+          "R009"
+        ],
+        "coverage": {
+          "input_class": "a sparse array payload with few entries",
+          "projection": "decode allocations relative to the actual entry count",
+          "scenario": "parse a sparse array payload with a large declared length",
+          "surface": "encoded representation and decode cost of sparse arrays"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00069"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:3aa1f088c5f1589181f3055da4f1c8f819b7db467487261d36a91c8e387f8929",
+        "id": "P2P-012",
+        "kind": "F2P",
+        "projection_signature": "sha256:fb55a290f8734932153510f064899d76bcf3ea73df14938d8154df18e4b80c16",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Synchronous stringify of a Symbol primitive throws DevalueError carrying the failing path.",
+        "contract_requirement_ids": [
+          "R010"
+        ],
+        "coverage": {
+          "input_class": "a value containing a Symbol primitive",
+          "projection": "thrown DevalueError and its failing path",
+          "scenario": "serialize a Symbol primitive through the synchronous stringify path",
+          "surface": "synchronous stringify error behavior at a failing path"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00070"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:3b2354674ab49ac4f9f11db1c84b531f4c0ff1cf7c0be6c143824ea66ea53eba",
+        "id": "P2P-014",
+        "kind": "F2P",
+        "projection_signature": "sha256:d501026f869bf5764e61d5ba733f63d8b501039ce622603a3e22f8f6bdd8805c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "ArrayBuffer, TypedArray and DataView values survive a stringify/parse round-trip with equivalent bytes.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "ArrayBuffer, typed arrays and DataView with non-trivial bytes",
+          "projection": "revived binary values have identical constructor, length and byte contents",
+          "scenario": "round-trip binary values through stringify and parse",
+          "surface": "source:src/base64.js"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00109",
+          "EVIDENCE-00118"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:3e097e84816099ab53fcfe6968b6cc5d47ee46a4f1f27d943c5c3c30a1be4b10",
+        "id": "P2P-015",
+        "kind": "F2P",
+        "projection_signature": "sha256:eb8e7268c21f62a83f970e42f72075cc93adaf9452590e0be5dd9e6cf55d5fa8",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "defaultStringifyOperations remains exported and frozen.",
+        "contract_requirement_ids": [
+          "R005"
+        ],
+        "coverage": {
+          "input_class": "the package entry point",
+          "projection": "export presence and Object.isFrozen result",
+          "scenario": "import the package entry point and inspect defaultStringifyOperations",
+          "surface": "the defaultStringifyOperations and defaultParseOperations exports and options.operations"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00065"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:3ea18a32cf1fc5184176404de94edf33c41be6760c04490ff7c56aa11b65341c",
+        "id": "P2P-016",
+        "kind": "F2P",
+        "projection_signature": "sha256:af1f17cb76158eb4980aec37d134ff5019a717e82dbebfbf173224ce13976698",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "filterArrayIndices is exported and callable; no input signature is specified by instruction.md.",
+        "contract_requirement_ids": [
+          "R006"
+        ],
+        "coverage": {
+          "input_class": "the public filterArrayIndices export",
+          "projection": "callability of the exported helper",
+          "scenario": "filterArrayIndices is exported and callable; no input signature is specified by instruction.md.",
+          "surface": "source:src/utils.test.js"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00273",
+          "EVIDENCE-00274",
+          "EVIDENCE-00275",
+          "EVIDENCE-00285",
+          "EVIDENCE-00287",
+          "EVIDENCE-00295",
+          "EVIDENCE-00296"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:424d26505a76cfa0641a6efeb11c4c03a6acac9688572e432a2767565a5c3125",
+        "id": "P2P-017",
+        "kind": "F2P",
+        "projection_signature": "sha256:55c4f4ef8a8bb7adc0fe711a5d98466c75ba6df7c70b285540509d798aea08ef",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "filterArrayIndices remains importable from the package entry point.",
+        "contract_requirement_ids": [
+          "R006"
+        ],
+        "coverage": {
+          "input_class": "the package entry point",
+          "projection": "successful import and callability of filterArrayIndices",
+          "scenario": "import filterArrayIndices from the package entry point",
+          "surface": "the DevalueError and filterArrayIndices exports from the package entry point"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00066"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:4f8f6777eba60f9b99306453ec8403668826476ad1893a0184a085c178c10f0a",
+        "id": "P2P-020",
+        "kind": "F2P",
+        "projection_signature": "sha256:3b8e4afda08711baa061b9adbaa1497c21488c253e1f559b50f819f951b0d4b5",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Synchronous stringify of a function, Symbol primitive, or thenable throws DevalueError carrying the failing path.",
+        "contract_requirement_ids": [
+          "R010"
+        ],
+        "coverage": {
+          "input_class": "functions, Symbol primitives, and thenables",
+          "projection": "thrown DevalueError type and reported failing path",
+          "scenario": "call the synchronous stringify path on unsupported values nested at a known path",
+          "surface": "symbol:fn"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00340",
+          "EVIDENCE-00355",
+          "EVIDENCE-00356",
+          "EVIDENCE-00357",
+          "EVIDENCE-00358",
+          "EVIDENCE-00383"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:51de90fca77047f7c16420914d5b07e529c29daddcccd5d1e72295cee99d79c4",
+        "id": "P2P-021",
+        "kind": "F2P",
+        "projection_signature": "sha256:c4de194f65df43d349e9cc269098544e828532c605b726d15088be68dff11cd7",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Synchronous stringify throws DevalueError with the failing path for functions, Symbol primitives and thenables.",
+        "contract_requirement_ids": [
+          "R010"
+        ],
+        "coverage": {
+          "input_class": "function values, Symbol primitives and thenables",
+          "projection": "thrown DevalueError and its path field",
+          "scenario": "stringify a function, a Symbol primitive and a thenable through the synchronous path",
+          "surface": "symbol:testFn"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00428",
+          "EVIDENCE-00429",
+          "EVIDENCE-00430"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:5dedc3db80b12e533fffd3864a6fcef908ce4d5b42c311d5763b573a6c8313ad",
+        "id": "P2P-022",
+        "kind": "F2P",
+        "projection_signature": "sha256:5a997788236c42a8555d532714017efb6bba529be74336638100d14d707bc4a4",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Binary values (ArrayBuffer, TypedArray, DataView) round-trip with equivalent type and bytes.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "ArrayBuffer, TypedArray, and DataView values",
+          "projection": "revived binary type and byte content",
+          "scenario": "stringify then parse binary values",
+          "surface": "symbol:dv"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00325",
+          "EVIDENCE-00326",
+          "EVIDENCE-00327"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:73eca63caf9ea543a9d8d706c71cf684413eeb2404d6a993cefd17315d1546b2",
+        "id": "P2P-025",
+        "kind": "F2P",
+        "projection_signature": "sha256:51e441ab8b00b43feef3f393ec243a3ef45f740f308ecf97f13a6338f9fb37bc",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "filterArrayIndices remains importable from the package entry point.",
+        "contract_requirement_ids": [
+          "R006"
+        ],
+        "coverage": {
+          "input_class": "array of numeric and non-numeric indices",
+          "projection": "the named export resolves to a callable function with the documented filtering behavior",
+          "scenario": "import filterArrayIndices and call it on a sample array of indices",
+          "surface": "symbol:filter_array_indices"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00267"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:7ddf7c38ab3d1d86335d40b19af908f1a5ba102f94a1ac9161459c32e58c381b",
+        "id": "P2P-026",
+        "kind": "F2P",
+        "projection_signature": "sha256:35bd42e48ab63969f8cb458f510583e719fbf44ea128702b0c08c139fd00a691",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "URL and URLSearchParams values round-trip with equivalent string and parameters.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "URL instances and URLSearchParams with multiple parameters",
+          "projection": "revived URL string and search-parameter entries",
+          "scenario": "stringify then parse URL and URLSearchParams values",
+          "surface": "symbol:from1"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00347",
+          "EVIDENCE-00348",
+          "EVIDENCE-00349"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:88c1026dc90ac96dc5bfd976c2cfc15c0cf491896c16b9d5d469a3a343180e68",
+        "id": "P2P-029",
+        "kind": "F2P",
+        "projection_signature": "sha256:480de86fabfa03b462d72dc8255202f32e2b3cff24697686a7a5f2d3c0f4c515",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Uint8Array values of small, medium and large sizes round-trip through stringify and parse.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "Uint8Array values of varying lengths",
+          "projection": "parsed typed-array contents equal the original",
+          "scenario": "stringify a Uint8Array and parse the returned string",
+          "surface": "source:benchmarking/benchmarks/typed-array.js"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00004",
+          "EVIDENCE-00007",
+          "EVIDENCE-00008",
+          "EVIDENCE-00009",
+          "EVIDENCE-00010",
+          "EVIDENCE-00013",
+          "EVIDENCE-00014",
+          "EVIDENCE-00015",
+          "EVIDENCE-00016"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:8916a7400a570a414847aab650d564e19baf133899522cbf24a3e6984f5cd6db",
+        "id": "P2P-030",
+        "kind": "F2P",
+        "projection_signature": "sha256:f56003e6b8207c07153018cc22f4836007c037160132ebc3ac1960de96bfa154",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Payloads from the synchronous and asynchronous paths stay mutually consumable and format-compatible.",
+        "contract_requirement_ids": [
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "values serializable by both the synchronous and asynchronous paths",
+          "projection": "cross-consumability and format agreement of the produced payloads",
+          "scenario": "compare payloads produced by stringify and stringifyAsync",
+          "surface": "symbol:asyncErrorTests"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00316",
+          "EVIDENCE-00317"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:957ff294d3163a70e1d71beb6942292788f875478e7641d61ea700afdc1a88c0",
+        "id": "P2P-032",
+        "kind": "F2P",
+        "projection_signature": "sha256:daf0125542a9ba01f2cb25c4dbe02c19ea06c27a890227596c39a5a31f0bf2cc",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Sparse array encode/decode cost scales with present entries rather than the declared length.",
+        "contract_requirement_ids": [
+          "R009"
+        ],
+        "coverage": {
+          "input_class": "sparse arrays whose declared length greatly exceeds the number of present entries",
+          "projection": "encoded size and decode allocation proportional to present entries",
+          "scenario": "stringify and parse a sparse array with a large declared length and few present entries",
+          "surface": "symbol:buildSparseDoSPayload"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00321",
+          "EVIDENCE-00338",
+          "EVIDENCE-00351",
+          "EVIDENCE-00365",
+          "EVIDENCE-00384",
+          "EVIDENCE-00385"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:a017b50550249d8d4ccdaf5389f74c7676803aca37c6993595fc019294a18cc5",
+        "id": "P2P-034",
+        "kind": "F2P",
+        "projection_signature": "sha256:7cdcbb8af5ac7ec7685306d1d215db36e73a440a34cfe554737e562ce32f4c43",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Every listed public contract remains importable and callable with unchanged signatures and semantics.",
+        "contract_requirement_ids": [
+          "R013",
+          "R015"
+        ],
+        "coverage": {
+          "input_class": "the package entry point and the listed contracts",
+          "projection": "importability, call signature and semantics of each contract",
+          "scenario": "import each public entry point and invoke the listed contracts",
+          "surface": "public entry-point imports and call signatures"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00073"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:a07a8c5488c28abff55a0d72a673fecaaf7f1c4a626becb1ecac635fcd3d0bf4",
+        "id": "P2P-035",
+        "kind": "F2P",
+        "projection_signature": "sha256:de286389317f6e953fc495fe4007720eb9855608107fad6d4b4f0f66ed5e6327",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "The default operation maps stay exported and frozen, and options.operations overrides them.",
+        "contract_requirement_ids": [
+          "R005"
+        ],
+        "coverage": {
+          "input_class": "caller supplied operation maps via options.operations",
+          "projection": "export presence, frozen state and applied overrides",
+          "scenario": "import both operation maps and pass options.operations overrides to stringify and parse",
+          "surface": "symbol:Custom"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00442",
+          "EVIDENCE-00443",
+          "EVIDENCE-00444",
+          "EVIDENCE-00445",
+          "EVIDENCE-00446",
+          "EVIDENCE-00447",
+          "EVIDENCE-00465",
+          "EVIDENCE-00475",
+          "EVIDENCE-00476"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:a0c004a229b54afd882fce337e4ad1302deb94407dd84e6e1706057d71d0b481",
+        "id": "P2P-036",
+        "kind": "F2P",
+        "projection_signature": "sha256:4b68449ab56a2a4c3f8b6bc0c222faef39e39bba32ac2f7c3d7e3e3ac7bdc2fa",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Synchronous and asynchronous payloads stay mutually consumable and format compatible.",
+        "contract_requirement_ids": [
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "values serialized through both the synchronous and asynchronous paths",
+          "projection": "cross path parse equality and payload format agreement",
+          "scenario": "cross-consume synchronous stringify output with parseAsync and asynchronous stringifyAsync output with parse",
+          "surface": "symbol:assert_parity"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00450",
+          "EVIDENCE-00451",
+          "EVIDENCE-00455",
+          "EVIDENCE-00464",
+          "EVIDENCE-00466"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:abff85c1986dde64228c2c7d8c4e308eab50accd3760957134e7defe1f783ab4",
+        "id": "P2P-039",
+        "kind": "F2P",
+        "projection_signature": "sha256:06063b0d144bfd6a59e5d6322c0250d56921e34eee00b904de3703e40509f20d",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "parse and unflatten reject malformed payloads, invalid references and incomplete built-in entries.",
+        "contract_requirement_ids": [
+          "R011"
+        ],
+        "coverage": {
+          "input_class": "negative, fractional, nonfinite and out-of-range references plus malformed built-in payloads",
+          "projection": "both entry points reject each malformed case",
+          "scenario": "parse and unflatten reject malformed payloads, invalid references and incomplete built-in entries.",
+          "surface": "symbol:cyclic"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00456",
+          "EVIDENCE-00457",
+          "EVIDENCE-00477",
+          "EVIDENCE-00478",
+          "EVIDENCE-00479"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:de8906ba356cbf00a33e9c74271728b14e8964c98c1898939775b49c3d7da8f7",
+        "id": "P2P-045",
+        "kind": "F2P",
+        "projection_signature": "sha256:85ee4ae7a6378727063119f7ba41cc77a4549fc5cb97037b725590fcc4aba468",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Sparse arrays encode and decode without allocating memory proportional to the declared length.",
+        "contract_requirement_ids": [
+          "R009"
+        ],
+        "coverage": {
+          "input_class": "sparse arrays with large length and few defined indices",
+          "projection": "encoded payload size and decode allocation independent of declared length",
+          "scenario": "stringify and parse a sparse array with a large declared length",
+          "surface": "symbol:sparseDoSCases"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00417"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:e4bd0a4a0d4042b0a4f9fc2133de35621336dfc5517bea1694d428171580a927",
+        "id": "P2P-046",
+        "kind": "F2P",
+        "projection_signature": "sha256:08109f3667fe0a16bdff39ca268f586fa0f5d1f0a2f3b3af1d2f8fa7b62ea98a",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "The base64 legacy path round-trips bytes and agrees with the buffer path encoding.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "the shipped base64 unit fixtures",
+          "projection": "decoded bytes and cross-path encoded strings are equal",
+          "scenario": "encode on legacy and buffer paths then decode on the legacy path",
+          "surface": "symbol:binary"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00094",
+          "EVIDENCE-00095",
+          "EVIDENCE-00101",
+          "EVIDENCE-00105",
+          "EVIDENCE-00114",
+          "EVIDENCE-00116"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:f71368233086563ea44be164bbc0fab98ec11859fc73af4b3b205dabbb5ee52a",
+        "id": "P2P-048",
+        "kind": "F2P",
+        "projection_signature": "sha256:16f30b20691f1a7ab2e26c092db17cb81171b946d40c4deae61d21e17580066e",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Payloads produced by the synchronous and asynchronous paths remain mutually consumable and format-compatible.",
+        "contract_requirement_ids": [
+          "R001",
+          "R002",
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "payloads produced by both stringify and stringifyAsync",
+          "projection": "format compatibility and mutual consumability",
+          "scenario": "parse payloads produced by stringify and stringifyAsync interchangeably",
+          "surface": "the stringify export from the package entry point"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00061",
+          "EVIDENCE-00062"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:feb074a77db41ee94fa5852e44b344f050edc0d92c94ae31d5cf4bbc9942b3b8",
+        "id": "P2P-051",
+        "kind": "F2P",
+        "projection_signature": "sha256:7eeb48e3f2a8de09eaf56f7f678c93c41456bf87bb9cfa08527ece770edf07cf",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      }
+    ],
+    "P2P": [
+      {
+        "atomic_claim": "package.json '.' export map keeps unchanged types/import/default conditions and targets.",
+        "contract_requirement_ids": [
+          "R015"
+        ],
+        "coverage": {
+          "input_class": "package.json export conditions",
+          "projection": "resolved export target and condition keys",
+          "scenario": "resolve the '.' subpath through the manifest export map",
+          "surface": "exports:."
+        },
+        "evidence_refs": [
+          "EVIDENCE-00079"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:6abf0c25617934cded283ffd4394cd83b55cf3b59d43908d68775a5d6f6eb517",
+        "id": "P2P-024",
+        "kind": "P2P",
+        "projection_signature": "sha256:28d6eb04cebe3ea42bb188f6126731fc44acbd1e64499934c39957371a0dd9e9",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Calling stringify on a structured value and parsing the payload revives a deeply equivalent value.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "plain objects, arrays, and JSON primitives",
+          "projection": "deep structural equality of the revived value to the original",
+          "scenario": "stringify then parse a structured value",
+          "surface": "symbol:actual"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00308",
+          "EVIDENCE-00309",
+          "EVIDENCE-00310",
+          "EVIDENCE-00311",
+          "EVIDENCE-00312",
+          "EVIDENCE-00313",
+          "EVIDENCE-00314",
+          "EVIDENCE-00315",
+          "EVIDENCE-00333",
+          "EVIDENCE-00334",
+          "EVIDENCE-00335",
+          "EVIDENCE-00336",
+          "EVIDENCE-00337",
+          "EVIDENCE-00359",
+          "EVIDENCE-00360",
+          "EVIDENCE-00361",
+          "EVIDENCE-00362",
+          "EVIDENCE-00363",
+          "EVIDENCE-00364",
+          "EVIDENCE-00371",
+          "EVIDENCE-00372",
+          "EVIDENCE-00373",
+          "EVIDENCE-00374",
+          "EVIDENCE-00375",
+          "EVIDENCE-00376",
+          "EVIDENCE-00377",
+          "EVIDENCE-00378",
+          "EVIDENCE-00379",
+          "EVIDENCE-00380",
+          "EVIDENCE-00381"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:0a787e80113591472733a442e9afcfadace9a651831d70b6878cf79011ef827b",
+        "id": "P2P-002",
+        "kind": "P2P",
+        "projection_signature": "sha256:4e0a2b25f7c92be74d3321281b05f3536f6517975375cc3918db0ecea8f50f61",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "parse and unflatten reject out-of-range indices.",
+        "contract_requirement_ids": [
+          "R011",
+          "R016"
+        ],
+        "coverage": {
+          "input_class": "a payload with an out-of-range index",
+          "projection": "rejection error from parse and unflatten",
+          "scenario": "parse and unflatten a payload referencing an out-of-range index",
+          "surface": "error behavior of parse and unflatten on invalid input"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00071"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:163538426da57737cd1ed289d2715e1112db1318cd7d774cb4715a3393c09a2e",
+        "id": "P2P-007",
+        "kind": "P2P",
+        "projection_signature": "sha256:8736e3fbb0c5835e03e39392f7e4cc96839a31abca927d21d0c0faaf2c18c1d3",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "undefined, NaN, Infinity, -Infinity and -0 survive stringify/parse with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "container of numeric and undefined special values",
+          "projection": "each special value is revived with the same distinct semantic identity",
+          "scenario": "Round-trip a container holding undefined, NaN, Infinity, -Infinity and -0 through stringify and parse.",
+          "surface": "symbol:NAN"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00122",
+          "EVIDENCE-00123",
+          "EVIDENCE-00124",
+          "EVIDENCE-00125",
+          "EVIDENCE-00127",
+          "EVIDENCE-00197"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:17f2bf359b519de8b575c22932c73b7d4f5c56bd39a66b31509408e0119e509f",
+        "id": "P2P-008",
+        "kind": "P2P",
+        "projection_signature": "sha256:0d6192c2d54663ae3f2eb1bd6c7b5239aaf61425a582b05d6bd55547ce09387c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Repeated references round-trip to the same shared instance after parse.",
+        "contract_requirement_ids": [
+          "R007",
+          "R016"
+        ],
+        "coverage": {
+          "input_class": "a value with a shared reference used twice",
+          "projection": "identity of both revived references",
+          "scenario": "stringify then parse a value with a reference used twice",
+          "surface": "round-trip identity after stringify/parse for cyclic and repeated references"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00067"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:3a6d0ffda9a510d7e8d278891d17709e2c50cf63fd9be0a9ce68a80a138c835e",
+        "id": "P2P-011",
+        "kind": "P2P",
+        "projection_signature": "sha256:5d0b02fa25a940dd3c39b012fa6ca10d6c4e3f4606b9cbdb5e813b529973d3fb",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Every preserved behavior stays observable through the migrated package surface after the migration.",
+        "contract_requirement_ids": [
+          "R001",
+          "R002",
+          "R003",
+          "R005",
+          "R006",
+          "R010",
+          "R011",
+          "R014",
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "preserved public export set",
+          "projection": "each preserved export remains invocable with unchanged observable behavior",
+          "scenario": "Import the migrated package surface and invoke each preserved export named by the contract.",
+          "surface": "symbol:default_parse_operations"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00133",
+          "EVIDENCE-00134",
+          "EVIDENCE-00135",
+          "EVIDENCE-00144",
+          "EVIDENCE-00146",
+          "EVIDENCE-00155",
+          "EVIDENCE-00159",
+          "EVIDENCE-00162",
+          "EVIDENCE-00167",
+          "EVIDENCE-00176",
+          "EVIDENCE-00184",
+          "EVIDENCE-00195",
+          "EVIDENCE-00196"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:3ac56ef7e79e26f1432291b308778d51b71c4c4c29995f7bd6cbad47f4608772",
+        "id": "P2P-013",
+        "kind": "P2P",
+        "projection_signature": "sha256:7bdd93c0c96edf3604152ac6a8b3bedeb1ddfe2d005aefc6dd4f1ff937a9ca9c",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Listed built-in and platform values round-trip with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "Date, RegExp, Map, Set, ArrayBuffer, TypedArray, DataView, URL, URLSearchParams, Temporal and special numeric values",
+          "projection": "type preserving value equality of the revived value",
+          "scenario": "stringify and parse each supported built-in and platform value",
+          "surface": "symbol:buffer"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00431",
+          "EVIDENCE-00432",
+          "EVIDENCE-00433",
+          "EVIDENCE-00434",
+          "EVIDENCE-00435",
+          "EVIDENCE-00436",
+          "EVIDENCE-00437",
+          "EVIDENCE-00438",
+          "EVIDENCE-00440",
+          "EVIDENCE-00453",
+          "EVIDENCE-00454",
+          "EVIDENCE-00458",
+          "EVIDENCE-00470",
+          "EVIDENCE-00471",
+          "EVIDENCE-00495",
+          "EVIDENCE-00496"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:4976b7f8511462f5f0e84009da4eb8813205670f579e288370242e629fe0c580",
+        "id": "P2P-018",
+        "kind": "P2P",
+        "projection_signature": "sha256:f44fd8a588818a5ad6862c770c0aa4f5a039679b2237b68387a4bc3b5d3bbfe3",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "BigInt values round-trip with identical magnitude.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "BigInt values of varying magnitude",
+          "projection": "revived BigInt with identical numeric value",
+          "scenario": "stringify then parse a BigInt value",
+          "surface": "symbol:data"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00324"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:4bacd6faee8fec73b7e2a158dfae76f435a4709d62b3e9ef0c00763fa587be1c",
+        "id": "P2P-019",
+        "kind": "P2P",
+        "projection_signature": "sha256:d0521df9fcbd1ee3d262004ba6d2342d8eec80c83a3d3a3e494d1390ce348d6b",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Date and RegExp values round-trip with equivalent timestamp, source, and flags.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "Date instances and RegExp patterns with flags",
+          "projection": "revived Date timestamp and RegExp source/flags",
+          "scenario": "stringify then parse Date and RegExp values",
+          "surface": "symbol:match"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00366",
+          "EVIDENCE-00386"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:66a6bf134b8f00e1f5a908887c8e3489b41212a612ad257a4ef61efc8ca3d82a",
+        "id": "P2P-023",
+        "kind": "P2P",
+        "projection_signature": "sha256:45c0a035df39e3da87ac7b44f0115864ab70e421d4b2b1a1b12480303e8f6060",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval returns evaluable JavaScript source equivalent to the input value.",
+        "contract_requirement_ids": [
+          "R004"
+        ],
+        "coverage": {
+          "input_class": "a representative value",
+          "projection": "the evaluated result is equivalent to the original value",
+          "scenario": "evaluate the source returned by uneval",
+          "surface": "the uneval export from the package entry point"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00064"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:82595fdf41e2a5a35e2614f49a21a023866812df4d77b76382da96051e404981",
+        "id": "P2P-027",
+        "kind": "P2P",
+        "projection_signature": "sha256:4622714b5ff006f09fd54290231a2f2c938c75ca06451617af968c6b51071e46",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "parse(serialized, revivers, options) equals unflatten(JSON.parse(serialized), revivers, options).",
+        "contract_requirement_ids": [
+          "R003"
+        ],
+        "coverage": {
+          "input_class": "a serialized payload",
+          "projection": "deep equality of the two revived results",
+          "scenario": "parse and unflatten the same serialized payload",
+          "surface": "the parse and unflatten exports from the package entry point"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00063"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:86ed952622e681569356c7c5daad17ef30d3c60671f0f4157239a719cde6fcf7",
+        "id": "P2P-028",
+        "kind": "P2P",
+        "projection_signature": "sha256:adcb7fb392b6c7129a10a60dffddfda4f78995fa10cb22f8aab7a9f71f72db66",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Special numeric values NaN, Infinity, -Infinity, and -0 round-trip with equivalent semantics.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "NaN, Infinity, -Infinity, and -0",
+          "projection": "revived numeric value preserving the original special semantics",
+          "scenario": "stringify then parse a value containing special numeric values",
+          "surface": "symbol:problematicValue"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00382"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:91d36895e8cffb504f26c58b7af60e057fdc4b094abf2418b0a596c2d350c747",
+        "id": "P2P-031",
+        "kind": "P2P",
+        "projection_signature": "sha256:9b58b1ee9458567682ccd86da799ece07ac9dd7b9a4827b1bd9f48a6ef862f28",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Special numeric values round-trip with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R004",
+          "R008",
+          "R013",
+          "R014",
+          "R015"
+        ],
+        "coverage": {
+          "input_class": "undefined, NaN, Infinity, -Infinity, -0 and BigInt",
+          "projection": "value identity and type after round-trip",
+          "scenario": "stringify then parse and uneval then evaluate each numeric special value",
+          "surface": "source:index.js"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00078"
+        ],
+        "family": "source-span",
+        "fingerprint": "sha256:9f76589621712cf7816fc355c916a80a24d1f463b41721eeac992f301499b35c",
+        "id": "P2P-033",
+        "kind": "P2P",
+        "projection_signature": "sha256:23e23d25de62548e6a68cfae57de94b6f821dda234aff4cccc408faef5714550",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Shared and cyclic references in a value graph survive stringify/parse with the same graph shape and aliasing.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "graphs with shared references, cycles, and custom class instances",
+          "projection": "revived graph aliasing and cycle structure",
+          "scenario": "stringify then parse a value graph containing repeated and self-referential links",
+          "surface": "symbol:circularCustomTypes"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00322",
+          "EVIDENCE-00323",
+          "EVIDENCE-00352",
+          "EVIDENCE-00353",
+          "EVIDENCE-00354",
+          "EVIDENCE-00367",
+          "EVIDENCE-00368",
+          "EVIDENCE-00369"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:aa8cc6b4fedaba5ab52bdb8bdb1eb7332e17535c4682f1faf6a4c351a8ae8011",
+        "id": "P2P-038",
+        "kind": "P2P",
+        "projection_signature": "sha256:cc93416cede5ce3686ac4db4121a881bd8241866e896f0d7eeba5de9be7f9ebb",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "The base64 native path round-trips bytes whenever the platform helpers exist.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "representative byte strings when Uint8Array base64 helpers are available",
+          "projection": "decoded bytes equal the original bytes",
+          "scenario": "conditionally encode and decode via native base64 helpers",
+          "surface": "symbol:decode_native"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00102",
+          "EVIDENCE-00106",
+          "EVIDENCE-00108"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:ba01988b130793123f9fb4a300fa071039403bb6c957d0304ebde768d9f687af",
+        "id": "P2P-040",
+        "kind": "P2P",
+        "projection_signature": "sha256:16d57a69a3803c94c8ffcde36fbf8afa6a170433b8ff15ee2a6c142e18064641",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "parse and unflatten reject malformed payloads and out-of-range indices instead of silently accepting them.",
+        "contract_requirement_ids": [
+          "R011"
+        ],
+        "coverage": {
+          "input_class": "malformed payload strings and payloads referencing invalid indices",
+          "projection": "rejection via thrown error rather than silent acceptance",
+          "scenario": "call parse and unflatten with malformed payloads and out-of-range indices",
+          "surface": "symbol:evaled"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00330",
+          "EVIDENCE-00331",
+          "EVIDENCE-00332",
+          "EVIDENCE-00350"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:d04ab10338dfcdcb9bcf5f6d611580ab9c1c52a0f65d39a7d5ffc57c71c7ee20",
+        "id": "P2P-041",
+        "kind": "P2P",
+        "projection_signature": "sha256:e9b8a92f1972b8887c231e35e7c038c067cd1104915675a529d0d97986e7bc45",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "stringify(value) followed by parse() revives a value deeply equivalent to the original.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "representative nested objects, arrays and primitives",
+          "projection": "deep structural and value equality of the revived result",
+          "scenario": "call stringify then parse on one public value",
+          "surface": "symbol:original"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00404",
+          "EVIDENCE-00405",
+          "EVIDENCE-00412",
+          "EVIDENCE-00413",
+          "EVIDENCE-00414",
+          "EVIDENCE-00439",
+          "EVIDENCE-00472",
+          "EVIDENCE-00473",
+          "EVIDENCE-00474"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:d09cf270f7c3bc1c3d8d06f745fe141350b2f797453e3b29e2927987689f5408",
+        "id": "P2P-042",
+        "kind": "P2P",
+        "projection_signature": "sha256:98314a000b629e9f3467bda2ac60108212d5ff9842cb8396bc3a5c958840bf13",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "User-defined types carried through reducers/revivers round-trip with restored class identity.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "custom class instances (Vector, Foo, Bar, NullObject, FunctionRef, Whatever)",
+          "projection": "revived values are instances of the original classes with equal state",
+          "scenario": "serialize custom test fixtures with reducers and revive them with matching revivers",
+          "surface": "symbol:Bar"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00297",
+          "EVIDENCE-00298",
+          "EVIDENCE-00300",
+          "EVIDENCE-00302",
+          "EVIDENCE-00303",
+          "EVIDENCE-00304"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:d9153b2760d9f0da621b30a79232626a8146ce9c1c2730113b59d8b74a533e1e",
+        "id": "P2P-043",
+        "kind": "P2P",
+        "projection_signature": "sha256:eb856c7fc1d454bcceaf0746d4cef738ab0c242b3b13b1b88c6a88460cd8f33f",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "uneval returns evaluable JavaScript source and wraps cyclic values in an IIFE.",
+        "contract_requirement_ids": [
+          "R004"
+        ],
+        "coverage": {
+          "input_class": "object graph containing a cycle",
+          "projection": "returned source evaluates to a value equivalent to the input",
+          "scenario": "Call uneval on a cyclic value, evaluate the returned source, and compare the revived value.",
+          "surface": "symbol:body"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00207",
+          "EVIDENCE-00208",
+          "EVIDENCE-00212",
+          "EVIDENCE-00214"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:d9b8d853c9a032ea13c3f30be3b9b88bb39302a0b0d5c8095ffdfaa00c159c1d",
+        "id": "P2P-044",
+        "kind": "P2P",
+        "projection_signature": "sha256:d5ec2650e48b87199c4a2d3b92fe53f38bfb65b75aabcb0e13230723922bb903",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "undefined, NaN, Infinity, -Infinity, -0 and BigInt survive stringify/parse round-trips with equivalent value semantics.",
+        "contract_requirement_ids": [
+          "R001",
+          "R002",
+          "R004",
+          "R007",
+          "R008",
+          "R009",
+          "R010",
+          "R011",
+          "R013",
+          "R014",
+          "R015",
+          "R016",
+          "R017"
+        ],
+        "coverage": {
+          "input_class": "special primitive values (undefined, NaN, Infinity, -Infinity, -0, BigInt)",
+          "projection": "each special primitive is revived with equivalent value semantics",
+          "scenario": "Round-trip special primitive values through stringify then parse.",
+          "surface": "exported public entry-point names and shapes"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00074",
+          "EVIDENCE-00075",
+          "EVIDENCE-00076",
+          "EVIDENCE-00077",
+          "EVIDENCE-00090",
+          "EVIDENCE-00091"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:ed2a1cdb6e7664fa94df636d403d7dd4c0d41d716b237e00e911372626bc622a",
+        "id": "P2P-047",
+        "kind": "P2P",
+        "projection_signature": "sha256:a11724c33a245ac8393c16ac17b77317446f716b542eb6edbc5952790c42ff3e",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Map and Set collections round-trip with equivalent type, size, and entries.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "Map and Set collections with representative keys and values",
+          "projection": "revived collection type, size, and entry contents",
+          "scenario": "stringify then parse Map and Set values",
+          "surface": "symbol:bar"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00318",
+          "EVIDENCE-00319",
+          "EVIDENCE-00320",
+          "EVIDENCE-00341",
+          "EVIDENCE-00342",
+          "EVIDENCE-00343",
+          "EVIDENCE-00344",
+          "EVIDENCE-00345",
+          "EVIDENCE-00346"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:f72e64d2ee82d7c32a0f08f75bec68566246bbcb5694c637703a7ec04852c147",
+        "id": "P2P-049",
+        "kind": "P2P",
+        "projection_signature": "sha256:a04d30434aa06ae6d77caaf125539cd9f3302391a71393d16139a22db3516f46",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "atomic_claim": "Cyclic and repeated references round-trip to the same instance identity after parse.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "object graph with a cycle and a repeated reference",
+          "projection": "revived cycle and shared child are the same instances they were at serialization time",
+          "scenario": "stringify then parse an object graph holding a self-reference and a shared child.",
+          "surface": "symbol:id"
+        },
+        "evidence_refs": [
+          "EVIDENCE-00170",
+          "EVIDENCE-00172"
+        ],
+        "family": "public-api",
+        "fingerprint": "sha256:f959149ecaca04fa4727434a247e30e9a3ad70b8f2cd43863b328ccd4a1b5ef4",
+        "id": "P2P-050",
+        "kind": "P2P",
+        "projection_signature": "sha256:74250e165420809221144802f021ae6f3c1920b1f19da37cd088f4a9170402f4",
+        "reason": "evidence-bound-atomic-observation",
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      }
+    ],
+    "STATE": []
+  },
+  "migration_units": [
+    {
+      "observation_ids": [
+        "F2P-001",
+        "P2P-037",
+        "P2P-033",
+        "P2P-035",
+        "P2P-047",
+        "P2P-024",
+        "F2P-005"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU001"
+    },
+    {
+      "observation_ids": [
+        "F2P-001"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU002"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-027",
+        "P2P-033",
+        "P2P-044",
+        "P2P-047",
+        "P2P-035",
+        "P2P-024"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU003"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-002",
+        "P2P-013",
+        "P2P-038",
+        "P2P-042",
+        "P2P-047",
+        "P2P-051",
+        "P2P-011",
+        "P2P-043",
+        "P2P-050",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-033",
+        "P2P-040",
+        "P2P-048",
+        "P2P-049",
+        "P2P-014",
+        "P2P-021",
+        "P2P-022",
+        "P2P-032",
+        "P2P-039",
+        "F2P-007",
+        "F2P-018",
+        "F2P-019",
+        "F2P-020",
+        "F2P-021",
+        "F2P-022",
+        "F2P-023"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU004"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-013",
+        "P2P-028",
+        "P2P-011",
+        "P2P-043",
+        "P2P-047",
+        "P2P-050",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-033",
+        "P2P-040",
+        "P2P-048",
+        "P2P-049",
+        "P2P-007",
+        "P2P-017",
+        "P2P-041",
+        "P2P-045",
+        "F2P-006",
+        "F2P-017"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU005"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-027",
+        "P2P-033",
+        "P2P-044",
+        "P2P-047",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-040",
+        "P2P-048",
+        "P2P-049",
+        "F2P-007",
+        "F2P-024",
+        "F2P-025",
+        "F2P-026",
+        "F2P-027",
+        "F2P-028",
+        "F2P-029"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU006"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-013",
+        "P2P-016",
+        "P2P-036",
+        "P2P-009",
+        "P2P-020",
+        "P2P-026"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU007"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-009",
+        "P2P-013",
+        "P2P-020",
+        "P2P-026",
+        "P2P-007",
+        "P2P-017",
+        "P2P-041",
+        "P2P-045",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU008"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-033",
+        "P2P-035",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU009"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-033",
+        "P2P-040",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU010"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-010",
+        "P2P-013",
+        "P2P-033",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU011"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-001",
+        "P2P-003",
+        "P2P-004",
+        "P2P-007",
+        "P2P-011",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU012"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-002",
+        "P2P-013",
+        "P2P-038",
+        "P2P-042",
+        "P2P-047",
+        "P2P-051",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-033",
+        "P2P-040",
+        "P2P-048",
+        "P2P-049",
+        "P2P-012",
+        "P2P-034",
+        "P2P-046",
+        "P2P-014",
+        "P2P-021",
+        "P2P-022",
+        "P2P-007",
+        "P2P-017",
+        "P2P-041",
+        "P2P-045",
+        "P2P-032",
+        "P2P-039"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU013"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-013",
+        "P2P-016",
+        "P2P-036",
+        "P2P-009",
+        "P2P-020",
+        "P2P-026"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU014"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-013",
+        "P2P-028",
+        "P2P-007",
+        "P2P-017",
+        "P2P-041",
+        "P2P-045",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU015"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-003",
+        "P2P-005",
+        "P2P-006",
+        "P2P-008",
+        "P2P-015",
+        "P2P-018",
+        "P2P-019",
+        "P2P-023",
+        "P2P-025",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-033",
+        "P2P-040",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU016"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-009",
+        "P2P-013",
+        "P2P-020",
+        "P2P-026",
+        "P2P-007",
+        "P2P-017",
+        "P2P-041",
+        "P2P-045",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU017"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-033",
+        "P2P-035",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU018"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-010",
+        "P2P-013",
+        "P2P-033",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU021"
+    },
+    {
+      "observation_ids": [
+        "P2P-037",
+        "P2P-033",
+        "P2P-035",
+        "P2P-047"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU022"
+    },
+    {
+      "observation_ids": [
+        "F2P-008",
+        "F2P-009",
+        "F2P-010",
+        "F2P-011",
+        "F2P-016"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU024"
+    },
+    {
+      "observation_ids": [
+        "F2P-012",
+        "F2P-013",
+        "F2P-014",
+        "F2P-015"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU025"
+    },
+    {
+      "observation_ids": [
+        "F2P-030",
+        "F2P-031",
+        "F2P-032",
+        "F2P-033",
+        "F2P-034",
+        "F2P-035"
+      ],
+      "reason": "requirement-link",
+      "unit_id": "MU026"
+    }
+  ],
+  "normalization_policy": {
+    "exceptions": "type-and-message",
+    "floating_point": "exact-unless-contract-declares-tolerance",
+    "ordering": "declared-order",
+    "platform_paths": "posix-normalized",
+    "python_repr_addresses": "stable-placeholder",
+    "timestamps": "exact"
+  },
+  "p2p_policy": "maximum-justified-deduplicated-case-coverage",
+  "schema_version": "migration-case-observation-inventory:v2"
+}

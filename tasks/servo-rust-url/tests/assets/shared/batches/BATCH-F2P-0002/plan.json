@@ -1,0 +1,29 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "scope": "shared",
+  "kind": "F2P",
+  "migration": {
+    "category": "language",
+    "source": {"name": "Rust", "language_name": "Rust", "version": "2018", "language_version": "2018"},
+    "target": {"name": "Go", "language_name": "Go", "version": "1.23.0", "language_version": "1.23.0"}
+  },
+  "predicate_contract": {
+    "source_side": "FAIL",
+    "target_side": "PASS",
+    "note": "Every F2P observation is a target-only postcondition. The identical semantic predicate is evaluated on /input/source and /input/target; the source technology (Rust) cannot satisfy it, so the source side must observe FAIL."
+  },
+  "target_probe": {
+    "asset": "target/batches/BATCH-F2P-0002",
+    "language": "Go",
+    "run": ["go", "test", "-count=1", "-v", "./..."],
+    "env": {"CGO_ENABLED": "0", "GOPROXY": "off", "GOTOOLCHAIN": "local"},
+    "selects": "TestF2PObservations, TestF2PRepoObservations"
+  },
+  "source_probe": {
+    "asset": "source/batches/BATCH-F2P-0002/source_probe.sh",
+    "run": ["sh", "source/batches/BATCH-F2P-0002/source_probe.sh", "{source_root}"],
+    "expected_exit": 1
+  },
+  "notes": "The source/runner and target/runner entrypoints are owned solely by the INTEGRATION batch and are neither created nor declared here."
+}

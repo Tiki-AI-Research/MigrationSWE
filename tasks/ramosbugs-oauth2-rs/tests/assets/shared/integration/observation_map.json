@@ -1,0 +1,2220 @@
+{
+ "schema_version": "migration-integration-observation-map:v1",
+ "batch_id": "BATCH-INTEGRATION-0001",
+ "migration": {
+  "category": "language",
+  "source": "Rust 2021",
+  "target": "Go 1.22"
+ },
+ "projection": {
+  "id": "status-wrapper",
+  "success_value": {
+   "result": "PASS"
+  },
+  "failure_value": {
+   "result": "FAIL"
+  }
+ },
+ "observations": [
+  {
+   "id": "P2P-001",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R010"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "endpoint::tests::test_async_client_closure",
+     "token::tests::test_exchange_code_successful_with_basic_auth"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAsyncClientClosure",
+     "TestExchangeCodeSuccessfulWithBasicAuth"
+    ]
+   }
+  },
+  {
+   "id": "P2P-002",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R023"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "tests::test_send_sync_impl",
+     "token::tests::test_exchange_code_successful_with_complete_json_response",
+     "revocation::tests::test_token_revocation_with_refresh_token"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+     "TestTokenRevocationWithRefreshToken",
+     "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-003",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R004"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "tests::test_send_sync_impl"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAuthorizeURL",
+     "TestExchangeCodeSuccessfulWithMinimalJSONResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-004",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R015"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_minimal_json_response",
+     "token::tests::test_exchange_code_successful_with_complete_json_response",
+     "introspection::tests::test_token_introspection_successful_with_basic_auth_full_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithMinimalJSONResponse",
+     "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+     "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-005",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R018"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "revocation::tests::test_token_revocation_with_access_token_and_empty_json_response",
+     "revocation::tests::test_token_revocation_with_access_token_and_empty_response",
+     "revocation::tests::test_token_revocation_with_access_token_and_non_json_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestTokenRevocationWithAccessTokenAndEmptyJSONResponse",
+     "TestTokenRevocationWithAccessTokenAndEmptyResponse",
+     "TestTokenRevocationWithAccessTokenAndNonJSONResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-006",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R005"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_basic_auth",
+     "token::tests::test_exchange_client_credentials_with_basic_auth"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithBasicAuth",
+     "TestExchangeClientCredentialsWithBasicAuth"
+    ]
+   }
+  },
+  {
+   "id": "P2P-007",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R021"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_minimal_json_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithMinimalJSONResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-008",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R028"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "error::tests::test_error_response_serializer"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestErrorResponseSerializer",
+     "TestConfigurationErrorMessages"
+    ]
+   }
+  },
+  {
+   "id": "P2P-009",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R011"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "types::tests::test_secret_redaction",
+     "types::tests::test_secret_conversion"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestSecretRedaction",
+     "TestSecretConversion"
+    ]
+   }
+  },
+  {
+   "id": "P2P-010",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R009"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "code::tests::test_authorize_url_with_param"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAuthorizeURLWithParam"
+    ]
+   }
+  },
+  {
+   "id": "P2P-011",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R020"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "devicecode::tests::test_device_token_pending_then_success",
+     "devicecode::tests::test_device_token_slowdown_then_success",
+     "devicecode::tests::test_device_token_expired",
+     "devicecode::tests::test_device_token_authorization_timeout"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDeviceTokenPendingThenSuccess",
+     "TestDeviceTokenSlowdownThenSuccess",
+     "TestDeviceTokenExpired",
+     "TestDeviceTokenAuthorizationTimeout"
+    ]
+   }
+  },
+  {
+   "id": "P2P-012",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R012"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "error::tests::test_error_response_serializer"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestErrorResponseSerializer"
+    ]
+   }
+  },
+  {
+   "id": "P2P-013",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R008"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "revocation::tests::test_token_revocation_with_refresh_token",
+     "revocation::tests::test_token_revocation_with_non_https_url"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestTokenRevocationWithRefreshToken",
+     "TestTokenRevocationWithNonHTTPSURL"
+    ]
+   }
+  },
+  {
+   "id": "P2P-014",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R016"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_with_simple_json_error",
+     "token::tests::test_exchange_code_with_json_parse_error",
+     "token::tests::test_exchange_code_with_400_status_code"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeWithSimpleJSONError",
+     "TestExchangeCodeWithJSONParseError",
+     "TestExchangeCodeWith400StatusCode"
+    ]
+   }
+  },
+  {
+   "id": "P2P-015",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R007"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "code::tests::test_authorize_url",
+     "code::tests::test_authorize_url_pkce",
+     "code::tests::test_authorize_url_implicit",
+     "code::tests::test_authorize_url_with_param",
+     "code::tests::test_authorize_url_with_scopes",
+     "code::tests::test_authorize_url_with_redirect_url"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAuthorizeURL",
+     "TestAuthorizeURLPKCE",
+     "TestAuthorizeURLImplicit",
+     "TestAuthorizeURLWithParam",
+     "TestAuthorizeURLWithScopes",
+     "TestAuthorizeURLWithRedirectURL"
+    ]
+   }
+  },
+  {
+   "id": "P2P-016",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R017"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_with_unexpected_content_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeWithUnexpectedContentType"
+    ]
+   }
+  },
+  {
+   "id": "P2P-017",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R019"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "revocation::tests::test_token_revocation_with_non_https_url"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestTokenRevocationWithNonHTTPSURL"
+    ]
+   }
+  },
+  {
+   "id": "P2P-018",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R014"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "tests::test_send_sync_impl"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAuthorizeURLMissingEndpoint",
+     "TestExchangeCodeMissingTokenEndpoint",
+     "TestTokenIntrospectionMissingEndpoint",
+     "TestTokenRevocationWithMissingURL"
+    ]
+   }
+  },
+  {
+   "id": "P2P-019",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R001"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_complete_json_response",
+     "revocation::tests::test_token_revocation_with_missing_url",
+     "introspection::tests::test_token_introspection_successful_with_basic_auth_minimal_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+     "TestTokenRevocationWithMissingURL",
+     "TestTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse"
+    ]
+   }
+  },
+  {
+   "id": "P2P-020",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R006"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_client_credentials_with_basic_auth",
+     "token::tests::test_exchange_client_credentials_with_body_auth_and_scope",
+     "token::tests::test_exchange_client_credentials_with_basic_auth_but_no_client_secret"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeClientCredentialsWithBasicAuth",
+     "TestExchangeClientCredentialsWithBodyAuthAndScope",
+     "TestExchangeClientCredentialsWithBasicAuthButNoClientSecret"
+    ]
+   }
+  },
+  {
+   "id": "P2P-021",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R013"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_pkce_and_extension",
+     "devicecode::tests::test_exchange_device_code_and_token",
+     "introspection::tests::test_token_introspection_successful_with_basic_auth_full_response",
+     "revocation::tests::test_extension_token_revocation_successful"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestExchangeCodeSuccessfulWithPKCEAndExtension",
+     "TestExchangeDeviceCodeAndToken",
+     "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse",
+     "TestExtensionRevocationSuccessful"
+    ]
+   }
+  },
+  {
+   "id": "P2P-022",
+   "kind": "P2P",
+   "batch_id": "BATCH-P2P-0001",
+   "requirement_ids": [
+    "R022"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "code::tests::test_authorize_url",
+     "code::tests::test_authorize_url_with_scopes",
+     "code::tests::test_authorize_url_with_one_scope"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestAuthorizeURL",
+     "TestAuthorizeURLWithScopes",
+     "TestAuthorizeURLWithOneScope"
+    ]
+   }
+  },
+  {
+   "id": "F2P-001",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R029"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0001_FakeClientParity"
+    ]
+   }
+  },
+  {
+   "id": "F2P-002",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0002_ContentTypeAndEmptyBody"
+    ]
+   }
+  },
+  {
+   "id": "F2P-003",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R039"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0003_ScopeRoundTrip"
+    ]
+   }
+  },
+  {
+   "id": "F2P-004",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R025"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0004_DependencyManifest"
+    ]
+   }
+  },
+  {
+   "id": "F2P-005",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0005_CallOperation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-006",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0006_Non200ErrorMapping"
+    ]
+   }
+  },
+  {
+   "id": "F2P-008",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0008_MissingTokenEndpoint"
+    ]
+   }
+  },
+  {
+   "id": "F2P-011",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R031"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0011_AuthorizationURLOrdering"
+    ]
+   }
+  },
+  {
+   "id": "F2P-014",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0014_InsecureRevocationURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-015",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R038"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0015_AudienceDecoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-016",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R040"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0016_RevocationIgnoresBody"
+    ]
+   }
+  },
+  {
+   "id": "F2P-017",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R036"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0017_OrderedErrorSerialization"
+    ]
+   }
+  },
+  {
+   "id": "F2P-018",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0018_TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-021",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R024"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0021_NoRuntimeDelegation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-032",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR030BasicAuthCredentialEncoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-033",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R042"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "structural",
+    "check": "gomod_module_go_only"
+   }
+  },
+  {
+   "id": "F2P-037",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R002"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "structural",
+    "check": "stdlib_only_imports"
+   }
+  },
+  {
+   "id": "F2P-040",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R026"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "structural",
+    "check": "change_footprint"
+   }
+  },
+  {
+   "id": "F2P-042",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R041"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR041DeviceIntervalDefault"
+    ]
+   }
+  },
+  {
+   "id": "F2P-045",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R037"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestSecretRedaction"
+    ]
+   }
+  },
+  {
+   "id": "F2P-046",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R034"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDeviceTokenPendingThenSuccess",
+     "TestDeviceTokenSlowdownThenSuccess",
+     "TestDeviceTokenExpired",
+     "TestDeviceTokenAuthorizationTimeout"
+    ]
+   }
+  },
+  {
+   "id": "F2P-034",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR027OutOfScopeComponentsUnmigrated"
+    ]
+   }
+  },
+  {
+   "id": "F2P-010",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0008_MissingTokenEndpoint"
+    ]
+   }
+  },
+  {
+   "id": "F2P-012",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R031"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0012_AuthorizationURLParamSet"
+    ]
+   }
+  },
+  {
+   "id": "F2P-019",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0014_InsecureRevocationURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-020",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0020_ClientConstructionAndSetters"
+    ]
+   }
+  },
+  {
+   "id": "F2P-022",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0022_ContractIdentity"
+    ]
+   }
+  },
+  {
+   "id": "F2P-023",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R040"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0014_InsecureRevocationURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-024",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0024_FullTokenDeserialization"
+    ]
+   }
+  },
+  {
+   "id": "F2P-025",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R036"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "structural",
+    "check": "tests_no_skip"
+   }
+  },
+  {
+   "id": "F2P-026",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R029"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0001_FakeClientParity"
+    ]
+   }
+  },
+  {
+   "id": "F2P-028",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-030",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R039"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0003_ScopeRoundTrip"
+    ]
+   }
+  },
+  {
+   "id": "F2P-031",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR043HTTPClientInjection"
+    ]
+   }
+  },
+  {
+   "id": "F2P-035",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R038"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0015_AudienceDecoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-041",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R003"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR041DeviceIntervalDefault"
+    ]
+   }
+  },
+  {
+   "id": "F2P-043",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR030BasicAuthCredentialEncoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-050",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R040"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR040RevocationBodyIgnored"
+    ]
+   }
+  },
+  {
+   "id": "F2P-055",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-061",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-062",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-065",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-069",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R036"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR036StandardErrorResponseOrdering"
+    ]
+   }
+  },
+  {
+   "id": "F2P-070",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R036"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR036StandardErrorResponseOrdering"
+    ]
+   }
+  },
+  {
+   "id": "F2P-072",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR009ExtraParams"
+    ]
+   }
+  },
+  {
+   "id": "F2P-009",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0002_ContentTypeAndEmptyBody"
+    ]
+   }
+  },
+  {
+   "id": "F2P-013",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0005_CallOperation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-027",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-029",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR033ContentTypeValidation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-036",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR033ContentTypeValidation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-038",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR033ContentTypeValidation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-039",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0005_CallOperation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-044",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-047",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR043HTTPClientInjection"
+    ]
+   }
+  },
+  {
+   "id": "F2P-048",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0002",
+   "requirement_ids": [
+    "R041"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR041DeviceIntervalDefault"
+    ]
+   }
+  },
+  {
+   "id": "F2P-049",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR030BasicAuthCredentialEncoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-051",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-052",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-053",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR027OutOfScopeComponentsUnmigrated"
+    ]
+   }
+  },
+  {
+   "id": "F2P-054",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-056",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-057",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R027"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR027OutOfScopeComponentsUnmigrated"
+    ]
+   }
+  },
+  {
+   "id": "F2P-058",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR030BasicAuthCredentialEncoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-059",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R035"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR035RevocationInsecureURL"
+    ]
+   }
+  },
+  {
+   "id": "F2P-060",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR033ContentTypeValidation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-063",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R032"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR032TokenTypeCaseInsensitive"
+    ]
+   }
+  },
+  {
+   "id": "F2P-064",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R030"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR030BasicAuthCredentialEncoding"
+    ]
+   }
+  },
+  {
+   "id": "F2P-066",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R033"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR033ContentTypeValidation"
+    ]
+   }
+  },
+  {
+   "id": "F2P-067",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR043HTTPClientInjection"
+    ]
+   }
+  },
+  {
+   "id": "F2P-068",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR016Non200ErrorMapping"
+    ]
+   }
+  },
+  {
+   "id": "F2P-071",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0003",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestProbeR043HTTPClientInjection"
+    ]
+   }
+  },
+  {
+   "id": "F2P-007",
+   "kind": "F2P",
+   "batch_id": "BATCH-F2P-0001",
+   "requirement_ids": [
+    "R043"
+   ],
+   "source": {
+    "mode": "target_technology"
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestF2P0007_HTTPClientInjection"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-001",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R001"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::tests::test_send_sync_impl",
+     "token::tests::test_exchange_client_credentials_with_basic_auth",
+     "oauth2::revocation::tests::test_token_revocation_with_access_token_and_empty_json_response",
+     "oauth2::introspection::tests::test_token_introspection_successful_with_basic_auth_minimal_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF001"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-002",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R004"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::code::tests::test_authorize_url",
+     "token::tests::test_exchange_client_credentials_with_basic_auth"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF002"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-003",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R005"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_client_credentials_with_basic_auth",
+     "token::tests::test_exchange_code_successful_with_basic_auth"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF003"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-004",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R006"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_client_credentials_with_basic_auth",
+     "token::tests::test_exchange_client_credentials_with_basic_auth_but_no_client_secret",
+     "token::tests::test_exchange_client_credentials_with_body_auth_and_scope"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF004"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-005",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R007"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::code::tests::test_authorize_url",
+     "oauth2::code::tests::test_authorize_url_with_param",
+     "oauth2::code::tests::test_authorize_url_with_scopes",
+     "oauth2::code::tests::test_authorize_url_implicit",
+     "oauth2::code::tests::test_authorize_url_with_extension_response_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF005"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-006",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R008"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::revocation::tests::test_token_revocation_with_non_https_url",
+     "oauth2::revocation::tests::test_token_revocation_with_refresh_token"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF006"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-007",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R009"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::code::tests::test_authorize_url_with_extension_response_type",
+     "token::tests::test_exchange_client_credentials_with_body_auth_and_scope"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF007"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-008",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R010"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::endpoint::tests::test_async_client_closure",
+     "oauth2::tests::test_send_sync_impl"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF008"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-009",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R011"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::types::tests::test_secret_redaction",
+     "oauth2::types::tests::test_secret_conversion"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF009"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-010",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R012"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::error::tests::test_error_response_serializer",
+     "token::tests::test_exchange_code_with_invalid_token_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF010"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-011",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R013"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::tests::test_send_sync_impl",
+     "token::tests::test_extension_serializer"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF011"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-012",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R014"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::revocation::tests::test_token_revocation_with_missing_url"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF012"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-013",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R015"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_successful_with_complete_json_response",
+     "oauth2::introspection::tests::test_token_introspection_successful_with_basic_auth_full_response"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF013"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-014",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R016"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_with_simple_json_error",
+     "token::tests::test_exchange_code_with_json_parse_error",
+     "token::tests::test_exchange_code_with_400_status_code",
+     "token::tests::test_exchange_code_fails_gracefully_on_transport_error"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF014"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-015",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R017"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_with_unexpected_content_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF015"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-016",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R018"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::revocation::tests::test_token_revocation_with_access_token_and_empty_response",
+     "oauth2::revocation::tests::test_token_revocation_with_access_token_and_non_json_response",
+     "oauth2::revocation::tests::test_token_revocation_with_unsupported_token_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF016"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-017",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R019"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::revocation::tests::test_token_revocation_with_non_https_url"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF017"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-018",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R020"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::devicecode::tests::test_device_token_pending_then_success",
+     "oauth2::devicecode::tests::test_device_token_slowdown_then_success",
+     "oauth2::devicecode::tests::test_device_token_authorization_timeout",
+     "oauth2::devicecode::tests::test_device_token_expired"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF018"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-019",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R021"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "token::tests::test_exchange_code_with_invalid_token_type"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF019"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-020",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R022"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::code::tests::test_authorize_url",
+     "oauth2::code::tests::test_authorize_url_with_param",
+     "oauth2::code::tests::test_authorize_url_with_scopes"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF020"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-021",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R023"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::tests::test_send_sync_impl"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF021"
+    ]
+   }
+  },
+  {
+   "id": "DIFF-022",
+   "kind": "DIFFERENTIAL",
+   "batch_id": "BATCH-DIFFERENTIAL-0001",
+   "requirement_ids": [
+    "R028"
+   ],
+   "source": {
+    "mode": "cargo",
+    "selectors": [
+     "oauth2::revocation::tests::test_token_revocation_with_missing_url",
+     "oauth2::revocation::tests::test_token_revocation_with_non_https_url",
+     "oauth2::error::tests::test_error_response_serializer"
+    ]
+   },
+   "target": {
+    "mode": "go_test",
+    "selectors": [
+     "TestDIFF022"
+    ]
+   }
+  }
+ ],
+ "source_technology": {
+  "language_name": "Rust",
+  "language_version": "2021"
+ },
+ "target_technology": {
+  "language_name": "Go",
+  "language_version": "1.22"
+ }
+}

@@ -1,0 +1,166 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "migration": {
+    "category": "language",
+    "source": "Rust",
+    "target": "Go"
+  },
+  "normalization": {
+    "relation": "equal_after_normalization",
+    "mode": "status-wrapper",
+    "projection": {
+      "result": "PASS"
+    }
+  },
+  "sides": {
+    "source": {
+      "repo": "/input/source",
+      "command": "git diff --exit-code",
+      "expectation": "PASS"
+    },
+    "target": {
+      "repo": "/input/target",
+      "command": "CGO_ENABLED=0 go test ./...",
+      "expectation": "PASS"
+    }
+  },
+  "observations": [
+    {
+      "id": "P2P-001",
+      "requirement_ids": ["R014"],
+      "atomic_claim": "After dispatch the runtime emits NewState only when a model field changed, the changed fields are reported in the stable order ctx, streaming_server, player, and two identical Player Loads each emit exactly one NewState.",
+      "source_tests": ["src/unit_tests/player/mod.rs::identical_player_loads_are_observable"],
+      "target_tests": ["models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState", "models:TestUnloadWithNoSelectionEmitsNoNewState", "runtime:TestRuntimeNewStateOnlyOnChange"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-002",
+      "requirement_ids": ["R006"],
+      "atomic_claim": "EnvError marshals as {\"code\":<int>,\"message\":<string>} and the fixed codes Fetch=1, AddonTransport=2, Serde=3, StorageUnavailable=4, StorageSchemaVersionDowngrade=5, StorageSchemaVersionUpgrade=6, StorageReadError=7, StorageWriteError=8, Other=1001 are preserved.",
+      "source_tests": ["src/runtime/env.rs::tests"],
+      "target_tests": ["runtime:TestEnvErrorCodes"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-003",
+      "requirement_ids": ["R011"],
+      "atomic_claim": "The root model keeps Update(m) (whole model) and UpdateField(m, field) (single field), each returning the effects and the changed-field list; the two must produce the same effect and changed-field outputs for the same routed message.",
+      "source_tests": ["src/unit_tests/player/mod.rs::identical_player_loads_are_observable"],
+      "target_tests": ["runtime:TestRuntimeFieldRouting", "models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-004",
+      "requirement_ids": ["R004"],
+      "atomic_claim": "json.Marshal of a NewState RuntimeEvent yields {\"name\":\"NewState\",\"args\":[changed fields]} and of a CoreEvent yields {\"name\":\"CoreEvent\",\"args\":{event...}}.",
+      "source_tests": ["src/unit_tests/serde/mod.rs"],
+      "target_tests": ["runtime:TestRuntimeEventMarshal"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-005",
+      "requirement_ids": ["R001"],
+      "atomic_claim": "The migrated Go module provides the update/effects runtime, message and event types, Ctx and model state, player and streaming-server models, addon transports and persistence; a port missing any responsibility cannot complete a Player load and persist library/profile/dismissed-events.",
+      "source_tests": ["src/unit_tests/player/mod.rs", "src/unit_tests/ctx/add_to_library.rs", "src/unit_tests/ctx/update_settings.rs", "src/unit_tests/ctx/update_events.rs"],
+      "target_tests": ["models:TestPlayerLoadsNextVideoAndStream", "models/ctx:TestAddToLibraryPersistsLibrary", "models/ctx:TestUpdateSettingsPersistsProfile"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-006",
+      "requirement_ids": ["R019"],
+      "atomic_claim": "deep_links generates stremio:///detail/..., /player/..., /discover/..., /addons/..., /library..., /calendar/..., /search?... with the engine query-parameter encoding.",
+      "source_tests": ["src/unit_tests/deep_links/mod.rs"],
+      "target_tests": ["deep_links:TestMetaItemDeepLinks", "deep_links:TestDiscoverDeepLinks", "deep_links:TestSearchHistoryDeepLinks", "deep_links:TestCalendarDeepLinks", "deep_links:TestLibraryDeepLinks", "deep_links:TestQueryParamsEncode"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-007",
+      "requirement_ids": ["R008"],
+      "atomic_claim": "The Go module exposes the equivalent public surface of the addon_transport, analytics, deep_links, models, runtime and types packages, including the model construction/derivation entry point models.New(env).",
+      "source_tests": ["src/lib.rs"],
+      "target_tests": ["build:go build ./...", "constants:TestProtectedStorageKeys", "models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-008",
+      "requirement_ids": ["R005"],
+      "atomic_claim": "Action values marshal with action/args, Event values with event/args, and model-load actions with model/args.",
+      "source_tests": ["src/unit_tests/serde/action.rs", "src/unit_tests/serde/event.rs"],
+      "target_tests": ["runtime:TestRuntimeEventMarshal", "runtime/msg:build"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-009",
+      "requirement_ids": ["R020"],
+      "atomic_claim": "No required public capability (runtime, models, addon transports, deep links, analytics, persistence) is removed or has its contract changed outside the stated goal.",
+      "source_tests": ["cargo test --all"],
+      "target_tests": ["go test ./..."],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-010",
+      "requirement_ids": ["R009"],
+      "atomic_claim": "New(model Model, effects []Effect, buffer int, env Env) returns a *Runtime together with a <-chan RuntimeEvent; a port without the initial-effect list or the event receiver fails.",
+      "source_tests": ["src/runtime/runtime.rs::tests"],
+      "target_tests": ["runtime:TestRuntimeNewStateOnlyOnChange", "runtime:TestRuntimeFieldRouting"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-011",
+      "requirement_ids": ["R015"],
+      "atomic_claim": "An internal message updates the model and continues processing returned effects, an event message emits only a CoreEvent, and an action returned by an effect panics.",
+      "source_tests": ["src/runtime/runtime.rs::tests"],
+      "target_tests": ["runtime:TestRuntimeInternalRecurses", "runtime:TestRuntimeEventMessageEmitsCoreEventOnly", "runtime:TestRuntimeActionEffectPanics"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-012",
+      "requirement_ids": ["R013"],
+      "atomic_claim": "The legacy transport keeps its JSON-RPC wire protocol and maps a JSON-RPC error to an addon-transport error formatted rpc error {code}: {message}, and keeps existing unsupported-resource/request messages.",
+      "source_tests": ["src/addon_transport/http_transport/legacy/legacy_manifest.rs::tests"],
+      "target_tests": ["addon_transport:TestLegacyErrorMapping", "addon_transport:TestLegacyManifestMapsMethodsToResources"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-013",
+      "requirement_ids": ["R017"],
+      "atomic_claim": "Loadable and ResourceLoadable keep their loading/ready/error states and emit changed-field notifications when Env::fetch succeeds or fails.",
+      "source_tests": ["src/models/common/mod.rs", "src/models/player.rs::tests"],
+      "target_tests": ["models/common:TestResourceLoadableTransitions", "models/common:TestLoadableMarshal", "models/common:TestEffectsJoinForcesChanged"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-014",
+      "requirement_ids": ["R025"],
+      "atomic_claim": "The migrated tests keep their assertions and comparisons and derive inputs from the model rather than hardcoding expected outputs.",
+      "source_tests": ["integrity:assertions-preserved"],
+      "target_tests": ["integrity:assertions-preserved"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-015",
+      "requirement_ids": ["R010"],
+      "atomic_claim": "Runtime.Model() returns the current model, and Dispatch(RuntimeAction{Field,Action}) routes a present Field to UpdateField and an absent Field to whole-model Update.",
+      "source_tests": ["src/runtime/runtime.rs::tests"],
+      "target_tests": ["runtime:TestRuntimeFieldRouting"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-016",
+      "requirement_ids": ["R016"],
+      "atomic_claim": "The legacy transport base64-encodes the JSON-RPC body into {transport_url}/q.json?b=<param> and deserializes {\"result\": ...} and {\"error\": {\"message\": ..., \"code\": ...}} responses.",
+      "source_tests": ["src/addon_transport/http_transport/legacy/mod.rs::tests"],
+      "target_tests": ["addon_transport:TestBuildLegacyReqCatalog", "addon_transport:TestBuildLegacyReqStreamImdb", "addon_transport:TestQueryFromID", "addon_transport:TestLegacyManifestCatalogs"],
+      "projection": {"result": "PASS"}
+    },
+    {
+      "id": "P2P-017",
+      "requirement_ids": ["R012"],
+      "atomic_claim": "The Env interface keeps fetch, get_storage, set_storage, exec_concurrent, exec_sequential, now, local_now and the analytics operations (FlushAnalytics, AnalyticsContext).",
+      "source_tests": ["src/runtime/env.rs::tests"],
+      "target_tests": ["runtime:build", "internal/testenv:build", "models/common:TestEffectsJoinForcesChanged"],
+      "projection": {"result": "PASS"}
+    }
+  ]
+}

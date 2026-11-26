@@ -1,0 +1,601 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "scope": "target",
+  "input_mount": "/input/target",
+  "required_technology": {
+    "language_name": "JavaScript",
+    "language_version": "unknown",
+    "name": "Flask",
+    "version": "3.1.2"
+  },
+  "source_technology": {
+    "language_name": "JavaScript",
+    "language_version": "unknown",
+    "name": "Python http.server",
+    "version": "3.10"
+  },
+  "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+  "observations": [
+    "F2P-001",
+    "F2P-002",
+    "F2P-003",
+    "F2P-004",
+    "F2P-007",
+    "F2P-010",
+    "F2P-013",
+    "F2P-016",
+    "F2P-017",
+    "F2P-019",
+    "F2P-020",
+    "F2P-021",
+    "F2P-022",
+    "F2P-005",
+    "F2P-006",
+    "F2P-008",
+    "F2P-011",
+    "F2P-012",
+    "F2P-014",
+    "F2P-018",
+    "F2P-023",
+    "F2P-009",
+    "F2P-015",
+    "F2P-024"
+  ],
+  "entries": [
+    {
+      "id": "F2P-001",
+      "observation_id": "F2P-001",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::failure responses of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/messages",
+        "body": {},
+        "assert": "HTTP 500 JSON envelope, produced by Flask error handler for both helpers"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-002",
+      "observation_id": "F2P-002",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::POST /code",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/append-account-log",
+        "body": {
+          "email": "a@b.com",
+          "password": "p",
+          "status": "success",
+          "recordedAt": "2020-01-01T00:00:00Z",
+          "reason": "r"
+        },
+        "assert": "two concurrent posts yield two complete non-interleaved TSV lines under app.run(threaded=True) + shared lock"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-003",
+      "observation_id": "F2P-003",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::POST /messages",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/messages",
+        "body": {},
+        "assert": "500 envelope and 404 envelope both carry the three CORS headers"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-004",
+      "observation_id": "F2P-004",
+      "requirement_ids": [
+        "R023"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "dependency-execution",
+      "scenario": "dependency-policy",
+      "surface": "scripts/hotmail_helper.py::POST /code",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/code",
+        "body": {},
+        "assert": "no subprocess/RPC/FFI/dynamic http.server delegation on the serving path"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-007",
+      "observation_id": "F2P-007",
+      "requirement_ids": [
+        "R040"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::successful response envelopes of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "env": {
+          "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT": "18000"
+        },
+        "assert": "project-root .env binds 127.0.0.1:18000"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-010",
+      "observation_id": "F2P-010",
+      "requirement_ids": [
+        "R030"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::POST /random-email",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/does-not-exist",
+        "body": {},
+        "assert": "404 JSON envelope with Content-Type application/json; charset=utf-8"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-013",
+      "observation_id": "F2P-013",
+      "requirement_ids": [
+        "R028"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-runtime",
+      "projection": "target-condition",
+      "scenario": "target-postcondition",
+      "surface": "validation and test behavior",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "tests/hotmail_helper_logging_test.py",
+        "method": "RUN",
+        "path": "tests/*.test.js",
+        "assert": "no checks skipped, assertions removed, comparisons weakened, or inputs hardcoded"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-016",
+      "observation_id": "F2P-016",
+      "requirement_ids": [
+        "R038"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::POST /append-account-log",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/append-account-log",
+        "body": {
+          "email": "a@b.com",
+          "password": "p",
+          "status": "success",
+          "recordedAt": "2020-01-01T00:00:00Z",
+          "reason": "r"
+        },
+        "assert": "route is dispatched by Flask and returns 200 filePath, not 404/405"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-017",
+      "observation_id": "F2P-017",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::unknown-path responses of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/does-not-exist",
+        "body": {},
+        "assert": "404 body carries Unsupported path: /does-not-exist and JSON charset"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-019",
+      "observation_id": "F2P-019",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::POST /sync-account-run-records",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/sync-account-run-records",
+        "body": "not-json",
+        "content_type": "application/json",
+        "assert": "500 Invalid JSON payload envelope instead of a 400 Bad Request"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-020",
+      "observation_id": "F2P-020",
+      "requirement_ids": [
+        "R022"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "dependency-execution",
+      "scenario": "dependency-policy",
+      "surface": "scripts/custom_mail_helper.py::every response emitted by both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "assert": "module does not import http.server / BaseHTTPRequestHandler / ThreadingHTTPServer"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-021",
+      "observation_id": "F2P-021",
+      "requirement_ids": [
+        "R031"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::successful response envelopes of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "GET",
+        "path": "/messages",
+        "body": null,
+        "assert": "405 handler remapped to 404 JSON envelope, not HTML"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-022",
+      "observation_id": "F2P-022",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::POST /code",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/sync-account-run-records",
+        "body": {
+          "records": [
+            {
+              "email": "a@b.com",
+              "password": "p",
+              "finalStatus": "success",
+              "retryCount": 2
+            }
+          ]
+        },
+        "assert": "200 filePath with summary {total:1, success:1, failed:0, retryTotal:2}"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-005",
+      "observation_id": "F2P-005",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::public capability and contract set of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "assert": "documented route/contract set preserved on the Flask app"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-006",
+      "observation_id": "F2P-006",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::account-run snapshot record normalization",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/sync-account-run-records",
+        "body": {
+          "records": [
+            {
+              "email": "a@b.com",
+              "password": "p",
+              "finalStatus": "success",
+              "retryCount": 2,
+              "failedStep": "s1",
+              "autoRunContext": {
+                "k": 1
+              }
+            }
+          ]
+        },
+        "assert": "normalization constrained to success/failed/stopped, retains retryCount/failedStep/autoRunContext"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-008",
+      "observation_id": "F2P-008",
+      "requirement_ids": [
+        "R023"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "dependency-execution",
+      "scenario": "dependency-policy",
+      "surface": "scripts/hotmail_helper.py::every response emitted by both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "assert": "every response path avoids subprocess/RPC/FFI/dynamic http.server serving"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-011",
+      "observation_id": "F2P-011",
+      "requirement_ids": [
+        "R030"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::POST /health",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "assert": "all five custom routes dispatched by Flask, none 404/405"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-012",
+      "observation_id": "F2P-012",
+      "requirement_ids": [
+        "R023"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "dependency-execution",
+      "scenario": "dependency-policy",
+      "surface": "scripts/hotmail_helper.py::OPTIONS handling on both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "OPTIONS",
+        "path": "/messages",
+        "body": null,
+        "assert": "204 with CORS headers and no delegated serving"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-014",
+      "observation_id": "F2P-014",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/hotmail_helper.py::unknown-path responses of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/append-account-log",
+        "body": {
+          "email": "a@b.com",
+          "password": "p",
+          "status": "success",
+          "recordedAt": "2020-01-01T00:00:00Z",
+          "reason": "r"
+        },
+        "assert": "threaded Flask plus shared lock prevents interleaving"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-018",
+      "observation_id": "F2P-018",
+      "requirement_ids": [
+        "R023"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "dependency-execution",
+      "scenario": "dependency-policy",
+      "surface": "scripts/hotmail_helper.py::hotmail_helper listener socket",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/hotmail_helper.py",
+        "method": "POST",
+        "path": "/messages",
+        "body": {},
+        "assert": "binds 127.0.0.1:17373 and serves without delegating to http.server"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-023",
+      "observation_id": "F2P-023",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::POST /messages",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/messages",
+        "body": {},
+        "assert": "404 and 500 responses both carry the three CORS headers"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-009",
+      "observation_id": "F2P-009",
+      "requirement_ids": [
+        "R040"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::unknown-path responses of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "env": {
+          "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT": "18000"
+        },
+        "assert": "project-root .env binds 127.0.0.1:18000"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-015",
+      "observation_id": "F2P-015",
+      "requirement_ids": [
+        "R040"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::POST /health",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/health",
+        "body": {},
+        "env": {
+          "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT": "18000"
+        },
+        "assert": "project-root .env binds 127.0.0.1:18000"
+      },
+      "expectation": "PASS"
+    },
+    {
+      "id": "F2P-024",
+      "observation_id": "F2P-024",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "scripts/custom_mail_helper.py::unknown-path responses of both helpers",
+      "semantic_predicate": "The observed HTTP request is served by the target technology Flask 3.1.2: the module imports flask, defines a module-level `app = Flask(__name__)`, registers the documented path as a Flask route rule, decodes the request body with Flask's JSON parser, and writes the response as a flask.Response; the request is not dispatched through BaseHTTPRequestHandler.do_POST.",
+      "probe": {
+        "file": "scripts/custom_mail_helper.py",
+        "method": "POST",
+        "path": "/does-not-exist",
+        "body": {},
+        "assert": "Flask routing/JSON parsing/Response/CORS predicate holds on the unknown-path path"
+      },
+      "expectation": "PASS"
+    }
+  ]
+}

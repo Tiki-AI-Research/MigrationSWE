@@ -1,0 +1,120 @@
+{
+  "contracts_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "kind": "DIFFERENTIAL",
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Express", "version": "4.17.1" },
+    "target": { "name": "Fastify", "version": "4.28.1" }
+  },
+  "relation": "equal_after_normalization",
+  "server_entry": "server.js",
+  "observations": [
+    {
+      "id": "DIFF-033",
+      "requirement_ids": ["R036"],
+      "surface": "MJPEG proxy for GET /webcam/stream",
+      "projection": {
+        "status": "statusCode",
+        "content_type": "headers.content-type",
+        "boundary": "upstream boundary echoed unchanged",
+        "frames": "concatenated frame bytes, in order, unchanged"
+      }
+    },
+    {
+      "id": "DIFF-034",
+      "requirement_ids": ["R037"],
+      "surface": "Resolution lifecycle for GET /webcam/resolution",
+      "projection": {
+        "status": "statusCode",
+        "body": "normalized JSON of YOLO.videoResolution"
+      }
+    },
+    {
+      "id": "DIFF-035",
+      "requirement_ids": ["R038"],
+      "surface": "Console stream behavior for GET /console",
+      "projection": {
+        "immediate_write": "first chunk received before the 2000ms interval",
+        "interval_write": "a further chunk arrives on the 2000ms interval",
+        "second_request_closes_first": "opening a second /console stream ends the first"
+      }
+    },
+    {
+      "id": "DIFF-036",
+      "requirement_ids": ["R039"],
+      "surface": "Process signal handling and stdout ring buffer",
+      "projection": {
+        "signal_exit": "SIGINT terminates the process",
+        "clean_called": "Opendatacam.clean() observed on exit",
+        "ring_buffer_limit": "captured stdout buffer capped at 30000 characters"
+      }
+    },
+    {
+      "id": "DIFF-037",
+      "requirement_ids": ["R040"],
+      "surface": "Startup version mismatch guard",
+      "projection": {
+        "exit_code": "process exit code when package.json version != config.OPENDATACAM_VERSION",
+        "error_block": "version mismatch error block printed"
+      }
+    },
+    {
+      "id": "DIFF-038",
+      "requirement_ids": ["R041"],
+      "surface": "HTTP listen port selection",
+      "projection": {
+        "env_port": "listen port when process.env.PORT is set",
+        "default_port": "listen port when process.env.PORT is unset (config PORTS.app)"
+      }
+    },
+    {
+      "id": "DIFF-039",
+      "requirement_ids": ["R042"],
+      "surface": "Handler side effects on Opendatacam, YOLO and tracker",
+      "projection": {
+        "start": "GET /start status and body",
+        "recording_start": "GET /recording/start status and body",
+        "recording_stop": "GET /recording/stop status and body",
+        "counter_areas_post": "POST /counter/areas status and body",
+        "ui_post": "POST /ui status and body"
+      }
+    },
+    {
+      "id": "DIFF-040",
+      "requirement_ids": ["R043"],
+      "surface": "Preservation of required public capabilities",
+      "projection": {
+        "routes": "sorted route/method table",
+        "route_response_shape": "normalized JSON shape for every read-only route"
+      }
+    },
+    {
+      "id": "DIFF-041",
+      "requirement_ids": ["R047"],
+      "surface": "Out-of-scope modules, config.json, ports, env and MongoDB untouched",
+      "projection": {
+        "config": "normalized GET /config equals config.json keys",
+        "out_of_scope_files": "sha256 of the out-of-scope modules"
+      }
+    },
+    {
+      "id": "DIFF-042",
+      "requirement_ids": ["R048"],
+      "surface": "Protected public specs under spec/",
+      "projection": {
+        "spec_files": "sorted spec/*.spec.js paths",
+        "spec_assertions": "count of expect/jasmine assertions per spec"
+      }
+    },
+    {
+      "id": "DIFF-043",
+      "requirement_ids": ["R049"],
+      "surface": "No skipped checks or hardcoded evaluation inputs",
+      "projection": {
+        "skipped_specs": "no xit/fit/pending markers in spec/",
+        "hardcoded_inputs": "no canned response map in server.js"
+      }
+    }
+  ]
+}

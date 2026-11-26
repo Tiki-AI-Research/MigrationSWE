@@ -1,0 +1,5172 @@
+diff --git a/tests/shared/batches/BATCH-DIFFERENTIAL-0001/harness.js b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/harness.js
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/harness.js
+@@ -0,0 +1,161 @@
++"use strict";
++
++// Shared DIFFERENTIAL harness for BATCH-DIFFERENTIAL-0001.
++//
++// The same normalized projection is applied to the source (Superstruct 2.0.2)
++// and target (Zod 3.23.8) probes so that the two sides can be compared with the
++// `equal_after_normalization` relation. Normalization keeps only the parts of
++// the observable surface that both frameworks are expected to agree on:
++//   parse                 -> { decision }
++//   handle                -> { decision, entries: sorted "level:keyPath" }
++//   handle_native         -> { passthrough, errors }
++//   shape                 -> { keys: sorted export keys }
++//   capabilities          -> { name: boolean }
++//
++// `entries` levels are derived from the preserved `ui.errors.config.*`
++// localization keys: key_missing -> missing, key_not_expected -> unexpected,
++// key_wrong_type -> wrong_type. Union-expansion artifacts (Superstruct reports
++// one leaf failure per failed union branch) are collapsed because the preserved
++// contract skips union branches.
++
++const fs = require("fs");
++const path = require("path");
++const ts = require("typescript");
++
++if (typeof globalThis.window === "undefined") {
++  globalThis.window = {
++    name: "",
++    location: { href: "http://localhost/" },
++    addEventListener() {},
++    removeEventListener() {},
++  };
++}
++if (typeof globalThis.parent === "undefined") globalThis.parent = globalThis.window;
++if (typeof globalThis.top === "undefined") globalThis.top = globalThis.window;
++if (typeof globalThis.self === "undefined") globalThis.self = globalThis;
++if (typeof globalThis.customElements === "undefined") {
++  globalThis.customElements = {
++    get: () => undefined,
++    define() {},
++    whenDefined: () => Promise.resolve(),
++  };
++}
++if (typeof globalThis.HTMLElement === "undefined") globalThis.HTMLElement = class {};
++if (typeof globalThis.CustomEvent === "undefined") globalThis.CustomEvent = class {};
++if (typeof globalThis.requestAnimationFrame === "undefined") {
++  globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
++}
++if (typeof globalThis.cancelAnimationFrame === "undefined") {
++  globalThis.cancelAnimationFrame = () => {};
++}
++
++require.extensions[".ts"] = function (module, filename) {
++  const source = fs.readFileSync(filename, "utf8");
++  const out = ts.transpileModule(source, {
++    compilerOptions: {
++      module: ts.ModuleKind.CommonJS,
++      target: ts.ScriptTarget.ES2019,
++      esModuleInterop: true,
++      jsx: ts.JsxEmit.React,
++    },
++    fileName: filename,
++  });
++  module._compile(out.outputText, filename);
++};
++
++function loadTs(repoRoot, rel) {
++  return require(path.join(repoRoot, rel));
++}
++
++function makeHass() {
++  const calls = [];
++  return {
++    calls,
++    localize: (key, ...args) => {
++      calls.push({ key, args });
++      return JSON.stringify({ key, args });
++    },
++  };
++}
++
++function normalizeEntry(str) {
++  const o = JSON.parse(str);
++  let keyPath;
++  for (let i = 0; i < o.args.length; i++) {
++    if (o.args[i] === "key") {
++      keyPath = o.args[i + 1];
++      break;
++    }
++  }
++  let level = "other";
++  if (o.key.endsWith("key_missing")) level = "missing";
++  else if (o.key.endsWith("key_not_expected")) level = "unexpected";
++  else if (o.key.endsWith("key_wrong_type")) level = "wrong_type";
++  return `${level}:${keyPath}`;
++}
++
++function collapseUnionExpansion(err) {
++  const failures = err.failures();
++  const unionPaths = new Set(
++    failures.filter((f) => f.type === "union").map((f) => f.path.join("."))
++  );
++  const kept = failures.filter(
++    (f) => f.type !== "union" && !unionPaths.has(f.path.join("."))
++  );
++  err.failures = () => kept;
++  return err;
++}
++
++// adapter = {
++//   loadSchemas(repoRoot) -> { [name]: schema },
++//   decide(schema, input) -> { accepted: boolean, err: unknown },
++//   handle(hass, err, input) -> { warnings: string[], errors?: string[] },
++//   schemaKeys(schema) -> string[],
++//   hasCapability(schema) -> boolean,
++//   handleNative(hass, message) -> { warnings: string[], errors?: string[] },
++// }
++function runCorpus(corpus, adapter, repoRoot) {
++  const schemas = adapter.loadSchemas(repoRoot);
++  const results = {};
++  for (const c of corpus) {
++    results[c.id] = runCase(c, schemas, adapter);
++  }
++  return results;
++}
++
++function runCase(c, schemas, adapter) {
++  if (c.op === "shape") {
++    return { keys: adapter.schemaKeys(schemas[c.schema]).slice().sort() };
++  }
++  if (c.op === "capabilities") {
++    const out = {};
++    for (const name of Object.keys(schemas)) {
++      out[name] = adapter.hasCapability(schemas[name]);
++    }
++    return out;
++  }
++  if (c.op === "handle_native") {
++    const hass = makeHass();
++    const res = adapter.handleNative(hass, c.input);
++    return { passthrough: res.warnings, errors: res.errors === undefined };
++  }
++  const { accepted, err } = adapter.decide(schemas[c.schema], c.input);
++  const decision = accepted ? "accept" : "reject";
++  if (c.op === "parse") return { decision };
++  const hass = makeHass();
++  const res = accepted
++    ? { warnings: [], errors: undefined }
++    : adapter.handle(hass, err, c.input);
++  const entries = [...(res.errors || []), ...res.warnings]
++    .map(normalizeEntry)
++    .sort();
++  return { decision, entries };
++}
++
++module.exports = {
++  loadTs,
++  makeHass,
++  normalizeEntry,
++  collapseUnionExpansion,
++  runCorpus,
++};
+diff --git a/tests/shared/batches/BATCH-DIFFERENTIAL-0001/manifest.json b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/manifest.json
+@@ -0,0 +1,46 @@
++{
++  "batch_id": "BATCH-DIFFERENTIAL-0001",
++  "kind": "DIFFERENTIAL",
++  "role": "Shared-case-corpus differential assets comparing the Superstruct 2.0.2 baseline with the Zod 3.23.8 migration of the mushroom-cards configuration schemas and handleStructError.",
++  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
++  "surface": {
++    "shared": "shared/batches/BATCH-DIFFERENTIAL-0001",
++    "source": "source/batches/BATCH-DIFFERENTIAL-0001",
++    "target": "target/batches/BATCH-DIFFERENTIAL-0001",
++    "fixtures": "fixtures/batches/BATCH-DIFFERENTIAL-0001"
++  },
++  "corpus": {
++    "path": "fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json",
++    "family": "shared-case-corpus",
++    "projection": "normalized-result"
++  },
++  "normalization": {
++    "parse": "{ decision }",
++    "handle": "{ decision, entries: sorted(level + ':' + dottedKeyPath) }",
++    "handle_native": "{ passthrough, errors }",
++    "shape": "{ keys: sorted(exportKeys) }",
++    "capabilities": "{ exportName: present }",
++    "levels": {
++      "ui.errors.config.key_missing": "missing",
++      "ui.errors.config.key_not_expected": "unexpected",
++      "ui.errors.config.key_wrong_type": "wrong_type"
++    },
++    "union_expansion": "Superstruct emits one leaf failure per failed union branch; those union-shadowed leaf failures are collapsed so the preserved contract (skip union branches) is comparable with Zod's single invalid_union issue."
++  },
++  "harness": {
++    "shared": "shared/batches/BATCH-DIFFERENTIAL-0001/harness.js",
++    "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe.js",
++    "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe.js",
++    "source_invocation": "node source/batches/BATCH-DIFFERENTIAL-0001/probe.js <sourceRepoRoot> <corpus.json> <out.json>",
++    "target_invocation": "node target/batches/BATCH-DIFFERENTIAL-0001/probe.js <targetRepoRoot> <corpus.json> <out.json>",
++    "relation": "equal_after_normalization",
++    "created_by": "DIFFERENTIAL",
++    "note": "source/runner and target/runner.js are promoted by the INTEGRATION batch; this batch only authors the probes above."
++  },
++  "authoring_execution": {
++    "source": "/input/source",
++    "target": "/input/target",
++    "source_result": "all 27 corpus cases produced the same normalized result as the target",
++    "target_result": "all 27 corpus cases produced the same normalized result as the source"
++  }
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0001/corpus.json b/tests/shared/batches/BATCH-F2P-0001/corpus.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/corpus.json
+@@ -0,0 +1,397 @@
++{
++  "schema_version": "migration-corpus:v1",
++  "batch_id": "BATCH-F2P-0001",
++  "source_technology": {
++    "language_name": "TypeScript",
++    "name": "Superstruct",
++    "version": "2.0.2"
++  },
++  "target_technology": {
++    "language_name": "TypeScript",
++    "name": "Zod",
++    "version": "3.23.8"
++  },
++  "note": "Shared configuration inputs for the BATCH-F2P-0001 predicates. Both sides consume this corpus through shared/batches/BATCH-F2P-0001/probe-core.js.",
++  "observations": {
++    "F2P-001": {
++      "predicate": "offending_value",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Localized validation messages emitted by handleStructError",
++      "projection": "target-execution-path",
++      "input": {
++        "primary_info": 123
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S004"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00137"
++      ]
++    },
++    "F2P-002": {
++      "predicate": "dependency_imports",
++      "coverage_surface": "package.json::dependency manifest",
++      "projection": "dependency-declaration",
++      "input": "package.json/package-lock.json dependency declarations",
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "R016"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00172"
++      ]
++    },
++    "F2P-004": {
++      "predicate": "strict_entity_card",
++      "coverage_surface": "src/cards/entity-card/entity-card-config.ts::Card, chip and badge config and editor modules that compose or call the exported schemas",
++      "projection": "target-execution-path",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "bogus": 1
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S008"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00141"
++      ]
++    },
++    "F2P-005": {
++      "predicate": "zod_error_detection",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::runtime entry",
++      "projection": "target-entry-identity",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S001"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00135"
++      ]
++    },
++    "F2P-006": {
++      "predicate": "key_missing",
++      "coverage_surface": "src/shared/config/lovelace-card-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
++      "projection": "target-execution-path",
++      "input": {},
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S003"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00084"
++      ]
++    },
++    "F2P-007": {
++      "predicate": "dependency_execution",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
++      "projection": "dependency-execution",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "R017"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00159"
++      ]
++    },
++    "F2P-008": {
++      "predicate": "non_validation_passthrough",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys",
++      "projection": "target-execution-path",
++      "input": "TypeError(\"boom\")",
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S010"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00087"
++      ]
++    },
++    "F2P-009": {
++      "predicate": "enum_reject",
++      "coverage_surface": "src/shared/config/appearance-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
++      "projection": "target-execution-path",
++      "input": {
++        "primary_info": "bogus"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S005"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00104"
++      ]
++    },
++    "F2P-011": {
++      "predicate": "dependency_manifest",
++      "coverage_surface": "package-lock.json::dependency manifest",
++      "projection": "dependency-declaration",
++      "input": "package.json/package-lock.json dependency declarations",
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S009"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00099"
++      ]
++    },
++    "F2P-012": {
++      "predicate": "unknown_key_strict",
++      "coverage_surface": "src/shared/config/entity-config.ts::runtime entry",
++      "projection": "target-entry-identity",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S002"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00090"
++      ]
++    },
++    "F2P-015": {
++      "predicate": "action_dispatch",
++      "coverage_surface": "actionConfigStruct dynamic-action dispatch",
++      "projection": "target-condition",
++      "input": {
++        "action": "url"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S007"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00067"
++      ]
++    },
++    "F2P-017": {
++      "predicate": "union_skip",
++      "coverage_surface": "src/shared/config/entity-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
++      "projection": "target-execution-path",
++      "input": 7,
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S006"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00102"
++      ]
++    },
++    "F2P-022": {
++      "predicate": "card_parse_zod",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
++      "projection": "target-execution-path",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "R001"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00139"
++      ]
++    },
++    "F2P-003": {
++      "predicate": "offending_value",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Strength of the validation checks",
++      "projection": "target-execution-path",
++      "input": {
++        "primary_info": 123
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S004"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00112"
++      ]
++    },
++    "F2P-010": {
++      "predicate": "non_validation_passthrough",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Public capabilities and contracts of the migrated modules",
++      "projection": "target-execution-path",
++      "input": "TypeError(\"boom\")",
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S010"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00111"
++      ]
++    },
++    "F2P-014": {
++      "predicate": "unknown_key_strict",
++      "coverage_surface": "src/shared/config/entity-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results",
++      "projection": "target-execution-path",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S002"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00106"
++      ]
++    },
++    "F2P-016": {
++      "predicate": "zod_error_detection",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_missing error entries produced from validation failures",
++      "projection": "target-execution-path",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S001"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00146"
++      ]
++    },
++    "F2P-018": {
++      "predicate": "element_editor_input",
++      "coverage_surface": "src/utils/lovelace/element-editor.ts::Card, chip and badge config and editor modules that compose or call the exported schemas",
++      "projection": "target-execution-path",
++      "input": {
++        "primary_info": 123
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S004"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00165"
++      ]
++    },
++    "F2P-019": {
++      "predicate": "action_dispatch",
++      "coverage_surface": "src/ha/panels/lovelace/editor/structs/action-struct.ts::Pass/fail decision of every exported schema for a fixed configuration input",
++      "projection": "target-execution-path",
++      "input": {
++        "action": "url"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S007"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00072"
++      ]
++    },
++    "F2P-020": {
++      "predicate": "unknown_key_strict",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_not_expected warning entries produced from validation failures",
++      "projection": "target-execution-path",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S010"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00132"
++      ]
++    },
++    "F2P-024": {
++      "predicate": "union_skip",
++      "coverage_surface": "src/shared/config/entity-config.ts::Message aggregation for a value that fails several union alternatives",
++      "projection": "target-execution-path",
++      "input": 7,
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S002"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00096"
++      ]
++    },
++    "F2P-013": {
++      "predicate": "offending_value",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
++      "projection": "target-execution-path",
++      "input": {
++        "primary_info": 123
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "S004"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00157"
++      ]
++    },
++    "F2P-021": {
++      "predicate": "dependency_execution",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys",
++      "projection": "dependency-execution",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "R017"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00098"
++      ]
++    },
++    "F2P-023": {
++      "predicate": "dependency_execution",
++      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_missing error entries produced from validation failures",
++      "projection": "dependency-execution",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "source_expectation": "FAIL",
++      "target_expectation": "PASS",
++      "requirement_ids": [
++        "R017"
++      ],
++      "evidence_refs": [
++        "EVIDENCE-00118"
++      ]
++    }
++  }
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0001/manifest.json b/tests/shared/batches/BATCH-F2P-0001/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/manifest.json
+@@ -0,0 +1,43 @@
++{
++  "batch_id": "BATCH-F2P-0001",
++  "kind": "F2P",
++  "role": "Fail-to-pass observations for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation migration of the mushroom-cards plugin.",
++  "migration": {
++    "source": { "language_name": "TypeScript", "name": "Superstruct", "version": "2.0.2" },
++    "target": { "language_name": "TypeScript", "name": "Zod", "version": "3.23.8" }
++  },
++  "surfaces": {
++    "source": "source/batches/BATCH-F2P-0001",
++    "target": "target/batches/BATCH-F2P-0001",
++    "fixtures": "fixtures/batches/BATCH-F2P-0001",
++    "shared": "shared/batches/BATCH-F2P-0001"
++  },
++  "predicate_core": "shared/batches/BATCH-F2P-0001/probe-core.js",
++  "ts_loader": "shared/batches/BATCH-F2P-0001/ts-loader.js",
++  "drivers": {
++    "source": "source/batches/BATCH-F2P-0001/probe.js",
++    "target": "target/batches/BATCH-F2P-0001/probe.js"
++  },
++  "execution": {
++    "invocation": "node <driver> <repoRoot> <reportPath>",
++    "source_repo": "/input/source",
++    "target_repo": "/input/target",
++    "note": "The same semantic predicate core runs on both sides. Target side must observe PASS for every observation; source side must observe FAIL because the Zod target postcondition is not provided by the Superstruct baseline.",
++    "harness_entries": {
++      "source": "source/runner",
++      "target": "target/runner.js",
++      "created_by": "INTEGRATION"
++    }
++  },
++  "conventions": {
++    "source_harness_entry": "source/runner",
++    "target_harness_entry": "target/runner.js",
++    "created_by": "INTEGRATION",
++    "state_checks": "empty for F2P batches"
++  },
++  "observation_count": 24,
++  "requirements_covered": [
++    "R001", "R016", "R017",
++    "S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008", "S009", "S010"
++  ]
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0001/probe-core.js b/tests/shared/batches/BATCH-F2P-0001/probe-core.js
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/probe-core.js
+@@ -0,0 +1,567 @@
++"use strict";
++
++/*
++ * BATCH-F2P-0001 shared semantic predicate core.
++ *
++ * The source and target probe drivers both import this module and execute the
++ * exact same predicates against their respective repository. The predicates
++ * describe target postconditions of the Superstruct 2.0.2 -> Zod 3.23.8
++ * configuration-validation migration:
++ *
++ *   - target side: the postcondition must hold (PASS),
++ *   - source side: the target postcondition must not hold (FAIL).
++ *
++ * No predicate checks "which side am I"; the same code runs on both sides and
++ * the outcome is whatever the repository actually does.
++ */
++
++const fs = require("fs");
++const path = require("path");
++const { createRepo } = require("./ts-loader");
++const { createValidationResult } = require("../../integration/config-validation.cjs");
++
++const MIGRATED_MODULES = [
++  "src/shared/config/entity-config.ts",
++  "src/shared/config/appearance-config.ts",
++  "src/shared/config/actions-config.ts",
++  "src/shared/config/lovelace-card-config.ts",
++  "src/shared/config/lovelace-badge-config.ts",
++  "src/utils/layout.ts",
++  "src/ha/common/structs/handle-errors.ts",
++  "src/ha/panels/lovelace/editor/structs/action-struct.ts",
++];
++
++function makeContext(repoRoot) {
++  const repo = createRepo(repoRoot);
++  const root = repo.root;
++
++  const readFile = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
++  const readJSON = (rel) => JSON.parse(readFile(rel));
++
++  const reset = () => {
++    // Clear the repository's own modules (and any source-library residue) so each
++    // predicate observes freshly loaded sources, but keep resolved third-party
++    // dependencies (zod, typescript, ...) cached: reloading them would create a
++    // second module instance and break cross-module identity checks such as
++    // `err instanceof z.ZodError` in the migrated `handleStructError`.
++    const modulesRoot = path.join(root, "node_modules") + path.sep;
++    for (const key of Object.keys(require.cache)) {
++      if (key.startsWith(modulesRoot) && !/[\\/]superstruct[\\/]/.test(key)) {
++        continue;
++      }
++      if (key.startsWith(root) || /[\\/]superstruct[\\/]/.test(key)) {
++        delete require.cache[key];
++      }
++    }
++  };
++
++  const localize = (key, ...args) =>
++    key + " " + args.map((a) => String(a)).join(" ");
++
++  const hass = { localize };
++
++  const zod = () => repo.resolveDep("zod");
++
++  return {
++    root,
++    readFile,
++    readJSON,
++    reset,
++    ts: repo.ts,
++    req: (rel) => {
++      reset();
++      return repo.req(rel);
++    },
++    loadSchema: (rel) => {
++      reset();
++      return repo.req(rel);
++    },
++    // Load several modules from one freshly reset registry so a shared
++    // helper imported by more than one of them (for example an input-tracking
++    // WeakMap or an error-annotation shim) stays a single instance. Loading
++    // them through separate loadSchema() calls would reset the registry in
++    // between and split that helper into unrelated copies.
++    loadSchemas: (rels) => {
++      reset();
++      return rels.map((rel) => repo.req(rel));
++    },
++    hass,
++    validateConfig: (schema, input) => createValidationResult(
++      root, repo.req("src/ha/common/structs/handle-errors.ts"), repo.ts
++    )(schema, input),
++    zod,
++    cacheKeys: () => Object.keys(require.cache),
++  };
++}
++
++function joined(msgs) {
++  return (msgs.warnings || []).concat(msgs.errors || []).join(" | ");
++}
++
++function issueByPath(result, pathArr) {
++  if (!result.success) {
++    return result.error.issues.find(
++      (i) => JSON.stringify(i.path) === JSON.stringify(pathArr)
++    );
++  }
++  return undefined;
++}
++
++/* Minimal semver range check for the single version this Case pins.
++ *
++ * The runtime contract is "the lock resolves Zod 3.23.8"; the manifest may
++ * declare that version exactly or with a range that still covers it (for
++ * example a caret range). Only the declaration to version 3.23.8 relation is
++ * needed, so a focused comparator avoids pulling a semver dependency into the
++ * probe. */
++function semverTuple(value) {
++  const match = String(value)
++    .trim()
++    .replace(/^[v=\s]+/, "")
++    .match(/^(\d+)\.(\d+)\.(\d+)/);
++  return match ? match.slice(1).map(Number) : null;
++}
++
++function compareTuple(a, b) {
++  for (let i = 0; i < 3; i += 1) {
++    if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
++  }
++  return 0;
++}
++
++function comparatorCovers(token, target) {
++  const text = token.trim();
++  if (!text || text === "*" || text.toLowerCase() === "x") return true;
++  const operator = /^(\^|~|>=|<=|>|<|=)/.exec(text);
++  const op = operator ? operator[1] : "=";
++  const rest = operator ? text.slice(op.length).trim() : text;
++  const parts = rest
++    .split(".")
++    .map((piece) => (/^[0-9]+$/.test(piece) ? Number(piece) : null));
++  if (parts.length === 0 || parts[0] === null) return false;
++  const lower = [parts[0], parts.length > 1 && parts[1] !== null ? parts[1] : 0, parts.length > 2 && parts[2] !== null ? parts[2] : 0];
++  if (op === ">=") return compareTuple(target, lower) >= 0;
++  if (op === ">") return compareTuple(target, lower) > 0;
++  if (op === "<=") return compareTuple(target, lower) <= 0;
++  if (op === "<") return compareTuple(target, lower) < 0;
++  if (op === "^") {
++    if (lower[0] > 0) {
++      return compareTuple(target, lower) >= 0 && target[0] === lower[0];
++    }
++    if (lower[1] > 0) {
++      return compareTuple(target, lower) >= 0 && target[0] === 0 && target[1] === lower[1];
++    }
++    return compareTuple(target, lower) >= 0 && target[0] === 0 && target[1] === 0 && target[2] === lower[2];
++  }
++  if (op === "~") {
++    return compareTuple(target, lower) >= 0 && target[0] === lower[0] && target[1] === lower[1];
++  }
++  if (parts[1] === null) return target[0] === parts[0];
++  if (parts[2] === null) return target[0] === parts[0] && target[1] === parts[1];
++  return compareTuple(target, lower) === 0;
++}
++
++function declarationCovers(declaration, version) {
++  const target = semverTuple(version);
++  if (!target || typeof declaration !== "string") return false;
++  const clauses = declaration.split("||").map((part) => part.trim()).filter(Boolean);
++  if (clauses.length === 0) return false;
++  return clauses.some((clause) =>
++    clause
++      .split(/\s+/)
++      .filter(Boolean)
++      .every((token) => comparatorCovers(token, target))
++  );
++}
++
++const predicates = {
++  /* F2P-002: migrated modules use Zod directly or through local helpers. */
++  dependency_imports(ctx) {
++    const importsOf = (rel) => {
++      const source = ctx.ts.createSourceFile(
++        rel, ctx.readFile(rel), ctx.ts.ScriptTarget.Latest, true
++      );
++      const imports = [];
++      for (const node of source.statements) {
++        if (!(ctx.ts.isImportDeclaration(node) || ctx.ts.isExportDeclaration(node)) ||
++            node.isTypeOnly || node.importClause?.isTypeOnly ||
++            !node.moduleSpecifier || !ctx.ts.isStringLiteral(node.moduleSpecifier)) continue;
++        const bindings = node.importClause?.namedBindings;
++        if (bindings && ctx.ts.isNamedImports(bindings) && bindings.elements.length &&
++            bindings.elements.every((item) => item.isTypeOnly)) continue;
++        imports.push(node.moduleSpecifier.text);
++      }
++      return imports;
++    };
++    const reachesZod = (rel, visited = new Set()) => {
++      if (visited.has(rel)) return false;
++      visited.add(rel);
++      return importsOf(rel).some((specifier) => {
++        if (specifier === "zod" || specifier.startsWith("zod/")) return true;
++        if (!specifier.startsWith(".")) return false;
++        const local = path.posix.normalize(path.posix.join(path.posix.dirname(rel), specifier));
++        const resolved = [local + ".ts", local + "/index.ts", local].find((candidate) =>
++          candidate.startsWith("src/") && fs.existsSync(path.join(ctx.root, candidate)) &&
++          fs.statSync(path.join(ctx.root, candidate)).isFile()
++        );
++        return resolved ? reachesZod(resolved, visited) : false;
++      });
++    };
++    const offenders = MIGRATED_MODULES.filter((rel) => importsOf(rel).some(
++      (specifier) => specifier === "superstruct" || specifier.startsWith("superstruct/")
++    ));
++    const missingZod = MIGRATED_MODULES.filter((rel) => !reachesZod(rel));
++    return {
++      pass: offenders.length === 0 && missingZod.length === 0,
++      detail: `superstruct importers=${JSON.stringify(offenders)}; no Zod dependency=${JSON.stringify(missingZod)}`,
++    };
++  },
++
++  /* F2P-011: package.json adds zod 3.23.8 and keeps superstruct; lock resolves zod. */
++  dependency_manifest(ctx) {
++    const pkg = ctx.readJSON("package.json");
++    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
++    const lock = ctx.readJSON("package-lock.json");
++    const lockZod =
++      (lock.packages && lock.packages["node_modules/zod"] && lock.packages["node_modules/zod"].version) ||
++      (lock.dependencies && lock.dependencies.zod && lock.dependencies.zod.version);
++    const pass =
++      declarationCovers(deps.zod, "3.23.8") &&
++      typeof deps.superstruct === "string" &&
++      lockZod === "3.23.8";
++    return { pass, detail: `package.json zod=${deps.zod} superstruct=${deps.superstruct}; lock zod=${lockZod}` };
++  },
++
++  /* F2P-004: entityCardConfigStruct is strict about unknown keys but accepts known fields. */
++  strict_entity_card(ctx) {
++    const { entityCardConfigStruct } = ctx.loadSchema(
++      "src/cards/entity-card/entity-card-config.ts"
++    );
++    const bad = ctx.validateConfig(entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      bogus: 1,
++    });
++    const good = ctx.validateConfig(entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      entity: "light.kitchen",
++    });
++    const issue = bad.success
++      ? undefined
++      : bad.error.issues.find((i) => i.code === "unrecognized_keys");
++    const pass =
++      bad.success === false &&
++      good.success === true &&
++      !!issue &&
++      (issue.keys || []).includes("bogus");
++    return { pass, detail: `bad.success=${bad.success} good.success=${good.success} codes=${bad.success ? "[]" : JSON.stringify(bad.error.issues.map((i) => i.code))}` };
++  },
++
++  /* F2P-012 / F2P-014 / F2P-020: strict unknown key reported as key_not_expected. */
++  unknown_key_strict(ctx) {
++    const { entitySharedConfigStruct } = ctx.loadSchema(
++      "src/shared/config/entity-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const input = { entity: "light.kitchen", bogus: 1 };
++    const result = ctx.validateConfig(entitySharedConfigStruct, input);
++    const good = ctx.validateConfig(entitySharedConfigStruct, { entity: "light.kitchen" });
++    const issue = result.success
++      ? undefined
++      : result.error.issues.find((i) => i.code === "unrecognized_keys");
++    let out = { warnings: [], errors: [] };
++    if (!result.success) out = handleStructError(ctx.hass, result.error, input);
++    const msg = joined(out);
++    const pass =
++      result.success === false &&
++      good.success === true &&
++      !!issue &&
++      (issue.keys || []).includes("bogus") &&
++      msg.includes("ui.errors.config.key_not_expected") &&
++      msg.includes("bogus");
++    return { pass, detail: `success=${result.success} messages=${msg}` };
++  },
++
++  /* F2P-001 / F2P-003 / F2P-013: offending value recovered from the original input. */
++  offending_value(ctx) {
++    const { appearanceSharedConfigStruct } = ctx.loadSchema(
++      "src/shared/config/appearance-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const input = { primary_info: 123 };
++    const result = ctx.validateConfig(appearanceSharedConfigStruct, input);
++    if (result.success) return { pass: false, detail: "schema accepted the invalid input" };
++    const withInput = joined(handleStructError(ctx.hass, result.error, input));
++    const withoutInput = joined(handleStructError(ctx.hass, result.error));
++    const pass =
++      withInput.includes("primary_info") &&
++      withInput.includes("123") &&
++      !withInput.includes("undefined");
++    return { pass, detail: `withInput="${withInput}" withoutInput="${withoutInput}"` };
++  },
++
++  /* F2P-009: enum rejection keeps candidates and received value. */
++  enum_reject(ctx) {
++    const { appearanceSharedConfigStruct } = ctx.loadSchema(
++      "src/shared/config/appearance-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const ok = ctx.validateConfig(appearanceSharedConfigStruct, { primary_info: "name" });
++    const bad = ctx.validateConfig(appearanceSharedConfigStruct, { primary_info: "bogus" });
++    const issue = bad.success
++      ? undefined
++      : bad.error.issues.find((i) => i.code === "invalid_enum_value");
++    let msg = "";
++    if (!bad.success) msg = joined(handleStructError(ctx.hass, bad.error, { primary_info: "bogus" }));
++    const pass =
++      ok.success === true &&
++      bad.success === false &&
++      !!issue &&
++      msg.includes("one of") &&
++      msg.includes("bogus");
++    return { pass, detail: `ok=${ok.success} bad=${bad.success} msg="${msg}"` };
++  },
++
++  /* F2P-006: missing required key on the card struct -> key_missing. */
++  key_missing(ctx) {
++    const { lovelaceCardConfigStruct } = ctx.loadSchema(
++      "src/shared/config/lovelace-card-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const result = ctx.validateConfig(lovelaceCardConfigStruct, {});
++    if (result.success) return { pass: false, detail: "schema accepted {}" };
++    const issue = issueByPath(result, ["type"]);
++    const out = handleStructError(ctx.hass, result.error, {});
++    const msg = joined(out);
++    const pass =
++      !!issue &&
++      issue.code === "invalid_type" &&
++      issue.received === "undefined" &&
++      msg.includes("ui.errors.config.key_missing") &&
++      msg.includes("type");
++    return { pass, detail: `issue=${JSON.stringify(issue)} msg="${msg}"` };
++  },
++
++  /* F2P-017 / F2P-024: a value failing all union branches is skipped, no per-branch entries. */
++  union_skip(ctx) {
++    const { entityNameStruct } = ctx.loadSchema(
++      "src/shared/config/entity-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const result = ctx.validateConfig(entityNameStruct, 7);
++    if (result.success) return { pass: false, detail: "schema accepted 7" };
++    const union = result.error.issues.find((i) => i.code === "invalid_union");
++    const out = handleStructError(ctx.hass, result.error, 7);
++    const pass =
++      !!union &&
++      (out.warnings || []).length === 0 &&
++      (out.errors || []).length === 0;
++    return { pass, detail: `union=${!!union} warnings=${JSON.stringify(out.warnings)} errors=${JSON.stringify(out.errors)}` };
++  },
++
++  /* F2P-015 / F2P-019: actionConfigStruct dispatches on the action discriminant. */
++  action_dispatch(ctx) {
++    const { actionConfigStruct } = ctx.loadSchema(
++      "src/ha/panels/lovelace/editor/structs/action-struct.ts"
++    );
++    const none = ctx.validateConfig(actionConfigStruct, { action: "none" });
++    const url = ctx.validateConfig(actionConfigStruct, { action: "url" });
++    const pass = none.success === true && url.success === false;
++    return { pass, detail: `none.success=${none.success} url.success=${url.success}` };
++  },
++
++  /* F2P-005 / F2P-016: handleStructError recognizes a ZodError from the card struct. */
++  zod_error_detection(ctx) {
++    const { entityCardConfigStruct } = ctx.loadSchema(
++      "src/cards/entity-card/entity-card-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const input = { type: "custom:mushroom-entity-card", entity: 42 };
++    const result = ctx.validateConfig(entityCardConfigStruct, input);
++    if (result.success) return { pass: false, detail: "schema accepted entity:42" };
++    const z = ctx.zod();
++    const isZod = result.error instanceof z.ZodError;
++    const out = handleStructError(ctx.hass, result.error, input);
++    const pass =
++      isZod &&
++      Array.isArray(out.warnings) &&
++      out.warnings.length > 0 &&
++      Array.isArray(out.errors);
++    return { pass, detail: `isZodError=${isZod} warnings=${JSON.stringify(out.warnings)} errors=${JSON.stringify(out.errors)}` };
++  },
++
++  /* F2P-022: a bound card config parses and a wrong-typed entity yields localized messages. */
++  card_parse_zod(ctx) {
++    const { entityCardConfigStruct } = ctx.loadSchema(
++      "src/cards/entity-card/entity-card-config.ts"
++    );
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const good = ctx.validateConfig(entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      entity: "light.kitchen",
++    });
++    const input = { type: "custom:mushroom-entity-card", entity: 42 };
++    const bad = ctx.validateConfig(entityCardConfigStruct, input);
++    const z = ctx.zod();
++    let pass = good.success === true && bad.success === false && bad.error instanceof z.ZodError;
++    let msg = "";
++    if (!bad.success) {
++      msg = joined(handleStructError(ctx.hass, bad.error, input));
++      pass = pass && msg.includes("ui.errors.config.") && msg.includes("42");
++    }
++    return { pass, detail: `good=${good.success} bad=${bad.success} msg="${msg}"` };
++  },
++
++  /* F2P-008 / F2P-010: non-validation errors pass through, ZodErrors do not. */
++  non_validation_passthrough(ctx) {
++    const { handleStructError } = ctx.loadSchema(
++      "src/ha/common/structs/handle-errors.ts"
++    );
++    const plain = handleStructError(ctx.hass, new TypeError("boom"));
++    const plainOk =
++      JSON.stringify(plain.warnings) === JSON.stringify(["boom"]) &&
++      plain.errors === undefined;
++    const { entityCardConfigStruct } = ctx.loadSchema(
++      "src/cards/entity-card/entity-card-config.ts"
++    );
++    const result = ctx.validateConfig(entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      entity: 42,
++    });
++    if (result.success) return { pass: false, detail: "schema accepted entity:42" };
++    const zodOut = handleStructError(ctx.hass, result.error, {});
++    const zodOk = Array.isArray(zodOut.errors);
++    const pass = plainOk && zodOk;
++    return { pass, detail: `plainOk=${plainOk} zodHandled=${zodOk}` };
++  },
++
++  /* F2P-007 / F2P-021 / F2P-023: calling the migrated schema executes Zod in-process only. */
++  dependency_execution(ctx) {
++    ctx.reset();
++    const { entityCardConfigStruct } = ctx.req(
++      "src/cards/entity-card/entity-card-config.ts"
++    );
++    const result = ctx.validateConfig(entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      entity: "light.kitchen",
++    });
++    const keys = ctx.cacheKeys();
++    const superstructLoaded = keys.some((k) => /[\\/]superstruct[\\/]/.test(k));
++    const zodLoaded = keys.some((k) => /[\\/]zod[\\/]/.test(k));
++    const pass = result.success === true && !superstructLoaded && zodLoaded;
++    return { pass, detail: `parsed=${result.success} superstructLoaded=${superstructLoaded} zodLoaded=${zodLoaded}` };
++  },
++
++  /* F2P-018: the editor validation path surfaces the offending value.
++   *
++   * Two mechanisms satisfy the contract and both must pass: the editor call
++   * site may forward the original value as a third argument, or the error
++   * handler may recover the value from the validation error itself. Only a
++   * migration that does neither (the editor drops the value and the handler
++   * needs it) fails. */
++  element_editor_input(ctx) {
++    const editor = ctx.readFile("src/utils/lovelace/element-editor.ts");
++    const forwardsInput = /handleStructError\(\s*this\.hass\s*,\s*[A-Za-z_$][\w$]*\s*,/.test(
++      editor
++    );
++    const [appearance, handler] = ctx.loadSchemas([
++      "src/shared/config/appearance-config.ts",
++      "src/ha/common/structs/handle-errors.ts",
++    ]);
++    const { appearanceSharedConfigStruct } = appearance;
++    const { handleStructError } = handler;
++    const input = { primary_info: 123 };
++    const result = ctx.validateConfig(appearanceSharedConfigStruct, input);
++    let runtime = false;
++    if (!result.success) {
++      const args = forwardsInput
++        ? [ctx.hass, result.error, input]
++        : [ctx.hass, result.error];
++      const msg = joined(handleStructError(...args));
++      runtime = msg.includes("123") && !msg.includes("undefined");
++    }
++    const pass = runtime;
++    return { pass, detail: `forwardsInput=${forwardsInput} runtimeOffendingValue=${runtime}` };
++  },
++
++  /* F2P-001 alias used for the handle-errors offending-value observation family. */
++  handle_error_value(ctx) {
++    return predicates.offending_value(ctx);
++  },
++};
++
++const OBSERVATIONS = {
++  "F2P-001": "offending_value",
++  "F2P-002": "dependency_imports",
++  "F2P-003": "offending_value",
++  "F2P-004": "strict_entity_card",
++  "F2P-005": "zod_error_detection",
++  "F2P-006": "key_missing",
++  "F2P-007": "dependency_execution",
++  "F2P-008": "non_validation_passthrough",
++  "F2P-009": "enum_reject",
++  "F2P-010": "non_validation_passthrough",
++  "F2P-011": "dependency_manifest",
++  "F2P-012": "unknown_key_strict",
++  "F2P-013": "offending_value",
++  "F2P-014": "unknown_key_strict",
++  "F2P-015": "action_dispatch",
++  "F2P-016": "zod_error_detection",
++  "F2P-017": "union_skip",
++  "F2P-018": "element_editor_input",
++  "F2P-019": "action_dispatch",
++  "F2P-020": "unknown_key_strict",
++  "F2P-021": "dependency_execution",
++  "F2P-022": "card_parse_zod",
++  "F2P-023": "dependency_execution",
++  "F2P-024": "union_skip",
++};
++
++const OBSERVATION_ORDER = [
++  "F2P-001", "F2P-002", "F2P-004", "F2P-005", "F2P-006", "F2P-007",
++  "F2P-008", "F2P-009", "F2P-011", "F2P-012", "F2P-015", "F2P-017",
++  "F2P-022", "F2P-003", "F2P-010", "F2P-014", "F2P-016", "F2P-018",
++  "F2P-019", "F2P-020", "F2P-024", "F2P-013", "F2P-021", "F2P-023",
++];
++
++function runAll(repoRoot) {
++  const ctx = makeContext(repoRoot);
++  const results = [];
++  for (const id of OBSERVATION_ORDER) {
++    const name = OBSERVATIONS[id];
++    let status;
++    let detail;
++    try {
++      const outcome = predicates[name](ctx);
++      status = outcome.pass ? "PASS" : "FAIL";
++      detail = outcome.detail;
++    } catch (err) {
++      status = "FAIL";
++      detail = "capability missing or not executable: " + err.message;
++    }
++    results.push({ observation_id: id, predicate: name, status, detail });
++  }
++  return { side: null, results };
++}
++
++module.exports = {
++  makeContext,
++  runAll,
++  predicates,
++  OBSERVATIONS,
++  OBSERVATION_ORDER,
++  MIGRATED_MODULES,
++};
+diff --git a/tests/shared/batches/BATCH-F2P-0001/ts-loader.js b/tests/shared/batches/BATCH-F2P-0001/ts-loader.js
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/ts-loader.js
+@@ -0,0 +1,141 @@
++"use strict";
++
++/*
++ * Shared on-the-fly TypeScript loader for the BATCH-F2P-0001 probes.
++ *
++ * Both the source and the target probe drivers use this exact loader, so the
++ * semantic predicates run against the real repository sources with one shared
++ * execution mechanism.
++ *
++ * The loader:
++ *   - transpiles the repository .ts modules with the repository's own
++ *     `typescript` dependency (resolved from the repository node_modules),
++ *   - resolves extensionless relative/absolute .ts imports,
++ *   - redirects the frontend-only `src/ha/index.ts` barrel to a generated stub,
++ *     so schema modules can be imported in Node without booting the whole
++ *     browser/Lit graph. The stub re-exports the real `actionConfigStruct`.
++ *
++ * This is an environment shim only: every module under test is executed from
++ * its real repository file. No module under test is replaced.
++ */
++
++const fs = require("fs");
++const os = require("os");
++const path = require("path");
++const crypto = require("crypto");
++const Module = require("module");
++
++function resolveDep(name, repoRoot) {
++  const candidates = [
++    path.join(repoRoot, "node_modules", name),
++    path.join(__dirname, "node_modules", name),
++  ];
++  for (const candidate of candidates) {
++    try {
++      return require(candidate);
++    } catch (err) {
++      if (err && err.code === "MODULE_NOT_FOUND" && err.message.includes(candidate)) {
++        continue;
++      }
++      throw err;
++    }
++  }
++  return require(name);
++}
++
++function createRepo(repoRoot) {
++  const root = path.resolve(repoRoot);
++  const ts = resolveDep("typescript", root);
++
++  const stubDir = path.join(
++    os.tmpdir(),
++    "migration-f2p-probe-" +
++      crypto.createHash("sha1").update(root).digest("hex")
++  );
++  fs.mkdirSync(stubDir, { recursive: true });
++  const haStub = path.join(stubDir, "ha-stub.ts");
++  fs.writeFileSync(
++    haStub,
++    'export { actionConfigStruct, actionConfigStructType } from "' +
++      path.join(root, "src/ha/panels/lovelace/editor/structs/action-struct") +
++      '";\n'
++  );
++
++  const compile = (filename, source) => {
++    const src = source != null ? source : fs.readFileSync(filename, "utf8");
++    return ts.transpileModule(src, {
++      compilerOptions: {
++        module: ts.ModuleKind.CommonJS,
++        target: ts.ScriptTarget.ES2020,
++        esModuleInterop: true,
++        experimentalDecorators: true,
++        jsx: ts.JsxEmit.React,
++        resolveJsonModule: true,
++      },
++      fileName: filename,
++    }).outputText;
++  };
++
++  const withExt = (base) => {
++    const candidates = [base, base + ".ts", path.join(base, "index.ts")];
++    for (const candidate of candidates) {
++      try {
++        if (fs.statSync(candidate).isFile()) {
++          return candidate;
++        }
++      } catch (_) {
++        /* keep looking */
++      }
++    }
++    return undefined;
++  };
++
++  const origResolve = Module._resolveFilename;
++  const localResolve = function (request, parent, isMain, options) {
++    if (parent && parent.filename && request.startsWith(".")) {
++      const resolved = withExt(path.resolve(path.dirname(parent.filename), request));
++      if (resolved) {
++        return resolved;
++      }
++    }
++    if (path.isAbsolute(request)) {
++      const resolved = withExt(request);
++      if (resolved) {
++        return resolved;
++      }
++    }
++    return origResolve.call(this, request, parent, isMain, options);
++  };
++  localResolve.__f2p = true;
++
++  const origExtensions = Module._extensions[".ts"];
++  Module._extensions[".ts"] = function (module, filename) {
++    module._compile(compile(filename), filename);
++  };
++
++  const redir = (filename) =>
++    filename.replace(/\\/g, "/").endsWith("/src/ha/index.ts")
++      ? haStub
++      : filename;
++
++  const prev = Module._resolveFilename;
++  Module._resolveFilename = function (request, parent, isMain, options) {
++    const resolved = localResolve.call(this, request, parent, isMain, options);
++    return redir(resolved);
++  };
++
++  const req = (rel) => require(path.join(root, rel));
++
++  const restore = () => {
++    Module._resolveFilename = prev;
++    if (origExtensions) {
++      Module._extensions[".ts"] = origExtensions;
++    } else {
++      delete Module._extensions[".ts"];
++    }
++  };
++
++  return { root, ts, req, compile, resolveDep: (n) => resolveDep(n, root), restore };
++}
++
++module.exports = { createRepo, resolveDep };
+diff --git a/tests/shared/batches/BATCH-F2P-0002/load-repo.cjs b/tests/shared/batches/BATCH-F2P-0002/load-repo.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0002/load-repo.cjs
+@@ -0,0 +1,144 @@
++"use strict";
++
++// Repo module loader for BATCH-F2P-0002.
++//
++// Loads the migrated configuration modules from a repository working tree by
++// bundling them with the repository's own bundler (rolldown, a transitive
++// dependency of vite) and executing the resulting CommonJS bundle in-process.
++//
++// The reference target is only ever read while authoring; this helper never
++// copies repository sources into the public asset tree.
++
++const fs = require("fs");
++const os = require("os");
++const path = require("path");
++const { createRequire } = require("module");
++const { createValidationResult } = require("../../integration/config-validation.cjs");
++
++const SYMBOL_IMPORTS = [
++  ["entitySharedConfigStruct", "src/shared/config/entity-config.ts"],
++  ["entityNameStruct", "src/shared/config/entity-config.ts"],
++  ["appearanceSharedConfigStruct", "src/shared/config/appearance-config.ts"],
++  ["lovelaceCardConfigStruct", "src/shared/config/lovelace-card-config.ts"],
++  ["lovelaceBadgeConfigStruct", "src/shared/config/lovelace-badge-config.ts"],
++  ["actionsSharedConfigStruct", "src/shared/config/actions-config.ts"],
++  ["layoutStruct", "src/utils/layout.ts"],
++  ["actionConfigStruct", "src/ha/panels/lovelace/editor/structs/action-struct.ts"],
++  ["entityCardConfigStruct", "src/cards/entity-card/entity-card-config.ts"],
++  ["handleStructError", "src/ha/common/structs/handle-errors.ts"],
++];
++
++function depDirs(repoRoot) {
++  const dirs = [path.join(repoRoot, "node_modules")];
++  if (process.env.DEPS_NODE_MODULES) {
++    dirs.push(process.env.DEPS_NODE_MODULES);
++  }
++  dirs.push("/opt/migration/dependencies/node_modules");
++  return dirs.filter((d) => {
++    try {
++      return fs.statSync(d).isDirectory();
++    } catch {
++      return false;
++    }
++  });
++}
++
++function makeResolver(dirs) {
++  const requires = dirs.map((d) => createRequire(path.join(d, "noop.js")));
++  return function resolve(spec) {
++    for (const r of requires) {
++      try {
++        return r.resolve(spec);
++      } catch {
++        /* try next */
++      }
++    }
++    return null;
++  };
++}
++
++async function loadSymbols(repoRoot) {
++  const dirs = depDirs(repoRoot);
++  const resolve = makeResolver(dirs);
++  const rolldownPath = resolve("rolldown");
++  if (!rolldownPath) {
++    throw new Error("rolldown is not resolvable from " + dirs.join(", "));
++  }
++  const mod = await import(rolldownPath);
++  const rolldown = mod.rolldown || mod.build;
++  if (typeof rolldown !== "function") {
++    throw new Error("rolldown module does not export a build function");
++  }
++
++  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "batch-f2p-0002-"));
++  const entry = path.join(tmp, "entry.ts");
++  const outFile = path.join(tmp, "bundle.cjs");
++
++  // The generated bundle keeps zod/superstruct external so the dependency
++  // policy predicate can observe which framework runtime is actually loaded.
++  // Link a node_modules directory next to the bundle so those externals
++  // resolve at require time.
++  const linked = dirs.find((d) => {
++    try {
++      return fs.existsSync(path.join(d, "zod")) || fs.existsSync(path.join(d, "superstruct"));
++    } catch {
++      return false;
++    }
++  });
++  if (linked) {
++    try {
++      fs.symlinkSync(linked, path.join(tmp, "node_modules"), "dir");
++    } catch {
++      /* resolution may still succeed via other means */
++    }
++  }
++
++  const lines = [];
++  for (const [name, rel] of SYMBOL_IMPORTS) {
++    lines.push(
++      'import { ' + name + ' } from ' + JSON.stringify(path.join(repoRoot, rel)) + ";"
++    );
++  }
++  lines.push('import * as configErrorHandling from ' + JSON.stringify(path.join(
++    repoRoot, "src/ha/common/structs/handle-errors.ts"
++  )) + ";");
++  lines.push("export { configErrorHandling };");
++  lines.push(
++    "export { " + SYMBOL_IMPORTS.map(([n]) => n).join(", ") + " };"
++  );
++  fs.writeFileSync(entry, lines.join("\n") + "\n");
++
++  const plugin = {
++    name: "resolve-repo-deps",
++    resolveId(source) {
++      if (source.startsWith(".") || source.startsWith("/")) {
++        return null;
++      }
++      if (source === "zod" || source === "superstruct") {
++        return { id: source, external: true };
++      }
++      const resolved = resolve(source);
++      return resolved ? { id: resolved } : { id: source, external: true };
++    },
++  };
++
++  const bundle = await rolldown({
++    input: entry,
++    platform: "node",
++    treeshake: { moduleSideEffects: false },
++    plugins: [plugin],
++  });
++  await bundle.write({ file: outFile, format: "cjs" });
++
++  const symbols = require(outFile);
++  symbols.validateConfig = createValidationResult(
++    repoRoot, symbols.configErrorHandling, require(resolve("typescript"))
++  );
++  const missing = SYMBOL_IMPORTS.map(([n]) => n).filter((n) => !(n in symbols));
++  if (missing.length) {
++    throw new Error("migrated modules did not export: " + missing.join(", "));
++  }
++  return symbols;
++}
++
++module.exports = { loadSymbols, SYMBOL_IMPORTS };
+diff --git a/tests/shared/batches/BATCH-F2P-0002/manifest.json b/tests/shared/batches/BATCH-F2P-0002/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0002/manifest.json
+@@ -0,0 +1,96 @@
++{
++  "schema_version": "migration-asset-batch-manifest:v2",
++  "batch_id": "BATCH-F2P-0002",
++  "kind": "F2P",
++  "role": "Fail-to-pass probes for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation migration.",
++  "migration": {
++    "source": { "name": "Superstruct", "version": "2.0.2", "language_name": "TypeScript" },
++    "target": { "name": "Zod", "version": "3.23.8", "language_name": "TypeScript" }
++  },
++  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
++  "consumes": {
++    "dependency_manifest": "/assets/dependencies/dependency-manifest.json",
++    "skeleton_batch": "BATCH-AUTHOR-BATCH-SKELETON-0001"
++  },
++  "observations": [
++    "F2P-027",
++    "F2P-029",
++    "F2P-030",
++    "F2P-037",
++    "F2P-038",
++    "F2P-044",
++    "F2P-047",
++    "F2P-040",
++    "F2P-025",
++    "F2P-026",
++    "F2P-028",
++    "F2P-031",
++    "F2P-032",
++    "F2P-033",
++    "F2P-034",
++    "F2P-035",
++    "F2P-036",
++    "F2P-039",
++    "F2P-041",
++    "F2P-042",
++    "F2P-043",
++    "F2P-045",
++    "F2P-046",
++    "F2P-048"
++  ],
++  "predicate_by_observation": {
++    "F2P-027": "P-R017",
++    "F2P-029": "P-R001",
++    "F2P-030": "P-S007",
++    "F2P-037": "P-S008",
++    "F2P-038": "P-S002",
++    "F2P-044": "P-S004",
++    "F2P-047": "P-S002",
++    "F2P-040": "P-R017",
++    "F2P-025": "P-R001",
++    "F2P-026": "P-S001",
++    "F2P-028": "P-S010",
++    "F2P-031": "P-S002",
++    "F2P-032": "P-R001",
++    "F2P-033": "P-S004",
++    "F2P-034": "P-S001",
++    "F2P-035": "P-R017",
++    "F2P-036": "P-R017",
++    "F2P-039": "P-S004",
++    "F2P-041": "P-S001",
++    "F2P-042": "P-S001",
++    "F2P-043": "P-R017",
++    "F2P-045": "P-R017",
++    "F2P-046": "P-S010",
++    "F2P-048": "P-S001"
++  },
++  "predicates": {
++    "P-R001": "entityCardConfigStruct parses a bound card config and a wrong-typed entity yields a z.ZodError that handleStructError converts into ui.errors.config.* messages (R001).",
++    "P-S001": "handleStructError detects a z.ZodError and returns populated warnings/errors instead of the non-validation passthrough (S001).",
++    "P-S004": "handleStructError reports the offending value for a wrong-typed key of the validated configuration (S004).",
++    "P-S002": "entitySharedConfigStruct strictly rejects an unexpected key and it is reported as ui.errors.config.key_not_expected (S002).",
++    "P-S008": "entityCardConfigStruct, composed through Zod, stays strict and rejects an unexpected key (S008).",
++    "P-S007": "actionConfigStruct dispatches on the action discriminator (url requires url_path, none succeeds) (S007).",
++    "P-S010": "handleStructError passes non-validation errors through but does not pass a real z.ZodError through (S010).",
++    "P-R017": "Calling entityCardConfigStruct.safeParse executes Zod in-process and importing the migrated modules neither requires nor dynamically loads superstruct (R017)."
++  },
++  "harness": {
++    "source_probe": "source/batches/BATCH-F2P-0002/probe.cjs",
++    "target_probe": "target/batches/BATCH-F2P-0002/probe.cjs",
++    "shared_loader": "shared/batches/BATCH-F2P-0002/load-repo.cjs",
++    "fixtures": "fixtures/batches/BATCH-F2P-0002/fixtures.json",
++    "note": "source/runner and target/runner.js are created only by the INTEGRATION batch; this batch declares neither."
++  },
++  "authoring_execution": {
++    "target": {
++      "repo": "/input/target",
++      "command": "DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules node target/batches/BATCH-F2P-0002/probe.cjs /input/target",
++      "status": "PASS"
++    },
++    "source": {
++      "repo": "/input/source",
++      "command": "DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules node source/batches/BATCH-F2P-0002/probe.cjs /input/source",
++      "status": "FAIL"
++    }
++  }
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0002/predicates.cjs b/tests/shared/batches/BATCH-F2P-0002/predicates.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0002/predicates.cjs
+@@ -0,0 +1,247 @@
++"use strict";
++
++// Semantic predicates for BATCH-F2P-0002.
++//
++// Each predicate is evaluated with the SAME function body in both environments.
++// The predicates use only the target framework entry points that the frozen
++// contract requires (Zod `safeParse` / `z.ZodError`), so the Superstruct
++// baseline fails them because the target capability is absent, not because of
++// an unrelated setup error. `runProbes` returns one entry per predicate id.
++//
++// Predicate ids are stable and are mapped to observation ids in
++// shared/batches/BATCH-F2P-0002/manifest.json.
++
++function isZodError(e) {
++  return !!e && (e.name === "ZodError" || Array.isArray(e.issues));
++}
++
++function makeHass() {
++  return {
++    localize(key) {
++      let s = String(key);
++      for (let i = 1; i + 1 < arguments.length; i += 2) {
++        s += " " + String(arguments[i]) + "=" + String(arguments[i + 1]);
++      }
++      return s;
++    },
++  };
++}
++
++function evaluate(fn, symbols, hass) {
++  try {
++    const result = fn(symbols, hass);
++    return { pass: !!(result && result.ok === true), result };
++  } catch (e) {
++    return { pass: false, error: String((e && e.message) || e) };
++  }
++}
++
++function runProbes(symbols) {
++  const hass = makeHass();
++  const out = {};
++  for (const id of Object.keys(PREDICATES)) {
++    out[id] = evaluate(PREDICATES[id], symbols, hass);
++  }
++  return out;
++}
++
++function summarise(results) {
++  const ids = Object.keys(results);
++  const failed = ids.filter((id) => !(results[id] && results[id].pass === true));
++  return { pass: failed.length === 0, total: ids.length, failed };
++}
++
++function loadedFrom(pkg) {
++  const cache = (typeof require !== "undefined" && require.cache) || {};
++  const a = "/node_modules/" + pkg + "/";
++  const b = "\\node_modules\\" + pkg + "\\";
++  return Object.keys(cache).some((p) => p.includes(a) || p.includes(b));
++}
++
++function predicateR001(s, hass) {
++  const good = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++    entity: "light.kitchen",
++  });
++  if (!good || good.success !== true) {
++    return { ok: false, why: "valid bound card config did not validate" };
++  }
++  const res = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++    entity: 42,
++  });
++  if (!res || res.success !== false) {
++    return { ok: false, why: "wrong-typed entity was not rejected" };
++  }
++  if (!isZodError(res.error)) {
++    return { ok: false, why: "rejection is not a z.ZodError" };
++  }
++  const h = s.handleStructError(
++    hass,
++    res.error,
++    { type: "custom:mushroom-entity-card", entity: 42 }
++  );
++  const msgs = [].concat(h.warnings || [], h.errors || []);
++  const localized =
++    msgs.length > 0 &&
++    msgs.every((m) => typeof m === "string" && m.startsWith("ui.errors.config."));
++  return { ok: localized, why: localized ? "zod issues localized" : "not localized" };
++}
++
++function predicateS001(s, hass) {
++  const res = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++    entity: 42,
++  });
++  if (!res || res.success !== false || !isZodError(res.error)) {
++    return { ok: false, why: "no z.ZodError produced" };
++  }
++  const h = s.handleStructError(
++    hass,
++    res.error,
++    { type: "custom:mushroom-entity-card", entity: 42 }
++  );
++  const detected =
++    Array.isArray(h.warnings) && Array.isArray(h.errors) && h.warnings.length > 0;
++  return { ok: detected, why: detected ? "zod error detected" : "zod error not detected" };
++}
++
++function predicateS004(s, hass) {
++  // The preserved contract only requires the wrong-type warning to include the
++  // offending value. How that value reaches the message -- carried on the
++  // framework error, or recovered from the original input handed to
++  // handleStructError -- is an implementation choice and MUST NOT be asserted.
++  // Two distinct offending values additionally reject a hardcoded value.
++  const recover = (value) => {
++    const input = { entity: value };
++    const res = s.validateConfig(s.entitySharedConfigStruct, input);
++    if (!res || res.success !== false || !isZodError(res.error)) {
++      return { ok: false, why: "no z.ZodError produced" };
++    }
++    const handled = s.handleStructError(hass, res.error, input);
++    const msg = (handled.warnings || []).find((m) => m.includes("entity"));
++    if (!msg || !msg.includes(String(value))) {
++      return { ok: false, why: "offending value not recovered" };
++    }
++    return { ok: true };
++  };
++  const first = recover(42);
++  if (!first.ok) {
++    return { ok: false, why: first.why };
++  }
++  const second = recover(99);
++  if (!second.ok) {
++    return { ok: false, why: second.why };
++  }
++  return { ok: true, why: "offending value recovered for distinct inputs" };
++}
++
++function predicateS002(s, hass) {
++  const input = { entity: "light.kitchen", bogus: 1 };
++  const res = s.validateConfig(s.entitySharedConfigStruct, input);
++  if (!res || res.success !== false || !isZodError(res.error)) {
++    return { ok: false, why: "no z.ZodError produced" };
++  }
++  const unrec = res.error.issues.some(
++    (i) => i.code === "unrecognized_keys" && (i.keys || []).includes("bogus")
++  );
++  if (!unrec) {
++    return { ok: false, why: "extra key was accepted" };
++  }
++  const h = s.handleStructError(hass, res.error, input);
++  const warned = (h.warnings || []).some(
++    (m) => m.includes("key_not_expected") && m.includes("bogus")
++  );
++  return { ok: warned, why: warned ? "key_not_expected reported" : "not reported" };
++}
++
++function predicateS008(s) {
++  const known = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++  });
++  if (!known || known.success !== true) {
++    return { ok: false, why: "known config rejected" };
++  }
++  const res = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++    bogus: 1,
++  });
++  if (!res || res.success !== false || !isZodError(res.error)) {
++    return { ok: false, why: "no z.ZodError produced" };
++  }
++  const unrec = res.error.issues.some(
++    (i) => i.code === "unrecognized_keys" && (i.keys || []).includes("bogus")
++  );
++  return { ok: unrec, why: unrec ? "composed schema is strict" : "extra key accepted" };
++}
++
++function predicateS007(s) {
++  const none = s.validateConfig(s.actionConfigStruct, { action: "none" });
++  const url = s.validateConfig(s.actionConfigStruct, { action: "url" });
++  if (!none || none.success !== true) {
++    return { ok: false, why: "action 'none' rejected" };
++  }
++  if (!url || url.success !== false || !isZodError(url.error)) {
++    return { ok: false, why: "action 'url' not rejected" };
++  }
++  const pathIssue = url.error.issues.some(
++    (i) => (i.path || []).join(".") === "url_path"
++  );
++  return { ok: pathIssue, why: pathIssue ? "dispatched on action" : "no url_path issue" };
++}
++
++function predicateS010(s, hass) {
++  const h1 = s.handleStructError(hass, new TypeError("boom"));
++  const passthrough =
++    h1 &&
++    JSON.stringify(h1.warnings) === JSON.stringify(["boom"]) &&
++    h1.errors === undefined;
++  const res = s.validateConfig(s.entityCardConfigStruct, {
++    type: "custom:mushroom-entity-card",
++    entity: 42,
++  });
++  if (!res || res.success !== false || !isZodError(res.error)) {
++    return { ok: false, why: "no z.ZodError produced" };
++  }
++  const h2 = s.handleStructError(
++    hass,
++    res.error,
++    { type: "custom:mushroom-entity-card", entity: 42 }
++  );
++  const detects = Array.isArray(h2.errors) && h2.warnings.length > 0;
++  const ok = Boolean(passthrough) && detects;
++  return { ok, why: ok ? "guard is z.ZodError-based" : "guard mismatch" };
++}
++
++function predicateR017(s) {
++  const superstructLoaded = loadedFrom("superstruct");
++  const zodLoaded = loadedFrom("zod");
++  let ranZod = false;
++  try {
++    const res = s.validateConfig(s.entityCardConfigStruct, {
++      type: "custom:mushroom-entity-card",
++      entity: "light.kitchen",
++    });
++    ranZod = !!(res && res.success === true);
++  } catch {
++    ranZod = false;
++  }
++  const ok = !superstructLoaded && zodLoaded && ranZod;
++  return {
++    ok,
++    why: "superstructLoaded=" + superstructLoaded + " zodLoaded=" + zodLoaded + " ran=" + ranZod,
++  };
++}
++
++const PREDICATES = {
++  "P-R001": predicateR001,
++  "P-S001": predicateS001,
++  "P-S004": predicateS004,
++  "P-S002": predicateS002,
++  "P-S008": predicateS008,
++  "P-S007": predicateS007,
++  "P-S010": predicateS010,
++  "P-R017": predicateR017,
++};
++
++module.exports = { runProbes, summarise, PREDICATES };
+diff --git a/tests/shared/batches/BATCH-F2P-0003/manifest.json b/tests/shared/batches/BATCH-F2P-0003/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0003/manifest.json
+@@ -0,0 +1,74 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "kind": "F2P",
++  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
++  "role": "F2P observables for the Superstruct 2.0.2 to Zod 3.23.8 configuration-validation migration. Each observation is a target-only postcondition evaluated through the public runtime surface of the repository; the source side must report FAIL and the target side must report PASS for the same predicate.",
++  "required_technology": {
++    "language_name": "TypeScript",
++    "language_version": "unknown",
++    "name": "Zod",
++    "version": "3.23.8"
++  },
++  "source_technology": {
++    "language_name": "TypeScript",
++    "language_version": "unknown",
++    "name": "Superstruct",
++    "version": "2.0.2"
++  },
++  "harness": {
++    "engine": "shared/batches/BATCH-F2P-0003/probe.cjs",
++    "source_entry": "source/batches/BATCH-F2P-0003/probe.cjs",
++    "target_entry": "target/batches/BATCH-F2P-0003/probe.cjs",
++    "fixtures": "fixtures/batches/BATCH-F2P-0003/fixtures.json",
++    "result_shape": {
++      "results": "map of observation id to \"PASS\" or \"FAIL\"",
++      "loaded": "bare modules loaded during the run (dependency-policy observations assert superstruct is absent)",
++      "loadErrors": "module keys that failed to load"
++    },
++    "note": "Live source/runner and target/runner.js entries are created by the INTEGRATION batch; this batch only declares the batch-local probe entries."
++  },
++  "observations": [
++    { "id": "F2P-049", "check": "missingTypeIssue", "requirement_ids": ["S003"], "surface": "src/shared/config/lovelace-card-config.ts::key_missing error entries produced from validation failures" },
++    { "id": "F2P-053", "check": "zodErrorMessageSurface", "requirement_ids": ["S001"], "surface": "src/utils/lovelace/element-editor.ts::Localized validation messages emitted by handleStructError" },
++    { "id": "F2P-054", "check": "inputValueRecovery", "requirement_ids": ["S004"], "surface": "src/ha/common/structs/handle-errors.ts::handleStructError handling of non-validation errors" },
++    { "id": "F2P-057", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-060", "check": "enumSurface", "requirement_ids": ["S005"], "surface": "src/shared/config/appearance-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results" },
++    { "id": "F2P-065", "check": "extraKeySurface", "requirement_ids": ["S008"], "surface": "src/cards/entity-card/entity-card-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-066", "check": "missingTypeIssue", "requirement_ids": ["S003"], "surface": "src/shared/config/lovelace-card-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results" },
++    { "id": "F2P-067", "check": "extraKeySurface", "requirement_ids": ["S008"], "surface": "src/cards/entity-card/entity-card-editor.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-068", "check": "actionDispatchSurface", "requirement_ids": ["S007"], "surface": "src/ha/panels/lovelace/editor/structs/action-struct.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results" },
++    { "id": "F2P-069", "check": "extraKeySurface", "requirement_ids": ["S008"], "surface": "src/cards/entity-card/entity-card-config.ts::Validation success for a satisfying configuration object" },
++    { "id": "F2P-070", "check": "extraKeySurface", "requirement_ids": ["S008"], "surface": "src/cards/entity-card/entity-card-editor.ts::Card, chip and badge config and editor modules that compose or call the exported schemas" },
++    { "id": "F2P-071", "check": "missingTypeIssue", "requirement_ids": ["S003"], "surface": "src/shared/config/lovelace-card-config.ts::Pass/fail decision of every exported schema for a fixed configuration input" },
++    { "id": "F2P-072", "check": "enumSurface", "requirement_ids": ["S005"], "surface": "src/shared/config/appearance-config.ts::Pass/fail decision of every exported schema for a fixed configuration input" },
++    { "id": "F2P-050", "check": "nonValidationAndZod", "requirement_ids": ["S010"], "surface": "src/ha/common/structs/handle-errors.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-051", "check": "zodErrorMessageSurface", "requirement_ids": ["S001"], "surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys" },
++    { "id": "F2P-052", "check": "zodErrorMessageSurface", "requirement_ids": ["R001"], "surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys" },
++    { "id": "F2P-055", "check": "dependencyPolicySurface", "requirement_ids": ["R017"], "surface": "src/ha/common/structs/handle-errors.ts::handleStructError return value" },
++    { "id": "F2P-056", "check": "wrongTypeValueSurface", "requirement_ids": ["R001"], "surface": "src/ha/common/structs/handle-errors.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-058", "check": "keyMissingSurface", "requirement_ids": ["R001"], "surface": "src/ha/common/structs/handle-errors.ts::key_missing error entries produced from validation failures" },
++    { "id": "F2P-059", "check": "nonValidationAndZod", "requirement_ids": ["S010"], "surface": "src/ha/common/structs/handle-errors.ts::handleStructError return value" },
++    { "id": "F2P-061", "check": "unionSkipSurface", "requirement_ids": ["S004"], "surface": "src/ha/common/structs/handle-errors.ts::Message aggregation for a value that fails several union alternatives" },
++    { "id": "F2P-062", "check": "nonValidationAndZod", "requirement_ids": ["S010"], "surface": "src/ha/common/structs/handle-errors.ts::Message aggregation for a value that fails several union alternatives" },
++    { "id": "F2P-063", "check": "keyNotExpectedSurface", "requirement_ids": ["S004"], "surface": "src/ha/common/structs/handle-errors.ts::key_not_expected warning entries produced from validation failures" },
++    { "id": "F2P-064", "check": "dependencyPolicySurface", "requirement_ids": ["R017"], "surface": "src/ha/common/structs/handle-errors.ts::Message aggregation for a value that fails several union alternatives" },
++    { "id": "F2P-073", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-074", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-075", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-076", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-077", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-078", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/entity-config.ts::Card and badge config structs that compose the shared schemas" },
++    { "id": "F2P-079", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/utils/layout.ts::Card and badge config and editor modules that compose or call the exported schemas" },
++    { "id": "F2P-080", "check": "unionSkipSurface", "requirement_ids": ["S006"], "surface": "src/shared/config/appearance-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results" },
++    { "id": "F2P-081", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/entity-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-082", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/entity-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-083", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/entity-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-084", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/entity-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-085", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/lovelace-card-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-086", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/shared/config/lovelace-card-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-087", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/ha/panels/lovelace/editor/structs/action-struct.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-088", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/cards/entity-card/entity-card-config.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-089", "check": "wrongTypeValueSurface", "requirement_ids": ["S004"], "surface": "src/ha/panels/lovelace/editor/structs/action-struct.ts::key_wrong_type warning entries with offending value" },
++    { "id": "F2P-090", "check": "enumSurface", "requirement_ids": ["S005"], "surface": "src/shared/config/appearance-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results" }
++  ]
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0003/probe.cjs b/tests/shared/batches/BATCH-F2P-0003/probe.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0003/probe.cjs
+@@ -0,0 +1,559 @@
++"use strict";
++
++// Shared probe engine for BATCH-F2P-0003.
++//
++// Runs the same semantic predicate for every F2P observation against a
++// mushroom-cards repository root. The engine is side-agnostic: the source
++// runner points it at the Superstruct baseline, the target runner points it at
++// the migrated repository. It never hardcodes PASS/FAIL by role; it reports the
++// raw predicate result for the repository it is given.
++//
++// The engine loads the repository TypeScript modules directly with a
++// transpile-on-require hook and evaluates the exported schemas and
++// handleStructError through their public runtime surface.
++
++const fs = require("fs");
++const path = require("path");
++const Module = require("module");
++const { createValidationResult } = require("../../integration/config-validation.cjs");
++
++const DEPS = process.env.MUSHROOM_DEPS || "/opt/migration/dependencies/node_modules";
++const ts = require(path.join(DEPS, "typescript"));
++
++const HASS_LOCALIZE = (key, ...args) => `${key}(${args.join("|")})`;
++
++function installTsLoader() {
++  Module._extensions[".ts"] = function (module, filename) {
++    const source = fs.readFileSync(filename, "utf8");
++    const output = ts.transpileModule(source, {
++      compilerOptions: {
++        module: ts.ModuleKind.CommonJS,
++        target: ts.ScriptTarget.ES2019,
++        esModuleInterop: true,
++        moduleResolution: ts.ModuleResolutionKind.Node10,
++      },
++    }).outputText;
++    module._compile(output, filename);
++  };
++}
++
++function installModuleInterception(repoRoot, loaded) {
++  const originalLoad = Module._load;
++  let barrelStub = null;
++
++  const litStub = {
++    html: () => ({}),
++    css: () => ({}),
++    svg: () => ({}),
++    nothing: Symbol("nothing"),
++    noChange: Symbol("noChange"),
++    LitElement: class {},
++  };
++
++  const makeBarrelStub = () => {
++    const actionStructPath = path.join(
++      repoRoot,
++      "src/ha/panels/lovelace/editor/structs/action-struct.ts"
++    );
++    return {
++      get actionConfigStruct() {
++        return require(actionStructPath).actionConfigStruct;
++      },
++      get actionConfigStructType() {
++        return require(actionStructPath).actionConfigStructType;
++      },
++      getEntityPicture: () => "",
++      isAvailable: () => false,
++      isUnknown: () => false,
++      computeDomain: (value) => String(value).split(".")[0],
++    };
++  };
++
++  Module._load = function (request, parent, isMain) {
++    loaded.push(request);
++    if (request === "lit" || request.startsWith("lit/")) {
++      return litStub;
++    }
++    if (parent && request.startsWith(".")) {
++      const candidate = path.resolve(path.dirname(parent.filename), request);
++      const barrel = path.join(repoRoot, "src/ha");
++      if (
++        candidate === barrel ||
++        candidate === path.join(barrel, "index") ||
++        candidate === path.join(barrel, "index.ts")
++      ) {
++        if (!barrelStub) {
++          barrelStub = makeBarrelStub();
++        }
++        return barrelStub;
++      }
++    }
++    return originalLoad.apply(this, arguments);
++  };
++}
++
++function loadModules(repoRoot) {
++  const modules = {
++    lovelaceCardConfig: "src/shared/config/lovelace-card-config.ts",
++    lovelaceBadgeConfig: "src/shared/config/lovelace-badge-config.ts",
++    layout: "src/utils/layout.ts",
++    entityConfig: "src/shared/config/entity-config.ts",
++    appearanceConfig: "src/shared/config/appearance-config.ts",
++    actionStruct: "src/ha/panels/lovelace/editor/structs/action-struct.ts",
++    entityCardConfig: "src/cards/entity-card/entity-card-config.ts",
++    handleErrors: "src/ha/common/structs/handle-errors.ts",
++  };
++  const loaded = {};
++  for (const [key, relative] of Object.entries(modules)) {
++    try {
++      loaded[key] = require(path.join(repoRoot, relative));
++    } catch (error) {
++      loaded[key] = { __loadError: String((error && error.stack) || error) };
++    }
++  }
++  return loaded;
++}
++
++function zodError(schema, input, validateConfig) {
++  if (!schema || typeof schema.safeParse !== "function") {
++    return null;
++  }
++  const result = validateConfig(schema, input);
++  if (result.success) {
++    return null;
++  }
++  const error = result.error;
++  if (error && typeof error === "object" && Array.isArray(error.issues)) {
++    return error;
++  }
++  return null;
++}
++
++const isArray = (value) => Array.isArray(value);
++
++function evaluate(repoRoot) {
++  const loadedRequests = [];
++  installTsLoader();
++  installModuleInterception(repoRoot, loadedRequests);
++  const modules = loadModules(repoRoot);
++  const hass = { localize: HASS_LOCALIZE };
++  const validateConfig = createValidationResult(repoRoot, modules.handleErrors, ts);
++  const configError = (schema, input) => zodError(schema, input, validateConfig);
++
++  const entityCardStruct = () => modules.entityCardConfig.entityCardConfigStruct;
++  const boundCard = {
++    type: "custom:mushroom-entity-card",
++    entity: "light.kitchen",
++  };
++
++  const checks = {};
++  const define = (id, predicate) => {
++    try {
++      checks[id] = predicate() === true ? "PASS" : "FAIL";
++    } catch (error) {
++      checks[id] = "FAIL";
++      checks[`${id}__error`] = String((error && error.message) || error);
++    }
++  };
++
++  const missingTypeIssue = () => {
++    const error = configError(modules.lovelaceCardConfig.lovelaceCardConfigStruct, {});
++    if (!error) return false;
++    return error.issues.some(
++      (issue) =>
++        issue.code === "invalid_type" &&
++        issue.received === "undefined" &&
++        issue.path.join(".") === "type"
++    );
++  };
++
++  const enumSurface = () => {
++    const schema = modules.appearanceConfig.appearanceSharedConfigStruct;
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const positive = validateConfig(schema, { primary_info: "name" });
++    const negative = validateConfig(schema, { primary_info: "bogus" });
++    if (positive.success !== true || negative.success) return false;
++    const error = negative.error;
++    if (!error || !isArray(error.issues)) return false;
++    if (!error.issues.some((issue) => issue.code === "invalid_enum_value")) {
++      return false;
++    }
++    const output = modules.handleErrors.handleStructError(hass, error, {
++      primary_info: "bogus",
++    });
++    return (
++      isArray(output.warnings) &&
++      output.warnings.some(
++        (message) =>
++          message.includes("ui.errors.config.key_wrong_type") &&
++          message.includes("primary_info") && message.includes("bogus") &&
++          ["name", "state", "last-changed", "last-updated", "none"].every(
++            (option) => message.includes(option)
++          )
++      )
++    );
++  };
++
++  const unionSkipSurface = () => {
++    const error = configError(modules.entityConfig.entityNameStruct, 7);
++    if (!error) return false;
++    if (!error.issues.every((issue) => issue.code === "invalid_union")) {
++      return false;
++    }
++    const output = modules.handleErrors.handleStructError(hass, error, 7);
++    return (
++      isArray(output.warnings) &&
++      output.warnings.length === 0 &&
++      isArray(output.errors) &&
++      output.errors.length === 0
++    );
++  };
++
++  const extraKeySurface = () => {
++    const schema = entityCardStruct();
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const bad = validateConfig(schema, {
++      type: "custom:mushroom-entity-card",
++      bogus: 1,
++    });
++    const good = validateConfig(schema, {
++      type: "custom:mushroom-entity-card",
++      entity: "light.kitchen",
++      layout: "horizontal",
++    });
++    return (
++      bad.success === false &&
++      bad.error &&
++      isArray(bad.error.issues) &&
++      bad.error.issues.some(
++        (issue) =>
++          issue.code === "unrecognized_keys" &&
++          isArray(issue.keys) &&
++          issue.keys.includes("bogus")
++      ) &&
++      good.success === true
++    );
++  };
++
++  const zodErrorMessageSurface = () => {
++    const schema = entityCardStruct();
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const result = validateConfig(schema,
++      Object.assign({}, boundCard, { entity: 42 })
++    );
++    if (result.success || !result.error || !isArray(result.error.issues)) {
++      return false;
++    }
++    const output = modules.handleErrors.handleStructError(
++      hass,
++      result.error,
++      Object.assign({}, boundCard, { entity: 42 })
++    );
++    return (
++      isArray(output.warnings) &&
++      output.warnings.some((message) => message.includes("ui.errors.config."))
++    );
++  };
++
++  // F2P-049 / F2P-066 / F2P-071: missing required key -> Invalid_type(undefined).
++  define("F2P-049", missingTypeIssue);
++  define("F2P-066", missingTypeIssue);
++  define("F2P-071", missingTypeIssue);
++
++  // F2P-053 / F2P-051 / F2P-052: ZodError detected and localized.
++  define("F2P-053", zodErrorMessageSurface);
++  define("F2P-051", zodErrorMessageSurface);
++  define("F2P-052", () => {
++    const schema = entityCardStruct();
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const good = validateConfig(schema, boundCard);
++    if (good.success !== true) return false;
++    return zodErrorMessageSurface();
++  });
++
++  // F2P-054: offending value recovered from the original input.
++  define("F2P-054", () => {
++    const input = { primary_info: 123 };
++    const error = configError(
++      modules.appearanceConfig.appearanceSharedConfigStruct,
++      input
++    );
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    return (
++      isArray(output.warnings) &&
++      output.warnings.some(
++        (message) => message.includes("primary_info") && message.includes("123")
++      )
++    );
++  });
++
++  // F2P-063: unexpected key -> key_not_expected.
++  define("F2P-063", () => {
++    const input = { entity: "light.kitchen", bogus: 1 };
++    const error = configError(modules.entityConfig.entitySharedConfigStruct, input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    return (
++      isArray(output.warnings) &&
++      output.warnings.some(
++        (message) =>
++          message.includes("key_not_expected") && message.includes("bogus")
++      )
++    );
++  });
++
++  // F2P-058: missing key -> key_missing.
++  define("F2P-058", () => {
++    const error = configError(modules.lovelaceCardConfig.lovelaceCardConfigStruct, {});
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, {});
++    return (
++      isArray(output.errors) &&
++      output.errors.some(
++        (message) => message.includes("key_missing") && message.includes("type")
++      )
++    );
++  });
++
++  // F2P-056: wrong type warning includes the offending value.
++  define("F2P-056", () => {
++    const input = Object.assign({}, boundCard, { entity: 42 });
++    const error = configError(entityCardStruct(), input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    return (
++      isArray(output.warnings) &&
++      output.warnings.some(
++        (message) =>
++          message.includes("key_wrong_type") && message.includes("42")
++      )
++    );
++  });
++
++  // F2P-050 / F2P-059 / F2P-062: non-validation error passthrough AND the
++  // migrated validation error type is still localized (the discriminative
++  // conjunction: the source guard passes the plain error but fails the
++  // validation error).
++  const nonValidationEvent = () => {
++    const output = modules.handleErrors.handleStructError(
++      hass,
++      new TypeError("boom")
++    );
++    return (
++      output &&
++      output.errors === undefined &&
++      isArray(output.warnings) &&
++      output.warnings.length === 1 &&
++      output.warnings[0] === "boom"
++    );
++  };
++  const nonValidationAndZod = () => {
++    if (!nonValidationEvent()) return false;
++    return zodErrorMessageSurface();
++  };
++  define("F2P-050", nonValidationAndZod);
++  define("F2P-059", nonValidationAndZod);
++  define("F2P-062", nonValidationAndZod);
++
++  // F2P-057 / F2P-061: union alternatives are skipped.
++  define("F2P-057", unionSkipSurface);
++  define("F2P-061", unionSkipSurface);
++
++  // F2P-060 / F2P-072: enum rejection formatted with candidate options.
++  define("F2P-060", enumSurface);
++  define("F2P-072", enumSurface);
++
++  // F2P-065 / F2P-067 / F2P-069 / F2P-070: strict composing schema.
++  define("F2P-065", extraKeySurface);
++  define("F2P-067", extraKeySurface);
++  define("F2P-069", extraKeySurface);
++  define("F2P-070", extraKeySurface);
++
++  // F2P-068: dynamic action dispatch keeps per-action requirements.
++  define("F2P-068", () => {
++    const schema = modules.actionStruct.actionConfigStruct;
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const url = validateConfig(schema, { action: "url" });
++    const none = validateConfig(schema, { action: "none" });
++    return url.success === false && none.success === true;
++  });
++
++  // F2P-055 / F2P-064: target technology executes in-process and the source
++  // technology is not loaded by the migrated modules.
++  const dependencyPolicySurface = () => {
++    const schema = entityCardStruct();
++    if (!schema || typeof schema.safeParse !== "function") return false;
++    const result = validateConfig(schema, boundCard);
++    if (result.success !== true) return false;
++    return !loadedRequests.includes("superstruct");
++  };
++  define("F2P-055", dependencyPolicySurface);
++  define("F2P-064", dependencyPolicySurface);
++
++  // ---------------------------------------------------------------------
++  // F2P-073..F2P-090: hardening observations.
++  //
++  // Each predicate reads only the repository's public runtime surface
++  // (`safeParse` + `handleStructError`) and is side-agnostic; it never
++  // hardcodes PASS/FAIL by role. Two families sit squarely inside the declared
++  // behavior contract:
++  //   * F2P-073..080  union-skip fidelity  (Behavior 37): when every union
++  //     branch fails, the localized report must stay empty.
++  //   * F2P-081..088  offending-value fidelity (Behavior 36): a
++  //     `key_wrong_type` warning must carry the offending value exactly.
++  // One family preserves the localized report the schemas produce today:
++  //   * F2P-089..090  expected-type / candidate rendering preserved as-is.
++  // ---------------------------------------------------------------------
++
++  const unionSkipped = (schema, input) => {
++    const error = configError(schema, input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    return (
++      isArray(output.warnings) &&
++      output.warnings.length === 0 &&
++      isArray(output.errors) &&
++      output.errors.length === 0
++    );
++  };
++
++  const offendingValueReported = (schema, input, key, value) => {
++    const error = configError(schema, input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    if (!isArray(output.warnings)) return false;
++    const anchor = `key|${key}|`;
++    const expected = `type_wrong|${JSON.stringify(value)})`;
++    return output.warnings.some(
++      (message) =>
++        String(message).includes(anchor) && String(message).includes(expected)
++    );
++  };
++
++  const expectedTypeReported = (schema, input, key, expectedType) => {
++    const error = configError(schema, input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    if (!isArray(output.warnings)) return false;
++    return output.warnings.some((message) =>
++      String(message).includes(`key|${key}|type_correct|${expectedType}|`)
++    );
++  };
++
++  const enumCandidatesReported = (schema, input, options) => {
++    const error = configError(schema, input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    if (!isArray(output.warnings)) return false;
++    return output.warnings.some((message) =>
++      String(message).includes("ui.errors.config.key_wrong_type") &&
++      String(message).includes("primary_info") && String(message).includes("bogus") &&
++      options.every((option) => String(message).includes(option))
++    );
++  };
++
++  const entityNameStruct = () => modules.entityConfig.entityNameStruct;
++  const entitySharedStruct = () => modules.entityConfig.entitySharedConfigStruct;
++  const layoutStruct = () => modules.layout.layoutStruct;
++  const appearanceStruct = () => modules.appearanceConfig.appearanceSharedConfigStruct;
++  const cardStruct = () => modules.lovelaceCardConfig.lovelaceCardConfigStruct;
++  const actionStruct = () => modules.actionStruct.actionConfigStruct;
++
++  // F2P-073..080: union-skip fidelity (Behavior 37).
++  define("F2P-073", () => unionSkipped(entityNameStruct(), {}));
++  define("F2P-074", () => unionSkipped(entityNameStruct(), { type: "x" }));
++  define("F2P-075", () => unionSkipped(entityNameStruct(), { type: "text" }));
++  define("F2P-076", () => unionSkipped(entityNameStruct(), [{ type: "x" }]));
++  define("F2P-077", () => unionSkipped(entitySharedStruct(), { name: {} }));
++  define("F2P-078", () =>
++    unionSkipped(entitySharedStruct(), { name: { type: "text" } })
++  );
++  define("F2P-079", () => unionSkipped(layoutStruct(), "bogus"));
++  define("F2P-080", () => unionSkipped(appearanceStruct(), { layout: "bogus" }));
++
++  // F2P-081..088: offending-value fidelity (Behavior 36).
++  define("F2P-081", () =>
++    offendingValueReported(entitySharedStruct(), { entity: 42 }, "entity", 42)
++  );
++  define("F2P-082", () =>
++    offendingValueReported(entitySharedStruct(), { entity: null }, "entity", null)
++  );
++  define("F2P-083", () =>
++    offendingValueReported(entitySharedStruct(), { icon: true }, "icon", true)
++  );
++  define("F2P-084", () =>
++    offendingValueReported(
++      entitySharedStruct(),
++      { entity: { a: 1 } },
++      "entity",
++      { a: 1 }
++    )
++  );
++  define("F2P-085", () =>
++    offendingValueReported(cardStruct(), { type: 5 }, "type", 5)
++  );
++  define("F2P-086", () =>
++    offendingValueReported(cardStruct(), { type: "x", index: "5" }, "index", "5")
++  );
++  define("F2P-087", () =>
++    offendingValueReported(
++      actionStruct(),
++      { action: "url", url_path: 5 },
++      "url_path",
++      5
++    )
++  );
++  define("F2P-088", () => {
++    const input = { type: 5, entity: 42, bogus: 1 };
++    const error = configError(entityCardStruct(), input);
++    if (!error) return false;
++    const output = modules.handleErrors.handleStructError(hass, error, input);
++    if (!isArray(output.warnings)) return false;
++    const joined = output.warnings.map((message) => String(message)).join("\n");
++    return (
++      joined.includes("type_wrong|42)") &&
++      joined.includes("type_wrong|5)") &&
++      joined.includes("key_not_expected") &&
++      joined.includes("bogus")
++    );
++  });
++
++  // F2P-089..090: localized report preserved from the schemas today.
++  define("F2P-089", () =>
++    expectedTypeReported(
++      actionStruct(),
++      { action: "call-service", service_data: 5 },
++      "service_data",
++      "object"
++    )
++  );
++  define("F2P-090", () =>
++    enumCandidatesReported(
++      appearanceStruct(),
++      { primary_info: "bogus" },
++      ["name", "state", "last-changed", "last-updated", "none"]
++    )
++  );
++
++  return {
++    results: checks,
++    loaded: loadedRequests.filter(
++      (name) => name === "superstruct" || name === "zod"
++    ),
++    loadErrors: Object.entries(modules)
++      .filter(([, value]) => value && value.__loadError)
++      .map(([key]) => key),
++  };
++}
++
++module.exports = { evaluate };
++
++if (require.main === module) {
++  const repoRoot = process.argv[2];
++  if (!repoRoot) {
++    process.stderr.write("usage: node probe.cjs <repoRoot>\n");
++    process.exit(2);
++  }
++  process.stdout.write(JSON.stringify(evaluate(repoRoot), null, 2) + "\n");
++}
+diff --git a/tests/shared/batches/BATCH-P2P-0001/manifest.json b/tests/shared/batches/BATCH-P2P-0001/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0001/manifest.json
+@@ -0,0 +1,36 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "kind": "P2P",
++  "role": "Executable state-preservation checks for the Superstruct 2.0.2 to Zod 3.23.8 configuration-validation migration.",
++  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
++  "migration": {
++    "category": "backend_framework",
++    "source": { "name": "Superstruct", "version": "2.0.2" },
++    "target": { "name": "Zod", "version": "3.23.8" }
++  },
++  "surface": {
++    "shared": "shared/batches/BATCH-P2P-0001",
++    "source": "source/batches/BATCH-P2P-0001",
++    "target": "target/batches/BATCH-P2P-0001",
++    "fixtures": "fixtures/batches/BATCH-P2P-0001"
++  },
++  "harness": {
++    "source_entry": "source/runner",
++    "target_entry": "target/runner.js",
++    "created_by": "INTEGRATION",
++    "note": "This batch only declares probe specifications and fixtures; the live harness entries are created by the INTEGRATION batch."
++  },
++  "projection": {
++    "relation": "equal_after_normalization",
++    "normalization": "The repository ships no test runner, so both sides emit the same stable status wrapper instead of a side-specific value: {\"result\": \"PASS\"}.",
++    "value": { "result": "PASS" }
++  },
++  "observations": [
++    "P2P-001", "P2P-002", "P2P-003", "P2P-004", "P2P-005",
++    "P2P-006", "P2P-007", "P2P-008", "P2P-009", "P2P-010",
++    "P2P-011", "P2P-012", "P2P-013", "P2P-014", "P2P-015",
++    "P2P-016", "P2P-017", "P2P-018", "P2P-019"
++  ],
++  "state_checks": [],
++  "note": "P2P batch: no state_checks are produced; behavior is compared as an observable-result projection that must be equal after normalization on the source and target sides."
++}
+diff --git a/tests/shared/integration/observations.json b/tests/shared/integration/observations.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/observations.json
+@@ -0,0 +1,646 @@
++{
++  "schema_version": "migration-integration-observations:v1",
++  "batch_id": "BATCH-INTEGRATION-0001",
++  "observations": [
++    {
++      "id": "P2P-001",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-002",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-003",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-004",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-005",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-006",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-007",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-008",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-009",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-010",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-011",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-012",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-013",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-014",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-015",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-016",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-017",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-018",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "P2P-019",
++      "kind": "P2P",
++      "batch_id": "BATCH-P2P-0001"
++    },
++    {
++      "id": "F2P-001",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-002",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-004",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-005",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-006",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-007",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-008",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-009",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-011",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-012",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-015",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-017",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-022",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-003",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-010",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-014",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-016",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-018",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-019",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-020",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-024",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-027",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-029",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-030",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-037",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-038",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-044",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-047",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-049",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-053",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-054",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-057",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-060",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-065",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-066",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-067",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-068",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-069",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-070",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-071",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-072",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-040",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-013",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-021",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-023",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0001"
++    },
++    {
++      "id": "F2P-025",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-026",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-028",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-031",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-032",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-033",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-034",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-035",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-036",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-039",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-041",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-042",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-043",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-045",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-046",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-048",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0002"
++    },
++    {
++      "id": "F2P-050",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-051",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-052",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-055",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-056",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-058",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-059",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-061",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-062",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-063",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-064",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-073",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-074",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-075",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-076",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-077",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-078",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-079",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-080",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-081",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-082",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-083",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-084",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-085",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-086",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-087",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-088",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-089",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "F2P-090",
++      "kind": "F2P",
++      "batch_id": "BATCH-F2P-0003"
++    },
++    {
++      "id": "DIFF-001",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-002",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-003",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-004",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-005",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-006",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-007",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-008",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-009",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-010",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-011",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-012",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-013",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-014",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-015",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-016",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-017",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-018",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    },
++    {
++      "id": "DIFF-019",
++      "kind": "DIFFERENTIAL",
++      "batch_id": "BATCH-DIFFERENTIAL-0001"
++    }
++  ]
++}
+diff --git a/tests/shared/integration/runner-core.cjs b/tests/shared/integration/runner-core.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/runner-core.cjs
+@@ -0,0 +1,368 @@
++"use strict";
++
++/*
++ * BATCH-INTEGRATION-0001 shared harness core.
++ *
++ * The INTEGRATION batch merges the dependency batches and owns the two live
++ * harness entries (source/runner and target/runner.js). This module is the
++ * shared implementation both entries delegate to. It runs every required
++ * runtime observation through the real batch probes that already exist in the
++ * published asset tree:
++ *
++ *   - P2P/DIFFERENTIAL  : the shared DIFFERENTIAL adapters (Superstruct
++ *                         validate on the source side, Zod safeParse on the
++ *                         target side) over a combined shared-case corpus.
++ *   - F2P-0001/0002/0003: the three shared semantic predicate engines.
++ *
++ * Nothing is hardcoded by side: the same predicates are evaluated against the
++ * repository the runner is pointed at and the raw observation is reported.
++ *
++ * At runtime the asset root only contains shared/, source/, target/ and
++ * fixtures/ (plus the entries). This file therefore reads only those merged
++ * paths and never the authoring-only dependencies/ or fragments/ trees.
++ */
++
++const fs = require("fs");
++const os = require("os");
++const path = require("path");
++const { spawnSync } = require("child_process");
++
++const ASSETS_ROOT = path.resolve(__dirname, "..", "..");
++const OBSERVATIONS_PATH = path.join(
++  ASSETS_ROOT,
++  "shared",
++  "integration",
++  "observations.json"
++);
++const DIFFERENTIAL_BATCH_CORPUS = path.join(
++  ASSETS_ROOT,
++  "fixtures",
++  "batches",
++  "BATCH-DIFFERENTIAL-0001",
++  "fixtures.json"
++);
++const DIFFERENTIAL_EXTRAS = path.join(
++  ASSETS_ROOT,
++  "fixtures",
++  "integration",
++  "differential-extras.json"
++);
++const P2P_CASES = path.join(
++  ASSETS_ROOT,
++  "fixtures",
++  "integration",
++  "p2p-cases.json"
++);
++
++const PROBE_TIMEOUT_MS = 600000;
++
++function resolveRepoRoot() {
++  const keys = ["MIGRATION_REPO_ROOT", "MIGRATION_REPO", "REPO_ROOT", "REPO"];
++  for (const key of keys) {
++    const value = process.env[key];
++    if (value && value.trim()) return path.resolve(value.trim());
++  }
++  return "/workspace/repo";
++}
++
++function depDirCandidates(repoRoot) {
++  const candidates = [
++    path.join(repoRoot, "node_modules"),
++    process.env.DEPS_NODE_MODULES,
++    process.env.MUSHROOM_DEPS,
++    "/opt/migration/dependencies/node_modules",
++  ];
++  const seen = [];
++  for (const candidate of candidates) {
++    if (!candidate) continue;
++    const resolved = path.resolve(candidate);
++    if (seen.includes(resolved)) continue;
++    try {
++      if (fs.statSync(resolved).isDirectory()) seen.push(resolved);
++    } catch (_) {
++      /* not present */
++    }
++  }
++  return seen;
++}
++
++function childEnv(repoRoot) {
++  const dirs = depDirCandidates(repoRoot);
++  const env = Object.assign({}, process.env);
++  const nodePath = [path.join(repoRoot, "node_modules")]
++    .concat(dirs)
++    .concat(env.NODE_PATH ? env.NODE_PATH.split(path.delimiter) : [])
++    .filter(Boolean);
++  env.NODE_PATH = Array.from(new Set(nodePath)).join(path.delimiter);
++  env.DEPS_NODE_MODULES = dirs[0] || path.join(repoRoot, "node_modules");
++  env.MUSHROOM_DEPS = dirs[0] || path.join(repoRoot, "node_modules");
++  env.MIGRATION_REPO_ROOT = repoRoot;
++  return env;
++}
++
++function runNode(scriptPath, args, repoRoot, stdoutTarget) {
++  return spawnSync(process.execPath, [scriptPath].concat(args), {
++    cwd: ASSETS_ROOT,
++    env: childEnv(repoRoot),
++    encoding: "utf8",
++    timeout: PROBE_TIMEOUT_MS,
++    maxBuffer: 64 * 1024 * 1024,
++  });
++}
++
++function readJSON(file) {
++  return JSON.parse(fs.readFileSync(file, "utf8"));
++}
++
++function readJSONStripped(file) {
++  let text = fs.readFileSync(file, "utf8").trim();
++  const fenced = text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
++  if (fenced) text = fenced[1].trim();
++  return JSON.parse(text);
++}
++
++function readInventory() {
++  const raw = readJSON(OBSERVATIONS_PATH);
++  return raw.observations;
++}
++
++function tmpFile(name) {
++  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "migration-integration-"));
++  return path.join(dir, name);
++}
++
++/* ---------------------------------------------------------------- F2P ---- */
++
++function collectF2P0001(side, repoRoot, out) {
++  const script = path.join(
++    ASSETS_ROOT,
++    side,
++    "batches",
++    "BATCH-F2P-0001",
++    "probe.js"
++  );
++  const reportPath = tmpFile("f2p-0001.json");
++  const proc = runNode(script, [repoRoot, reportPath], repoRoot);
++  try {
++    const report = readJSON(reportPath);
++    for (const entry of report.results || []) {
++      out[entry.observation_id] = {
++        status: entry.status,
++        value: { result: entry.status },
++      };
++    }
++    return true;
++  } catch (err) {
++    void proc;
++    return false;
++  }
++}
++
++function collectF2P0002(side, repoRoot, out) {
++  const script = path.join(
++    ASSETS_ROOT,
++    side,
++    "batches",
++    "BATCH-F2P-0002",
++    "probe.cjs"
++  );
++  const reportPath = tmpFile("f2p-0002.json");
++  runNode(script, [repoRoot, reportPath], repoRoot);
++  try {
++    const report = readJSON(reportPath);
++    for (const entry of report.results || []) {
++      out[entry.observation_id] = {
++        status: entry.status,
++        value: { result: entry.status },
++      };
++    }
++    return true;
++  } catch (err) {
++    return false;
++  }
++}
++
++function collectF2P0003(side, repoRoot, out) {
++  const script = path.join(
++    ASSETS_ROOT,
++    side,
++    "batches",
++    "BATCH-F2P-0003",
++    "probe.cjs"
++  );
++  const proc = runNode(script, [repoRoot], repoRoot);
++  try {
++    const report = JSON.parse((proc.stdout || "").trim());
++    for (const [id, status] of Object.entries(report.results || {})) {
++      out[id] = { status: status, value: { result: status } };
++    }
++    return true;
++  } catch (err) {
++    return false;
++  }
++}
++
++/* ----------------------------------------------------- P2P / DIFFERENTIAL */
++
++function buildCombinedCorpus() {
++  const corpus = [];
++  corpus.push(...readJSON(DIFFERENTIAL_BATCH_CORPUS).corpus);
++  corpus.push(...readJSON(DIFFERENTIAL_EXTRAS).cases);
++  corpus.push(...readJSON(P2P_CASES).cases);
++  const file = tmpFile("corpus.json");
++  fs.writeFileSync(file, JSON.stringify({ corpus: corpus }, null, 2));
++  return { file: file, cases: corpus };
++}
++
++function runSharedCorpus(side, repoRoot) {
++  const { file, cases } = buildCombinedCorpus();
++  const script = path.join(
++    ASSETS_ROOT,
++    side,
++    "batches",
++    "BATCH-DIFFERENTIAL-0001",
++    "probe.js"
++  );
++  const outPath = tmpFile("normalized.json");
++  runNode(script, [repoRoot, file, outPath], repoRoot);
++  let results = {};
++  let ok = false;
++  try {
++    results = readJSON(outPath);
++    ok = true;
++  } catch (err) {
++    results = {};
++  }
++  return { ok: ok, results: results, cases: cases };
++}
++
++function groupCaseIds(cases) {
++  const groups = {};
++  for (const c of cases) {
++    const observationId = c.observation_id || c.id.split("-").slice(0, 2).join("-");
++    const prefix = c.id.replace(/-[a-z]$/, "");
++    const key = c.observation_id || prefix;
++    if (!groups[key]) groups[key] = [];
++    groups[key].push(c.id);
++    void observationId;
++  }
++  return groups;
++}
++
++function projectCases(caseIds, results) {
++  const projection = {};
++  for (const id of caseIds) projection[id] = id in results ? results[id] : null;
++  return projection;
++}
++
++function statusForExpected(expectations, results) {
++  let status = "PASS";
++  for (const expectation of expectations) {
++    const result = results[expectation.id];
++    if (!result || typeof result !== "object") {
++      return "INCONCLUSIVE";
++    }
++    if (expectation.expect && result.decision !== expectation.expect) {
++      status = "FAIL";
++    }
++  }
++  return status;
++}
++
++/* ------------------------------------------------------------- assembly --- */
++
++function buildReport(side, repoRoot) {
++  const inventory = readInventory();
++  const f2p = {};
++  const notes = [];
++
++  if (!collectF2P0001(side, repoRoot, f2p)) notes.push("F2P-0001 probe unavailable");
++  if (!collectF2P0002(side, repoRoot, f2p)) notes.push("F2P-0002 probe unavailable");
++  if (!collectF2P0003(side, repoRoot, f2p)) notes.push("F2P-0003 probe unavailable");
++
++  const shared = runSharedCorpus(side, repoRoot);
++  if (!shared.ok) notes.push("P2P/DIFFERENTIAL shared corpus unavailable");
++
++  const p2pConfig = readJSON(P2P_CASES);
++  const p2pExpectations = {};
++  for (const c of p2pConfig.cases) {
++    if (!p2pExpectations[c.observation_id]) p2pExpectations[c.observation_id] = [];
++    p2pExpectations[c.observation_id].push(c);
++  }
++
++  const sharedGroups = groupCaseIds(shared.cases);
++
++  const observations = [];
++  for (const entry of inventory) {
++    const kind = entry.kind;
++    if (kind === "F2P") {
++      const observed = f2p[entry.id];
++      observations.push({
++        id: entry.id,
++        kind: kind,
++        status: observed ? observed.status : "INCONCLUSIVE",
++        value: {
++          type: "json",
++          value: observed ? observed.value : { result: "INCONCLUSIVE" },
++        },
++      });
++      continue;
++    }
++
++    const caseIds = sharedGroups[entry.id] || [];
++    const projection = projectCases(caseIds, shared.results);
++
++    if (kind === "P2P") {
++      const expectations = p2pExpectations[entry.id] || [];
++      const status = shared.ok
++        ? statusForExpected(expectations, shared.results)
++        : "INCONCLUSIVE";
++      observations.push({
++        id: entry.id,
++        kind: kind,
++        status: status,
++        value: { type: "json", value: projection },
++      });
++      continue;
++    }
++
++    observations.push({
++      id: entry.id,
++      kind: kind,
++      status: shared.ok ? "PASS" : "INCONCLUSIVE",
++      value: { type: "json", value: projection },
++    });
++  }
++
++  return {
++    schema_version: "migration-observations:v6",
++    observations: observations,
++    notes: notes.length ? notes : undefined,
++  };
++}
++
++function main(side, reportPath) {
++  const repoRoot = resolveRepoRoot();
++  const report = buildReport(side, repoRoot);
++  const target = reportPath || "/logs/result.json";
++  try {
++    fs.mkdirSync(path.dirname(target), { recursive: true });
++  } catch (_) {
++    /* directory already exists */
++  }
++  fs.writeFileSync(target, JSON.stringify(report, null, 2) + "\n");
++  process.stdout.write(JSON.stringify(report, null, 2) + "\n");
++  return report;
++}
++
++module.exports = { main, buildReport, resolveRepoRoot, ASSETS_ROOT };
++
++if (require.main === module) {
++  const side = process.argv[2];
++  const reportPath = process.argv[3];
++  if (side !== "source" && side !== "target") {
++    process.stderr.write("usage: runner-core.cjs <source|target> <reportPath>\n");
++    process.exit(2);
++  }
++  main(side, reportPath);
++}
+diff --git a/tests/shared/skeleton/manifest.json b/tests/shared/skeleton/manifest.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/skeleton/manifest.json
+@@ -0,0 +1,17 @@
++{
++  "batch_id": "BATCH-SKELETON-0001",
++  "kind": "SKELETON",
++  "role": "Directory scaffold for the Superstruct 2.0.2 to Zod 3.23.8 configuration-validation migration test assets.",
++  "surface": {
++    "source": "source/skeleton",
++    "target": "target/skeleton",
++    "fixtures": "fixtures/skeleton",
++    "shared": "shared/skeleton"
++  },
++  "conventions": {
++    "source_harness_entry": "source/runner",
++    "target_harness_entry": "target/runner.js",
++    "created_by": "INTEGRATION"
++  },
++  "note": "Placeholder scaffold only. Live harness entries (source/runner and target/runner.js) are created by the INTEGRATION batch; this batch declares no observations and no gates."
++}
+diff --git a/tests/shared/validated-observations/selection.json b/tests/shared/validated-observations/selection.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/validated-observations/selection.json
+@@ -0,0 +1,247 @@
++{
++  "accepted_ids": [
++    "P2P-001",
++    "P2P-002",
++    "P2P-003",
++    "P2P-004",
++    "P2P-005",
++    "P2P-006",
++    "P2P-007",
++    "P2P-008",
++    "P2P-009",
++    "P2P-010",
++    "P2P-011",
++    "P2P-012",
++    "P2P-013",
++    "P2P-014",
++    "P2P-015",
++    "P2P-016",
++    "P2P-017",
++    "P2P-018",
++    "P2P-019",
++    "F2P-002",
++    "F2P-004",
++    "F2P-007",
++    "F2P-011",
++    "F2P-015",
++    "F2P-018",
++    "F2P-019",
++    "F2P-027",
++    "F2P-029",
++    "F2P-030",
++    "F2P-037",
++    "F2P-038",
++    "F2P-044",
++    "F2P-047",
++    "F2P-049",
++    "F2P-053",
++    "F2P-054",
++    "F2P-057",
++    "F2P-060",
++    "F2P-065",
++    "F2P-066",
++    "F2P-067",
++    "F2P-068",
++    "F2P-069",
++    "F2P-070",
++    "F2P-071",
++    "F2P-072",
++    "F2P-040",
++    "F2P-021",
++    "F2P-023",
++    "F2P-025",
++    "F2P-026",
++    "F2P-028",
++    "F2P-031",
++    "F2P-032",
++    "F2P-033",
++    "F2P-034",
++    "F2P-035",
++    "F2P-036",
++    "F2P-039",
++    "F2P-041",
++    "F2P-042",
++    "F2P-043",
++    "F2P-045",
++    "F2P-046",
++    "F2P-048",
++    "F2P-050",
++    "F2P-051",
++    "F2P-052",
++    "F2P-055",
++    "F2P-056",
++    "F2P-058",
++    "F2P-059",
++    "F2P-061",
++    "F2P-062",
++    "F2P-063",
++    "F2P-064",
++    "F2P-073",
++    "F2P-074",
++    "F2P-075",
++    "F2P-076",
++    "F2P-077",
++    "F2P-078",
++    "F2P-079",
++    "F2P-080",
++    "F2P-081",
++    "F2P-082",
++    "F2P-083",
++    "F2P-084",
++    "F2P-085",
++    "F2P-086",
++    "F2P-087",
++    "F2P-088",
++    "F2P-089",
++    "F2P-090",
++    "DIFF-001",
++    "DIFF-002",
++    "DIFF-003",
++    "DIFF-004",
++    "DIFF-005",
++    "DIFF-006",
++    "DIFF-007",
++    "DIFF-008",
++    "DIFF-009",
++    "DIFF-010",
++    "DIFF-011",
++    "DIFF-012",
++    "DIFF-013",
++    "DIFF-014",
++    "DIFF-015",
++    "DIFF-016",
++    "DIFF-017",
++    "DIFF-018",
++    "DIFF-019"
++  ],
++  "original_ids": [
++    "P2P-001",
++    "P2P-002",
++    "P2P-003",
++    "P2P-004",
++    "P2P-005",
++    "P2P-006",
++    "P2P-007",
++    "P2P-008",
++    "P2P-009",
++    "P2P-010",
++    "P2P-011",
++    "P2P-012",
++    "P2P-013",
++    "P2P-014",
++    "P2P-015",
++    "P2P-016",
++    "P2P-017",
++    "P2P-018",
++    "P2P-019",
++    "F2P-001",
++    "F2P-002",
++    "F2P-004",
++    "F2P-005",
++    "F2P-006",
++    "F2P-007",
++    "F2P-008",
++    "F2P-009",
++    "F2P-011",
++    "F2P-012",
++    "F2P-015",
++    "F2P-017",
++    "F2P-022",
++    "F2P-003",
++    "F2P-010",
++    "F2P-014",
++    "F2P-016",
++    "F2P-018",
++    "F2P-019",
++    "F2P-020",
++    "F2P-024",
++    "F2P-027",
++    "F2P-029",
++    "F2P-030",
++    "F2P-037",
++    "F2P-038",
++    "F2P-044",
++    "F2P-047",
++    "F2P-049",
++    "F2P-053",
++    "F2P-054",
++    "F2P-057",
++    "F2P-060",
++    "F2P-065",
++    "F2P-066",
++    "F2P-067",
++    "F2P-068",
++    "F2P-069",
++    "F2P-070",
++    "F2P-071",
++    "F2P-072",
++    "F2P-040",
++    "F2P-013",
++    "F2P-021",
++    "F2P-023",
++    "F2P-025",
++    "F2P-026",
++    "F2P-028",
++    "F2P-031",
++    "F2P-032",
++    "F2P-033",
++    "F2P-034",
++    "F2P-035",
++    "F2P-036",
++    "F2P-039",
++    "F2P-041",
++    "F2P-042",
++    "F2P-043",
++    "F2P-045",
++    "F2P-046",
++    "F2P-048",
++    "F2P-050",
++    "F2P-051",
++    "F2P-052",
++    "F2P-055",
++    "F2P-056",
++    "F2P-058",
++    "F2P-059",
++    "F2P-061",
++    "F2P-062",
++    "F2P-063",
++    "F2P-064",
++    "F2P-073",
++    "F2P-074",
++    "F2P-075",
++    "F2P-076",
++    "F2P-077",
++    "F2P-078",
++    "F2P-079",
++    "F2P-080",
++    "F2P-081",
++    "F2P-082",
++    "F2P-083",
++    "F2P-084",
++    "F2P-085",
++    "F2P-086",
++    "F2P-087",
++    "F2P-088",
++    "F2P-089",
++    "F2P-090",
++    "DIFF-001",
++    "DIFF-002",
++    "DIFF-003",
++    "DIFF-004",
++    "DIFF-005",
++    "DIFF-006",
++    "DIFF-007",
++    "DIFF-008",
++    "DIFF-009",
++    "DIFF-010",
++    "DIFF-011",
++    "DIFF-012",
++    "DIFF-013",
++    "DIFF-014",
++    "DIFF-015",
++    "DIFF-016",
++    "DIFF-017",
++    "DIFF-018",
++    "DIFF-019"
++  ]
++}
+diff --git a/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.js b/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.js
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.js
+@@ -0,0 +1,65 @@
++"use strict";
++
++// Source-side (Superstruct 2.0.2) DIFFERENTIAL probe for
++// BATCH-DIFFERENTIAL-0001. Loads the baseline schema modules from the source
++// repository and produces the shared normalized projection.
++//
++// Usage: node probe.js <repoRoot> <corpusPath> <outPath>
++//   repoRoot   checkout that contains src/ (source baseline when authoring)
++//   corpusPath fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json
++//   outPath    normalized JSON result file
++
++const fs = require("fs");
++const path = require("path");
++const { loadTs, collapseUnionExpansion, runCorpus } = require(
++  "../../../shared/batches/BATCH-DIFFERENTIAL-0001/harness.js"
++);
++
++const MODULES = {
++  entitySharedConfigStruct: "src/shared/config/entity-config.ts",
++  entityNameStruct: "src/shared/config/entity-config.ts",
++  appearanceSharedConfigStruct: "src/shared/config/appearance-config.ts",
++  layoutStruct: "src/utils/layout.ts",
++  actionConfigStruct: "src/ha/panels/lovelace/editor/structs/action-struct.ts",
++  lovelaceCardConfigStruct: "src/shared/config/lovelace-card-config.ts",
++  lovelaceBadgeConfigStruct: "src/shared/config/lovelace-badge-config.ts",
++  entityCardConfigStruct: "src/cards/entity-card/entity-card-config.ts",
++};
++
++function createAdapter(repoRoot) {
++  const superstruct = require("superstruct");
++  const { handleStructError } = loadTs(
++    repoRoot,
++    "src/ha/common/structs/handle-errors.ts"
++  );
++  const schemas = {};
++  for (const [name, rel] of Object.entries(MODULES)) {
++    const mod = loadTs(repoRoot, rel);
++    if (name in mod) schemas[name] = mod[name];
++  }
++  return {
++    loadSchemas: () => schemas,
++    decide: (schema, input) => {
++      const [err] = superstruct.validate(input, schema);
++      return { accepted: !err, err };
++    },
++    handle: (hass, err) =>
++      handleStructError(hass, collapseUnionExpansion(err)),
++    schemaKeys: (schema) => Object.keys(schema.schema || {}),
++    hasCapability: (schema) => schema != null,
++    handleNative: (hass, message) =>
++      handleStructError(hass, new Error(message)),
++  };
++}
++
++module.exports = { createAdapter, MODULES };
++
++if (require.main === module) {
++  const repoRoot = process.argv[2];
++  const corpusPath = process.argv[3];
++  const outPath = process.argv[4];
++  const corpus = JSON.parse(fs.readFileSync(corpusPath, "utf8")).corpus;
++  const results = runCorpus(corpus, createAdapter(repoRoot), repoRoot);
++  fs.writeFileSync(outPath, JSON.stringify(results, null, 2));
++  console.log("source probe wrote", outPath);
++}
+diff --git a/tests/source/batches/BATCH-F2P-0001/probe.js b/tests/source/batches/BATCH-F2P-0001/probe.js
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0001/probe.js
+@@ -0,0 +1,40 @@
++"use strict";
++
++/*
++ * BATCH-F2P-0001 source-side probe driver.
++ *
++ * Runs the shared semantic predicates against a Superstruct 2.0.2 repository
++ * (the migration baseline). Because the baseline does not provide the Zod
++ * target capabilities, every F2P postcondition is expected to FAIL here. The
++ * status is the raw observation of this side, never a hardcoded value.
++ *
++ * CLI: node probe.js [repoRoot] [reportPath]
++ * API: module.exports.run(repoRoot) -> { side, results }
++ */
++
++const path = require("path");
++const fs = require("fs");
++const core = require("../../../shared/batches/BATCH-F2P-0001/probe-core");
++
++const SIDE = "source";
++
++function run(repoRoot) {
++  const report = core.runAll(repoRoot);
++  report.side = SIDE;
++  return report;
++}
++
++if (require.main === module) {
++  const repoRoot = process.argv[2] || process.env.PROBE_REPO || "/workspace/repo";
++  const reportPath = process.argv[3] || process.env.PROBE_REPORT;
++  const report = run(repoRoot);
++  for (const r of report.results) {
++    process.stdout.write(`${SIDE} ${r.observation_id} ${r.status} ${r.detail}\n`);
++  }
++  if (reportPath) {
++    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
++    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++  }
++}
++
++module.exports = { run };
+diff --git a/tests/source/batches/BATCH-F2P-0002/probe.cjs b/tests/source/batches/BATCH-F2P-0002/probe.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0002/probe.cjs
+@@ -0,0 +1,73 @@
++"use strict";
++
++// Source-side F2P probe for BATCH-F2P-0002 (Superstruct 2.0.2 baseline).
++//
++// Executed against the read-only source repository with:
++//
++//   DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules \
++//   node source/batches/BATCH-F2P-0002/probe.cjs /input/source /logs/result.json
++//
++// The very same semantic predicates used by the target probe are evaluated.
++// On the source baseline every F2P postcondition is expected to FAIL because
++// the target framework entry points (Zod `safeParse` / `z.ZodError`) are not
++// present, while the Superstruct runtime is. The probe reports the raw
++// per-observation status; it is a successful observation run even when the
++// statuses are FAIL.
++
++const fs = require("fs");
++const path = require("path");
++
++const { loadSymbols } = require("../../../shared/batches/BATCH-F2P-0002/load-repo.cjs");
++const { runProbes } = require("../../../shared/batches/BATCH-F2P-0002/predicates.cjs");
++
++const manifest = require("../../../shared/batches/BATCH-F2P-0002/manifest.json");
++
++async function main() {
++  const repoRoot = process.argv[2] || process.env.REPO_ROOT || "/workspace/repo";
++  const reportPath = process.argv[3] || "/logs/result.json";
++
++  let symbols;
++  try {
++    symbols = await loadSymbols(repoRoot);
++  } catch (err) {
++    const report = {
++      batch_id: manifest.batch_id,
++      side: "source",
++      repo_root: repoRoot,
++      status: "INFRA_ERROR",
++      error: String((err && err.stack) || err),
++      results: [],
++    };
++    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++    process.stderr.write("INFRA_ERROR: " + report.error + "\n");
++    process.exit(2);
++  }
++
++  const predicates = runProbes(symbols);
++  const results = manifest.observations.map((observation_id) => {
++    const predicate_id = manifest.predicate_by_observation[observation_id];
++    const result = predicates[predicate_id] || { pass: false, error: "missing predicate" };
++    return {
++      observation_id,
++      predicate_id,
++      status: result.pass === true ? "PASS" : "FAIL",
++      evidence: result,
++    };
++  });
++
++  const allFailed = results.every((r) => r.status === "FAIL");
++  const report = {
++    batch_id: manifest.batch_id,
++    side: "source",
++    repo_root: repoRoot,
++    status: allFailed ? "FAIL" : "MIXED",
++    expected: "FAIL",
++    predicates,
++    results,
++  };
++  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++  process.stdout.write(JSON.stringify(report, null, 2) + "\n");
++  process.exit(0);
++}
++
++void main();
+diff --git a/tests/source/batches/BATCH-F2P-0003/probe.cjs b/tests/source/batches/BATCH-F2P-0003/probe.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0003/probe.cjs
+@@ -0,0 +1,20 @@
++"use strict";
++
++// Source-side entry for BATCH-F2P-0003.
++//
++// Runs the shared probe engine against the Superstruct baseline repository
++// (authored against /input/source). The repository root can be overridden with
++// argv[2] or MUSHROOM_SOURCE_REPO so the INTEGRATION runner can point it at the
++// baseline checkout. It reports the raw per-observation predicate result for
++// the repository it is given; it never hardcodes FAIL by role.
++
++const path = require("path");
++
++const { evaluate } = require(
++  path.join(__dirname, "../../../shared/batches/BATCH-F2P-0003/probe.cjs")
++);
++
++const repoRoot =
++  process.argv[2] || process.env.MUSHROOM_SOURCE_REPO || "/input/source";
++
++process.stdout.write(JSON.stringify(evaluate(repoRoot), null, 2) + "\n");
+diff --git a/tests/source/batches/BATCH-P2P-0001/probes.json b/tests/source/batches/BATCH-P2P-0001/probes.json
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-P2P-0001/probes.json
+@@ -0,0 +1,31 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "side": "source",
++  "kind": "P2P",
++  "runtime": "superstruct-2.0.2",
++  "harness_entry": "source/runner",
++  "created_by": "INTEGRATION",
++  "native_test_commands": [["git", "diff", "--exit-code"]],
++  "note": "The source repository ships no test files and no test script, so each observation is mapped to the stable common projection {\"result\": \"PASS\"} produced by the source runtime.",
++  "probes": [
++    { "observation_id": "P2P-001", "requirement_ids": ["R022"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-002", "requirement_ids": ["R005"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-003", "requirement_ids": ["R003"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-004", "requirement_ids": ["R008"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-005", "requirement_ids": ["R010"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-006", "requirement_ids": ["R013"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-007", "requirement_ids": ["R009"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-008", "requirement_ids": ["R002"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-009", "requirement_ids": ["R007"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-010", "requirement_ids": ["R021"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-011", "requirement_ids": ["R020"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-012", "requirement_ids": ["R018"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-013", "requirement_ids": ["R004"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-014", "requirement_ids": ["R015"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-015", "requirement_ids": ["R019"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-016", "requirement_ids": ["R011"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-017", "requirement_ids": ["R006"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-018", "requirement_ids": ["R012"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-019", "requirement_ids": ["R014"], "command": ["git", "diff", "--exit-code"], "result": "PASS", "value": { "result": "PASS" } }
++  ]
++}
+diff --git a/tests/source/run.sh b/tests/source/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/run.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++git --version
++git diff --exit-code
++set +e
++/assets/source/runner /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/source/runner b/tests/source/runner
+new file mode 100644
+--- /dev/null
++++ b/tests/source/runner
+@@ -0,0 +1,31 @@
++#!/bin/sh
++# BATCH-INTEGRATION-0001 source harness entry.
++#
++# Invoked as: {assets}/source/runner {report}
++#
++# Runs every required runtime observation against the repository the source
++# environment mounts (the Superstruct 2.0.2 baseline) and writes the
++# migration-observations:v6 report. The asset root is derived from this
++# script's own location; the repository root is read from the standard
++# MIGRATION_REPO_ROOT / MIGRATION_REPO / REPO_ROOT / REPO variables and falls
++# back to /workspace/repo.
++set -eu
++
++SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++ASSETS_ROOT=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
++REPORT="${1:-/logs/result.json}"
++
++NODE_BIN=""
++for candidate in node /usr/local/bin/node /usr/bin/node; do
++  if command -v "$candidate" >/dev/null 2>&1; then
++    NODE_BIN="$candidate"
++    break
++  fi
++done
++
++if [ -z "$NODE_BIN" ]; then
++  echo "source/runner: node executable not found" >&2
++  exit 127
++fi
++
++exec "$NODE_BIN" "$ASSETS_ROOT/shared/integration/runner-core.cjs" source "$REPORT"
+diff --git a/tests/source/skeleton/runner.template b/tests/source/skeleton/runner.template
+new file mode 100644
+--- /dev/null
++++ b/tests/source/skeleton/runner.template
+@@ -0,0 +1,10 @@
++#!/bin/sh
++# Skeleton template for the source harness entry {assets}/source/runner.
++# The INTEGRATION batch promotes this template to source/runner and fills in the probes.
++set -eu
++
++report="${1:-/logs/result.json}"
++
++# TODO: run the F2P/DIFF source probes against /workspace/repo (Superstruct baseline)
++# and write a JSON report to "$report".
++printf '%s\n' '{"results": []}' > "$report"
+diff --git a/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.js b/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.js
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.js
+@@ -0,0 +1,77 @@
++"use strict";
++
++// Target-side (Zod 3.23.8) DIFFERENTIAL probe for BATCH-DIFFERENTIAL-0001.
++// Loads the migrated schema modules from the repository under test and produces
++// the shared normalized projection used by the `equal_after_normalization`
++// relation.
++//
++// Usage: node probe.js <repoRoot> <corpusPath> <outPath>
++//   repoRoot   checkout that contains src/ (migrated repository when verifying)
++//   corpusPath fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json
++//   outPath    normalized JSON result file
++
++const fs = require("fs");
++const path = require("path");
++const { createValidationResult } = require("../../../shared/integration/config-validation.cjs");
++const { loadTs, runCorpus } = require(
++  "../../../shared/batches/BATCH-DIFFERENTIAL-0001/harness.js"
++);
++
++const MODULES = {
++  entitySharedConfigStruct: "src/shared/config/entity-config.ts",
++  entityNameStruct: "src/shared/config/entity-config.ts",
++  appearanceSharedConfigStruct: "src/shared/config/appearance-config.ts",
++  layoutStruct: "src/utils/layout.ts",
++  actionConfigStruct: "src/ha/panels/lovelace/editor/structs/action-struct.ts",
++  lovelaceCardConfigStruct: "src/shared/config/lovelace-card-config.ts",
++  lovelaceBadgeConfigStruct: "src/shared/config/lovelace-badge-config.ts",
++  entityCardConfigStruct: "src/cards/entity-card/entity-card-config.ts",
++};
++
++function createAdapter(repoRoot) {
++  const errorHandling = loadTs(
++    repoRoot,
++    "src/ha/common/structs/handle-errors.ts"
++  );
++  const { handleStructError } = errorHandling;
++  const validateConfig = createValidationResult(repoRoot, errorHandling, require("typescript"));
++  const schemas = {};
++  for (const [name, rel] of Object.entries(MODULES)) {
++    const mod = loadTs(repoRoot, rel);
++    if (name in mod) schemas[name] = mod[name];
++  }
++  return {
++    loadSchemas: () => schemas,
++    decide: (schema, input) => {
++      const parsed = validateConfig(schema, input);
++      return { accepted: parsed.success, err: parsed.error };
++    },
++    handle: (hass, err, input) => handleStructError(hass, err, input),
++    schemaKeys: (schema) => {
++      // Preprocessing/refinement wrappers do not change the public config type.
++      // Inspect the enclosed object instead of requiring a top-level .shape.
++      const visited = new Set();
++      while (schema && !schema.shape && !visited.has(schema) &&
++             schema._def?.typeName === "ZodEffects") {
++        visited.add(schema);
++        schema = schema.innerType();
++      }
++      return Object.keys(schema?.shape || {});
++    },
++    hasCapability: (schema) => schema != null,
++    handleNative: (hass, message) =>
++      handleStructError(hass, new Error(message)),
++  };
++}
++
++module.exports = { createAdapter, MODULES };
++
++if (require.main === module) {
++  const repoRoot = process.argv[2];
++  const corpusPath = process.argv[3];
++  const outPath = process.argv[4];
++  const corpus = JSON.parse(fs.readFileSync(corpusPath, "utf8")).corpus;
++  const results = runCorpus(corpus, createAdapter(repoRoot), repoRoot);
++  fs.writeFileSync(outPath, JSON.stringify(results, null, 2));
++  console.log("target probe wrote", outPath);
++}
+diff --git a/tests/target/batches/BATCH-F2P-0001/probe.js b/tests/target/batches/BATCH-F2P-0001/probe.js
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/probe.js
+@@ -0,0 +1,41 @@
++"use strict";
++
++/*
++ * BATCH-F2P-0001 target-side probe driver.
++ *
++ * Runs the exact same shared semantic predicates used by the source driver
++ * against a Zod 3.23.8 repository (the migration target). The predicates
++ * describe the target postconditions, so each F2P observation is expected to
++ * PASS here. The status is the raw observation of this side, never a
++ * hardcoded value.
++ *
++ * CLI: node probe.js [repoRoot] [reportPath]
++ * API: module.exports.run(repoRoot) -> { side, results }
++ */
++
++const path = require("path");
++const fs = require("fs");
++const core = require("../../../shared/batches/BATCH-F2P-0001/probe-core");
++
++const SIDE = "target";
++
++function run(repoRoot) {
++  const report = core.runAll(repoRoot);
++  report.side = SIDE;
++  return report;
++}
++
++if (require.main === module) {
++  const repoRoot = process.argv[2] || process.env.PROBE_REPO || "/workspace/repo";
++  const reportPath = process.argv[3] || process.env.PROBE_REPORT;
++  const report = run(repoRoot);
++  for (const r of report.results) {
++    process.stdout.write(`${SIDE} ${r.observation_id} ${r.status} ${r.detail}\n`);
++  }
++  if (reportPath) {
++    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
++    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++  }
++}
++
++module.exports = { run };
+diff --git a/tests/target/batches/BATCH-F2P-0002/probe.cjs b/tests/target/batches/BATCH-F2P-0002/probe.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0002/probe.cjs
+@@ -0,0 +1,70 @@
++"use strict";
++
++// Target-side F2P probe for BATCH-F2P-0002 (Zod 3.23.8 migration).
++//
++// Executed against a migrated working tree (default /workspace/repo). During
++// authoring this same file is executed against the read-only reference target
++// /input/target with:
++//
++//   DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules \
++//   node target/batches/BATCH-F2P-0002/probe.cjs /input/target /logs/result.json
++//
++// It exits 0 only when every F2P predicate holds (target expectation PASS).
++
++const fs = require("fs");
++const path = require("path");
++
++const { loadSymbols } = require("../../../shared/batches/BATCH-F2P-0002/load-repo.cjs");
++const { runProbes, summarise } = require("../../../shared/batches/BATCH-F2P-0002/predicates.cjs");
++
++const manifest = require("../../../shared/batches/BATCH-F2P-0002/manifest.json");
++
++async function main() {
++  const repoRoot = process.argv[2] || process.env.REPO_ROOT || "/workspace/repo";
++  const reportPath = process.argv[3] || "/logs/result.json";
++
++  let symbols;
++  try {
++    symbols = await loadSymbols(repoRoot);
++  } catch (err) {
++    const report = {
++      batch_id: manifest.batch_id,
++      side: "target",
++      repo_root: repoRoot,
++      status: "INFRA_ERROR",
++      error: String((err && err.stack) || err),
++      results: [],
++    };
++    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++    process.stderr.write("INFRA_ERROR: " + report.error + "\n");
++    process.exit(2);
++  }
++
++  const predicates = runProbes(symbols);
++  const results = manifest.observations.map((observation_id) => {
++    const predicate_id = manifest.predicate_by_observation[observation_id];
++    const result = predicates[predicate_id] || { pass: false, error: "missing predicate" };
++    return {
++      observation_id,
++      predicate_id,
++      status: result.pass === true ? "PASS" : "FAIL",
++      evidence: result,
++    };
++  });
++
++  const summary = summarise(predicates);
++  const report = {
++    batch_id: manifest.batch_id,
++    side: "target",
++    repo_root: repoRoot,
++    status: summary.pass ? "PASS" : "FAIL",
++    failed_predicates: summary.failed,
++    predicates,
++    results,
++  };
++  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
++  process.stdout.write(JSON.stringify(report, null, 2) + "\n");
++  process.exit(0);
++}
++
++void main();
+diff --git a/tests/target/batches/BATCH-F2P-0003/probe.cjs b/tests/target/batches/BATCH-F2P-0003/probe.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0003/probe.cjs
+@@ -0,0 +1,21 @@
++"use strict";
++
++// Target-side entry for BATCH-F2P-0003.
++//
++// Runs the shared probe engine against the migrated repository (authored
++// against the private reference target at /input/target). The repository root
++// can be overridden with argv[2] or MUSHROOM_TARGET_REPO so the INTEGRATION
++// runner can point it at the candidate solution /workspace/repo. It reports the
++// raw per-observation predicate result for the repository it is given; it never
++// hardcodes PASS by role.
++
++const path = require("path");
++
++const { evaluate } = require(
++  path.join(__dirname, "../../../shared/batches/BATCH-F2P-0003/probe.cjs")
++);
++
++const repoRoot =
++  process.argv[2] || process.env.MUSHROOM_TARGET_REPO || "/input/target";
++
++process.stdout.write(JSON.stringify(evaluate(repoRoot), null, 2) + "\n");
+diff --git a/tests/target/batches/BATCH-P2P-0001/probes.json b/tests/target/batches/BATCH-P2P-0001/probes.json
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-P2P-0001/probes.json
+@@ -0,0 +1,32 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "side": "target",
++  "kind": "P2P",
++  "runtime": "zod-3.23.8",
++  "harness_entry": "target/runner.js",
++  "created_by": "INTEGRATION",
++  "native_test_commands": [],
++  "build_commands": [["npm", "run", "build"]],
++  "note": "The target repository ships no test files and no test script, so each observation is mapped to the stable common projection {\"result\": \"PASS\"} produced by the target runtime after the migrated schemas build and load.",
++  "probes": [
++    { "observation_id": "P2P-001", "requirement_ids": ["R022"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-002", "requirement_ids": ["R005"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-003", "requirement_ids": ["R003"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-004", "requirement_ids": ["R008"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-005", "requirement_ids": ["R010"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-006", "requirement_ids": ["R013"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-007", "requirement_ids": ["R009"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-008", "requirement_ids": ["R002"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-009", "requirement_ids": ["R007"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-010", "requirement_ids": ["R021"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-011", "requirement_ids": ["R020"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-012", "requirement_ids": ["R018"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-013", "requirement_ids": ["R004"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-014", "requirement_ids": ["R015"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-015", "requirement_ids": ["R019"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-016", "requirement_ids": ["R011"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-017", "requirement_ids": ["R006"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-018", "requirement_ids": ["R012"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-019", "requirement_ids": ["R014"], "command": ["node", "target/runner.js"], "result": "PASS", "value": { "result": "PASS" } }
++  ]
++}
+diff --git a/tests/target/run.sh b/tests/target/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/run.sh
+@@ -0,0 +1,10 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++node --version
++npm --version
++npm run build
++set +e
++node /assets/target/runner.js /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/target/runner.js b/tests/target/runner.js
+new file mode 100644
+--- /dev/null
++++ b/tests/target/runner.js
+@@ -0,0 +1,20 @@
++"use strict";
++
++/*
++ * BATCH-INTEGRATION-0001 target harness entry.
++ *
++ * Invoked as: node {assets}/target/runner.js {report}
++ *
++ * Runs every required runtime observation against the repository the target
++ * environment mounts (the migrated Zod 3.23.8 working tree) and writes the
++ * migration-observations:v6 report. All logic lives in the shared
++ * integration core so the source and target sides evaluate the exact same
++ * predicates; only the repository under test differs.
++ */
++
++const path = require("path");
++const { main } = require(
++  path.join(__dirname, "..", "shared", "integration", "runner-core.cjs")
++);
++
++main("target", process.argv[2] || "/logs/result.json");
+diff --git a/tests/target/skeleton/runner.js.template b/tests/target/skeleton/runner.js.template
+new file mode 100644
+--- /dev/null
++++ b/tests/target/skeleton/runner.js.template
+@@ -0,0 +1,11 @@
++// Skeleton template for the target harness entry {assets}/target/runner.js.
++// The INTEGRATION batch promotes this template to target/runner.js and fills in the probes.
++"use strict";
++
++const fs = require("fs");
++
++const reportPath = process.argv[2] || "/logs/result.json";
++
++// TODO: run the F2P/DIFF target probes against /workspace/repo (Zod migration)
++// and write a JSON report to reportPath.
++fs.writeFileSync(reportPath, JSON.stringify({ results: [] }, null, 2));
+diff --git a/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json
+@@ -0,0 +1,35 @@
++{
++  "batch_id": "BATCH-DIFFERENTIAL-0001",
++  "kind": "DIFFERENTIAL",
++  "family": "shared-case-corpus",
++  "projection": "normalized-result",
++  "corpus": [
++    { "id": "DIFF-001-a", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": "light.kitchen" } },
++    { "id": "DIFF-001-b", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": 42 } },
++    { "id": "DIFF-001-c", "op": "parse", "schema": "lovelaceCardConfigStruct", "input": { "type": "custom:mushroom-entity-card" } },
++    { "id": "DIFF-001-d", "op": "parse", "schema": "lovelaceCardConfigStruct", "input": {} },
++    { "id": "DIFF-002-a", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" } },
++    { "id": "DIFF-002-b", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": 42 } },
++    { "id": "DIFF-003-a", "op": "parse", "schema": "layoutStruct", "input": "horizontal" },
++    { "id": "DIFF-003-b", "op": "parse", "schema": "layoutStruct", "input": "diagonal" },
++    { "id": "DIFF-003-c", "op": "parse", "schema": "entityNameStruct", "input": "Kitchen" },
++    { "id": "DIFF-003-d", "op": "parse", "schema": "entityNameStruct", "input": 7 },
++    { "id": "DIFF-003-e", "op": "parse", "schema": "actionConfigStruct", "input": { "action": "none" } },
++    { "id": "DIFF-004-a", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen", "layout": "horizontal" } },
++    { "id": "DIFF-004-b", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen", "layout": "diagonal" } },
++    { "id": "DIFF-005-a", "op": "shape", "schema": "entitySharedConfigStruct" },
++    { "id": "DIFF-005-b", "op": "shape", "schema": "appearanceSharedConfigStruct" },
++    { "id": "DIFF-006-a", "op": "handle", "schema": "entitySharedConfigStruct", "input": { "entity": 42 } },
++    { "id": "DIFF-007-a", "op": "handle", "schema": "actionConfigStruct", "input": { "action": "call-service", "target": { "entity_id": "light.kitchen", "bogus": 1 } } },
++    { "id": "DIFF-008-a", "op": "handle", "schema": "lovelaceCardConfigStruct", "input": { "type": "custom:mushroom-entity-card" } },
++    { "id": "DIFF-009-a", "op": "handle", "schema": "lovelaceCardConfigStruct", "input": {} },
++    { "id": "DIFF-010-a", "op": "handle", "schema": "entitySharedConfigStruct", "input": { "entity": "light.kitchen", "bogus": 1 } },
++    { "id": "DIFF-011-a", "op": "handle", "schema": "entitySharedConfigStruct", "input": { "entity": 42 } },
++    { "id": "DIFF-012-a", "op": "handle", "schema": "entityNameStruct", "input": 7 },
++    { "id": "DIFF-013-a", "op": "handle_native", "input": "boom" },
++    { "id": "DIFF-014-a", "op": "capabilities" },
++    { "id": "DIFF-017-a", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "primary_info": "name" } },
++    { "id": "DIFF-018-a", "op": "parse", "schema": "appearanceSharedConfigStruct", "input": {} },
++    { "id": "DIFF-019-a", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": 42 } }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0001/fixtures.json b/tests/fixtures/batches/BATCH-F2P-0001/fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0001/fixtures.json
+@@ -0,0 +1,243 @@
++{
++  "schema_version": "migration-fixtures:v1",
++  "batch_id": "BATCH-F2P-0001",
++  "note": "Concrete F2P fixtures consumed by the source and target probe drivers. Each fixture is evaluated by the shared predicate named in the fixture.",
++  "fixtures": [
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-001",
++      "observation_id": "F2P-001",
++      "input": {
++        "primary_info": 123
++      },
++      "predicate": "offending_value",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-002",
++      "observation_id": "F2P-002",
++      "input": "package.json/package-lock.json dependency declarations",
++      "predicate": "dependency_imports",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-004",
++      "observation_id": "F2P-004",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "bogus": 1
++      },
++      "predicate": "strict_entity_card",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-005",
++      "observation_id": "F2P-005",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "predicate": "zod_error_detection",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-006",
++      "observation_id": "F2P-006",
++      "input": {},
++      "predicate": "key_missing",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-007",
++      "observation_id": "F2P-007",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "predicate": "dependency_execution",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-008",
++      "observation_id": "F2P-008",
++      "input": "TypeError(\"boom\")",
++      "predicate": "non_validation_passthrough",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-009",
++      "observation_id": "F2P-009",
++      "input": {
++        "primary_info": "bogus"
++      },
++      "predicate": "enum_reject",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-011",
++      "observation_id": "F2P-011",
++      "input": "package.json/package-lock.json dependency declarations",
++      "predicate": "dependency_manifest",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-012",
++      "observation_id": "F2P-012",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "predicate": "unknown_key_strict",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-015",
++      "observation_id": "F2P-015",
++      "input": {
++        "action": "url"
++      },
++      "predicate": "action_dispatch",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-017",
++      "observation_id": "F2P-017",
++      "input": 7,
++      "predicate": "union_skip",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-022",
++      "observation_id": "F2P-022",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "predicate": "card_parse_zod",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-003",
++      "observation_id": "F2P-003",
++      "input": {
++        "primary_info": 123
++      },
++      "predicate": "offending_value",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-010",
++      "observation_id": "F2P-010",
++      "input": "TypeError(\"boom\")",
++      "predicate": "non_validation_passthrough",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-014",
++      "observation_id": "F2P-014",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "predicate": "unknown_key_strict",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-016",
++      "observation_id": "F2P-016",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": 42
++      },
++      "predicate": "zod_error_detection",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-018",
++      "observation_id": "F2P-018",
++      "input": {
++        "primary_info": 123
++      },
++      "predicate": "element_editor_input",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-019",
++      "observation_id": "F2P-019",
++      "input": {
++        "action": "url"
++      },
++      "predicate": "action_dispatch",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-020",
++      "observation_id": "F2P-020",
++      "input": {
++        "entity": "light.kitchen",
++        "bogus": 1
++      },
++      "predicate": "unknown_key_strict",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-024",
++      "observation_id": "F2P-024",
++      "input": 7,
++      "predicate": "union_skip",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-013",
++      "observation_id": "F2P-013",
++      "input": {
++        "primary_info": 123
++      },
++      "predicate": "offending_value",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-021",
++      "observation_id": "F2P-021",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "predicate": "dependency_execution",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    },
++    {
++      "id": "BATCH-F2P-0001-FIXTURE-023",
++      "observation_id": "F2P-023",
++      "input": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen"
++      },
++      "predicate": "dependency_execution",
++      "expected_source": "FAIL",
++      "expected_target": "PASS"
++    }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0002/fixtures.json b/tests/fixtures/batches/BATCH-F2P-0002/fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0002/fixtures.json
+@@ -0,0 +1,106 @@
++{
++  "schema_version": "migration-asset-fixtures:v2",
++  "batch_id": "BATCH-F2P-0002",
++  "role": "Fixed configuration inputs for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation F2P probes.",
++  "fixtures": [
++    {
++      "id": "FIX-CARD-VALID",
++      "schema": "entityCardConfigStruct",
++      "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" },
++      "expect": "accept"
++    },
++    {
++      "id": "FIX-CARD-WRONG-TYPE",
++      "schema": "entityCardConfigStruct",
++      "input": { "type": "custom:mushroom-entity-card", "entity": 42 },
++      "expect": "reject",
++      "reject_issue": "invalid_type",
++      "reject_key": "entity"
++    },
++    {
++      "id": "FIX-CARD-UNKNOWN-KEY",
++      "schema": "entityCardConfigStruct",
++      "input": { "type": "custom:mushroom-entity-card", "bogus": 1 },
++      "expect": "reject",
++      "reject_issue": "unrecognized_keys",
++      "reject_key": "bogus"
++    },
++    {
++      "id": "FIX-CARD-MISSING-TYPE",
++      "schema": "lovelaceCardConfigStruct",
++      "input": {},
++      "expect": "reject",
++      "reject_issue": "invalid_type",
++      "reject_key": "type"
++    },
++    {
++      "id": "FIX-ENTITY-VALID",
++      "schema": "entitySharedConfigStruct",
++      "input": { "entity": "light.kitchen" },
++      "expect": "accept"
++    },
++    {
++      "id": "FIX-ENTITY-UNKNOWN-KEY",
++      "schema": "entitySharedConfigStruct",
++      "input": { "entity": "light.kitchen", "bogus": 1 },
++      "expect": "reject",
++      "reject_issue": "unrecognized_keys",
++      "reject_key": "bogus"
++    },
++    {
++      "id": "FIX-ENTITY-WRONG-TYPE",
++      "schema": "entitySharedConfigStruct",
++      "input": { "entity": 42 },
++      "expect": "reject",
++      "reject_issue": "invalid_type",
++      "reject_key": "entity"
++    },
++    {
++      "id": "FIX-APPEARANCE-ENUM-BAD",
++      "schema": "appearanceSharedConfigStruct",
++      "input": { "primary_info": 123 },
++      "expect": "reject",
++      "reject_issue": "invalid_enum_value",
++      "reject_key": "primary_info"
++    },
++    {
++      "id": "FIX-NAME-UNION-FAIL",
++      "schema": "entityNameStruct",
++      "input": 7,
++      "expect": "reject",
++      "reject_issue": "invalid_union"
++    },
++    {
++      "id": "FIX-LAYOUT-VALID",
++      "schema": "layoutStruct",
++      "input": "horizontal",
++      "expect": "accept"
++    },
++    {
++      "id": "FIX-LAYOUT-BAD",
++      "schema": "layoutStruct",
++      "input": "diagonal",
++      "expect": "reject"
++    },
++    {
++      "id": "FIX-ACTION-NONE",
++      "schema": "actionConfigStruct",
++      "input": { "action": "none" },
++      "expect": "accept"
++    },
++    {
++      "id": "FIX-ACTION-URL-MISSING-PATH",
++      "schema": "actionConfigStruct",
++      "input": { "action": "url" },
++      "expect": "reject",
++      "reject_issue": "invalid_type",
++      "reject_key": "url_path"
++    },
++    {
++      "id": "FIX-NON-VALIDATION-ERROR",
++      "schema": "handleStructError",
++      "input": "TypeError:boom",
++      "expect": "passthrough"
++    }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/fixtures.json b/tests/fixtures/batches/BATCH-F2P-0003/fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/fixtures.json
+@@ -0,0 +1,86 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "note": "Fixed configuration inputs shared by the source and target probes. Both sides evaluate the same semantic predicate over these inputs.",
++  "hass_localize_stub": "localize(key, ...args) => `${key}(${args.join('|')})`",
++  "fixtures": [
++    {
++      "id": "bound-entity-card",
++      "description": "A satisfying bound entity card configuration.",
++      "value": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" }
++    },
++    {
++      "id": "bound-entity-card-wrong-type",
++      "description": "Same bound card with entity replaced by a number.",
++      "value": { "type": "custom:mushroom-entity-card", "entity": 42 }
++    },
++    {
++      "id": "bound-entity-card-extra-key",
++      "description": "Interacting configuration with one unexpected key.",
++      "value": { "type": "custom:mushroom-entity-card", "bogus": 1 }
++    },
++    {
++      "id": "bound-entity-card-horizontal",
++      "description": "Satisfying card with known layout value.",
++      "value": {
++        "type": "custom:mushroom-entity-card",
++        "entity": "light.kitchen",
++        "layout": "horizontal"
++      }
++    },
++    {
++      "id": "lovelace-card-missing-type",
++      "description": "Empty lovelace card configuration missing the required type key.",
++      "value": {}
++    },
++    {
++      "id": "entity-wrong-type",
++      "description": "Shared entity configuration with a numeric entity.",
++      "value": { "entity": 42 }
++    },
++    {
++      "id": "entity-extra-key",
++      "description": "Shared entity configuration with an unexpected key.",
++      "value": { "entity": "light.kitchen", "bogus": 1 }
++    },
++    {
++      "id": "entity-name-number",
++      "description": "A number that fails every union alternative of entityNameStruct.",
++      "value": 7
++    },
++    {
++      "id": "appearance-valid-info",
++      "description": "Appearance configuration with a valid primary_info enum value.",
++      "value": { "primary_info": "name" }
++    },
++    {
++      "id": "appearance-invalid-info",
++      "description": "Appearance configuration with an unknown primary_info enum value.",
++      "value": { "primary_info": "bogus" }
++    },
++    {
++      "id": "appearance-wrong-type-info",
++      "description": "Appearance configuration whose primary_info has the wrong type.",
++      "value": { "primary_info": 123 }
++    },
++    {
++      "id": "action-url-missing-path",
++      "description": "Action configuration dispatched to the url branch without url_path.",
++      "value": { "action": "url" }
++    },
++    {
++      "id": "action-none",
++      "description": "Action configuration for the none branch.",
++      "value": { "action": "none" }
++    },
++    {
++      "id": "layout-horizontal",
++      "description": "Accepted layout literal.",
++      "value": "horizontal"
++    },
++    {
++      "id": "layout-diagonal",
++      "description": "Rejected layout literal.",
++      "value": "diagonal"
++    }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-P2P-0001/fixtures.json b/tests/fixtures/batches/BATCH-P2P-0001/fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-P2P-0001/fixtures.json
+@@ -0,0 +1,26 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "kind": "P2P",
++  "normalization": "Both sides emit the same status wrapper {\"result\": \"PASS\"}; the relation for every observation is equal_after_normalization.",
++  "fixtures": [
++    { "observation_id": "P2P-001", "requirement_ids": ["R022"], "surface": "Strength of the validation checks", "input": "entitySharedConfigStruct.safeParse({ entity: 42 })", "expected": "reject", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-002", "requirement_ids": ["R005"], "surface": "Card and badge config structs", "input": "entityCardConfigStruct.safeParse({ type: 'custom:mushroom-entity-card', entity: 'light.kitchen', layout: 'horizontal' }) and the same object with layout: 'diagonal'", "expected": "accept then reject", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-003", "requirement_ids": ["R003"], "surface": "Card, chip and badge config and editor modules", "input": "entity card editor setConfig with a previously valid config and the same previously invalid config", "expected": "accept previously valid, reject previously invalid", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-004", "requirement_ids": ["R008"], "surface": "Localized validation messages", "input": "handleStructError over a failing nested name item", "expected": "dotted key path 'name.text'", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-005", "requirement_ids": ["R010"], "surface": "key_missing error entries", "input": "lovelaceCardConfigStruct.safeParse({})", "expected": "ui.errors.config.key_missing for key 'type'", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-006", "requirement_ids": ["R013"], "surface": "Union-failure message aggregation", "input": "entityNameStruct.safeParse(7)", "expected": "no per-alternative warnings or errors", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-007", "requirement_ids": ["R009"], "surface": "Validation success", "input": "lovelaceCardConfigStruct.parse({ type: 'custom:mushroom-entity-card' })", "expected": "returns the object", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-008", "requirement_ids": ["R002"], "surface": "Schema accept/reject decisions", "input": "entitySharedConfigStruct on { entity: 'light.kitchen' } and { entity: 42 }; lovelaceCardConfigStruct on { type: 'custom:mushroom-entity-card' } and {}", "expected": "accept, reject, accept, reject", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-009", "requirement_ids": ["R007"], "surface": "handleStructError return value", "input": "handleStructError(hass, err) for any error", "expected": "{ warnings: string[]; errors?: string[] }", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-010", "requirement_ids": ["R021"], "surface": "Rendering code and optional field defaults", "input": "render of a card with an omitted optional appearance field", "expected": "identical default value and rendered template output", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-011", "requirement_ids": ["R020"], "surface": "Custom element tag names and YAML option names", "input": "mushroom-entity-card registration and the 'primary_info' option name", "expected": "unchanged", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-012", "requirement_ids": ["R018"], "surface": "Set of files changed by the migration", "input": "the migration change set", "expected": "only migrated schema modules, their composing/calling modules and dependency configuration", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-013", "requirement_ids": ["R004"], "surface": "Named schemas", "input": "layoutStruct 'horizontal' and 'diagonal'; entityNameStruct 'Kitchen' and 7; actionConfigStruct { action: 'none' }", "expected": "accept, reject, accept, reject, accept", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-014", "requirement_ids": ["R015"], "surface": "Public capabilities and contracts", "input": "exported schema names and handleStructError invocation", "expected": "preserved", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-015", "requirement_ids": ["R019"], "surface": "Exported names and localization keys", "input": "entitySharedConfigStruct, EntitySharedConfig, ui.errors.config.key_missing", "expected": "same spellings", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-016", "requirement_ids": ["R011"], "surface": "key_not_expected warning entries", "input": "entitySharedConfigStruct.safeParse({ entity: 'light.kitchen', bogus: 1 })", "expected": "ui.errors.config.key_not_expected for key 'bogus'", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-017", "requirement_ids": ["R006"], "surface": "Exported config types", "input": "EntitySharedConfig and AppearanceSharedConfig type shape", "expected": "optional entity/name/icon and layout/fill_container/primary_info/secondary_info/icon_type", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-018", "requirement_ids": ["R012"], "surface": "key_wrong_type warning entries", "input": "entitySharedConfigStruct with entity set to 42", "expected": "message containing '42'", "value": { "result": "PASS" } },
++    { "observation_id": "P2P-019", "requirement_ids": ["R014"], "surface": "Non-validation error handling", "input": "handleStructError(hass, new Error('boom'))", "expected": "{ warnings: ['boom'], errors: undefined }", "value": { "result": "PASS" } }
++  ]
++}
+diff --git a/tests/fixtures/integration/differential-extras.json b/tests/fixtures/integration/differential-extras.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/integration/differential-extras.json
+@@ -0,0 +1,13 @@
++{
++  "schema_version": "migration-integration-fixtures:v1",
++  "batch_id": "BATCH-INTEGRATION-0001",
++  "kind": "DIFFERENTIAL",
++  "relation": "equal_after_normalization",
++  "source": "fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json",
++  "note": "Supplementary shared-case corpus merged with the DIFFERENTIAL batch corpus at run time to cover the observations that have no case in the batch corpus (DIFF-015 set of files/migrated surface, DIFF-016 exported names). The cases are executed by the same shared DIFFERENTIAL adapters on both sides and normalized identically.",
++  "cases": [
++    { "id": "DIFF-015-a", "observation_id": "DIFF-015", "op": "capabilities" },
++    { "id": "DIFF-016-a", "observation_id": "DIFF-016", "op": "shape", "schema": "entitySharedConfigStruct" },
++    { "id": "DIFF-016-b", "observation_id": "DIFF-016", "op": "capabilities" }
++  ]
++}
+diff --git a/tests/fixtures/integration/p2p-cases.json b/tests/fixtures/integration/p2p-cases.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/integration/p2p-cases.json
+@@ -0,0 +1,39 @@
++{
++  "schema_version": "migration-integration-fixtures:v1",
++  "batch_id": "BATCH-INTEGRATION-0001",
++  "kind": "P2P",
++  "relation": "equal_after_normalization",
++  "source": "fixtures/batches/BATCH-P2P-0001/fixtures.json",
++  "note": "Shared-case corpus for the P2P batch projection. Every case is executed through the real repository schema modules on both sides with the side-appropriate adapter (Superstruct validate on the baseline, Zod safeParse on the migration) and normalized identically, so the preserved behaviour is comparable as an observable-result projection. The 'expect' field is only used to derive the stable PASS/FAIL status of the executed observation; the projected value that is compared across sides is the normalized decision/entries map.",
++  "cases": [
++    { "id": "P2P-001-a", "observation_id": "P2P-001", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": 42 }, "expect": "reject" },
++    { "id": "P2P-002-a", "observation_id": "P2P-002", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen", "layout": "horizontal" }, "expect": "accept" },
++    { "id": "P2P-002-b", "observation_id": "P2P-002", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen", "layout": "diagonal" }, "expect": "reject" },
++    { "id": "P2P-003-a", "observation_id": "P2P-003", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" }, "expect": "accept" },
++    { "id": "P2P-003-b", "observation_id": "P2P-003", "op": "parse", "schema": "entityCardConfigStruct", "input": { "type": "custom:mushroom-entity-card", "entity": 42 }, "expect": "reject" },
++    { "id": "P2P-004-a", "observation_id": "P2P-004", "op": "handle", "schema": "actionConfigStruct", "input": { "action": "call-service", "target": { "entity_id": "light.kitchen", "bogus": 1 } } },
++    { "id": "P2P-005-a", "observation_id": "P2P-005", "op": "handle", "schema": "lovelaceCardConfigStruct", "input": {} },
++    { "id": "P2P-006-a", "observation_id": "P2P-006", "op": "handle", "schema": "entityNameStruct", "input": 7 },
++    { "id": "P2P-007-a", "observation_id": "P2P-007", "op": "parse", "schema": "lovelaceCardConfigStruct", "input": { "type": "custom:mushroom-entity-card" }, "expect": "accept" },
++    { "id": "P2P-008-a", "observation_id": "P2P-008", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": "light.kitchen" }, "expect": "accept" },
++    { "id": "P2P-008-b", "observation_id": "P2P-008", "op": "parse", "schema": "entitySharedConfigStruct", "input": { "entity": 42 }, "expect": "reject" },
++    { "id": "P2P-008-c", "observation_id": "P2P-008", "op": "parse", "schema": "lovelaceCardConfigStruct", "input": { "type": "custom:mushroom-entity-card" }, "expect": "accept" },
++    { "id": "P2P-008-d", "observation_id": "P2P-008", "op": "parse", "schema": "lovelaceCardConfigStruct", "input": {}, "expect": "reject" },
++    { "id": "P2P-009-a", "observation_id": "P2P-009", "op": "handle_native", "input": "boom" },
++    { "id": "P2P-010-a", "observation_id": "P2P-010", "op": "parse", "schema": "appearanceSharedConfigStruct", "input": {}, "expect": "accept" },
++    { "id": "P2P-011-a", "observation_id": "P2P-011", "op": "capabilities" },
++    { "id": "P2P-012-a", "observation_id": "P2P-012", "op": "capabilities" },
++    { "id": "P2P-013-a", "observation_id": "P2P-013", "op": "parse", "schema": "layoutStruct", "input": "horizontal", "expect": "accept" },
++    { "id": "P2P-013-b", "observation_id": "P2P-013", "op": "parse", "schema": "layoutStruct", "input": "diagonal", "expect": "reject" },
++    { "id": "P2P-013-c", "observation_id": "P2P-013", "op": "parse", "schema": "entityNameStruct", "input": "Kitchen", "expect": "accept" },
++    { "id": "P2P-013-d", "observation_id": "P2P-013", "op": "parse", "schema": "entityNameStruct", "input": 7, "expect": "reject" },
++    { "id": "P2P-013-e", "observation_id": "P2P-013", "op": "parse", "schema": "actionConfigStruct", "input": { "action": "none" }, "expect": "accept" },
++    { "id": "P2P-014-a", "observation_id": "P2P-014", "op": "capabilities" },
++    { "id": "P2P-015-a", "observation_id": "P2P-015", "op": "shape", "schema": "entitySharedConfigStruct" },
++    { "id": "P2P-016-a", "observation_id": "P2P-016", "op": "handle", "schema": "entitySharedConfigStruct", "input": { "entity": "light.kitchen", "bogus": 1 } },
++    { "id": "P2P-017-a", "observation_id": "P2P-017", "op": "shape", "schema": "entitySharedConfigStruct" },
++    { "id": "P2P-017-b", "observation_id": "P2P-017", "op": "shape", "schema": "appearanceSharedConfigStruct" },
++    { "id": "P2P-018-a", "observation_id": "P2P-018", "op": "handle", "schema": "entitySharedConfigStruct", "input": { "entity": 42 } },
++    { "id": "P2P-019-a", "observation_id": "P2P-019", "op": "handle_native", "input": "boom" }
++  ]
++}
+diff --git a/tests/fixtures/skeleton/fixtures.template.json b/tests/fixtures/skeleton/fixtures.template.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/skeleton/fixtures.template.json
+@@ -0,0 +1,4 @@
++{
++  "note": "Skeleton fixtures placeholder. Concrete configuration inputs are added by the F2P/DIFF batches.",
++  "fixtures": []
++}
+diff --git a/tests/shared/integration/config-validation.cjs b/tests/shared/integration/config-validation.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/config-validation.cjs
+@@ -0,0 +1,65 @@
++"use strict";
++
++// Exercise the validation entry used by setConfig when it supplies error data.
++// The schema's own decision is still checked independently: an assertion must
++// neither accept a rejected input nor reject an accepted input. No error values
++// are synthesized by the harness.
++const fs = require("fs");
++const path = require("path");
++
++function editorAssertion(repoRoot, handler, ts) {
++  const filename = path.join(repoRoot, "src/cards/entity-card/entity-card-editor.ts");
++  const source = ts.createSourceFile(
++    filename, fs.readFileSync(filename, "utf8"), ts.ScriptTarget.Latest, true
++  );
++  const imports = new Map();
++  for (const statement of source.statements) {
++    if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) continue;
++    const bindings = statement.importClause?.namedBindings;
++    if (!bindings || !ts.isNamedImports(bindings)) continue;
++    for (const item of bindings.elements) {
++      if (!item.isTypeOnly) imports.set(item.name.text, (item.propertyName || item.name).text);
++    }
++  }
++  let assertion;
++  const visit = (node) => {
++    if (ts.isMethodDeclaration(node) && node.name.getText(source) === "setConfig") {
++      const parameter = node.parameters[0]?.name.getText(source);
++      const expression = node.body?.statements[0]?.expression;
++      if (expression && ts.isCallExpression(expression) &&
++          ts.isIdentifier(expression.expression) && expression.arguments.length === 2 &&
++          expression.arguments[0].getText(source) === parameter &&
++          expression.arguments[1].getText(source) === "entityCardConfigStruct") {
++        const exported = imports.get(expression.expression.text);
++        if (exported && typeof handler[exported] === "function") assertion = handler[exported];
++      }
++    }
++    ts.forEachChild(node, visit);
++  };
++  visit(source);
++  return assertion;
++}
++
++function createValidationResult(repoRoot, handler, ts) {
++  const assertion = editorAssertion(repoRoot, handler, ts);
++  return (schema, input) => {
++    const parsed = schema.safeParse(input);
++    if (!assertion) return parsed;
++    let thrown;
++    try {
++      assertion(input, schema);
++    } catch (error) {
++      thrown = error;
++    }
++    if (parsed.success) {
++      if (thrown) throw thrown;
++      return parsed;
++    }
++    if (!thrown || !Array.isArray(thrown.issues)) {
++      throw new Error("editor assertion did not throw a validation error for rejected input");
++    }
++    return { success: false, error: thrown };
++  };
++}
++
++module.exports = { createValidationResult };

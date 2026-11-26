@@ -1,0 +1,308 @@
+[
+  {
+    "atomic_claim": "Distribution metadata keeps `python_requires>=3.10` and classifiers for Python 3.10-3.13, and the changed-file set is confined to `feincms/admin/filters.py`, `feincms/extensions/datepublisher.py`, `setup.cfg`, `tox.ini`, and `.pre-commit-config.yaml`.",
+    "contract_requirement_ids": [
+      "R005"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "declared Python support range and migration change scope"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-001",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "`feincms.settings` is a `feincms.LazySettings` and reading `feincms.settings.FEINCMS_TREE_EDITOR_INCLUDE_ANCESTORS` returns the `django.conf.settings` override when present and the default otherwise.",
+    "contract_requirement_ids": [
+      "R006"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "feincms.settings LazySettings attribute resolution"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-002",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A model field carrying `parent_filter=True` resolves through `FieldListFilter.create(...)` to `feincms.admin.ParentFieldListFilter`, and a field carrying `category_filter=True` resolves to `feincms.admin.CategoryFieldListFilter`.",
+    "contract_requirement_ids": [
+      "R007"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "django.contrib.admin.filters.FieldListFilter registration"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-003",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "`inspect.signature(granular_now)` equals `(n=None, default_tz=None)` and `granular_now(datetime(2024,1,1,10,7))` returns a `datetime` instance whose `tzinfo` is not None.",
+    "contract_requirement_ids": [
+      "R008"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "granular_now call signature and return type"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-004",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "For a page with `publication_end_date = timezone.now() + timedelta(hours=1)`, `datepublisher_response_processor(page, request, response)` sets the response `Expires` header about one hour ahead through `patch_response_headers`.",
+    "contract_requirement_ids": [
+      "R009"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "datepublisher_response_processor response headers"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-005",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "An admin instance that mixes in `ItemEditor` retains its declared `fieldsets`/tab grouping, and a `TreeEditor` admin retains the selected `list_filter` entries, after the datepublisher extension registers its option group.",
+    "contract_requirement_ids": [
+      "R010"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "ItemEditor and TreeEditor fieldset/tab and list_filter selection"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-006",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Every concrete content type instance exposes `render(**kwargs)`; the base implementation dispatches to `render_<region>(**kwargs)` and raises `NotImplementedError` when no region renderer exists.",
+    "contract_requirement_ids": [
+      "R011"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "content type render(**kwargs) contract"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-007",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "With a single selected value `lookup_val='3'`, the yielded choice for pk 3 has `selected=True` and every other choice has `selected=False`.",
+    "contract_requirement_ids": [
+      "R012"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "ParentFieldListFilter/CategoryFieldListFilter single-selection rendering"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-008",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "`granular_now(datetime(2024,3,5,14,37,42), default_tz=ZoneInfo('UTC'))` equals `datetime(2024,3,5,14,35,tzinfo=UTC)`, preserving year/month/day/hour and flooring the minute to 35 with seconds 0.",
+    "contract_requirement_ids": [
+      "R014"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "granular_now five-minute rounding"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-009",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A request for a missing page path with `FEINCMS_CMS_404_PAGE` configured returns the configured page body with HTTP status 404; `PreviewHandler` raises Http404 for a non-staff user and returns the page with `Cache-Control: no-cache, must-revalidate, no-store, private` for staff.",
+    "contract_requirement_ids": [
+      "R016"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "FEINCMS_CMS_404_PAGE handling and preview routing responses"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-010",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "`Meta.ordering` on the abstract `BasePage` and the concrete `Page` equals `['tree_id', 'lft']`, so `Page.objects.all()` orders by tree_id then lft.",
+    "contract_requirement_ids": [
+      "R017"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "tree editor/Page Meta ordering"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-011",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Previously importable public names such as `feincms.settings`, `feincms.views.Handler`, `feincms.admin.ParentFieldListFilter`, and the concrete content-type classes remain importable and callable with unchanged signatures.",
+    "contract_requirement_ids": [
+      "R019"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "public FeinCMS capabilities and contracts"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-012",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "All template and static asset bytes match the baseline commit after canonicalizing only the two exact JavaScript comment replacements published in instruction constraint 4. Executable code, runtime strings, other asset contents, and the file inventory remain unchanged.",
+    "contract_requirement_ids": [
+      "R021"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "repository templates and static HTML/CSS/JS assets"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-013",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Names such as `feincms.admin.ParentFieldListFilter`, `feincms.extensions.datepublisher.granular_now`, `feincms.views.Handler`, `feincms.admin.item_editor.ItemEditor`, and `feincms.admin.tree_editor.TreeEditor` remain importable under their existing module paths.",
+    "contract_requirement_ids": [
+      "R022"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "public FeinCMS symbol names"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-014",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "`python_requires` is not above 3.10 and the tox envlist still generates `py310` and `py311` environments alongside `py312` and `py313`.",
+    "contract_requirement_ids": [
+      "R023"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "Python floor and tox Python matrix"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-015",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "The diff against the baseline modifies only `feincms/admin/filters.py` and `feincms/extensions/datepublisher.py` among production modules and only `setup.cfg`, `tox.ini`, and `.pre-commit-config.yaml` among configuration files.",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "migration change scope"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-016",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "The `tests/testapp` suite still executes all collected tests with no added skips or xfail markers and the coverage configuration keeps its `include`/`omit` rules rather than weakening them.",
+    "contract_requirement_ids": [
+      "R025"
+    ],
+    "coverage": {
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "test suite assertions and coverage gates"
+    },
+    "family": "shared-case-corpus",
+    "id": "DIFF-017",
+    "kind": "DIFFERENTIAL",
+    "reason": "shared-case-corpus",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  }
+]

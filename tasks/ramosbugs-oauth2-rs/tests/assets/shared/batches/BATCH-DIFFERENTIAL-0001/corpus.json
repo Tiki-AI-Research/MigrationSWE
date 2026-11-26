@@ -1,0 +1,520 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "scenarios": [
+    {
+      "id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R001"
+      ],
+      "claim": "A consumer importing package oauth2 can construct a client, build and execute every documented flow request, introspect and revoke tokens, inject a custom HTTP client, and receive the documented response and error types.",
+      "surface": "public Go package API (client assembly, flow requests, introspection, revocation, request/response handling, HTTP client abstraction, error contract)",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-001",
+      "source_tests": [
+        "oauth2::tests::test_send_sync_impl",
+        "token::tests::test_exchange_client_credentials_with_basic_auth",
+        "oauth2::revocation::tests::test_token_revocation_with_access_token_and_empty_json_response",
+        "oauth2::introspection::tests::test_token_introspection_successful_with_basic_auth_minimal_response"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF001",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R004"
+      ],
+      "claim": "NewBasicClient(NewClientId(\"id\")) defaults AuthType to BasicAuth; each of SetAuthURL, SetTokenURL, SetRedirectURL, SetDeviceAuthorizationURL, SetIntrospectionURL, SetRevocationURL and SetClientSecret stores its value with the matching accessor returning it, and the conditional Set*URLOption setters accept an optional endpoint while flow accessors are fallible.",
+      "surface": "client construction and endpoint setters/accessors",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-002",
+      "source_tests": [
+        "oauth2::code::tests::test_authorize_url",
+        "token::tests::test_exchange_client_credentials_with_basic_auth"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF002",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R005"
+      ],
+      "claim": "Executing any flow request through a fake client yields an HTTPRequest with Method \"POST\", Header[\"Content-Type\"] == \"application/x-www-form-urlencoded\", Header[\"Accept\"] == \"application/json\", and a form-encoded body.",
+      "surface": "HTTP method, headers and body of flow requests",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-003",
+      "source_tests": [
+        "token::tests::test_exchange_client_credentials_with_basic_auth",
+        "token::tests::test_exchange_code_successful_with_basic_auth"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF003",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R006"
+      ],
+      "claim": "With BasicAuth and a client secret the request carries Authorization: Basic base64(urlencode(client_id):urlencode(client_secret)) and omits client_id/client_secret from the body; with RequestBody auth (or no secret) client_id, and client_secret when set, appear in the form body instead.",
+      "surface": "client credential placement in headers vs form body",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-004",
+      "source_tests": [
+        "token::tests::test_exchange_client_credentials_with_basic_auth",
+        "token::tests::test_exchange_client_credentials_with_basic_auth_but_no_client_secret",
+        "token::tests::test_exchange_client_credentials_with_body_auth_and_scope"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF004",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R007"
+      ],
+      "claim": "AuthorizationRequest.URL() always contains response_type, client_id and state; contains code_challenge and code_challenge_method only when a PKCE challenge is set; contains redirect_uri only when a redirect URL is set; contains scope (space-joined) only when scopes exist; and appends extra parameters, with default response_type=code, UseImplicitFlow selecting token, and SetResponseType supporting a custom value.",
+      "surface": "authorization URL query parameter set",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-005",
+      "source_tests": [
+        "oauth2::code::tests::test_authorize_url",
+        "oauth2::code::tests::test_authorize_url_with_param",
+        "oauth2::code::tests::test_authorize_url_with_scopes",
+        "oauth2::code::tests::test_authorize_url_implicit",
+        "oauth2::code::tests::test_authorize_url_with_extension_response_type"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF005",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R008"
+      ],
+      "claim": "RevokeToken sends token=<token secret> plus the optional token_type_hint (access_token or refresh_token) and a non-HTTPS revocation URL returns a configuration error.",
+      "surface": "revocation request parameters and URL validation",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-006",
+      "source_tests": [
+        "oauth2::revocation::tests::test_token_revocation_with_non_https_url",
+        "oauth2::revocation::tests::test_token_revocation_with_refresh_token"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF006",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R009"
+      ],
+      "claim": "AddExtraParam(name, value) on the authorization, code, client-credentials, password, refresh-token, device-authorization, device-access-token, introspection and revocation requests appends the supplied name/value to the outgoing request.",
+      "surface": "AddExtraParam on every request type",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-007",
+      "source_tests": [
+        "oauth2::code::tests::test_authorize_url_with_extension_response_type",
+        "token::tests::test_exchange_client_credentials_with_body_auth_and_scope"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF007",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R010"
+      ],
+      "claim": "SyncHTTPClient.Call(HTTPRequest) (HTTPResponse, error) and AsyncHTTPClient.Call(ctx, HTTPRequest) (HTTPResponse, error) are the single call operations carrying method/URL/headers/body and returning status/headers/body or error, and a caller-supplied implementation passed to Request/RequestAsync is the one invoked.",
+      "surface": "SyncHTTPClient and AsyncHTTPClient call operation",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-008",
+      "source_tests": [
+        "oauth2::endpoint::tests::test_async_client_closure",
+        "oauth2::tests::test_send_sync_impl"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF008",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R011"
+      ],
+      "claim": "fmt.Sprintf with %s, %v and %#v (or String/GoString) of NewClientSecret(\"s3cr3t\"), NewAccessToken, NewRefreshToken, NewAuthorizationCode, NewPkceCodeVerifier, NewCsrfToken, NewDeviceCode, NewUserCode and NewVerificationUriComplete never contains the underlying value, while Secret() returns it.",
+      "surface": "formatted output and Secret() accessor of secret newtypes",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-009",
+      "source_tests": [
+        "oauth2::types::tests::test_secret_redaction",
+        "oauth2::types::tests::test_secret_conversion"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF009",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R012"
+      ],
+      "claim": "StandardErrorResponse always serializes the required error field and includes error_description and error_uri only when set; token types parse case-insensitively and serialize to canonical strings; error types serialize to their canonical strings.",
+      "surface": "StandardErrorResponse fields and token/error enum serialization",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-010",
+      "source_tests": [
+        "oauth2::error::tests::test_error_response_serializer",
+        "token::tests::test_exchange_code_with_invalid_token_type"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF010",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R013"
+      ],
+      "claim": "For each scenario exercised by the Rust unit tests and doctests under oauth2/src using an injected fake HTTP client, the Go implementation produces the same observable request, response or error.",
+      "surface": "behavioral parity with the Rust fake-client test scenarios",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-011",
+      "source_tests": [
+        "oauth2::tests::test_send_sync_impl",
+        "token::tests::test_extension_serializer"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF011",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R014"
+      ],
+      "claim": "Any flow accessor whose required endpoint is unset returns a *ConfigurationError with Kind ConfigurationMissingURL naming that endpoint (authorization, token, device authorization, introspection or revocation) rather than issuing a request.",
+      "surface": "missing-endpoint error from every flow accessor",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-012",
+      "source_tests": [
+        "oauth2::revocation::tests::test_token_revocation_with_missing_url"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF012",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R015"
+      ],
+      "claim": "A status-200 response with a non-empty JSON body containing access_token, token_type, optional expires_in, optional refresh_token, optional space-delimited scope and extra fields deserializes into the corresponding token or introspection response with each field populated.",
+      "surface": "successful token and introspection response deserialization",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-013",
+      "source_tests": [
+        "token::tests::test_exchange_code_successful_with_complete_json_response",
+        "oauth2::introspection::tests::test_token_introspection_successful_with_basic_auth_full_response"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF013",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R016"
+      ],
+      "claim": "A non-200 response with a parseable body returns RequestTokenError{Kind: RequestTokenErrorServerResponse}; a non-200 response with an unparseable non-empty body returns Kind RequestTokenErrorParse with RawBody equal to the body; a non-200 response with an empty body returns Kind RequestTokenErrorOther.",
+      "surface": "token request error mapping for non-200 responses",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-014",
+      "source_tests": [
+        "token::tests::test_exchange_code_with_simple_json_error",
+        "token::tests::test_exchange_code_with_json_parse_error",
+        "token::tests::test_exchange_code_with_400_status_code",
+        "token::tests::test_exchange_code_fails_gracefully_on_transport_error"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF014",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R017"
+      ],
+      "claim": "A response whose present Content-Type is not application/json after case-insensitive comparison and ignoring parameters returns an other error naming the content type, and a response with an empty body returns an other error reporting an empty body.",
+      "surface": "response Content-Type and empty-body validation",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-015",
+      "source_tests": [
+        "token::tests::test_exchange_code_with_unexpected_content_type"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF015",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R018"
+      ],
+      "claim": "A revocation request inspects only the status code: a body is ignored, a non-200 status is mapped through the status check, and a 200 status returns a nil error.",
+      "surface": "revocation response handling",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-016",
+      "source_tests": [
+        "oauth2::revocation::tests::test_token_revocation_with_access_token_and_empty_response",
+        "oauth2::revocation::tests::test_token_revocation_with_access_token_and_non_json_response",
+        "oauth2::revocation::tests::test_token_revocation_with_unsupported_token_type"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF016",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R019"
+      ],
+      "claim": "RevokeToken with a non-HTTPS revocation URL returns a *ConfigurationError with Kind ConfigurationInsecureURL and the injected HTTP client is never called.",
+      "surface": "insecure revocation URL rejection",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-017",
+      "source_tests": [
+        "oauth2::revocation::tests::test_token_revocation_with_non_https_url"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF017",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R020"
+      ],
+      "claim": "Device access token polling calls the supplied sleep function between polls with the device-authorization interval (defaulting to 5s), reuses the same interval on authorization_pending, adds 5s on slow_down, backs off exponentially to a 10s cap (or SetMaxBackoffInterval) on transport errors, and returns an expired_token server-response error once the timeout elapses.",
+      "surface": "device access token polling loop",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-018",
+      "source_tests": [
+        "oauth2::devicecode::tests::test_device_token_pending_then_success",
+        "oauth2::devicecode::tests::test_device_token_slowdown_then_success",
+        "oauth2::devicecode::tests::test_device_token_authorization_timeout",
+        "oauth2::devicecode::tests::test_device_token_expired"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF018",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R021"
+      ],
+      "claim": "Deserializing token_type \"BEARER\" and \"bearer\" both yields BasicTokenTypeBearer, and serializing BasicTokenTypeBearer emits \"bearer\".",
+      "surface": "token type case-insensitive parsing and canonical serialization",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-019",
+      "source_tests": [
+        "token::tests::test_exchange_code_with_invalid_token_type"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF019",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-020",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R022"
+      ],
+      "claim": "For a fixed input the generated authorization URL matches the baseline tests' exact parameter set, percent-encoding and ordering.",
+      "surface": "authorization URL parameter set, encoding and ordering",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-020",
+      "source_tests": [
+        "oauth2::code::tests::test_authorize_url",
+        "oauth2::code::tests::test_authorize_url_with_param",
+        "oauth2::code::tests::test_authorize_url_with_scopes"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF020",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-021",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R023"
+      ],
+      "claim": "The migrated package retains every public capability of the Rust library and continues to implement the RFC 6749, RFC 7662, RFC 7009 and RFC 8628 semantics without behavioral change.",
+      "surface": "public capabilities and RFC protocol semantics",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-021",
+      "source_tests": [
+        "oauth2::tests::test_send_sync_impl"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF021",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "DIFF-022",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R028"
+      ],
+      "claim": "The public configuration and error contract surface (AuthUrl, TokenUrl, RedirectUrl, IntrospectionUrl, RevocationUrl, DeviceAuthorizationUrl, ConfigurationError, RequestTokenError, HTTPClientError, BasicAuth/RequestBody, StandardErrorResponse) keeps equivalent names and behavior rebuilt with Go idioms.",
+      "surface": "public configuration and error contract identity",
+      "projection": "normalized-result",
+      "normalization": "normalized observable projection: request method/url/headers/form-body or response fields or RequestTokenError kind, compared after case/parameter normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe-manifest.json#DIFF-022",
+      "source_tests": [
+        "oauth2::revocation::tests::test_token_revocation_with_missing_url",
+        "oauth2::revocation::tests::test_token_revocation_with_non_https_url",
+        "oauth2::error::tests::test_error_response_serializer"
+      ],
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe_test.go#TestDIFF022",
+      "fixtures": [
+        "fixtures/batches/BATCH-DIFFERENTIAL-0001/diff_cases.json"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    }
+  ]
+}

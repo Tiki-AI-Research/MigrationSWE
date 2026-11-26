@@ -1,0 +1,2027 @@
+diff --git a/lib/helpers/initialize_app.js b/lib/helpers/initialize_app.js
+index 93869d0..c3807b9 100644
+--- a/lib/helpers/initialize_app.js
++++ b/lib/helpers/initialize_app.js
+@@ -80,6 +80,17 @@ export default function initializeApp() {
+   };
+ 
+   const routeMap = new Map();
++
++  // every provider route is described here and later registered on the Fastify
++  // instance so that Fastify owns request dispatch and route matching. The router
++  // above is only kept for reverse URL lookup (`Provider#pathFor`) and for the
++  // out-of-scope Koa middleware mount surface (`provider.middleware`).
++  //
++  // `saveSession` travels with the route instead of a middleware: the provider
++  // persists a touched session from a Fastify `onSend` hook, so Fastify owns the
++  // interaction/session persistence timing on the Fastify request path. The Koa
++  // mount path keeps composing `ensureSessionSave` itself.
++  const definitions = [];
+   function normalizeRoute(name, route, ...stack) {
+     assert(typeof name === 'string' && name.charAt(0) !== '/', `invalid route name ${name}`);
+     assert(typeof route === 'string' && route.charAt(0) === '/', `invalid route ${route}`);
+@@ -89,24 +100,44 @@ export default function initializeApp() {
+     return route;
+   }
+ 
++  // HEAD is not registered on Fastify explicitly: Fastify exposes a HEAD route
++  // for every GET route and routes it to the same handler, which is the contract
++  // the actions rely on.
++  //
++  // The context and `oidc` are established by a Fastify `onRequest` hook rather
++  // than a first action middleware, and a touched session is persisted from a
++  // Fastify `onSend` hook, so Fastify owns both. What remains in `stack` is the
++  // action middleware chain (including the checked-in CORS middleware, which
++  // stays a middleware because it has to run after the `provider.use` surface).
++  const register = (method, name, route, stack, saveSession = false) => {
++    definitions.push({
++      name, path: route, method, stack, saveSession,
++    });
++  };
++
+   const get = (name, route, ...stack) => {
+     route = normalizeRoute(name, route, ...stack);
++    register('GET', name, route, [...stack], true);
+     router.get(name, route, ensureOIDC, ensureSessionSave, ...stack);
+   };
+   const post = (name, route, ...stack) => {
+     route = normalizeRoute(name, route, ...stack);
++    register('POST', name, route, [...stack], true);
+     router.post(name, route, ensureOIDC, ensureSessionSave, ...stack);
+   };
+   const del = (name, route, ...stack) => {
+     route = normalizeRoute(name, route, ...stack);
++    register('DELETE', name, route, [...stack]);
+     router.delete(name, route, ensureOIDC, ...stack);
+   };
+   const put = (name, route, ...stack) => {
+     route = normalizeRoute(name, route, ...stack);
++    register('PUT', name, route, [...stack]);
+     router.put(name, route, ensureOIDC, ...stack);
+   };
+   const options = (name, route, ...stack) => {
+     route = normalizeRoute(name, route, ...stack);
++    register('OPTIONS', name, route, [...stack]);
+     router.options(name, route, ensureOIDC, ...stack);
+   };
+ 
+@@ -263,5 +294,5 @@ export default function initializeApp() {
+     get('abort', '/interaction/:uid/abort', error(), ...devInteractions.abort);
+   }
+ 
+-  return router.routes();
++  return { dispatch: router.routes(), routes: definitions };
+ }
+diff --git a/lib/helpers/oidc_context.js b/lib/helpers/oidc_context.js
+index 7b4143b..5ef54a0 100644
+--- a/lib/helpers/oidc_context.js
++++ b/lib/helpers/oidc_context.js
+@@ -37,7 +37,10 @@ export default function getContext(provider) {
+ 
+     get cookies() {
+       if (!this[COOKIES]) {
+-        this[COOKIES] = provider.createContext(this.ctx.req, this.ctx.res).cookies;
++        // the same Fastify-backed cookie jar the context exposes, so a cookie
++        // written through `ctx.cookies` and one written through `ctx.oidc.cookies`
++        // are one and the same
++        this[COOKIES] = this.ctx.cookies || provider.createContext(this.ctx.req, this.ctx.res).cookies;
+         this[COOKIES].secure = !this[COOKIES].secure && this.ctx.secure
+           ? true : this[COOKIES].secure;
+       }
+diff --git a/lib/provider.js b/lib/provider.js
+index 2ffaa8e..1a3d61c 100644
+--- a/lib/provider.js
++++ b/lib/provider.js
+@@ -1,9 +1,13 @@
+ import { strict as assert } from 'node:assert';
+ import * as util from 'node:util';
++import { STATUS_CODES, createServer } from 'node:http';
++import { EventEmitter } from 'node:events';
++import * as querystring from 'node:querystring';
+ 
+-import LRU from './helpers/lru.js';
+-import Koa from 'koa';
++import Cookies from 'cookies';
++import Fastify from 'fastify';
+ 
++import LRU from './helpers/lru.js';
+ import Configuration from './helpers/configuration.js';
+ import * as instance from './helpers/weak_cache.js';
+ import inititalizeKeyStore from './helpers/initialize_keystore.js';
+@@ -20,13 +24,959 @@ import * as models from './models/index.js';
+ import ServerChallenge from './helpers/challenge.js';
+ import als from './helpers/als.js';
+ 
++/*
++ * Fastify owns the HTTP entrypoint and the migrated responsibilities:
++ *
++ *  - every provider route is registered on the Fastify instance, so Fastify
++ *    performs request dispatch and route matching;
++ *  - request bodies are read by Fastify's content type parsers (buffered and
++ *    handed to lib/shared/selective_body.js);
++ *  - cookies are a Fastify request decorator backed by the Fastify reply;
++ *  - a touched interaction/session is persisted from a Fastify `onSend` hook;
++ *  - uncaught errors are rendered by Fastify's error handler;
++ *  - the client address, host and protocol (secure detection) come from
++ *    Fastify's `trustProxy` configuration (`provider.proxy`).
++ *
++ * The actions are still written against a Koa-flavoured context, which is an
++ * out-of-scope public surface (`Provider#use`, `provider.middleware`,
++ * `provider.createContext`). That context is a thin adapter over the Fastify
++ * request/reply pair below rather than a re-implementation of Koa's HTTP layer.
++ *
++ * `lib/helpers/router.js` remains only for reverse URL lookup (`Provider#pathFor`)
++ * and for the Koa middleware mount surface.
++ */
++
++const COOKIES = Symbol('context#cookies');
++const CTX = Symbol('context#fastify');
++
++function persistSession(ctx) {
++  if (ctx.oidc?.session?.touched && !ctx.oidc.session.destroyed) {
++    return ctx.oidc.session.persist();
++  }
++  return undefined;
++}
++
++const EMPTY_STATUSES = new Set([204, 205, 304]);
++const REDIRECT_STATUSES = new Set([300, 301, 302, 303, 305, 307, 308]);
++
++const MIME_TYPES = {
++  html: 'text/html',
++  htm: 'text/html',
++  txt: 'text/plain',
++  text: 'text/plain',
++  json: 'application/json',
++  js: 'application/javascript',
++  mjs: 'application/javascript',
++  bin: 'application/octet-stream',
++  xml: 'application/xml',
++  css: 'text/css',
++  csv: 'text/csv',
++  ico: 'image/x-icon',
++  png: 'image/png',
++  gif: 'image/gif',
++  jpg: 'image/jpeg',
++  jpeg: 'image/jpeg',
++  svg: 'image/svg+xml',
++  pdf: 'application/pdf',
++};
++
++function mimeLookup(type) {
++  if (type.includes('/')) return type;
++  const ext = type.charCodeAt(0) === 0x2e /* . */ ? type.slice(1) : type;
++  return MIME_TYPES[ext.toLowerCase()] || false;
++}
++
++function charsetOf(mime) {
++  if (/^text\//.test(mime) || /\+json$/.test(mime) || /\+xml$/.test(mime)) return 'utf-8';
++  if (['application/json', 'application/javascript', 'application/xml'].includes(mime)) return 'utf-8';
++  return null;
++}
++
++function contentTypeOf(type) {
++  if (!type || typeof type !== 'string') return false;
++  let mime = mimeLookup(type);
++  if (!mime) return false;
++  if (!/charset/i.test(mime)) {
++    const charset = charsetOf(mime);
++    if (charset) mime += `; charset=${charset}`;
++  }
++  return mime;
++}
++
++function escapeHtml(value) {
++  return String(value).replace(/[&<>"']/g, (char) => ({
++    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
++  }[char]));
++}
++
++function encodeUrl(url) {
++  return String(url)
++    .replace(/(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF]([^\uDC00-\uDFFF]|$)/g, '$1\uFFFD$2')
++    .replace(
++      /(?:[^\x21\x23-\x3B\x3D\x3F-\x5F\x61-\x7A\x7C\x7E]|%(?:[^0-9A-Fa-f]|[0-9A-Fa-f][^0-9A-Fa-f]|$))+/g,
++      encodeURI,
++    );
++}
++
++function createHttpError(...args) {
++  let status = 500;
++  let message;
++  const [first, second] = args;
++
++  if (first instanceof Error) return first;
++
++  if (typeof first === 'number') {
++    status = first;
++    if (second instanceof Error) message = second.message;
++    else if (typeof second === 'string') message = second;
++  } else if (typeof first === 'string') {
++    message = first;
++  }
++
++  const error = new Error(message ?? STATUS_CODES[status] ?? String(status));
++  error.status = status;
++  error.statusCode = status;
++  error.expose = status < 500;
++  return error;
++}
++
++function normalizeTypeValue(value) {
++  if (!value) return null;
++  const type = String(value).split(';')[0].trim().toLowerCase();
++  return /^[!#$%&'*+.^_`|~0-9A-Za-z-]+\/[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(type) ? type : null;
++}
++
++function normalizeExpectedType(type) {
++  if (typeof type !== 'string') return false;
++  if (type === 'urlencoded') return 'application/x-www-form-urlencoded';
++  if (type === 'multipart') return 'multipart/*';
++  if (type.charCodeAt(0) === 0x2b /* + */) return `*/*${type}`;
++  return mimeLookup(type);
++}
++
++function mimeMatch(expected, actual) {
++  if (expected === false) return false;
++  const actualParts = actual.split('/');
++  const expectedParts = expected.split('/');
++  if (actualParts.length !== 2 || expectedParts.length !== 2) return false;
++  if (expectedParts[0] !== '*' && expectedParts[0] !== actualParts[0]) return false;
++  if (expectedParts[1].slice(0, 2) === '*+') {
++    return expectedParts[1].length <= actualParts[1].length + 1
++      && expectedParts[1].slice(1) === actualParts[1].slice(1 - expectedParts[1].length);
++  }
++  if (expectedParts[1] !== '*' && expectedParts[1] !== actualParts[1]) return false;
++  return true;
++}
++
++function typeIs(value, types) {
++  const actual = normalizeTypeValue(value);
++  if (!actual) return false;
++  for (const type of types) {
++    const expected = normalizeExpectedType(type);
++    if (expected && mimeMatch(expected, actual)) {
++      return type[0] === '+' || type.includes('*') ? actual : type;
++    }
++  }
++  return false;
++}
++
++function quoteCount(string) {
++  let count = 0;
++  let index = string.indexOf('"');
++  while (index !== -1) {
++    count += 1;
++    index = string.indexOf('"', index + 1);
++  }
++  return count;
++}
++
++function splitMediaTypes(accept) {
++  const accepts = accept.split(',');
++  let j = 0;
++  for (let i = 1; i < accepts.length; i += 1) {
++    if (quoteCount(accepts[j]) % 2 === 0) {
++      j += 1;
++      accepts[j] = accepts[i];
++    } else {
++      accepts[j] += `,${accepts[i]}`;
++    }
++  }
++  accepts.length = j + 1;
++  return accepts;
++}
++
++function splitParameters(str) {
++  const parameters = str.split(';');
++  let j = 0;
++  for (let i = 1; i < parameters.length; i += 1) {
++    if (quoteCount(parameters[j]) % 2 === 0) {
++      j += 1;
++      parameters[j] = parameters[i];
++    } else {
++      parameters[j] += `;${parameters[i]}`;
++    }
++  }
++  parameters.length = j + 1;
++  return parameters.map((parameter) => parameter.trim());
++}
++
++const mediaTypeRegExp = /^\s*([^\s/;]+)\/([^;\s]+)\s*(?:;(.*))?$/;
++
++function parseMediaType(str, i) {
++  const match = mediaTypeRegExp.exec(str);
++  if (!match) return null;
++
++  const params = Object.create(null);
++  let q = 1;
++  const subtype = match[2];
++  const type = match[1];
++
++  if (match[3]) {
++    for (const pair of splitParameters(match[3]).map((parameter) => {
++      const index = parameter.indexOf('=');
++      return index === -1 ? [parameter] : [parameter.slice(0, index), parameter.slice(index + 1)];
++    })) {
++      const key = pair[0].toLowerCase();
++      const val = pair[1];
++      const value = val && val[0] === '"' && val[val.length - 1] === '"' ? val.slice(1, -1) : val;
++      if (key === 'q') { q = Number.parseFloat(value); break; }
++      params[key] = value;
++    }
++  }
++
++  return {
++    type, subtype, params, q, i,
++  };
++}
++
++function parseAccept(accept) {
++  const accepts = splitMediaTypes(accept);
++  let j = 0;
++  for (let i = 0; i < accepts.length; i += 1) {
++    const mediaType = parseMediaType(accepts[i].trim(), i);
++    if (mediaType) {
++      accepts[j] = mediaType;
++      j += 1;
++    }
++  }
++  accepts.length = j;
++  return accepts;
++}
++
++function specify(type, spec, index) {
++  const p = parseMediaType(type);
++  let s = 0;
++  if (!p) return null;
++
++  if (spec.type.toLowerCase() === p.type.toLowerCase()) s |= 4;
++  else if (spec.type !== '*') return null;
++
++  if (spec.subtype.toLowerCase() === p.subtype.toLowerCase()) s |= 2;
++  else if (spec.subtype !== '*') return null;
++
++  const keys = Object.keys(spec.params);
++  if (keys.length > 0) {
++    if (keys.every((key) => spec.params[key] === '*' || (spec.params[key] || '').toLowerCase() === (p.params[key] || '').toLowerCase())) {
++      s |= 1;
++    } else {
++      return null;
++    }
++  }
++
++  return { i: index, o: spec.i, q: spec.q, s };
++}
++
++function getMediaTypePriority(type, accepted, index) {
++  let priority = { o: -1, q: 0, s: 0, i: index };
++  for (const spec of accepted) {
++    const candidate = specify(type, spec, index);
++    if (candidate && (priority.s - candidate.s || priority.q - candidate.q || priority.o - candidate.o) < 0) {
++      priority = candidate;
++    }
++  }
++  return priority;
++}
++
++function compareSpecs(a, b) {
++  return (b.q - a.q) || (b.s - a.s) || (a.o - b.o) || (a.i - b.i) || 0;
++}
++
++function preferredMediaTypes(accept, provided) {
++  const accepts = parseAccept(accept === undefined ? '*/*' : accept || '');
++
++  if (!provided) {
++    return accepts.filter((spec) => spec.q > 0).sort(compareSpecs).map((spec) => `${spec.type}/${spec.subtype}`);
++  }
++
++  const priorities = provided.map((type, index) => getMediaTypePriority(type, accepts, index));
++
++  return priorities
++    .filter((spec) => spec.q > 0)
++    .sort(compareSpecs)
++    .map((priority) => provided[priorities.indexOf(priority)]);
++}
++
++const FIELD_NAME_REGEXP = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
++
++function parseVary(header) {
++  let end = 0;
++  const list = [];
++  let start = 0;
++  for (let i = 0; i < header.length; i += 1) {
++    if (header.charCodeAt(i) === 0x20) {
++      if (start === end) start = end = i + 1;
++    } else if (header.charCodeAt(i) === 0x2c) {
++      list.push(header.substring(start, end));
++      start = end = i + 1;
++    } else {
++      end = i + 1;
++    }
++  }
++  list.push(header.substring(start, end));
++  return list;
++}
++
++function appendVary(header, field) {
++  if (!field) throw new TypeError('field argument is required');
++  const fields = Array.isArray(field) ? field : parseVary(String(field));
++  for (const f of fields) {
++    if (!FIELD_NAME_REGEXP.test(f)) throw new TypeError('field argument contains an invalid header name');
++  }
++  if (header === '*') return header;
++  let val = header;
++  const values = parseVary(header.toLowerCase());
++  if (fields.includes('*') || values.includes('*')) return '*';
++  for (const f of fields) {
++    const lower = f.toLowerCase();
++    if (!values.includes(lower)) {
++      values.push(lower);
++      val = val ? `${val}, ${f}` : f;
++    }
++  }
++  return val;
++}
++
++function varyAppend(res, field) {
++  const header = res.getHeader('Vary') || '';
++  const val = Array.isArray(header) ? header.join(', ') : header;
++  const next = appendVary(val, field);
++  if (next === '*') res.setHeader('Vary', '*');
++  else if (next) res.setHeader('Vary', next);
++}
++
++function parseQuery(str) {
++  const params = new URLSearchParams(str);
++  const obj = {};
++  for (const key of params.keys()) {
++    const values = params.getAll(key);
++    obj[key] = values.length <= 1 ? values[0] : values;
++  }
++  return obj;
++}
++
++/*
++ * The context actions read and write the response through the `res` object.
++ * When Fastify owns the request, `res` is this facade over the Fastify reply:
++ * headers, status, cookies and the final body all flow through Fastify's reply
++ * lifecycle (`reply.header`/`reply.code`/`reply.send`) instead of ending the raw
++ * ServerResponse behind Fastify's back.
++ */
++function createReplyFacade(reply) {
++  const facade = {
++    get statusCode() { return reply.statusCode; },
++    set statusCode(code) { reply.code(code); },
++    get statusMessage() { return reply.raw.statusMessage; },
++    set statusMessage(message) { reply.raw.statusMessage = message; },
++    get headersSent() { return reply.raw.headersSent; },
++    get writableEnded() { return reply.raw.writableEnded; },
++    get finished() { return reply.raw.finished; },
++    get socket() { return reply.raw.socket; },
++    setHeader(name, value) { reply.header(name, value); },
++    getHeader(name) { return reply.getHeader(name); },
++    getHeaders() { return reply.getHeaders(); },
++    getHeaderNames() { return Object.keys(reply.getHeaders()); },
++    hasHeader(name) { return reply.getHeader(name) !== undefined; },
++    removeHeader(name) { if (!reply.raw.headersSent) reply.removeHeader(name); },
++    end(body) {
++      if (reply.sent) return;
++      if (body === undefined || body === null) reply.send();
++      else reply.send(body);
++    },
++  };
++  return facade;
++}
++
++function isFastifyRequest(req) {
++  return req != null && typeof req === 'object' && req.raw !== undefined
++    && typeof req.headers === 'object';
++}
++
++class RequestFacade {
++  constructor(context) {
++    this.ctx = context;
++    this.req = context.req;
++  }
++
++  // When Fastify owns the request, its request object is the source of truth for
++  // the HTTP request line and headers; `this.req` (the raw Node request) is only
++  // the fallback for the out-of-scope Koa mount surface.
++  get #fastifyRequest() { return this.ctx.fastifyRequest; }
++
++  get header() { return (this.#fastifyRequest ?? this.req).headers; }
++
++  set header(val) { (this.#fastifyRequest ?? this.req).headers = val; }
++
++  get headers() { return (this.#fastifyRequest ?? this.req).headers; }
++
++  set headers(val) { (this.#fastifyRequest ?? this.req).headers = val; }
++
++  get url() { return (this.#fastifyRequest ?? this.req).url; }
++
++  set url(val) { (this.#fastifyRequest ?? this.req).url = val; }
++
++  get originalUrl() {
++    const req = this.#fastifyRequest ?? this.req;
++    return req.raw?.originalUrl || req.originalUrl || req.url;
++  }
++
++  get method() { return (this.#fastifyRequest ?? this.req).method; }
++
++  set method(val) { (this.#fastifyRequest ?? this.req).method = val; }
++
++  get path() {
++    const url = this.url;
++    const query = url.indexOf('?');
++    const path = query === -1 ? url : url.slice(0, query);
++    const hash = path.indexOf('#');
++    return hash === -1 ? path : path.slice(0, hash);
++  }
++
++  set path(path) {
++    const url = this.url;
++    const query = url.indexOf('?');
++    this.url = path + (query === -1 ? '' : url.slice(query));
++  }
++
++  get querystring() {
++    const url = this.url;
++    const query = url.indexOf('?');
++    if (query === -1) return '';
++    const hash = url.indexOf('#', query);
++    return hash === -1 ? url.slice(query + 1) : url.slice(query + 1, hash);
++  }
++
++  get query() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.query;
++    const str = this.querystring;
++    this._querycache = this._querycache || {};
++    if (!this._querycache[str]) this._querycache[str] = parseQuery(str);
++    return this._querycache[str];
++  }
++
++  get search() {
++    const querystring = this.querystring;
++    return querystring ? `?${querystring}` : '';
++  }
++
++  get host() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.host;
++    const { proxy } = this.ctx.app;
++    let host = proxy && this.get('X-Forwarded-Host');
++    if (!host) host = this.get('Host');
++    if (!host) return '';
++    host = String(host).split(',', 1)[0].trim();
++    if (host.includes('@')) {
++      try {
++        host = new URL(`http://${host}`).host;
++      } catch {
++        return '';
++      }
++    }
++    return host;
++  }
++
++  get hostname() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.hostname;
++    const host = this.host;
++    if (!host) return '';
++    if (host[0] === '[') return new URL(`${this.protocol}://${host}`).hostname;
++    return host.split(':', 1)[0];
++  }
++
++  get protocol() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.protocol;
++    if (this.req.socket?.encrypted) return 'https';
++    if (!this.ctx.app.proxy) return 'http';
++    const proto = this.get('X-Forwarded-Proto');
++    return proto ? String(proto).split(',', 1)[0].trim() : 'http';
++  }
++
++  get secure() { return true; }
++
++  get ips() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.ips;
++    const { proxy } = this.ctx.app;
++    const val = proxy && this.get('X-Forwarded-For');
++    return val ? String(val).split(',').map((ip) => ip.trim()) : [];
++  }
++
++  get ip() {
++    if (this.ctx.fastifyRequest) return this.ctx.fastifyRequest.ip;
++    return this.ips[0] || this.req.socket?.remoteAddress || '';
++  }
++
++  get bufferedBody() {
++    return this.ctx.fastifyRequest ? this.ctx.fastifyRequest.body : undefined;
++  }
++
++  get charset() {
++    const contentType = this.get('Content-Type');
++    if (!contentType) return '';
++    const match = /;\s*charset\s*=\s*("?)([^;"]+)\1/i.exec(contentType);
++    return match ? match[2].trim() : '';
++  }
++
++  get length() {
++    const len = this.get('Content-Length');
++    if (len === '') return undefined;
++    const parsed = Number.parseInt(len, 10);
++    return Number.isNaN(parsed) ? undefined : parsed;
++  }
++
++  get type() {
++    const type = this.get('Content-Type');
++    if (!type) return '';
++    return type.split(';', 1)[0];
++  }
++
++  get href() {
++    const originalUrl = this.originalUrl;
++    if (/^https?:\/\//i.test(originalUrl)) return originalUrl;
++    return `${this.protocol}://${this.host}${originalUrl}`;
++  }
++
++  get(field) {
++    const { headers } = this.#fastifyRequest ?? this.req;
++    const key = field.toLowerCase();
++    switch (key) {
++      case 'referer':
++      case 'referrer':
++        return headers.referrer || headers.referer || '';
++      default:
++        return headers[key] || '';
++    }
++  }
++
++  is(...types) {
++    return typeIs(this.get('content-type'), types);
++  }
++
++  accepts(...args) {
++    let types = args;
++    if (types.length === 1 && Array.isArray(types[0])) types = types[0];
++    if (!types.length) return preferredMediaTypes(this.get('accept'));
++    if (!this.get('accept')) return types[0];
++    const mimes = types.map(normalizeExpectedType);
++    const valid = mimes.filter((mime) => typeof mime === 'string' && mime.includes('/'));
++    const [first] = preferredMediaTypes(this.get('accept'), valid);
++    return first ? types[mimes.indexOf(first)] : false;
++  }
++}
++
++class ResponseFacade {
++  constructor(context) {
++    this.ctx = context;
++    this.res = context.res;
++  }
++
++  get socket() { return this.res.socket; }
++
++  get header() {
++    return typeof this.res.getHeaders === 'function' ? this.res.getHeaders() : (this.res._headers || {});
++  }
++
++  get headers() { return this.header; }
++
++  get status() { return this.res.statusCode; }
++
++  set status(code) {
++    if (this.headerSent) return;
++    assert(Number.isInteger(code), 'status code must be a number');
++    assert(code >= 100 && code <= 999, `invalid status code: ${code}`);
++    this._explicitStatus = true;
++    this.res.statusCode = code;
++    if (this.ctx.req.httpVersionMajor < 2) this.res.statusMessage = STATUS_CODES[code];
++    if (this.body && EMPTY_STATUSES.has(code)) this.body = null;
++  }
++
++  get message() { return this.res.statusMessage || STATUS_CODES[this.status]; }
++
++  set message(msg) { this.res.statusMessage = msg; }
++
++  get body() { return this._body; }
++
++  set body(val) {
++    this._body = val;
++
++    if (val === null || val === undefined) {
++      if (!EMPTY_STATUSES.has(this.status)) {
++        if (this.type === 'application/json') {
++          this._body = 'null';
++          return;
++        }
++        this.status = 204;
++      }
++      if (val === null) this._explicitNullBody = true;
++      this.remove('Content-Type');
++      this.remove('Content-Length');
++      this.remove('Transfer-Encoding');
++      return;
++    }
++
++    if (!this._explicitStatus) this.status = 200;
++
++    const setType = !this.has('Content-Type');
++
++    if (typeof val === 'string') {
++      if (setType) this.type = /^\s*</.test(val) ? 'html' : 'text';
++      this.length = Buffer.byteLength(val);
++      return;
++    }
++
++    if (Buffer.isBuffer(val)) {
++      if (setType) this.type = 'bin';
++      this.length = val.length;
++      return;
++    }
++
++    this.remove('Content-Length');
++    if (!this.type || !/\bjson\b/i.test(this.type)) this.type = 'json';
++  }
++
++  get length() {
++    if (this.has('Content-Length')) {
++      return Number.parseInt(this.get('Content-Length'), 10) || 0;
++    }
++    const { body } = this;
++    if (!body) return undefined;
++    if (typeof body === 'string') return Buffer.byteLength(body);
++    if (Buffer.isBuffer(body)) return body.length;
++    return Buffer.byteLength(JSON.stringify(body));
++  }
++
++  set length(n) {
++    if (!this.has('Transfer-Encoding')) this.set('Content-Length', n);
++  }
++
++  get headerSent() { return this.res.headersSent; }
++
++  get type() {
++    const type = this.get('Content-Type');
++    if (!type) return '';
++    return type.split(';', 1)[0];
++  }
++
++  set type(type) {
++    const resolved = contentTypeOf(type);
++    if (resolved) this.set('Content-Type', resolved);
++    else this.remove('Content-Type');
++  }
++
++  get writable() {
++    if (this.res.writableEnded || this.res.finished) return false;
++    const socket = this.res.socket;
++    if (!socket) return true;
++    return socket.writable;
++  }
++
++  vary(field) {
++    if (this.headerSent) return;
++    varyAppend(this.res, field);
++  }
++
++  redirect(url) {
++    let location = url;
++    if (/^https?:\/\//i.test(location)) location = new URL(location).toString();
++    this.set('Location', encodeUrl(location));
++    if (!REDIRECT_STATUSES.has(this.status)) this.status = 302;
++    if (this.ctx.accepts('html')) {
++      this.type = 'text/html; charset=utf-8';
++      this.body = `Redirecting to ${escapeHtml(location)}.`;
++      return;
++    }
++    this.type = 'text/plain; charset=utf-8';
++    this.body = `Redirecting to ${escapeHtml(location)}.`;
++  }
++
++  get(field) { return this.res.getHeader(field); }
++
++  has(field) {
++    return typeof this.res.hasHeader === 'function' ? this.res.hasHeader(field) : field.toLowerCase() in this.headers;
++  }
++
++  set(field, val) {
++    if (this.headerSent || !field) return;
++    if (typeof field === 'string') {
++      this.res.setHeader(field, val);
++    } else {
++      Object.keys(field).forEach((header) => { this.res.setHeader(header, field[header]); });
++    }
++  }
++
++  append(field, val) {
++    const prev = this.get(field);
++    let value = val;
++    if (prev) value = Array.isArray(prev) ? prev.concat(val) : [prev].concat(val);
++    return this.set(field, value);
++  }
++
++  remove(field) {
++    if (this.headerSent) return;
++    this.res.removeHeader(field);
++  }
++}
++
++class RequestContext {
++  constructor(app, req, res) {
++    this.app = app;
++    this.state = {};
++
++    if (isFastifyRequest(req) && res != null && res.raw !== undefined) {
++      // Fastify owns the request: keep the raw Node request available to the
++      // actions (`ctx.req`) while request/response access, header/status writes
++      // and the final send go through the Fastify request/reply pair.
++      this.fastifyRequest = req;
++      this.fastifyReply = res;
++      this.req = req.raw;
++      this.res = createReplyFacade(res);
++    } else {
++      this.fastifyRequest = undefined;
++      this.fastifyReply = undefined;
++      this.req = req;
++      this.res = res;
++    }
++
++    this.request = new RequestFacade(this);
++    this.response = new ResponseFacade(this);
++  }
++
++  get cookies() {
++    if (!this[COOKIES]) {
++      // Cookies are a Fastify-owned decorator (registered in the Provider
++      // constructor): the request carries a Cookies instance backed by the
++      // Fastify reply, so reading and writing Set-Cookie flows through Fastify.
++      if (this.fastifyRequest?.cookies) {
++        this[COOKIES] = this.fastifyRequest.cookies;
++      } else {
++        this[COOKIES] = new Cookies(this.req, this.res, {
++          keys: this.app.keys,
++          secure: this.request.secure,
++        });
++      }
++    }
++    return this[COOKIES];
++  }
++
++  set cookies(value) { this[COOKIES] = value; }
++
++  get body() { return this.response.body; }
++
++  set body(val) { this.response.body = val; }
++
++  get status() { return this.response.status; }
++
++  set status(code) { this.response.status = code; }
++
++  get message() { return this.response.message; }
++
++  set message(msg) { this.response.message = msg; }
++
++  get type() { return this.response.type; }
++
++  set type(type) { this.response.type = type; }
++
++  get length() { return this.response.length; }
++
++  set length(n) { this.response.length = n; }
++
++  get headerSent() { return this.response.headerSent; }
++
++  get writable() { return this.response.writable; }
++
++  get method() { return this.request.method; }
++
++  get path() { return this.request.path; }
++
++  set path(path) { this.request.path = path; }
++
++  get url() { return this.request.url; }
++
++  set url(url) { this.request.url = url; }
++
++  get query() { return this.request.query; }
++
++  get querystring() { return this.request.querystring; }
++
++  get search() { return this.request.search; }
++
++  get headers() { return this.request.headers; }
++
++  get header() { return this.request.header; }
++
++  get host() { return this.request.host; }
++
++  get hostname() { return this.request.hostname; }
++
++  get protocol() { return this.request.protocol; }
++
++  get secure() { return this.request.secure; }
++
++  get ip() { return this.request.ip; }
++
++  get href() { return this.request.href; }
++
++  get charset() { return this.request.charset; }
++
++  get originalUrl() { return this.request.originalUrl; }
++
++  get(field) { return this.request.get(field); }
++
++  accepts(...args) { return this.request.accepts(...args); }
++
++  is(...args) { return this.request.is(...args); }
++
++  set(field, val) { return this.response.set(field, val); }
++
++  append(field, val) { return this.response.append(field, val); }
++
++  remove(field) { return this.response.remove(field); }
++
++  vary(field) { return this.response.vary(field); }
++
++  has(field) { return this.response.has(field); }
++
++  redirect(url) { return this.response.redirect(url); }
++
++  throw(...args) { throw createHttpError(...args); }
++
++  assert(value, error) {
++    if (value) return;
++    throw (error instanceof Error ? error : createHttpError(error));
++  }
++
++}
++
++// koa-compose
++function compose(middleware) {
++  return function composed(ctx, next) {
++    let index = -1;
++    function dispatch(i) {
++      if (i <= index) return Promise.reject(new Error('next() called multiple times'));
++      index = i;
++      const fn = i === middleware.length ? next : middleware[i];
++      if (!fn) return Promise.resolve();
++      try {
++        return Promise.resolve(fn(ctx, dispatch.bind(null, i + 1)));
++      } catch (err) {
++        return Promise.reject(err);
++      }
++    }
++    return dispatch(0);
++  };
++}
++
++function respond(ctx) {
++  if (ctx.respond === false) return;
++
++  const { res } = ctx;
++  if (!ctx.writable) {
++    res.end();
++    return;
++  }
++
++  let body = ctx.body;
++  const code = ctx.status;
++
++  if (EMPTY_STATUSES.has(code)) {
++    ctx.body = null;
++    res.end();
++    return;
++  }
++
++  if (ctx.method === 'HEAD') {
++    if (!res.headersSent && !ctx.response.has('Content-Length')) {
++      const { length } = ctx.response;
++      if (Number.isInteger(length)) ctx.length = length;
++    }
++    res.end();
++    return;
++  }
++
++  if (body === null || body === undefined) {
++    if (ctx.response._explicitNullBody) {
++      ctx.response.remove('Content-Type');
++      ctx.response.remove('Transfer-Encoding');
++      ctx.length = 0;
++      res.end();
++      return;
++    }
++    body = ctx.message || String(code);
++    if (!res.headersSent) {
++      ctx.type = 'text';
++      ctx.length = Buffer.byteLength(body);
++    }
++    res.end(body);
++    return;
++  }
++
++  if (Buffer.isBuffer(body) || typeof body === 'string') {
++    res.end(body);
++    return;
++  }
++
++  body = JSON.stringify(body);
++  if (!res.headersSent) ctx.length = Buffer.byteLength(body);
++  res.end(body);
++}
++
++/*
++ * Fastify owns error rendering: an uncaught error is turned into the response
++ * through the Fastify reply (headers cleared, status and body sent by Fastify)
++ * rather than by Koa's `ctx.onerror`.
++ */
++function renderUnhandledError(ctx, reply, err) {
++  if (err == null) return;
++  let error = err;
++  const isNativeError = err instanceof Error || Object.prototype.toString.call(err) === '[object Error]';
++  if (!isNativeError) error = new Error(util.format('non-error thrown: %j', err));
++
++  if (ctx.headerSent || !ctx.writable) {
++    error.headerSent = true;
++    return;
++  }
++
++  if (typeof ctx.app.listenerCount === 'function' && ctx.app.listenerCount('error')) {
++    ctx.app.emit('error', error, ctx);
++  }
++
++  for (const name of Object.keys(reply.getHeaders())) reply.removeHeader(name);
++  if (error.headers) reply.headers(error.headers);
++
++  let statusCode = error.status || error.statusCode;
++  if (typeof statusCode !== 'number' || !STATUS_CODES[statusCode]) statusCode = 500;
++  error.status = statusCode;
++
++  const message = error.expose ? error.message : STATUS_CODES[statusCode];
++  reply.type('text/plain; charset=utf-8').code(statusCode).send(message);
++}
++
+ const featuresDescriptor = {
+   enumerable: true,
+   configurable: true,
+   get() { return this.configuration.features; },
+ };
+ 
+-export class Provider extends Koa {
++export class Provider extends EventEmitter {
+   #AccessToken;
+ 
+   #AuthorizationCode;
+@@ -69,6 +1019,10 @@ export class Provider extends Koa {
+ 
+   #exec;
+ 
++  #fastify;
++
++  #ready;
++
+   #int = Object.defineProperty({
+     dynamicClients: new LRU({ maxSize: 100 }),
+   }, 'features', featuresDescriptor);
+@@ -98,6 +1052,8 @@ export class Provider extends Koa {
+     super();
+ 
+     this.issuer = issuer;
++    this.middleware = [];
++    this.proxy = false;
+ 
+     const configuration = new Configuration(setup);
+ 
+@@ -157,8 +1113,100 @@ export class Provider extends Koa {
+     inititalizeKeyStore.call(this, configuration.jwks);
+     delete configuration.jwks;
+ 
+-    this.#exec = initializeApp.call(this);
+-    Koa.prototype.use.call(this, this.#exec);
++    const { dispatch, routes } = initializeApp.call(this);
++    this.#exec = dispatch;
++    this.middleware.push(this.#exec);
++
++    // `trustProxy` is a function so that flipping `provider.proxy` after the
++    // provider was constructed keeps being honoured on the next request.
++    this.#fastify = Fastify({
++      trustProxy: () => this.proxy,
++      bodyLimit: 10 * 1024 * 1024,
++      routerOptions: {
++        caseSensitive: false,
++        ignoreTrailingSlash: true,
++        querystringParser: (str) => querystring.parse(str),
++      },
++    });
++
++    // Fastify parses request bodies. The parsers hand the raw bytes to the
++    // actions through the context; lib/shared/selective_body.js only decides
++    // whether the content type is acceptable and how the bytes decode.
++    this.#fastify.removeAllContentTypeParsers();
++    this.#fastify.addContentTypeParser('*', { parseAs: 'buffer' }, (_request, body, done) => {
++      done(null, body);
++    });
++
++    // Fastify owns the request lifecycle. A single onRequest hook decorates the
++    // request with cookies (backed by the Fastify reply, with `secure` derived
++    // from Fastify's own protocol resolution so `trustProxy` is honoured) and
++    // attaches the action context/`oidc` for the route, so request/response
++    // access, cookie access and proxy detection all come from Fastify.
++    this.#fastify.decorateRequest('cookies', null);
++    this.#fastify.addHook('onRequest', (request, reply, done) => {
++      request.cookies = new Cookies(request.raw, createReplyFacade(reply), {
++        keys: this.keys,
++        secure: request.protocol === 'https',
++      });
++
++      const ctx = this.createContext(request, reply);
++      request[CTX] = ctx;
++      const { config } = request.routeOptions ?? {};
++      ctx.params = { ...request.params };
++      ctx.request.params = ctx.params;
++      ctx.router = this.#int.router;
++      ctx.routerName = config?.name;
++      ctx.routerPath = config?.path;
++      ctx._matchedRoute = config?.path;
++      ctx._matchedRouteName = config?.name;
++
++      let oidcCtx;
++      Object.defineProperty(ctx, 'oidc', {
++        get: () => {
++          oidcCtx ||= new this.OIDCContext(ctx);
++          return oidcCtx;
++        },
++      });
++
++      done();
++    });
++
++    for (const route of routes) {
++      this.#fastify.route({
++        method: route.method,
++        url: route.path,
++        config: {
++          name: route.name,
++          path: route.path,
++          saveSession: route.saveSession === true,
++        },
++        handler: (request) => this.#handleRequest(request, route),
++      });
++    }
++
++    // Fastify owns the interaction/session persistence timing: a session that
++    // was touched during the request is persisted right before the response is
++    // sent, instead of wrapping the action stack in a Koa-style middleware.
++    this.#fastify.addHook('onSend', async (request, _reply, payload) => {
++      const ctx = request[CTX];
++      if (ctx && request.routeOptions?.config?.saveSession) {
++        await persistSession(ctx);
++      }
++      return payload;
++    });
++
++    this.#fastify.setErrorHandler((error, request, reply) => {
++      const ctx = request[CTX] ?? this.createContext(request, reply);
++      renderUnhandledError(ctx, reply, error);
++    });
++
++    // an unmatched method/path falls through exactly as it did when a single
++    // router middleware served every request and never called next()
++    this.#fastify.setNotFoundHandler((_request, reply) => {
++      reply.type('text/plain; charset=utf-8').code(404).send('Not Found');
++    });
++
++    this.#ready = this.#fastify.ready();
+ 
+     initializeClients.call(this, configuration.clients);
+     delete configuration.clients;
+@@ -450,8 +1498,51 @@ export class Provider extends Koa {
+     return interaction;
+   }
+ 
++  async #handleRequest(request, route) {
++    const ctx = request[CTX];
++
++    // the extension surface (provider.middleware) is only everything the host
++    // pushed in front of the dispatcher; it wraps the remaining action stack.
++    const boundary = this.middleware.indexOf(this.#exec);
++    const stack = boundary === -1
++      ? route.stack
++      : [...this.middleware.slice(0, boundary), ...route.stack];
++
++    // `als` carries the context into the models that issue tokens
++    await als.run(ctx, () => compose(stack)(ctx));
++
++    respond(ctx);
++  }
++
++  createContext(req, res) {
++    return new RequestContext(this, req, res);
++  }
++
++  callback() {
++    const fastify = this.#fastify;
++    const ready = this.#ready;
++    let booted = false;
++    return function handler(req, res) {
++      if (booted) {
++        fastify.routing(req, res);
++        return;
++      }
++      ready.then(() => {
++        booted = true;
++        fastify.routing(req, res);
++      }, () => {
++        res.statusCode = 500;
++        res.end('Internal Server Error');
++      });
++    };
++  }
++
++  listen(...args) {
++    return createServer(this.callback()).listen(...args);
++  }
++
+   use(fn) {
+-    Koa.prototype.use.call(this, fn);
++    this.middleware.push(fn);
+     this.middleware.splice(this.middleware.indexOf(this.#exec), 0, this.middleware.pop());
+     return this;
+   }
+@@ -476,5 +1567,5 @@ export class Provider extends Koa {
+ Object.defineProperty(Provider.prototype, 'app', {
+   get: util.deprecate(function app() {
+     return this;
+-  }, '.app getter is deprecated. The Provider instance is now the Koa app itself'),
++  }, '.app getter is deprecated. The Provider instance is now the Fastify app itself'),
+ });
+diff --git a/lib/shared/selective_body.js b/lib/shared/selective_body.js
+index 40be149..6f9a1a5 100644
+--- a/lib/shared/selective_body.js
++++ b/lib/shared/selective_body.js
+@@ -52,6 +52,10 @@ async function selectiveBody(cty, ctx, next) {
+     try {
+       let usedFallback;
+       const body = await (() => {
++        // Fastify buffered the request body through its content type parsers
++        if (ctx.request.bufferedBody !== undefined) {
++          return ctx.request.bufferedBody;
++        }
+         if (ctx.req.readable) {
+           return readBody(ctx.req, ctx.request.length, ctx.charset);
+         }
+@@ -64,6 +68,11 @@ is not recommended, resolving to use req.body or request.body instead');
+         return ctx.req.body || ctx.request.body;
+       })();
+ 
++      if (Buffer.isBuffer(body) && body.length > LIMIT) {
++        // the same cap raw-body enforced while reading the stream
++        throw new Error('request entity too large');
++      }
++
+       if (body instanceof Buffer || typeof body === 'string') {
+         if (cty === 'application/json') {
+           ctx.oidc.body = JSON.parse(body);
+diff --git a/package-lock.json b/package-lock.json
+index b491473..d82036b 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,9 +9,11 @@
+       "version": "9.12.2",
+       "license": "MIT",
+       "dependencies": {
++        "cookies": "0.9.1",
+         "debug": "^4.4.3",
++        "fastify": "5.12.0",
+         "jose": "^6.2.10",
+-        "koa": "^3.2.1"
++        "keygrip": "1.1.0"
+       },
+       "devDependencies": {
+         "@babel/parser": "^8.0.4",
+@@ -27,9 +29,9 @@
+         "eta": "^4.6.0",
+         "express": "^5.2.1",
+         "fast-check": "^4.9.0",
+-        "fastify": "^5.12.0",
+         "helmet": "^8.3.0",
+         "jsesc": "^3.1.0",
++        "koa": "^3.2.1",
+         "koa-body": "^8.0.0",
+         "koa-mount": "^4.2.0",
+         "lodash": "^4.18.1",
+@@ -168,9 +170,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT OR Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -188,9 +187,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT OR Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -208,9 +204,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT OR Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -228,9 +221,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT OR Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -278,7 +268,6 @@
+       "version": "4.0.6",
+       "resolved": "https://registry.npmjs.org/@fastify/ajv-compiler/-/ajv-compiler-4.0.6.tgz",
+       "integrity": "sha512-NtuzM0SfaMJbGlnjr9LWQUN5LzgSrbB8tf/wRZNas+4E1O/Nmzl53e7ruT61HDZyRCJGC6FxIogmNZO1c5ETBA==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -300,7 +289,6 @@
+       "version": "4.2.0",
+       "resolved": "https://registry.npmjs.org/@fastify/error/-/error-4.2.0.tgz",
+       "integrity": "sha512-RSo3sVDXfHskiBZKBPRgnQTtIqpi/7zhJOEmAxCiBcM7d0uwdGdxLlsCaLzGs8v8NnxIRlfG0N51p5yFaOentQ==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -317,7 +305,6 @@
+       "version": "5.1.0",
+       "resolved": "https://registry.npmjs.org/@fastify/fast-json-stringify-compiler/-/fast-json-stringify-compiler-5.1.0.tgz",
+       "integrity": "sha512-PxcYtKLbQ8Z+yApiqjK8FwxIwvEj38k2OiLc17u8dkJSlmfi2wHHPaSnaoqBPQqtvF8YVsDgDpP2snDCfFrpfw==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -337,7 +324,6 @@
+       "version": "3.0.2",
+       "resolved": "https://registry.npmjs.org/@fastify/forwarded/-/forwarded-3.0.2.tgz",
+       "integrity": "sha512-NE8HgKLgYejV9lDpqkEFaDKMLYelJBVfHekhB0UKvX0ghagXRJqg68feg8er1NPXxG4N9i6vPxzt8E+3wHfcmA==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -354,7 +340,6 @@
+       "version": "0.2.1",
+       "resolved": "https://registry.npmjs.org/@fastify/merge-json-schemas/-/merge-json-schemas-0.2.1.tgz",
+       "integrity": "sha512-OA3KGBCy6KtIvLf8DINC5880o5iBlDX4SxzLQS8HorJAbqluzLRn80UXU0bxZn7UOFhFgpRJDasfwn9nG4FG4A==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -398,7 +383,6 @@
+       "version": "5.1.0",
+       "resolved": "https://registry.npmjs.org/@fastify/proxy-addr/-/proxy-addr-5.1.0.tgz",
+       "integrity": "sha512-INS+6gh91cLUjB+PVHfu1UqcB76Sqtpyp7bnL+FYojhjygvOPA9ctiD/JDKsyD9Xgu4hUhCSJBPig/w7duNajw==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -1022,7 +1006,6 @@
+       "version": "0.4.0",
+       "resolved": "https://registry.npmjs.org/@pinojs/redact/-/redact-0.4.0.tgz",
+       "integrity": "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/@pkgjs/parseargs": {
+@@ -1271,7 +1254,6 @@
+       "version": "2.0.1",
+       "resolved": "https://registry.npmjs.org/abstract-logging/-/abstract-logging-2.0.1.tgz",
+       "integrity": "sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/accepts": {
+@@ -1292,7 +1274,6 @@
+       "version": "8.20.0",
+       "resolved": "https://registry.npmjs.org/ajv/-/ajv-8.20.0.tgz",
+       "integrity": "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "fast-deep-equal": "^3.1.3",
+@@ -1309,7 +1290,6 @@
+       "version": "3.0.1",
+       "resolved": "https://registry.npmjs.org/ajv-formats/-/ajv-formats-3.0.1.tgz",
+       "integrity": "sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "ajv": "^8.0.0"
+@@ -1327,7 +1307,6 @@
+       "version": "3.1.7",
+       "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.7.tgz",
+       "integrity": "sha512-dOvZVzjdZdz7phd9v6jCbwxrBW3fK6n8Rc0CtdmM4bumzMnxywBYhuph6J819RRw/ku+rLbelwfMunktuzVVHg==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -1416,7 +1395,6 @@
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/atomic-sleep/-/atomic-sleep-1.0.0.tgz",
+       "integrity": "sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=8.0.0"
+@@ -1426,7 +1404,6 @@
+       "version": "9.3.0",
+       "resolved": "https://registry.npmjs.org/avvio/-/avvio-9.3.0.tgz",
+       "integrity": "sha512-g2tQ7LE7oOSqDfwEm3M+ZCMTJc7KiZCdJ4UwyZJb5ckTKyYu50OYmvv0mCFXPuYXoM4zkSt8zM9XQ9KCvxA74A==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -1884,6 +1861,7 @@
+       "version": "1.0.5",
+       "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+       "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -1978,6 +1956,7 @@
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/deep-equal/-/deep-equal-1.0.1.tgz",
+       "integrity": "sha512-bHtC0iYvWhyaTzvV3CZgPeZQqCOBGyGsVV7v4eevpdkLHfiSrXUdBG+qAuSz4RI70sszvjQ1QSZ98An1yNwpSw==",
++      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/delayed-stream": {
+@@ -1994,6 +1973,7 @@
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/delegates/-/delegates-1.0.0.tgz",
+       "integrity": "sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==",
++      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/depd": {
+@@ -2009,7 +1989,6 @@
+       "version": "2.0.3",
+       "resolved": "https://registry.npmjs.org/dequal/-/dequal-2.0.3.tgz",
+       "integrity": "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=6"
+@@ -2026,6 +2005,7 @@
+       "version": "1.2.0",
+       "resolved": "https://registry.npmjs.org/destroy/-/destroy-1.2.0.tgz",
+       "integrity": "sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8",
+@@ -2079,6 +2059,7 @@
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+       "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
++      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/ejs": {
+@@ -2108,6 +2089,7 @@
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
+       "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8"
+@@ -2176,6 +2158,7 @@
+       "version": "1.0.3",
+       "resolved": "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz",
+       "integrity": "sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==",
++      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/escape-string-regexp": {
+@@ -2285,21 +2268,18 @@
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/fast-decode-uri-component/-/fast-decode-uri-component-1.0.1.tgz",
+       "integrity": "sha512-WKgKWg5eUxvRZGwW8FvfbaH7AXSh2cL+3j5fMGzUMCxWBJ3dV3a7Wz8y2f/uQ0e3B6WmodD3oS54jTQ9HVTIIg==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/fast-deep-equal": {
+       "version": "3.1.3",
+       "resolved": "https://registry.npmjs.org/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz",
+       "integrity": "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/fast-json-stringify": {
+       "version": "7.0.1",
+       "resolved": "https://registry.npmjs.org/fast-json-stringify/-/fast-json-stringify-7.0.1.tgz",
+       "integrity": "sha512-eRSayARSbbwlBjpP4vnTTIRD5QPcIrmihPxDeN1DtKnHPg66UuJLx+8hlK1kaFdjvzyQ/dzALoi4vwAQ+T+iZA==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -2324,7 +2304,6 @@
+       "version": "1.1.2",
+       "resolved": "https://registry.npmjs.org/fast-querystring/-/fast-querystring-1.1.2.tgz",
+       "integrity": "sha512-g6KuKWmFXc0fID8WWH0jit4g0AGBoJhCkJMb1RmbsSEUNvQ+ZC8D6CUZ+GtF8nMzSPXnhiePyyqqipzNNEnHjg==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "fast-decode-uri-component": "^1.0.1"
+@@ -2341,7 +2320,6 @@
+       "version": "4.1.4",
+       "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-4.1.4.tgz",
+       "integrity": "sha512-dODXrIxlS9JSdgAnhIUKOosKV1oMtU2VtVw87QRaHzyl5jxO290Ii5tEZfCfzfWNHi3jKWwBSdQj0qIyshdZdQ==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -2355,10 +2333,9 @@
+       "license": "BSD-3-Clause"
+     },
+     "node_modules/fastify": {
+-      "version": "5.12.1",
+-      "resolved": "https://registry.npmjs.org/fastify/-/fastify-5.12.1.tgz",
+-      "integrity": "sha512-FWi+tQvwxR/PeRX7Z2mhfEF5ozJ3jn9asiiclzKXNSzJRHAYcU924aIOKAdHFJ+YIKieh3cqr1IwCOvTr41B3Q==",
+-      "dev": true,
++      "version": "5.12.0",
++      "resolved": "https://registry.npmjs.org/fastify/-/fastify-5.12.0.tgz",
++      "integrity": "sha512-A3RNEaDIHWaxFW8n8rNJaW1wQ+XAXuoU71llfUQJjuh5WaYLmKfRhhanaJBOx8m2EBPQkR6sDBovYdHNe9F6rA==",
+       "funding": [
+         {
+           "type": "github",
+@@ -2409,7 +2386,6 @@
+       "version": "1.20.1",
+       "resolved": "https://registry.npmjs.org/fastq/-/fastq-1.20.1.tgz",
+       "integrity": "sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==",
+-      "dev": true,
+       "license": "ISC",
+       "dependencies": {
+         "reusify": "^1.0.4"
+@@ -2451,7 +2427,6 @@
+       "version": "9.8.0",
+       "resolved": "https://registry.npmjs.org/find-my-way/-/find-my-way-9.8.0.tgz",
+       "integrity": "sha512-JtyUgATO7qxRp2zKhrmWof74Mqxc1ikbwpwMY97p8ipuTj2QtreA4gK2JNAF6SOqqHnYYkwMUvsgQVi2AJxIyw==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "fast-deep-equal": "^3.1.3",
+@@ -2773,6 +2748,7 @@
+       "version": "1.5.0",
+       "resolved": "https://registry.npmjs.org/http-assert/-/http-assert-1.5.0.tgz",
+       "integrity": "sha512-uPpH7OKX4H25hBmU6G1jWNaqJGpTXxey+YOUizJUAgu0AjLUeC8D73hTrhvDS5D+GJN1DN1+hhc/eF/wpxtp0w==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "deep-equal": "~1.0.1",
+@@ -2786,6 +2762,7 @@
+       "version": "1.1.2",
+       "resolved": "https://registry.npmjs.org/depd/-/depd-1.1.2.tgz",
+       "integrity": "sha512-7emPTl6Dpo6JRXOXjLRxck+FlLRX5847cLKEn00PLAgc3g2hTZZgr+e4c2v6QpSmLeFP3n5yUo7ft6avBK/5jQ==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -2795,6 +2772,7 @@
+       "version": "1.8.1",
+       "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-1.8.1.tgz",
+       "integrity": "sha512-Kpk9Sm7NmI+RHhnj6OIWDI1d6fIoFAtFt9RLaTMRlg/8w49juAStsrBgp0Dp4OdxdVbRIeKhtCUvoi/RuAhO4g==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "depd": "~1.1.2",
+@@ -2811,6 +2789,7 @@
+       "version": "1.5.0",
+       "resolved": "https://registry.npmjs.org/statuses/-/statuses-1.5.0.tgz",
+       "integrity": "sha512-OpZ3zP+jT1PI7I8nemJX4AKmAX070ZkYPVWV/AaKTJl+tXCTGyVdC1a4SL8RUQYEwk/f34ZX8UTykN68FwrqAA==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -2820,6 +2799,7 @@
+       "version": "2.0.1",
+       "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz",
+       "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "depd": "~2.0.0",
+@@ -2867,13 +2847,13 @@
+       "version": "2.0.4",
+       "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
++      "dev": true,
+       "license": "ISC"
+     },
+     "node_modules/ipaddr.js": {
+       "version": "2.5.0",
+       "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-2.5.0.tgz",
+       "integrity": "sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 10"
+@@ -3019,7 +2999,6 @@
+       "version": "3.0.0",
+       "resolved": "https://registry.npmjs.org/json-schema-ref-resolver/-/json-schema-ref-resolver-3.0.0.tgz",
+       "integrity": "sha512-hOrZIVL5jyYFjzk7+y7n5JDzGlU8rfWDuYyHwGa2WA8/pcmMHezp2xsVwxrebD/Q9t8Nc5DboieySDpCp4WG4A==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -3039,7 +3018,6 @@
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz",
+       "integrity": "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/keygrip": {
+@@ -3058,6 +3036,7 @@
+       "version": "3.2.1",
+       "resolved": "https://registry.npmjs.org/koa/-/koa-3.2.1.tgz",
+       "integrity": "sha512-e7IpWJrnanNUroVK2taAgMxoEZvHLXdQiNjeExSu/DEIWm83jaKGBgb7tLmu2rMYpA027qFB3iLR/k3AVpFRnA==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "accepts": "^1.3.8",
+@@ -3103,6 +3082,7 @@
+       "version": "4.1.0",
+       "resolved": "https://registry.npmjs.org/koa-compose/-/koa-compose-4.1.0.tgz",
+       "integrity": "sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw==",
++      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/koa-mount": {
+@@ -3123,6 +3103,7 @@
+       "version": "1.3.8",
+       "resolved": "https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz",
+       "integrity": "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "mime-types": "~2.1.34",
+@@ -3136,6 +3117,7 @@
+       "version": "2.1.35",
+       "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.35.tgz",
+       "integrity": "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "mime-db": "1.52.0"
+@@ -3148,6 +3130,7 @@
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.0.1.tgz",
+       "integrity": "sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=18"
+@@ -3161,6 +3144,7 @@
+       "version": "0.5.2",
+       "resolved": "https://registry.npmjs.org/fresh/-/fresh-0.5.2.tgz",
+       "integrity": "sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -3170,6 +3154,7 @@
+       "version": "1.52.0",
+       "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz",
+       "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -3179,6 +3164,7 @@
+       "version": "0.6.3",
+       "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-0.6.3.tgz",
+       "integrity": "sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -3188,7 +3174,6 @@
+       "version": "6.6.0",
+       "resolved": "https://registry.npmjs.org/light-my-request/-/light-my-request-6.6.0.tgz",
+       "integrity": "sha512-CHYbu8RtboSIoVsHZ6Ye4cj4Aw/yg2oAFimlF7mNvfDV192LR7nDiKtSIfCuLT7KokPSTn/9kfVLm5OGN0A28A==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -3210,7 +3195,6 @@
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/cookie/-/cookie-1.1.1.tgz",
+       "integrity": "sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=18"
+@@ -3224,7 +3208,6 @@
+       "version": "4.0.1",
+       "resolved": "https://registry.npmjs.org/process-warning/-/process-warning-4.0.1.tgz",
+       "integrity": "sha512-3c2LzQ3rY9d0hc1emcsHhfT9Jwz0cChib/QN89oME2R451w5fy3f0afAhERFZAwrbDU43wk12d0ORBpDVME50Q==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -3298,6 +3281,7 @@
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-1.1.1.tgz",
+       "integrity": "sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8"
+@@ -3347,6 +3331,7 @@
+       "version": "1.54.0",
+       "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz",
+       "integrity": "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.6"
+@@ -3356,6 +3341,7 @@
+       "version": "3.0.2",
+       "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz",
+       "integrity": "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "mime-db": "^1.54.0"
+@@ -3516,7 +3502,6 @@
+       "version": "2.1.2",
+       "resolved": "https://registry.npmjs.org/on-exit-leak-free/-/on-exit-leak-free-2.1.2.tgz",
+       "integrity": "sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=14.0.0"
+@@ -3526,6 +3511,7 @@
+       "version": "2.4.1",
+       "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
+       "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "ee-first": "1.1.1"
+@@ -3601,6 +3587,7 @@
+       "version": "1.3.3",
+       "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+       "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8"
+@@ -3665,7 +3652,6 @@
+       "version": "10.3.1",
+       "resolved": "https://registry.npmjs.org/pino/-/pino-10.3.1.tgz",
+       "integrity": "sha512-r34yH/GlQpKZbU1BvFFqOjhISRo1MNx1tWYsYvmj6KIRHSPMT2+yHOEb1SG6NMvRoHRF0a07kCOox/9yakl1vg==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "@pinojs/redact": "^0.4.0",
+@@ -3688,7 +3674,6 @@
+       "version": "3.0.0",
+       "resolved": "https://registry.npmjs.org/pino-abstract-transport/-/pino-abstract-transport-3.0.0.tgz",
+       "integrity": "sha512-wlfUczU+n7Hy/Ha5j9a/gZNy7We5+cXp8YL+X+PG8S0KXxw7n/JXA3c46Y0zQznIJ83URJiwy7Lh56WLokNuxg==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "split2": "^4.0.0"
+@@ -3698,7 +3683,6 @@
+       "version": "7.1.0",
+       "resolved": "https://registry.npmjs.org/pino-std-serializers/-/pino-std-serializers-7.1.0.tgz",
+       "integrity": "sha512-BndPH67/JxGExRgiX1dX0w1FvZck5Wa4aal9198SrRhZjH3GxKQUKIBnYJTdj2HDN3UQAS06HlfcSbQj2OHmaw==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/pkijs": {
+@@ -3736,7 +3720,6 @@
+       "version": "5.1.0",
+       "resolved": "https://registry.npmjs.org/process-warning/-/process-warning-5.1.0.tgz",
+       "integrity": "sha512-jQSaVHsPgtyw60e1rQ/A+/ArPEj/S8pS/vFnyGa/gYFXrKk/6RuDkoqVDQ5NI5MmS01698ltlAk0NoDBNLujRw==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -3831,7 +3814,6 @@
+       "version": "4.0.4",
+       "resolved": "https://registry.npmjs.org/quick-format-unescaped/-/quick-format-unescaped-4.0.4.tgz",
+       "integrity": "sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/quick-lru": {
+@@ -3903,7 +3885,6 @@
+       "version": "0.2.0",
+       "resolved": "https://registry.npmjs.org/real-require/-/real-require-0.2.0.tgz",
+       "integrity": "sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 12.13.0"
+@@ -3930,7 +3911,6 @@
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/require-from-string/-/require-from-string-2.0.2.tgz",
+       "integrity": "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=0.10.0"
+@@ -3940,7 +3920,6 @@
+       "version": "0.5.0",
+       "resolved": "https://registry.npmjs.org/ret/-/ret-0.5.0.tgz",
+       "integrity": "sha512-I1XxrZSQ+oErkRR4jYbAyEEu2I0avBvvMM5JN+6EBprOGRCs63ENqZ3vjavq8fBw2+62G5LF5XelKwuJpcvcxw==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=10"
+@@ -3950,7 +3929,6 @@
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/reusify/-/reusify-1.1.0.tgz",
+       "integrity": "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "iojs": ">=1.0.0",
+@@ -3961,7 +3939,6 @@
+       "version": "1.4.1",
+       "resolved": "https://registry.npmjs.org/rfdc/-/rfdc-1.4.1.tgz",
+       "integrity": "sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/router": {
+@@ -4006,7 +3983,6 @@
+       "version": "5.1.1",
+       "resolved": "https://registry.npmjs.org/safe-regex2/-/safe-regex2-5.1.1.tgz",
+       "integrity": "sha512-mOSBvHGDZMuIEZMdOz/aCEYDCv0E7nfcNsIhUF+/P+xC7Hyf3FkvymqgPbg9D1EdSGu+uKbJgy09K/RKKc7kJA==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -4029,7 +4005,6 @@
+       "version": "2.5.0",
+       "resolved": "https://registry.npmjs.org/safe-stable-stringify/-/safe-stable-stringify-2.5.0.tgz",
+       "integrity": "sha512-b3rppTKm9T+PsVCBEOUR46GWI7fdOs00VKZ1+9c1EWDaDMvjQc6tUwuFyIprgGgTcWoVHSKrU8H31ZHA2e0RHA==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=10"
+@@ -4046,7 +4021,6 @@
+       "version": "4.1.0",
+       "resolved": "https://registry.npmjs.org/secure-json-parse/-/secure-json-parse-4.1.0.tgz",
+       "integrity": "sha512-l4KnYfEyqYJxDwlNVyRfO2E4NTHfMKAWdUuA8J0yve2Dz/E/PdBepY03RvyJpssIpRFwJoCD55wA+mEDs6ByWA==",
+-      "dev": true,
+       "funding": [
+         {
+           "type": "github",
+@@ -4077,7 +4051,6 @@
+       "version": "7.8.5",
+       "resolved": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+       "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+-      "dev": true,
+       "license": "ISC",
+       "bin": {
+         "semver": "bin/semver.js"
+@@ -4147,13 +4120,13 @@
+       "version": "2.7.2",
+       "resolved": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz",
+       "integrity": "sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/setprototypeof": {
+       "version": "1.2.0",
+       "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+       "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==",
++      "dev": true,
+       "license": "ISC"
+     },
+     "node_modules/shebang-command": {
+@@ -4299,7 +4272,6 @@
+       "version": "4.2.1",
+       "resolved": "https://registry.npmjs.org/sonic-boom/-/sonic-boom-4.2.1.tgz",
+       "integrity": "sha512-w6AxtubXa2wTXAUsZMMWERrsIRAdrK0Sc+FUytWvYAhBJLyuI4llrMIC1DtlNSdI99EI86KZum2MMq3EAZlF9Q==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "atomic-sleep": "^1.0.0"
+@@ -4309,7 +4281,6 @@
+       "version": "4.2.0",
+       "resolved": "https://registry.npmjs.org/split2/-/split2-4.2.0.tgz",
+       "integrity": "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==",
+-      "dev": true,
+       "license": "ISC",
+       "engines": {
+         "node": ">= 10.x"
+@@ -4319,6 +4290,7 @@
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+       "integrity": "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8"
+@@ -4510,7 +4482,6 @@
+       "version": "4.2.0",
+       "resolved": "https://registry.npmjs.org/thread-stream/-/thread-stream-4.2.0.tgz",
+       "integrity": "sha512-e2zZ96wSChazBsbENf/Pcm/4swHt2cEKQ92rhUjkL9GCKiTDJIaTBenjE/m9DXi0QBmTMDkFDdOomUy20A1tDQ==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "real-require": "^1.0.0"
+@@ -4523,7 +4494,6 @@
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/real-require/-/real-require-1.0.0.tgz",
+       "integrity": "sha512-P4nbQYQfePJxRSmY+v/KINxVucm4NF3p3s7pJveMTtom52FR4YGltUQLB8idDXwDDWW+eYrWDFbuzUnjoWHF7g==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/timekeeper": {
+@@ -4537,7 +4507,6 @@
+       "version": "3.7.4",
+       "resolved": "https://registry.npmjs.org/toad-cache/-/toad-cache-3.7.4.tgz",
+       "integrity": "sha512-m1TdR/rvT7kgGJZhspNtXdsdYk0fddFpJJFlG5s+UkPFo6lkLoZ3YLOaovPYjq1R75NP5JfeTlSHaOsE09peCg==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=20"
+@@ -4547,6 +4516,7 @@
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz",
+       "integrity": "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=0.6"
+@@ -4618,6 +4588,7 @@
+       "version": "2.1.0",
+       "resolved": "https://registry.npmjs.org/type-is/-/type-is-2.1.0.tgz",
+       "integrity": "sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==",
++      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "content-type": "^2.0.0",
+@@ -4636,6 +4607,7 @@
+       "version": "2.1.0",
+       "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz",
+       "integrity": "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=18"
+@@ -4676,6 +4648,7 @@
+       "version": "1.1.2",
+       "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+       "integrity": "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==",
++      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">= 0.8"
+diff --git a/package.json b/package.json
+index 6dc6962..4700b6d 100644
+--- a/package.json
++++ b/package.json
+@@ -58,9 +58,11 @@
+     "lint": "biome lint"
+   },
+   "dependencies": {
++    "cookies": "0.9.1",
+     "debug": "^4.4.3",
++    "fastify": "5.12.0",
+     "jose": "^6.2.10",
+-    "koa": "^3.2.1"
++    "keygrip": "1.1.0"
+   },
+   "devDependencies": {
+     "@babel/parser": "^8.0.4",
+@@ -76,9 +78,9 @@
+     "eta": "^4.6.0",
+     "express": "^5.2.1",
+     "fast-check": "^4.9.0",
+-    "fastify": "^5.12.0",
+     "helmet": "^8.3.0",
+     "jsesc": "^3.1.0",
++    "koa": "^3.2.1",
+     "koa-body": "^8.0.0",
+     "koa-mount": "^4.2.0",
+     "lodash": "^4.18.1",

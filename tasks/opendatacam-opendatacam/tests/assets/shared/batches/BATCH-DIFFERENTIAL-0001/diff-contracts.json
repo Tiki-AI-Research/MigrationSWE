@@ -1,0 +1,64 @@
+{
+  "diff_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Express", "version": "4.17.1" },
+    "target": { "name": "Fastify", "version": "4.28.1" }
+  },
+  "source_root": "/input/source",
+  "target_root": "/input/target",
+  "normalization": {
+    "strip_headers": [
+      "date",
+      "connection",
+      "keep-alive",
+      "transfer-encoding",
+      "content-length",
+      "etag",
+      "x-powered-by"
+    ],
+    "strip_body_whitespace": false,
+    "sort_json_keys": true,
+    "normalize_status_only_routes": [
+      "GET /start",
+      "GET /recording/start",
+      "GET /recording/stop",
+      "POST /counter/areas",
+      "POST /ui"
+    ],
+    "volatile_field_patterns": [
+      "^counterData-.*",
+      "^trackerData-.*",
+      "startDate",
+      "startTime"
+    ]
+  },
+  "surfaces": [
+    { "id": "catch-all", "method": "GET", "path": "/a-page-that-does-not-exist", "expect": "equal_after_normalization" },
+    { "id": "out-of-scope", "method": "GET", "path": "/config", "expect": "equal_after_normalization" },
+    { "id": "index", "method": "GET", "path": "/", "expect": "equal_after_normalization" },
+    { "id": "start", "method": "GET", "path": "/start", "expect": "equal_after_normalization" },
+    { "id": "mjpeg", "method": "GET", "path": "/webcam/stream", "expect": "equal_after_normalization" },
+    { "id": "resolution", "method": "GET", "path": "/webcam/resolution", "expect": "equal_after_normalization" },
+    { "id": "console", "method": "GET", "path": "/console", "expect": "equal_after_normalization" },
+    { "id": "counter-areas-post", "method": "POST", "path": "/counter/areas", "expect": "equal_after_normalization" },
+    { "id": "counter-areas-get", "method": "GET", "path": "/counter/areas", "expect": "equal_after_normalization" },
+    { "id": "tracker-sse", "method": "GET", "path": "/tracker/sse", "expect": "equal_after_normalization" },
+    { "id": "recording-start", "method": "GET", "path": "/recording/start", "expect": "equal_after_normalization" },
+    { "id": "recording-stop", "method": "GET", "path": "/recording/stop", "expect": "equal_after_normalization" },
+    { "id": "recordings", "method": "GET", "path": "/recordings", "expect": "equal_after_normalization" },
+    { "id": "recording-tracker", "method": "GET", "path": "/recording/:id/tracker", "expect": "equal_after_normalization" },
+    { "id": "recording-get", "method": "GET", "path": "/recording/:id", "expect": "equal_after_normalization" },
+    { "id": "recording-delete", "method": "DELETE", "path": "/recording/:id", "expect": "equal_after_normalization" },
+    { "id": "counter-json", "method": "GET", "path": "/recording/:id/counter", "expect": "equal_after_normalization" },
+    { "id": "counter-csv", "method": "GET", "path": "/recording/:id/counter/csv", "expect": "equal_after_normalization" },
+    { "id": "status", "method": "GET", "path": "/status", "expect": "equal_after_normalization" },
+    { "id": "config", "method": "GET", "path": "/config", "expect": "equal_after_normalization" },
+    { "id": "files-get", "method": "GET", "path": "/files", "expect": "equal_after_normalization" },
+    { "id": "files-post", "method": "POST", "path": "/files", "expect": "equal_after_normalization" },
+    { "id": "ui-get", "method": "GET", "path": "/ui", "expect": "equal_after_normalization" },
+    { "id": "ui-post", "method": "POST", "path": "/ui", "expect": "equal_after_normalization" },
+    { "id": "apidoc", "method": "GET", "path": "/api/doc", "expect": "equal_after_normalization" }
+  ]
+}

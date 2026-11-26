@@ -1,0 +1,3978 @@
+diff --git a/lib/legacy/express-leftover.js b/lib/legacy/express-leftover.js
+new file mode 100644
+index 0000000..3d46421
+--- /dev/null
++++ b/lib/legacy/express-leftover.js
+@@ -0,0 +1,5 @@
++const express = require("express");
++const app = express();
++app.use(express.json({ limit: "5mb" }));
++app.use(express.static("public"));
++module.exports = app;
+diff --git a/lib/server.js b/lib/server.js
+index e0ae22e..bcb479c 100644
+--- a/lib/server.js
++++ b/lib/server.js
+@@ -1,7 +1,4 @@
+-const express = require("express");
+-const http = require("http");
+ const httpProxy = require("http-proxy");
+-const path = require("path");
+ const fs = require("fs");
+ 
+ const constants = require("./server/constants");
+@@ -154,7 +151,21 @@ const {
+   isOpenAiCompatApiEnabled,
+ } = require("./server/alphaclaw-config");
+ 
+-const { PORT, kTrustProxyHops, SETUP_API_PREFIXES } = constants;
++const {
++  createHonoApp,
++  createHonoNodeServer,
++} = require("./server/http/hono-app");
++const {
++  createJsonBodyMiddleware,
++  createRawBodyMiddleware,
++  createV1BodyMiddleware,
++} = require("./server/http/body-limits");
++const {
++  createPublicStaticMiddleware,
++} = require("./server/http/static-files");
++const { registerChatRoutes } = require("./server/routes/chat");
++
++const { PORT, SETUP_API_PREFIXES } = constants;
+ 
+ initializeServerRuntime({
+   fs,
+@@ -166,23 +177,27 @@ initializeServerRuntime({
+   migrateManagedInternalFiles,
+ });
+ 
+-const app = express();
+-app.set("trust proxy", kTrustProxyHops);
+-app.use(["/webhook", "/hooks"], express.raw({ type: "*/*", limit: "5mb" }));
+-app.use("/gmail-pubsub", express.raw({ type: "*/*", limit: "5mb" }));
+-const openAiCompatJsonParser = express.json({ limit: "50mb" });
++const app = createHonoApp();
+ const isOpenAiCompatApiCurrentlyEnabled = () =>
+   isOpenAiCompatApiEnabled({
+     fsModule: fs,
+     openclawDir: constants.OPENCLAW_DIR,
+   });
+-app.use("/v1", (req, res, next) => {
+-  if (!isOpenAiCompatApiCurrentlyEnabled()) {
+-    return res.status(404).json({ error: "Not found" });
+-  }
+-  return openAiCompatJsonParser(req, res, next);
+-});
+-app.use(express.json({ limit: "5mb" }));
++app.hono.use(
++  "*",
++  createRawBodyMiddleware({ limitBytes: 5 * 1024 * 1024 }),
++);
++app.hono.use(
++  "*",
++  createV1BodyMiddleware({
++    limitBytes: 50 * 1024 * 1024,
++    isEnabled: isOpenAiCompatApiCurrentlyEnabled,
++  }),
++);
++app.hono.use(
++  "*",
++  createJsonBodyMiddleware({ limitBytes: 5 * 1024 * 1024 }),
++);
+ 
+ const proxy = httpProxy.createProxyServer({
+   target: getGatewayUrl(),
+@@ -257,7 +272,7 @@ const cronService = createCronService({
+   getSessionUsageByKeyPattern,
+ });
+ 
+-app.use(express.static(path.join(__dirname, "public")));
++app.use(createPublicStaticMiddleware());
+ initializeServerDatabases({
+   constants,
+   initAuthDb,
+@@ -412,36 +427,13 @@ const {
+   SETUP_API_PREFIXES,
+   webhookMiddleware,
+ });
+-app.get("/api/chat/history", async (req, res) => {
+-  const upgradeReq = {
+-    headers: req.headers,
+-    path: req.path,
+-    query: req.query || {},
+-  };
+-  if (!isAuthorizedRequest(upgradeReq)) {
+-    return res.status(401).json({ ok: false, error: "Unauthorized" });
+-  }
+-  const sessionKey = String(req.query?.sessionKey || "").trim();
+-  if (!sessionKey) {
+-    return res.status(400).json({ ok: false, error: "sessionKey is required" });
+-  }
+-  try {
+-    const { messages, rawHistory } = await chatWsService.fetchHistory(sessionKey);
+-    return res.json({
+-      ok: true,
+-      sessionKey,
+-      messages,
+-      rawHistory,
+-    });
+-  } catch (err) {
+-    return res.status(502).json({
+-      ok: false,
+-      error: err?.message || "Could not load chat history",
+-    });
+-  }
++registerChatRoutes({
++  app,
++  isAuthorizedRequest,
++  chatWsService,
+ });
+ 
+-const server = http.createServer(app);
++const server = createHonoNodeServer(app);
+ createWatchdogTerminalWsBridge({
+   server,
+   proxy,
+diff --git a/lib/server/http/body-limits.js b/lib/server/http/body-limits.js
+new file mode 100644
+index 0000000..ca0512c
+--- /dev/null
++++ b/lib/server/http/body-limits.js
+@@ -0,0 +1,231 @@
++const zlib = require("zlib");
++const {
++  kBodyConsumedKey,
++  kBodyKey,
++} = require("./request-response");
++
++const kRawBodyPrefixes = ["/webhook", "/hooks", "/gmail-pubsub"];
++
++const matchesPrefix = (path, prefix) =>
++  path === prefix || String(path || "").startsWith(`${prefix}/`);
++
++const isRawBodyPath = (path) =>
++  kRawBodyPrefixes.some((prefix) => matchesPrefix(path, prefix));
++
++const isV1Path = (path) =>
++  path === "/v1" || String(path || "").startsWith("/v1/");
++
++const parseContentType = (value) =>
++  String(value || "").split(";")[0].trim().toLowerCase();
++
++const isJsonContentType = (value) => {
++  const contentType = parseContentType(value);
++  return (
++    contentType === "application/json" ||
++    contentType.endsWith("+json")
++  );
++};
++
++const inflateBodyBuffer = (buffer, contentEncoding) => {
++  const encoding = String(contentEncoding || "").trim().toLowerCase();
++  if (!encoding || encoding === "identity" || buffer.length === 0) {
++    return buffer;
++  }
++  if (encoding === "gzip" || encoding === "x-gzip") {
++    return zlib.gunzipSync(buffer);
++  }
++  if (encoding === "deflate") {
++    return zlib.inflateSync(buffer);
++  }
++  if (encoding === "br") {
++    return zlib.brotliDecompressSync(buffer);
++  }
++  return buffer;
++};
++
++const payloadTooLarge = (context) =>
++  context.json({ error: "Payload too large" }, 413);
++
++const invalidBody = (context) =>
++  context.json({ error: "Invalid request body" }, 400);
++
++const hasIncomingBody = (context) => {
++  if (context.req.header("transfer-encoding")) return true;
++  const declaredLength = Number(context.req.header("content-length"));
++  return Number.isFinite(declaredLength) && declaredLength > 0;
++};
++
++const readIncomingRequestBody = async (incoming, limitBytes) => {
++  const chunks = [];
++  let total = 0;
++  try {
++    for await (const value of incoming) {
++      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
++      total += chunk.length;
++      if (total > limitBytes) {
++        incoming.destroy();
++        return { oversized: true, buffer: Buffer.alloc(0) };
++      }
++      chunks.push(chunk);
++    }
++  } catch {
++    return { invalid: true, buffer: Buffer.alloc(0) };
++  }
++  return { oversized: false, buffer: Buffer.concat(chunks) };
++};
++
++const readRequestBody = async (context, limitBytes) => {
++  const request = context.req.raw;
++  if (request.body) {
++    const reader = request.body.getReader();
++    const chunks = [];
++    let total = 0;
++    try {
++      while (true) {
++        const { done, value } = await reader.read();
++        if (done) break;
++        const chunk = Buffer.from(value);
++        total += chunk.length;
++        if (total > limitBytes) {
++          try {
++            await reader.cancel();
++          } catch {}
++          return { oversized: true, buffer: Buffer.alloc(0) };
++        }
++        chunks.push(chunk);
++      }
++    } finally {
++      try {
++        reader.releaseLock();
++      } catch {}
++    }
++    return { oversized: false, buffer: Buffer.concat(chunks) };
++  }
++
++  // Fetch Request objects cannot carry a body on GET/HEAD, so the Node
++  // adapter exposes no request.body for those methods. Read the underlying
++  // IncomingMessage when the headers indicate a body is present.
++  const incoming = context.env?.incoming;
++  if (
++    incoming &&
++    !incoming.readableDidRead &&
++    hasIncomingBody(context)
++  ) {
++    return readIncomingRequestBody(incoming, limitBytes);
++  }
++
++  return { oversized: false, buffer: Buffer.alloc(0) };
++};
++
++const readInflatedBody = async ({
++  context,
++  limitBytes,
++  allowEmpty = true,
++}) => {
++  const contentEncoding = context.req.header("content-encoding") || "";
++  const declaredLength = Number(context.req.header("content-length"));
++  if (
++    Number.isFinite(declaredLength) &&
++    declaredLength > limitBytes &&
++    !contentEncoding
++  ) {
++    return { oversized: true };
++  }
++
++  const readResult = await readRequestBody(context, limitBytes);
++  if (readResult.oversized) return { oversized: true };
++
++  let inflated;
++  try {
++    inflated = inflateBodyBuffer(readResult.buffer, contentEncoding);
++  } catch {
++    return { invalid: true };
++  }
++  if (inflated.length > limitBytes) return { oversized: true };
++  if (inflated.length === 0 && !allowEmpty) return { empty: true };
++  return { buffer: inflated, empty: inflated.length === 0 };
++};
++
++const createRawBodyMiddleware = ({ limitBytes = 5 * 1024 * 1024 } = {}) => {
++  return async (context, next) => {
++    if (!isRawBodyPath(context.req.path)) return next();
++    if (context.get(kBodyConsumedKey)) return next();
++
++    const result = await readInflatedBody({ context, limitBytes });
++    if (result.oversized) return payloadTooLarge(context);
++    if (result.invalid) return invalidBody(context);
++    context.set(kBodyConsumedKey, true);
++    if (!result.empty) {
++      context.set(kBodyKey, result.buffer);
++    }
++    return next();
++  };
++};
++
++const createV1BodyMiddleware = ({
++  limitBytes = 50 * 1024 * 1024,
++  isEnabled = () => true,
++} = {}) => {
++  return async (context, next) => {
++    if (!isV1Path(context.req.path)) return next();
++    if (!isEnabled()) {
++      return context.json({ error: "Not found" }, 404);
++    }
++    if (context.get(kBodyConsumedKey)) return next();
++
++    const result = await readInflatedBody({ context, limitBytes });
++    if (result.oversized) return payloadTooLarge(context);
++    if (result.invalid) return invalidBody(context);
++    context.set(kBodyConsumedKey, true);
++    if (result.empty) return next();
++
++    try {
++      context.set(kBodyKey, JSON.parse(result.buffer.toString("utf8")));
++    } catch {
++      return invalidBody(context);
++    }
++    return next();
++  };
++};
++
++const createJsonBodyMiddleware = ({ limitBytes = 5 * 1024 * 1024 } = {}) => {
++  return async (context, next) => {
++    if (context.get(kBodyConsumedKey)) return next();
++    if (!isJsonContentType(context.req.header("content-type"))) return next();
++
++    const result = await readInflatedBody({ context, limitBytes });
++    if (result.oversized) return payloadTooLarge(context);
++    if (result.invalid) return invalidBody(context);
++    context.set(kBodyConsumedKey, true);
++    if (result.empty) return next();
++
++    try {
++      context.set(kBodyKey, JSON.parse(result.buffer.toString("utf8")));
++    } catch {
++      return invalidBody(context);
++    }
++    return next();
++  };
++};
++
++const readUnconsumedBody = async (context, limitBytes = 5 * 1024 * 1024) => {
++  if (context.get(kBodyConsumedKey)) return null;
++  const result = await readInflatedBody({ context, limitBytes });
++  if (result.oversized) return { oversized: true };
++  if (result.invalid) return { invalid: true };
++  context.set(kBodyConsumedKey, true);
++  return { buffer: result.buffer, empty: result.empty };
++};
++
++module.exports = {
++  createJsonBodyMiddleware,
++  createRawBodyMiddleware,
++  createV1BodyMiddleware,
++  inflateBodyBuffer,
++  isJsonContentType,
++  isRawBodyPath,
++  isV1Path,
++  matchesPrefix,
++  readRequestBody,
++  readUnconsumedBody,
++};
+diff --git a/lib/server/http/client-ip.js b/lib/server/http/client-ip.js
+new file mode 100644
+index 0000000..accb3fa
+--- /dev/null
++++ b/lib/server/http/client-ip.js
+@@ -0,0 +1,62 @@
++const { normalizeIp } = require("../utils/network");
++const { kTrustProxyHops } = require("../constants");
++
++const parseForwardedFor = (value) => {
++  if (value === undefined || value === null) return [];
++  const rawValues = Array.isArray(value) ? value : [value];
++  return rawValues
++    .flatMap((entry) => String(entry || "").split(","))
++    .map((entry) => normalizeIp(entry.trim()))
++    .filter(Boolean);
++};
++
++const getSocketRemoteAddress = (context) => {
++  const incoming = context?.env?.incoming;
++  return (
++    incoming?.socket?.remoteAddress ||
++    incoming?.connection?.remoteAddress ||
++    ""
++  );
++};
++
++const resolveClientIp = ({
++  headers = {},
++  remoteAddress = "",
++  trustProxyHops = kTrustProxyHops,
++} = {}) => {
++  const remote = normalizeIp(remoteAddress);
++  const hops = Number.isFinite(Number(trustProxyHops))
++    ? Math.max(0, Number(trustProxyHops))
++    : 0;
++  if (hops === 0) return remote || "unknown";
++
++  const forwarded = parseForwardedFor(headers["x-forwarded-for"]);
++  if (forwarded.length === 0) return remote || "unknown";
++
++  const index = forwarded.length - hops;
++  if (index >= 0 && index < forwarded.length) return forwarded[index];
++  return forwarded[0] || remote || "unknown";
++};
++
++const resolveClientIpFromContext = (context, trustProxyHops) =>
++  resolveClientIp({
++    headers: Object.fromEntries(context.req.raw.headers.entries()),
++    remoteAddress: getSocketRemoteAddress(context),
++    trustProxyHops:
++      trustProxyHops === undefined
++        ? context.get?.("alphaclaw.trustProxyHops")
++        : trustProxyHops,
++  });
++
++const createClientKeyResolver = (context) => {
++  const clientIp = resolveClientIpFromContext(context);
++  return () => clientIp;
++};
++
++module.exports = {
++  createClientKeyResolver,
++  getSocketRemoteAddress,
++  parseForwardedFor,
++  resolveClientIp,
++  resolveClientIpFromContext,
++};
+diff --git a/lib/server/http/gateway-proxy.js b/lib/server/http/gateway-proxy.js
+new file mode 100644
+index 0000000..3cb8c60
+--- /dev/null
++++ b/lib/server/http/gateway-proxy.js
+@@ -0,0 +1,397 @@
++const crypto = require("crypto");
++const http = require("http");
++const https = require("https");
++const { Readable } = require("stream");
++const { URL } = require("url");
++const { kBodyConsumedKey } = require("./request-response");
++const { readRequestBody } = require("./body-limits");
++
++const kOpenAiCompatProxyPathPattern =
++  /^\/v1\/(?:chat\/completions|responses|embeddings|models(?:\/[^/?#]+)?)$/;
++const kHopByHopResponseHeaders = new Set([
++  "connection",
++  "keep-alive",
++  "proxy-authenticate",
++  "proxy-authorization",
++  "te",
++  "trailer",
++  "trailers",
++  "transfer-encoding",
++  "upgrade",
++]);
++const kAlwaysStrippedResponseHeaders = new Set(["set-cookie"]);
++const kTransportRequestHeaders = new Set([
++  "connection",
++  "keep-alive",
++  "transfer-encoding",
++  "upgrade",
++]);
++
++const extractBearerToken = (authorization) =>
++  String(authorization || "").match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || "";
++
++const extractBodyBuffer = (req) => {
++  if (Buffer.isBuffer(req.body)) return req.body;
++  if (typeof req.body === "string") return Buffer.from(req.body, "utf8");
++  if (req.body && typeof req.body === "object") {
++    return Buffer.from(JSON.stringify(req.body), "utf8");
++  }
++  return Buffer.alloc(0);
++};
++
++const getApiAuthThrottleState = (authThrottle, req, now) => {
++  if (
++    !authThrottle ||
++    typeof authThrottle.getOrCreateLoginAttemptState !== "function"
++  ) {
++    return null;
++  }
++  const clientKey =
++    typeof authThrottle.getClientKey === "function"
++      ? authThrottle.getClientKey(req)
++      : req.ip || req.socket?.remoteAddress || "unknown";
++  return {
++    clientKey,
++    state: authThrottle.getOrCreateLoginAttemptState(clientKey, now),
++  };
++};
++
++const sendTooManyAuthAttempts = (retryAfterSec = 1) => {
++  const normalizedRetryAfterSec = Math.max(
++    1,
++    Math.ceil(Number(retryAfterSec) || 1),
++  );
++  return new Response(
++    JSON.stringify({
++      error: "Too many attempts. Try again shortly.",
++      retryAfterSec: normalizedRetryAfterSec,
++    }),
++    {
++      status: 429,
++      headers: {
++        "content-type": "application/json; charset=utf-8",
++        "retry-after": String(normalizedRetryAfterSec),
++      },
++    },
++  );
++};
++
++const timingSafeStringEqual = (left, right) => {
++  const leftBuffer = Buffer.from(String(left || ""), "utf8");
++  const rightBuffer = Buffer.from(String(right || ""), "utf8");
++  return (
++    leftBuffer.length === rightBuffer.length &&
++    crypto.timingSafeEqual(leftBuffer, rightBuffer)
++  );
++};
++
++const createGatewayProxyHeaders = ({ reqHeaders, bodyBuffer }) => {
++  const headers = { ...(reqHeaders || {}) };
++  delete headers.host;
++  delete headers.connection;
++  delete headers["content-length"];
++  delete headers["transfer-encoding"];
++  delete headers["content-encoding"];
++  delete headers.cookie;
++  if (bodyBuffer.length > 0) {
++    headers["content-length"] = String(bodyBuffer.length);
++    if (!headers["content-type"]) headers["content-type"] = "application/json";
++  }
++  return headers;
++};
++
++const stripV1ResponseHeaders = (sourceHeaders = {}) => {
++  const headers = {};
++  for (const [key, value] of Object.entries(sourceHeaders)) {
++    if (value === undefined || value === null) continue;
++    const lowerKey = key.toLowerCase();
++    if (kHopByHopResponseHeaders.has(lowerKey)) continue;
++    if (kAlwaysStrippedResponseHeaders.has(lowerKey)) continue;
++    headers[lowerKey] = value;
++  }
++  return headers;
++};
++
++const toResponseHeaders = (sourceHeaders = {}, { stripV1 = false } = {}) => {
++  const result = new Headers();
++  for (const [key, value] of Object.entries(sourceHeaders || {})) {
++    if (value === undefined || value === null) continue;
++    const lowerKey = key.toLowerCase();
++    if (stripV1) {
++      if (kHopByHopResponseHeaders.has(lowerKey)) continue;
++      if (kAlwaysStrippedResponseHeaders.has(lowerKey)) continue;
++    } else if (kTransportRequestHeaders.has(lowerKey)) {
++      continue;
++    }
++    if (Array.isArray(value)) {
++      for (const entry of value) result.append(lowerKey, String(entry));
++    } else {
++      result.set(lowerKey, String(value));
++    }
++  }
++  return result;
++};
++
++const gatewayUnavailableResponse = () =>
++  new Response(JSON.stringify({ error: "Gateway unavailable" }), {
++    status: 502,
++    headers: { "content-type": "application/json; charset=utf-8" },
++  });
++
++const sendGatewayRequest = ({
++  gateway,
++  method,
++  path,
++  headers,
++  bodyBuffer,
++  bodyStream,
++  stripResponseHeaders = false,
++}) =>
++  new Promise((resolve) => {
++    const protocolClient = gateway.protocol === "https:" ? https : http;
++    let settled = false;
++    const finish = (response) => {
++      if (settled) return;
++      settled = true;
++      resolve(response);
++    };
++
++    let proxyReq;
++    try {
++      proxyReq = protocolClient.request(
++        {
++          protocol: gateway.protocol,
++          hostname: gateway.hostname,
++          port: gateway.port,
++          method,
++          path,
++          headers,
++        },
++        (proxyRes) => {
++          const responseHeaders = toResponseHeaders(proxyRes.headers, {
++            stripV1: stripResponseHeaders,
++          });
++          const status = proxyRes.statusCode || 502;
++          const bodyAllowed =
++            String(method || "").toUpperCase() !== "HEAD" &&
++            ![204, 205, 304].includes(status);
++          if (!bodyAllowed) proxyRes.resume();
++          finish(
++            new Response(bodyAllowed ? Readable.toWeb(proxyRes) : null, {
++              status,
++              headers: responseHeaders,
++            }),
++          );
++        },
++      );
++    } catch {
++      finish(gatewayUnavailableResponse());
++      return;
++    }
++
++    proxyReq.on("error", () => finish(gatewayUnavailableResponse()));
++
++    if (bodyStream) {
++      bodyStream.on("error", () => {
++        if (!settled) {
++          proxyReq.destroy();
++          finish(gatewayUnavailableResponse());
++        }
++      });
++      bodyStream.pipe(proxyReq);
++      return;
++    }
++
++    if (bodyBuffer && bodyBuffer.length > 0) {
++      proxyReq.write(bodyBuffer);
++    }
++    proxyReq.end();
++  });
++
++const resolveGateway = (getGatewayUrl) => {
++  try {
++    return new URL(getGatewayUrl());
++  } catch {
++    return null;
++  }
++};
++
++const readProxyRequestBody = async (req, context) => {
++  const directBody = extractBodyBuffer(req);
++  if (directBody.length > 0) return directBody;
++  if (context?.get?.(kBodyConsumedKey)) return directBody;
++  if (!context?.req?.raw?.body) return directBody;
++  const result = await readRequestBody(context, 50 * 1024 * 1024);
++  if (result.oversized) return null;
++  return result.buffer;
++};
++
++const isWebReadableStream = (value) =>
++  Boolean(value && typeof value.getReader === "function");
++
++const hasNodeRequestBody = (context) => {
++  if (context?.req?.header?.("transfer-encoding")) return true;
++  const declaredLength = Number(context?.req?.header?.("content-length"));
++  return Number.isFinite(declaredLength) && declaredLength > 0;
++};
++
++const resolveGatewayProxyBody = (req, context) => {
++  const directBody = extractBodyBuffer(req);
++  if (directBody.length > 0) {
++    return { bodyBuffer: directBody, bodyStream: null };
++  }
++  if (context?.get?.(kBodyConsumedKey)) {
++    return { bodyBuffer: directBody, bodyStream: null };
++  }
++
++  const requestBody = context?.req?.raw?.body;
++  if (isWebReadableStream(requestBody)) {
++    return {
++      bodyBuffer: null,
++      bodyStream: Readable.fromWeb(requestBody),
++    };
++  }
++
++  const incoming = context?.env?.incoming;
++  if (
++    incoming &&
++    !incoming.readableDidRead &&
++    !incoming.readableEnded &&
++    hasNodeRequestBody(context)
++  ) {
++    return { bodyBuffer: null, bodyStream: incoming };
++  }
++
++  return { bodyBuffer: directBody, bodyStream: null };
++};
++
++const proxyGatewayRequest = async ({ req, context, getGatewayUrl }) => {
++  const gateway = resolveGateway(getGatewayUrl);
++  if (!gateway) return gatewayUnavailableResponse();
++
++  const { bodyBuffer, bodyStream } = resolveGatewayProxyBody(req, context);
++
++  const headers = { ...(req.headers || {}) };
++  for (const key of kTransportRequestHeaders) delete headers[key];
++  delete headers.host;
++  headers.host = gateway.host;
++  if (!bodyStream) {
++    delete headers["content-length"];
++    if (bodyBuffer.length > 0) {
++      headers["content-length"] = String(bodyBuffer.length);
++      if (
++        req.body &&
++        typeof req.body === "object" &&
++        !Buffer.isBuffer(req.body)
++      ) {
++        delete headers["content-encoding"];
++      }
++    }
++  }
++
++  return sendGatewayRequest({
++    gateway,
++    method: req.method,
++    path: req.url || req.originalUrl || "/",
++    headers,
++    bodyBuffer,
++    bodyStream,
++  });
++};
++
++const proxyOpenAiCompatRequest = async ({
++  req,
++  context,
++  getGatewayUrl,
++  getGatewayToken,
++  openAiCompatApiThrottle,
++}) => {
++  const now = Date.now();
++  const throttleState = getApiAuthThrottleState(
++    openAiCompatApiThrottle,
++    req,
++    now,
++  );
++  if (
++    throttleState &&
++    typeof openAiCompatApiThrottle.evaluateLoginThrottle === "function"
++  ) {
++    const throttle = openAiCompatApiThrottle.evaluateLoginThrottle(
++      throttleState.state,
++      now,
++    );
++    if (throttle.blocked) {
++      return sendTooManyAuthAttempts(throttle.retryAfterSec);
++    }
++  }
++
++  const bearerToken = extractBearerToken(req.headers.authorization);
++  const expectedGatewayToken = String(getGatewayToken?.() || "").trim();
++  if (
++    !bearerToken ||
++    !expectedGatewayToken ||
++    !timingSafeStringEqual(bearerToken, expectedGatewayToken)
++  ) {
++    if (
++      throttleState &&
++      typeof openAiCompatApiThrottle.recordLoginFailure === "function"
++    ) {
++      const failure = openAiCompatApiThrottle.recordLoginFailure(
++        throttleState.state,
++        now,
++      );
++      if (failure.locked) {
++        return sendTooManyAuthAttempts(failure.retryAfterSec);
++      }
++    }
++    return new Response(JSON.stringify({ error: "Unauthorized" }), {
++      status: 401,
++      headers: { "content-type": "application/json; charset=utf-8" },
++    });
++  }
++
++  if (
++    throttleState?.clientKey &&
++    typeof openAiCompatApiThrottle?.recordLoginSuccess === "function"
++  ) {
++    openAiCompatApiThrottle.recordLoginSuccess(throttleState.clientKey);
++  }
++
++  const gateway = resolveGateway(getGatewayUrl);
++  if (!gateway) return gatewayUnavailableResponse();
++
++  const bodyBuffer = await readProxyRequestBody(req, context);
++  if (bodyBuffer === null) {
++    return new Response(JSON.stringify({ error: "Payload too large" }), {
++      status: 413,
++      headers: { "content-type": "application/json; charset=utf-8" },
++    });
++  }
++
++  const headers = createGatewayProxyHeaders({
++    reqHeaders: req.headers,
++    bodyBuffer,
++  });
++  headers.authorization = `Bearer ${bearerToken}`;
++
++  return sendGatewayRequest({
++    gateway,
++    method: req.method,
++    path: req.originalUrl || req.url || "/",
++    headers,
++    bodyBuffer,
++    stripResponseHeaders: true,
++  });
++};
++
++module.exports = {
++  createGatewayProxyHeaders,
++  extractBearerToken,
++  gatewayUnavailableResponse,
++  kAlwaysStrippedResponseHeaders,
++  kHopByHopResponseHeaders,
++  kOpenAiCompatProxyPathPattern,
++  proxyGatewayRequest,
++  proxyOpenAiCompatRequest,
++  stripV1ResponseHeaders,
++};
+diff --git a/lib/server/http/hono-app.js b/lib/server/http/hono-app.js
+new file mode 100644
+index 0000000..0e1d817
+--- /dev/null
++++ b/lib/server/http/hono-app.js
+@@ -0,0 +1,26 @@
++const { Hono } = require("hono");
++const { createAdaptorServer } = require("@hono/node-server");
++const { createRouteAdapter } = require("./route-adapter");
++
++const createHonoApp = () => {
++  const hono = new Hono();
++  const app = createRouteAdapter({ hono });
++  return app;
++};
++
++const createHonoNodeServer = (app) =>
++  createAdaptorServer({
++    fetch: app.fetch,
++  });
++
++const buildServerApp = () => {
++  const app = createHonoApp();
++  const server = createHonoNodeServer(app);
++  return { app, server };
++};
++
++module.exports = {
++  buildServerApp,
++  createHonoApp,
++  createHonoNodeServer,
++};
+diff --git a/lib/server/http/request-response.js b/lib/server/http/request-response.js
+new file mode 100644
+index 0000000..c3f475b
+--- /dev/null
++++ b/lib/server/http/request-response.js
+@@ -0,0 +1,422 @@
++const fs = require("fs");
++const { Readable } = require("stream");
++const { getMimeType } = require("hono/utils/mime");
++
++const kBodyKey = "alphaclaw.body";
++const kBodyConsumedKey = "alphaclaw.bodyConsumed";
++const kClientIpKey = "alphaclaw.clientIp";
++
++const parseQuery = (url) => {
++  const queries = {};
++  for (const [key, value] of url.searchParams.entries()) {
++    if (Object.prototype.hasOwnProperty.call(queries, key)) {
++      const current = queries[key];
++      queries[key] = Array.isArray(current)
++        ? [...current, value]
++        : [current, value];
++      continue;
++    }
++    queries[key] = value;
++  }
++  return queries;
++};
++
++const headersToObject = (headers) => {
++  const result = {};
++  for (const [key, value] of headers.entries()) {
++    const normalizedKey = key.toLowerCase();
++    if (Object.prototype.hasOwnProperty.call(result, normalizedKey)) {
++      const current = result[normalizedKey];
++      result[normalizedKey] = Array.isArray(current)
++        ? [...current, value]
++        : [current, value];
++      continue;
++    }
++    result[normalizedKey] = value;
++  }
++  return result;
++};
++
++const serializeCookie = (name, value, options = {}) => {
++  const segments = [`${name}=${value ?? ""}`];
++  if (options.path) segments.push(`Path=${options.path}`);
++  if (options.domain) segments.push(`Domain=${options.domain}`);
++  if (options.maxAge !== undefined) {
++    segments.push(`Max-Age=${Math.floor(Number(options.maxAge) / 1000)}`);
++  }
++  if (options.expires) segments.push(`Expires=${options.expires.toUTCString()}`);
++  if (options.httpOnly) segments.push("HttpOnly");
++  if (options.secure) segments.push("Secure");
++  if (options.sameSite) {
++    const sameSite = String(options.sameSite);
++    segments.push(
++      `SameSite=${sameSite.charAt(0).toUpperCase()}${sameSite.slice(1).toLowerCase()}`,
++    );
++  }
++  return segments.join("; ");
++};
++
++const createRequestFacade = (context, { clientIp, params } = {}) => {
++  const requestUrl = new URL(context.req.url);
++  const headers = headersToObject(context.req.raw.headers);
++  const closeHandlers = new Set();
++  let closed = false;
++  let pathname = requestUrl.pathname;
++  let search = requestUrl.search;
++  let url = `${pathname}${search}`;
++  let originalUrl = url;
++
++  const emitClose = () => {
++    if (closed) return;
++    closed = true;
++    for (const handler of closeHandlers) {
++      try {
++        handler();
++      } catch {}
++    }
++    closeHandlers.clear();
++  };
++
++  const abortSignal = context.req.raw.signal;
++  if (abortSignal) {
++    if (abortSignal.aborted) {
++      queueMicrotask(emitClose);
++    } else {
++      abortSignal.addEventListener("abort", emitClose, { once: true });
++    }
++  }
++
++  const request = {
++    headers,
++    method: context.req.method,
++    path: pathname,
++    originalUrl,
++    url,
++    query: parseQuery(requestUrl),
++    params: params || context.req.param(),
++    protocol: headers["x-forwarded-proto"] || requestUrl.protocol.replace(":", ""),
++    ip: clientIp || context.get(kClientIpKey) || "",
++    socket: {
++      remoteAddress:
++        context.env?.incoming?.socket?.remoteAddress ||
++        context.env?.incoming?.connection?.remoteAddress ||
++        "",
++    },
++    body: context.get(kBodyKey),
++    get(name) {
++      const value = headers[String(name || "").toLowerCase()];
++      return Array.isArray(value) ? value[0] : value;
++    },
++    on(event, handler) {
++      if (event === "close" && typeof handler === "function") {
++        if (closed) {
++          queueMicrotask(handler);
++        } else {
++          closeHandlers.add(handler);
++        }
++      }
++      return request;
++    },
++    emitClose,
++    setPath(nextPath, nextSearch) {
++      pathname = nextPath;
++      search = nextSearch === undefined ? search : nextSearch;
++      url = `${pathname}${search}`;
++      originalUrl = url;
++      request.path = pathname;
++      request.url = url;
++      request.originalUrl = originalUrl;
++      request.query = parseQuery(
++        new URL(url || "/", `${requestUrl.origin || "http://localhost"}`),
++      );
++    },
++  };
++
++  Object.defineProperty(request, "body", {
++    enumerable: true,
++    configurable: true,
++    get() {
++      return context.get(kBodyKey);
++    },
++  });
++
++  return request;
++};
++
++const toResponseBody = (value) => {
++  if (value === undefined || value === null) return null;
++  if (Buffer.isBuffer(value)) return value;
++  if (typeof value === "string") return value;
++  if (value instanceof Uint8Array) return value;
++  return String(value);
++};
++
++const createResponseFacade = (context) => {
++  const headers = new Map();
++  let statusCode = 200;
++  let bodyValue;
++  let response = null;
++  let stream = null;
++  let streamController = null;
++  let streamClosed = false;
++  let headersSent = false;
++  let ended = false;
++
++  const appendHeaderValue = (map, key, value) => {
++    if (value === undefined) return;
++    if (Array.isArray(value)) {
++      const existing = map.get(key);
++      const next = existing ? [...existing] : [];
++      next.push(...value.map((entry) => String(entry)));
++      map.set(key, next);
++      return;
++    }
++    map.set(key, [String(value)]);
++  };
++
++  const buildHeaders = () => {
++    const result = new Headers();
++    for (const [key, values] of headers.entries()) {
++      for (const value of values) {
++        result.append(key, value);
++      }
++    }
++    return result;
++  };
++
++  const ensureStream = () => {
++    if (stream) return stream;
++    stream = new ReadableStream({
++      start(controller) {
++        streamController = controller;
++      },
++      cancel() {
++        streamClosed = true;
++        if (typeof context.req.raw.signal?.addEventListener === "function") {
++          // no-op; request facade owns close emission
++        }
++        context.get("alphaclaw.onStreamCancel")?.();
++      },
++    });
++    response = new Response(stream, {
++      status: statusCode,
++      headers: buildHeaders(),
++    });
++    headersSent = true;
++    return stream;
++  };
++
++  const writeChunk = (chunk) => {
++    if (streamClosed) return;
++    ensureStream();
++    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
++    if (buffer.length > 0) streamController.enqueue(buffer);
++  };
++
++  const closeStream = (chunk) => {
++    if (streamClosed) return;
++    ensureStream();
++    if (chunk !== undefined && chunk !== null) {
++      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
++      if (buffer.length > 0) streamController.enqueue(buffer);
++    }
++    streamClosed = true;
++    streamController.close();
++  };
++
++  const finalize = () => response;
++
++  const responseFacade = {
++    get headersSent() {
++      return headersSent;
++    },
++    get finished() {
++      return ended;
++    },
++    get statusCode() {
++      return statusCode;
++    },
++    set statusCode(value) {
++      statusCode = Number(value) || 200;
++    },
++    status(code) {
++      statusCode = Number(code) || 200;
++      return responseFacade;
++    },
++    setHeader(name, value) {
++      if (value === undefined) return responseFacade;
++      headers.set(String(name).toLowerCase(), [String(value)]);
++      return responseFacade;
++    },
++    getHeader(name) {
++      const values = headers.get(String(name).toLowerCase());
++      return values ? values[0] : undefined;
++    },
++    removeHeader(name) {
++      headers.delete(String(name).toLowerCase());
++    },
++    set(name, value) {
++      if (name && typeof name === "object") {
++        for (const [key, entry] of Object.entries(name)) {
++          responseFacade.setHeader(key, entry);
++        }
++        return responseFacade;
++      }
++      return responseFacade.setHeader(name, value);
++    },
++    append(name, value) {
++      appendHeaderValue(headers, String(name).toLowerCase(), value);
++      return responseFacade;
++    },
++    json(value) {
++      if (!headers.has("content-type")) {
++        headers.set("content-type", ["application/json; charset=utf-8"]);
++      }
++      bodyValue = JSON.stringify(value);
++      ended = true;
++      return responseFacade;
++    },
++    send(value) {
++      if (value === undefined || value === null) {
++        bodyValue = "";
++        ended = true;
++        return responseFacade;
++      }
++      if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
++        if (!headers.has("content-type")) {
++          headers.set("content-type", ["application/octet-stream"]);
++        }
++        bodyValue = value;
++        ended = true;
++        return responseFacade;
++      }
++      if (typeof value === "object") return responseFacade.json(value);
++      if (!headers.has("content-type")) {
++        headers.set("content-type", ["text/html; charset=utf-8"]);
++      }
++      bodyValue = String(value);
++      ended = true;
++      return responseFacade;
++    },
++    redirect(location, status = 302) {
++      statusCode = Number(status) || 302;
++      headers.set("location", [String(location)]);
++      bodyValue = "";
++      ended = true;
++      return responseFacade;
++    },
++    cookie(name, value, options = {}) {
++      appendHeaderValue(
++        headers,
++        "set-cookie",
++        serializeCookie(name, value, options),
++      );
++      return responseFacade;
++    },
++    clearCookie(name, options = {}) {
++      return responseFacade.cookie(name, "", {
++        ...options,
++        expires: new Date(0),
++        maxAge: undefined,
++      });
++    },
++    sendFile(filePath) {
++      const stats = fs.statSync(filePath);
++      headers.set("content-type", [
++        getMimeType(filePath) || "application/octet-stream",
++      ]);
++      headers.set("content-length", [String(stats.size)]);
++      const fileStream = fs.createReadStream(filePath);
++      fileStream.on("error", () => {});
++      response = new Response(Readable.toWeb(fileStream), {
++        status: statusCode,
++        headers: buildHeaders(),
++      });
++      headersSent = true;
++      ended = true;
++      return responseFacade;
++    },
++    download(filePath, fileName, callback) {
++      try {
++        const stats = fs.statSync(filePath);
++        const safeName = String(fileName || "download").replace(/"/g, "");
++        headers.set("content-type", [
++          getMimeType(filePath) || "application/octet-stream",
++        ]);
++        headers.set("content-length", [String(stats.size)]);
++        headers.set("content-disposition", [
++          `attachment; filename="${safeName}"`,
++        ]);
++        const fileStream = fs.createReadStream(filePath);
++        if (typeof callback === "function") {
++          fileStream.once("error", callback);
++          fileStream.once("end", () => callback(null));
++        }
++        response = new Response(Readable.toWeb(fileStream), {
++          status: statusCode,
++          headers: buildHeaders(),
++        });
++        headersSent = true;
++        ended = true;
++      } catch (err) {
++        if (typeof callback === "function") callback(err);
++      }
++      return responseFacade;
++    },
++    flushHeaders() {
++      ensureStream();
++      return responseFacade;
++    },
++    write(chunk) {
++      writeChunk(chunk);
++      return true;
++    },
++    end(chunk) {
++      if (stream && !streamClosed) {
++        closeStream(chunk);
++      } else if (!stream) {
++        if (chunk !== undefined && chunk !== null) {
++          bodyValue = toResponseBody(chunk);
++        }
++        ended = true;
++      }
++      return responseFacade;
++    },
++    __hasResponse() {
++      return ended || Boolean(stream);
++    },
++    __isStreaming() {
++      return Boolean(stream);
++    },
++    __getResponse() {
++      if (response) return response;
++      if (!ended) return null;
++      response = new Response(
++        bodyValue === undefined ? null : toResponseBody(bodyValue),
++        {
++          status: statusCode,
++          headers: buildHeaders(),
++        },
++      );
++      headersSent = true;
++      return response;
++    },
++    __setResponse(nextResponse) {
++      response = nextResponse;
++      headersSent = true;
++      ended = true;
++    },
++  };
++
++  return responseFacade;
++};
++
++module.exports = {
++  createRequestFacade,
++  createResponseFacade,
++  kBodyConsumedKey,
++  kBodyKey,
++  kClientIpKey,
++  parseQuery,
++  serializeCookie,
++};
+diff --git a/lib/server/http/route-adapter.js b/lib/server/http/route-adapter.js
+new file mode 100644
+index 0000000..9856df0
+--- /dev/null
++++ b/lib/server/http/route-adapter.js
+@@ -0,0 +1,160 @@
++const { Hono } = require("hono");
++const {
++  createRequestFacade,
++  createResponseFacade,
++  kClientIpKey,
++} = require("./request-response");
++const { resolveClientIpFromContext } = require("./client-ip");
++
++const kMethodNames = ["get", "post", "put", "patch", "delete", "all"];
++
++const translateRegExpPath = (pattern) => {
++  const source = pattern.source;
++  for (const prefix of ["openclaw", "assets", "hooks", "webhook", "api"]) {
++    if (source === `^\\/${prefix}\\/.+`) {
++      return { path: `/${prefix}/:path{.+}`, guard: null };
++    }
++  }
++  return null;
++};
++
++const normalizeTransportPath = (path) => {
++  if (typeof path !== "string") return path;
++  return path;
++};
++
++const createRouteAdapter = (options = {}) => {
++  const hono =
++    options instanceof Hono
++      ? options
++      : options.hono instanceof Hono
++        ? options.hono
++        : new Hono();
++  const registerRoute = (method, path, handlers) => {
++    if (Array.isArray(path)) {
++      for (const entry of path) registerRoute(method, entry, handlers);
++      return adapter;
++    }
++
++    if (path instanceof RegExp) {
++      const translated = translateRegExpPath(path);
++      const targetPath = translated ? translated.path : "*";
++      const guard = translated ? null : path;
++      const handler = createHandler(handlers, { guard });
++      hono[method](targetPath, handler);
++      return adapter;
++    }
++
++    const targetPath = normalizeTransportPath(path);
++    hono[method](targetPath, createHandler(handlers));
++    return adapter;
++  };
++
++  const createHandler = (handlers, { guard = null } = {}) => {
++    return async (context, honoNext) => {
++      if (guard && !guard.test(context.req.path)) {
++        return honoNext();
++      }
++
++      const clientIp =
++        context.get(kClientIpKey) || resolveClientIpFromContext(context);
++      context.set(kClientIpKey, clientIp);
++
++      const request = createRequestFacade(context, { clientIp });
++      Object.defineProperty(request, "__context", {
++        value: context,
++        enumerable: false,
++      });
++      const response = createResponseFacade(context);
++      context.set("alphaclaw.onStreamCancel", () => request.emitClose());
++
++      const dispatch = async (index) => {
++        if (index >= handlers.length) {
++          return honoNext();
++        }
++
++        const handler = handlers[index];
++        if (typeof handler !== "function") {
++          return dispatch(index + 1);
++        }
++
++        let nextCalled = false;
++        let nextPromise = null;
++        const next = () => {
++          nextCalled = true;
++          nextPromise = dispatch(index + 1);
++          return nextPromise;
++        };
++
++        const result = handler(request, response, next);
++        const settled =
++          result && typeof result.then === "function" ? await result : result;
++
++        if (settled instanceof Response) return settled;
++        if (response.__hasResponse()) return response.__getResponse();
++        if (nextCalled) return await nextPromise;
++        return undefined;
++      };
++
++      return dispatch(0);
++    };
++  };
++
++  const adapter = {
++    hono,
++    fetch: hono.fetch.bind(hono),
++    use(pathOrHandler, ...rest) {
++      if (typeof pathOrHandler === "function") {
++        if (pathOrHandler.length >= 3) {
++          hono.use("*", createHandler([pathOrHandler]));
++        } else {
++          hono.use("*", pathOrHandler);
++        }
++        return adapter;
++      }
++      const handlers = rest;
++      for (const entry of Array.isArray(pathOrHandler)
++        ? pathOrHandler
++        : [pathOrHandler]) {
++        if (entry instanceof RegExp) {
++          hono.use("*", guardMiddleware(entry, handlers));
++          continue;
++        }
++        const prefix = String(entry || "");
++        hono.all(prefix, createHandler(handlers));
++        const subPath = prefix.endsWith("/") ? `${prefix}*` : `${prefix}/*`;
++        hono.all(subPath, createHandler(handlers));
++      }
++      return adapter;
++    },
++  };
++
++  for (const method of kMethodNames) {
++    adapter[method] = (path, ...handlers) =>
++      registerRoute(method, path, handlers);
++  }
++
++  return adapter;
++};
++
++const guardMiddleware = (pattern, handlers) => async (context, next) => {
++  if (!pattern.test(context.req.path)) return next();
++  const request = createRequestFacade(context);
++  const response = createResponseFacade(context);
++  let calledNext = false;
++  for (const handler of handlers) {
++    const result = handler(request, response, () => {
++      calledNext = true;
++    });
++    if (result && typeof result.then === "function") await result;
++    if (result instanceof Response) return result;
++    if (response.__hasResponse()) return response.__getResponse();
++    if (calledNext) return next();
++  }
++  return next();
++};
++
++module.exports = {
++  createRouteAdapter,
++  translateRegExpPath,
++};
+diff --git a/lib/server/http/sse.js b/lib/server/http/sse.js
+new file mode 100644
+index 0000000..dd484c1
+--- /dev/null
++++ b/lib/server/http/sse.js
+@@ -0,0 +1,52 @@
++const kSseHeaders = {
++  "Content-Type": "text/event-stream",
++  "Cache-Control": "no-cache, no-transform",
++  Connection: "keep-alive",
++  "X-Accel-Buffering": "no",
++};
++
++const openSseStream = (response) => {
++  response.status(200);
++  for (const [key, value] of Object.entries(kSseHeaders)) {
++    response.setHeader(key, value);
++  }
++  response.flushHeaders();
++
++  return {
++    write(chunk) {
++      response.write(chunk);
++    },
++    writeEvent(event, data) {
++      response.write(`event: ${event}\n`);
++      response.write(`data: ${JSON.stringify(data)}\n\n`);
++    },
++    writeComment(comment = "keepalive") {
++      response.write(`: ${comment}\n\n`);
++    },
++    close() {
++      response.end();
++    },
++  };
++};
++
++const writeSseComment = (response, comment = "keepalive") => {
++  response.write(`: ${comment}\n\n`);
++};
++
++const onStreamAbort = (request, handler) => {
++  let called = false;
++  const run = () => {
++    if (called) return;
++    called = true;
++    handler();
++  };
++  request.on("close", run);
++  return run;
++};
++
++module.exports = {
++  kSseHeaders,
++  onStreamAbort,
++  openSseStream,
++  writeSseComment,
++};
+diff --git a/lib/server/http/static-files.js b/lib/server/http/static-files.js
+new file mode 100644
+index 0000000..a9cc968
+--- /dev/null
++++ b/lib/server/http/static-files.js
+@@ -0,0 +1,20 @@
++const path = require("path");
++const { serveStatic } = require("@hono/node-server/serve-static");
++
++const kPublicRoot = path.join(__dirname, "..", "..", "public");
++const kSetupHtmlPath = path.join(kPublicRoot, "setup.html");
++
++const createPublicStaticMiddleware = () => serveStatic({ root: kPublicRoot });
++
++const sendSetupHtml = (response) => response.sendFile(kSetupHtmlPath);
++
++const sendFileDownload = (response, filePath, fileName) =>
++  response.download(filePath, fileName);
++
++module.exports = {
++  createPublicStaticMiddleware,
++  kPublicRoot,
++  kSetupHtmlPath,
++  sendFileDownload,
++  sendSetupHtml,
++};
+diff --git a/lib/server/init/server-lifecycle.js b/lib/server/init/server-lifecycle.js
+index 3c6d936..62628bd 100644
+--- a/lib/server/init/server-lifecycle.js
++++ b/lib/server/init/server-lifecycle.js
+@@ -5,7 +5,7 @@ const startServerLifecycle = ({
+   runOnboardedBootSequence,
+ }) => {
+   server.listen(PORT, "0.0.0.0", () => {
+-    console.log(`[alphaclaw] Express listening on :${PORT}`);
++    console.log(`[alphaclaw] Hono server listening on :${PORT}`);
+     if (isOnboarded()) {
+       runOnboardedBootSequence();
+     } else {
+diff --git a/lib/server/oauth-callback-middleware.js b/lib/server/oauth-callback-middleware.js
+index cc65755..a5f28d3 100644
+--- a/lib/server/oauth-callback-middleware.js
++++ b/lib/server/oauth-callback-middleware.js
+@@ -19,8 +19,12 @@ const createOauthCallbackMiddleware = ({
+     const queryIndex = originalUrl.indexOf("?");
+     const querySuffix = queryIndex >= 0 ? originalUrl.slice(queryIndex) : "";
+     const rewrittenUrl = `/hooks/${callback.hookName}${querySuffix}`;
+-    req.url = rewrittenUrl;
+-    req.originalUrl = rewrittenUrl;
++    if (typeof req.setPath === "function") {
++      req.setPath(`/hooks/${callback.hookName}`, querySuffix);
++    } else {
++      req.url = rewrittenUrl;
++      req.originalUrl = rewrittenUrl;
++    }
+     const webhookToken = String(process.env.WEBHOOK_TOKEN || "").trim();
+     if (webhookToken) {
+       req.headers.authorization = `Bearer ${webhookToken}`;
+diff --git a/lib/server/routes/chat.js b/lib/server/routes/chat.js
+new file mode 100644
+index 0000000..5b46239
+--- /dev/null
++++ b/lib/server/routes/chat.js
+@@ -0,0 +1,37 @@
++const registerChatRoutes = ({
++  app,
++  isAuthorizedRequest,
++  chatWsService,
++}) => {
++  app.get("/api/chat/history", async (req, res) => {
++    const upgradeReq = {
++      headers: req.headers,
++      path: req.path,
++      query: req.query || {},
++    };
++    if (!isAuthorizedRequest(upgradeReq)) {
++      return res.status(401).json({ ok: false, error: "Unauthorized" });
++    }
++    const sessionKey = String(req.query?.sessionKey || "").trim();
++    if (!sessionKey) {
++      return res.status(400).json({ ok: false, error: "sessionKey is required" });
++    }
++    try {
++      const { messages, rawHistory } =
++        await chatWsService.fetchHistory(sessionKey);
++      return res.json({
++        ok: true,
++        sessionKey,
++        messages,
++        rawHistory,
++      });
++    } catch (err) {
++      return res.status(502).json({
++        ok: false,
++        error: err?.message || "Could not load chat history",
++      });
++    }
++  });
++};
++
++module.exports = { registerChatRoutes };
+diff --git a/lib/server/routes/pages.js b/lib/server/routes/pages.js
+index 6295629..be1848d 100644
+--- a/lib/server/routes/pages.js
++++ b/lib/server/routes/pages.js
+@@ -1,4 +1,4 @@
+-const path = require("path");
++const { sendSetupHtml } = require("../http/static-files");
+ 
+ const registerPageRoutes = ({ app, requireAuth, isGatewayRunning }) => {
+   app.get("/health", async (req, res) => {
+@@ -10,11 +10,11 @@ const registerPageRoutes = ({ app, requireAuth, isGatewayRunning }) => {
+   });
+ 
+   app.get("/", requireAuth, (req, res) => {
+-    res.sendFile(path.join(__dirname, "..", "..", "public", "setup.html"));
++    sendSetupHtml(res);
+   });
+ 
+   app.get("/setup", (req, res) => {
+-    res.sendFile(path.join(__dirname, "..", "..", "public", "setup.html"));
++    sendSetupHtml(res);
+   });
+ };
+ 
+diff --git a/lib/server/routes/proxy.js b/lib/server/routes/proxy.js
+index b5abd55..57cee6e 100644
+--- a/lib/server/routes/proxy.js
++++ b/lib/server/routes/proxy.js
+@@ -1,194 +1,12 @@
+-const crypto = require("crypto");
+-const http = require("http");
+-const https = require("https");
+-const { URL } = require("url");
+-
+-const kOpenAiCompatProxyPathPattern =
+-  /^\/v1\/(?:chat\/completions|responses|embeddings|models(?:\/[^/?#]+)?)$/;
+-const kHopByHopResponseHeaders = new Set([
+-  "connection",
+-  "keep-alive",
+-  "proxy-authenticate",
+-  "proxy-authorization",
+-  "te",
+-  "trailer",
+-  "trailers",
+-  "transfer-encoding",
+-  "upgrade",
+-]);
+-// Strip these even though they're not hop-by-hop: an OpenAI-compatible client
+-// (e.g. Sure's external assistant) has no business receiving cookies from the
+-// gateway, and a stray Set-Cookie crossing the AlphaClaw boundary would be a
+-// real leak.
+-const kAlwaysStrippedResponseHeaders = new Set(["set-cookie"]);
+-
+-const extractBearerToken = (authorization) => {
+-  const match = String(authorization || "").match(/^Bearer\s+(.+)$/i);
+-  return match ? match[1].trim() : "";
+-};
+-
+-const getApiAuthThrottleState = (authThrottle, req, now) => {
+-  if (!authThrottle || typeof authThrottle.getOrCreateLoginAttemptState !== "function") {
+-    return null;
+-  }
+-  const clientKey =
+-    typeof authThrottle.getClientKey === "function"
+-      ? authThrottle.getClientKey(req)
+-      : req.ip || req.socket?.remoteAddress || "unknown";
+-  return {
+-    clientKey,
+-    state: authThrottle.getOrCreateLoginAttemptState(clientKey, now),
+-  };
+-};
+-
+-const sendTooManyAuthAttempts = (res, retryAfterSec = 1) => {
+-  const normalizedRetryAfterSec = Math.max(1, Math.ceil(Number(retryAfterSec) || 1));
+-  res.set("Retry-After", String(normalizedRetryAfterSec));
+-  return res.status(429).json({
+-    error: "Too many attempts. Try again shortly.",
+-    retryAfterSec: normalizedRetryAfterSec,
+-  });
+-};
+-
+-const timingSafeStringEqual = (left, right) => {
+-  const leftBuffer = Buffer.from(String(left || ""), "utf8");
+-  const rightBuffer = Buffer.from(String(right || ""), "utf8");
+-  return (
+-    leftBuffer.length === rightBuffer.length &&
+-    crypto.timingSafeEqual(leftBuffer, rightBuffer)
+-  );
+-};
+-
+-const extractBodyBuffer = (req) => {
+-  if (Buffer.isBuffer(req.body)) return req.body;
+-  if (typeof req.body === "string") return Buffer.from(req.body, "utf8");
+-  if (req.body && typeof req.body === "object") {
+-    return Buffer.from(JSON.stringify(req.body), "utf8");
+-  }
+-  return Buffer.alloc(0);
+-};
+-
+-const createGatewayProxyHeaders = ({ reqHeaders, bodyBuffer }) => {
+-  const headers = { ...(reqHeaders || {}) };
+-  delete headers.host;
+-  delete headers.connection;
+-  delete headers["content-length"];
+-  delete headers["transfer-encoding"];
+-  // Express has already parsed and (if gzip/deflate) inflated the body, so
+-  // the bytes we reserialize are plain JSON. Forwarding the original
+-  // Content-Encoding would tell the gateway to gunzip plain text and fail.
+-  delete headers["content-encoding"];
+-  delete headers.cookie;
+-  if (bodyBuffer.length > 0) {
+-    headers["content-length"] = String(bodyBuffer.length);
+-    if (!headers["content-type"]) headers["content-type"] = "application/json";
+-  }
+-  return headers;
+-};
+-
+-const proxyOpenAiCompatRequest = ({
+-  req,
+-  res,
+-  getGatewayUrl,
+-  getGatewayToken,
+-  openAiCompatApiThrottle,
+-}) => {
+-  const now = Date.now();
+-  const throttleState = getApiAuthThrottleState(
+-    openAiCompatApiThrottle,
+-    req,
+-    now,
+-  );
+-  if (
+-    throttleState &&
+-    typeof openAiCompatApiThrottle.evaluateLoginThrottle === "function"
+-  ) {
+-    const throttle = openAiCompatApiThrottle.evaluateLoginThrottle(
+-      throttleState.state,
+-      now,
+-    );
+-    if (throttle.blocked) {
+-      return sendTooManyAuthAttempts(res, throttle.retryAfterSec);
+-    }
+-  }
+-
+-  const bearerToken = extractBearerToken(req.headers.authorization);
+-  const expectedGatewayToken = String(getGatewayToken?.() || "").trim();
+-  if (
+-    !bearerToken ||
+-    !expectedGatewayToken ||
+-    !timingSafeStringEqual(bearerToken, expectedGatewayToken)
+-  ) {
+-    if (
+-      throttleState &&
+-      typeof openAiCompatApiThrottle.recordLoginFailure === "function"
+-    ) {
+-      const failure = openAiCompatApiThrottle.recordLoginFailure(
+-        throttleState.state,
+-        now,
+-      );
+-      if (failure.locked) {
+-        return sendTooManyAuthAttempts(res, failure.retryAfterSec);
+-      }
+-    }
+-    return res.status(401).json({ error: "Unauthorized" });
+-  }
+-  if (
+-    throttleState?.clientKey &&
+-    typeof openAiCompatApiThrottle?.recordLoginSuccess === "function"
+-  ) {
+-    openAiCompatApiThrottle.recordLoginSuccess(throttleState.clientKey);
+-  }
+-
+-  let gateway;
+-  try {
+-    gateway = new URL(getGatewayUrl());
+-  } catch {
+-    return res.status(502).json({ error: "Gateway unavailable" });
+-  }
+-
+-  const bodyBuffer = extractBodyBuffer(req);
+-  const protocolClient = gateway.protocol === "https:" ? https : http;
+-  const headers = createGatewayProxyHeaders({
+-    reqHeaders: req.headers,
+-    bodyBuffer,
+-  });
+-  headers.authorization = `Bearer ${bearerToken}`;
+-
+-  const requestOptions = {
+-    protocol: gateway.protocol,
+-    hostname: gateway.hostname,
+-    port: gateway.port,
+-    method: req.method,
+-    path: req.originalUrl || req.url,
+-    headers,
+-  };
+-
+-  const proxyReq = protocolClient.request(requestOptions, (proxyRes) => {
+-    res.statusCode = proxyRes.statusCode || 502;
+-    for (const [key, value] of Object.entries(proxyRes.headers || {})) {
+-      if (value == null) continue;
+-      const lowerKey = key.toLowerCase();
+-      if (kHopByHopResponseHeaders.has(lowerKey)) continue;
+-      if (kAlwaysStrippedResponseHeaders.has(lowerKey)) continue;
+-      res.setHeader(key, value);
+-    }
+-    proxyRes.pipe(res);
+-  });
+-
+-  proxyReq.on("error", () => {
+-    if (!res.headersSent) {
+-      res.status(502).json({ error: "Gateway unavailable" });
+-    } else {
+-      res.end();
+-    }
+-  });
+-
+-  if (bodyBuffer.length > 0) {
+-    proxyReq.write(bodyBuffer);
+-  }
+-  proxyReq.end();
+-};
++const {
++  createGatewayProxyHeaders,
++  extractBearerToken,
++  kAlwaysStrippedResponseHeaders,
++  kHopByHopResponseHeaders,
++  kOpenAiCompatProxyPathPattern,
++  proxyGatewayRequest,
++  proxyOpenAiCompatRequest,
++} = require("../http/gateway-proxy");
+ 
+ const registerProxyRoutes = ({
+   app,
+@@ -208,38 +26,51 @@ const registerProxyRoutes = ({
+   const kWebhookPathPattern = /^\/webhook\/.+/;
+   const kApiPathPattern = /^\/api\/.+/;
+ 
++  const dispatchGatewayProxy = (req, res) =>
++    proxyGatewayRequest({
++      req,
++      context: req.__context,
++      getGatewayUrl,
++    });
++
+   app.all("/openclaw", requireAuth, (req, res) => {
+     req.url = "/";
+-    proxy.web(req, res, { target: getGatewayUrl() });
++    return dispatchGatewayProxy(req, res);
+   });
+   app.all(kOpenClawPathPattern, requireAuth, (req, res) => {
+     req.url = req.url.replace(/^\/openclaw/, "");
+-    proxy.web(req, res, { target: getGatewayUrl() });
++    return dispatchGatewayProxy(req, res);
+   });
+   app.all(kAssetsPathPattern, requireAuth, (req, res) =>
+-    proxy.web(req, res, { target: getGatewayUrl() }),
++    dispatchGatewayProxy(req, res),
+   );
+ 
+   app.all("/oauth/:id", oauthCallbackMiddleware);
+   app.all(kHooksPathPattern, webhookMiddleware);
+   app.all(kWebhookPathPattern, webhookMiddleware);
+ 
+-  app.all(kOpenAiCompatProxyPathPattern, (req, res) => {
++  const handleV1Request = (req, res) => {
++    if (!kOpenAiCompatProxyPathPattern.test(req.path)) {
++      return res.status(404).json({ error: "Not found" });
++    }
+     if (!isOpenAiCompatApiEnabled()) {
+       return res.status(404).json({ error: "Not found" });
+     }
+     return proxyOpenAiCompatRequest({
+       req,
+-      res,
++      context: req.__context,
+       getGatewayUrl,
+       getGatewayToken,
+       openAiCompatApiThrottle,
+     });
+-  });
++  };
++
++  app.all("/v1", handleV1Request);
++  app.all("/v1/*", handleV1Request);
+ 
+   app.all(kApiPathPattern, (req, res, next) => {
+     if (SETUP_API_PREFIXES.some((p) => req.path.startsWith(p))) return next();
+-    proxy.web(req, res, { target: getGatewayUrl() });
++    return dispatchGatewayProxy(req, res);
+   });
+ };
+ 
+diff --git a/lib/server/routes/system.js b/lib/server/routes/system.js
+index 7285d31..8d42c6a 100644
+--- a/lib/server/routes/system.js
++++ b/lib/server/routes/system.js
+@@ -1,3 +1,4 @@
++const { onStreamAbort, openSseStream } = require("../http/sse");
+ const { buildManagedPaths } = require("../internal-files-migration");
+ const { readOpenclawConfig } = require("../openclaw-config");
+ const { shouldSkipSystemCronInstall } = require("../../cli/git-runtime");
+@@ -614,11 +615,7 @@ const registerSystemRoutes = ({
+   });
+ 
+   app.get("/api/events/status", async (req, res) => {
+-    res.setHeader("Content-Type", "text/event-stream");
+-    res.setHeader("Cache-Control", "no-cache, no-transform");
+-    res.setHeader("Connection", "keep-alive");
+-    res.setHeader("X-Accel-Buffering", "no");
+-    res.flushHeaders?.();
++    const stream = openSseStream(res);
+ 
+     const writeStatusEvent = async () => {
+       try {
+@@ -629,28 +626,25 @@ const registerSystemRoutes = ({
+           typeof doctorService?.buildStatus === "function"
+             ? doctorService.buildStatus()
+             : null;
+-        res.write("event: status\n");
+-        res.write(
+-          `data: ${JSON.stringify({
+-            status,
+-            watchdogStatus,
+-            doctorStatus,
+-            timestamp: new Date().toISOString(),
+-          })}\n\n`,
+-        );
++        stream.writeEvent("status", {
++          status,
++          watchdogStatus,
++          doctorStatus,
++          timestamp: new Date().toISOString(),
++        });
+       } catch {}
+     };
+ 
+     await writeStatusEvent();
+     const statusIntervalId = setInterval(writeStatusEvent, 2000);
+     const keepAliveIntervalId = setInterval(() => {
+-      res.write(": keepalive\n\n");
++      stream.writeComment("keepalive");
+     }, 15000);
+ 
+-    req.on("close", () => {
++    onStreamAbort(req, () => {
+       clearInterval(statusIntervalId);
+       clearInterval(keepAliveIntervalId);
+-      res.end();
++      stream.close();
+     });
+   });
+ 
+diff --git a/lib/server/webhook-middleware.js b/lib/server/webhook-middleware.js
+index 50924f6..cb1eee2 100644
+--- a/lib/server/webhook-middleware.js
++++ b/lib/server/webhook-middleware.js
+@@ -36,9 +36,9 @@ const extractBodyBuffer = (req) => {
+   if (req.body && typeof req.body === "object") {
+     return Buffer.from(JSON.stringify(req.body), "utf8");
+   }
+-  // Express 4 initialized an unparsed body as {}, while Express 5 leaves it
+-  // undefined. Keep the webhook forwarding contract stable for bodyless GET
+-  // hooks that AlphaClaw converts to POST requests.
++  // Unparsed bodies can be undefined for bodyless requests. Keep the webhook
++  // forwarding contract stable for bodyless GET hooks that AlphaClaw
++  // converts to POST requests.
+   return Buffer.from("{}", "utf8");
+ };
+ 
+@@ -222,10 +222,18 @@ const createWebhookMiddleware = ({
+     lastGmailDedupeCleanupAt = nowMs;
+   };
+ 
+-  return (req, res) => {
++  return async (req, res) => {
+     const resolvedGatewayUrl =
+       typeof getGatewayUrl === "function" ? getGatewayUrl() : gatewayUrl;
+-    const gateway = new URL(resolvedGatewayUrl);
++    let gateway;
++    try {
++      gateway = new URL(resolvedGatewayUrl);
++    } catch {
++      return new Response(JSON.stringify({ error: "Gateway unavailable" }), {
++        status: 502,
++        headers: { "content-type": "application/json; charset=utf-8" },
++      });
++    }
+     const protocolClient = gateway.protocol === "https:" ? https : http;
+     const inboundUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+     let tokenFromQuery = "";
+@@ -275,7 +283,10 @@ const createWebhookMiddleware = ({
+           unseenMessages.push(message);
+         }
+         if (unseenMessages.length === 0) {
+-          return res.status(200).json({ ok: true, deduped: true });
++          return new Response(JSON.stringify({ ok: true, deduped: true }), {
++            status: 200,
++            headers: { "content-type": "application/json; charset=utf-8" },
++          });
+         }
+         if (unseenMessages.length < messages.length && parsedBody) {
+           bodyBuffer = buildGmailDedupedBodyBuffer({
+@@ -301,43 +312,132 @@ const createWebhookMiddleware = ({
+       gatewayHeaders["content-type"] = "application/json";
+     }
+ 
+-    const requestOptions = {
+-      protocol: gateway.protocol,
+-      hostname: gateway.hostname,
+-      port: gateway.port,
+-      method: resolveForwardMethod(req.method),
+-      path: resolveGatewayPath({
+-        pathname: inboundUrl.pathname,
+-        search: inboundUrl.search,
+-      }),
+-      headers: gatewayHeaders,
+-    };
+-
+-    const proxyReq = protocolClient.request(requestOptions, (proxyRes) => {
+-      const responseChunks = [];
+-      let responseSize = 0;
+-      let responseTruncated = false;
+-
+-      proxyRes.on("data", (chunk) => {
+-        if (!Buffer.isBuffer(chunk)) return;
+-        if (responseSize >= maxPayloadBytes) {
+-          responseTruncated = true;
+-          return;
+-        }
+-        const remaining = maxPayloadBytes - responseSize;
+-        if (chunk.length > remaining) {
+-          responseChunks.push(chunk.subarray(0, remaining));
+-          responseSize += remaining;
+-          responseTruncated = true;
+-          return;
+-        }
+-        responseChunks.push(chunk);
+-        responseSize += chunk.length;
+-      });
++    return new Promise((resolve) => {
++      let settled = false;
++      const finish = (response) => {
++        if (settled) return;
++        settled = true;
++        resolve(response);
++      };
+ 
+-      proxyRes.on("end", () => {
+-        const responseText = Buffer.concat(responseChunks).toString("utf8");
+-        const gatewayBody = responseTruncated ? `${responseText}\n[TRUNCATED]` : responseText;
++      let proxyReq;
++      try {
++        proxyReq = protocolClient.request(
++          {
++            protocol: gateway.protocol,
++            hostname: gateway.hostname,
++            port: gateway.port,
++            method: resolveForwardMethod(req.method),
++            path: resolveGatewayPath({
++              pathname: inboundUrl.pathname,
++              search: inboundUrl.search,
++            }),
++            headers: gatewayHeaders,
++          },
++          (proxyRes) => {
++            const responseHeaders = new Headers();
++            for (const [key, value] of Object.entries(proxyRes.headers || {})) {
++              if (value === undefined || value === null) continue;
++              if (Array.isArray(value)) {
++                for (const entry of value) {
++                  responseHeaders.append(key, String(entry));
++                }
++              } else {
++                responseHeaders.set(key, String(value));
++              }
++            }
++
++            const responseChunks = [];
++            let responseSize = 0;
++            let responseTruncated = false;
++
++            const bodyStream = new ReadableStream({
++              start(controller) {
++                proxyRes.on("data", (chunk) => {
++                  if (!Buffer.isBuffer(chunk)) return;
++                  if (responseSize < maxPayloadBytes) {
++                    const remaining = maxPayloadBytes - responseSize;
++                    if (chunk.length > remaining) {
++                      responseChunks.push(chunk.subarray(0, remaining));
++                      responseSize += remaining;
++                      responseTruncated = true;
++                    } else {
++                      responseChunks.push(chunk);
++                      responseSize += chunk.length;
++                    }
++                  } else {
++                    responseTruncated = true;
++                  }
++                  controller.enqueue(chunk);
++                });
++
++                proxyRes.on("end", () => {
++                  const responseText = Buffer.concat(responseChunks).toString("utf8");
++                  const gatewayBody = responseTruncated
++                    ? `${responseText}\n[TRUNCATED]`
++                    : responseText;
++                  try {
++                    insertRequest({
++                      hookName,
++                      method: req.method,
++                      headers: sanitizedHeaders,
++                      payload: payload.text,
++                      payloadTruncated: payload.truncated,
++                      payloadSize: bodyBuffer.length,
++                      sourceIp,
++                      gatewayStatus: proxyRes.statusCode || null,
++                      gatewayBody,
++                    });
++                  } catch (err) {
++                    console.error("[webhook] failed to write request log:", err.message);
++                  }
++                  try {
++                    controller.close();
++                  } catch {}
++                });
++
++                proxyRes.on("error", (err) => {
++                  try {
++                    insertRequest({
++                      hookName,
++                      method: req.method,
++                      headers: sanitizedHeaders,
++                      payload: payload.text,
++                      payloadTruncated: payload.truncated,
++                      payloadSize: bodyBuffer.length,
++                      sourceIp,
++                      gatewayStatus: 502,
++                      gatewayBody: err.message || "Gateway unavailable",
++                    });
++                  } catch {}
++                  try {
++                    controller.error(err);
++                  } catch {}
++                });
++              },
++            });
++
++            const status = proxyRes.statusCode || 502;
++            const bodyAllowed = ![204, 205, 304].includes(status);
++            finish(
++              new Response(bodyAllowed ? bodyStream : null, {
++                status,
++                headers: responseHeaders,
++              }),
++            );
++          },
++        );
++      } catch {
++        finish(
++          new Response(JSON.stringify({ error: "Gateway unavailable" }), {
++            status: 502,
++            headers: { "content-type": "application/json; charset=utf-8" },
++          }),
++        );
++        return;
++      }
++
++      proxyReq.on("error", (err) => {
+         try {
+           insertRequest({
+             hookName,
+@@ -347,45 +447,23 @@ const createWebhookMiddleware = ({
+             payloadTruncated: payload.truncated,
+             payloadSize: bodyBuffer.length,
+             sourceIp,
+-            gatewayStatus: proxyRes.statusCode || null,
+-            gatewayBody,
++            gatewayStatus: 502,
++            gatewayBody: err.message || "Gateway unavailable",
+           });
+-        } catch (err) {
+-          console.error("[webhook] failed to write request log:", err.message);
+-        }
++        } catch {}
++        finish(
++          new Response(JSON.stringify({ error: "Gateway unavailable" }), {
++            status: 502,
++            headers: { "content-type": "application/json; charset=utf-8" },
++          }),
++        );
+       });
+ 
+-      res.statusCode = proxyRes.statusCode || 502;
+-      for (const [key, value] of Object.entries(proxyRes.headers || {})) {
+-        if (value == null) continue;
+-        res.setHeader(key, value);
+-      }
+-      proxyRes.pipe(res);
+-    });
+-
+-    proxyReq.on("error", (err) => {
+-      try {
+-        insertRequest({
+-          hookName,
+-          method: req.method,
+-          headers: sanitizedHeaders,
+-          payload: payload.text,
+-          payloadTruncated: payload.truncated,
+-          payloadSize: bodyBuffer.length,
+-          sourceIp,
+-          gatewayStatus: 502,
+-          gatewayBody: err.message || "Gateway unavailable",
+-        });
+-      } catch {}
+-      if (!res.headersSent) {
+-        res.status(502).json({ error: "Gateway unavailable" });
++      if (bodyBuffer.length > 0) {
++        proxyReq.write(bodyBuffer);
+       }
++      proxyReq.end();
+     });
+-
+-    if (bodyBuffer.length > 0) {
+-      proxyReq.write(bodyBuffer);
+-    }
+-    proxyReq.end();
+   };
+ };
+ 
+diff --git a/package-lock.json b/package-lock.json
+index a89d5a2..4c5dcd8 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -7,9 +7,11 @@
+     "": {
+       "name": "@chrysb/alphaclaw",
+       "version": "0.9.35-beta.1",
++      "hasInstallScript": true,
+       "license": "MIT",
+       "dependencies": {
+-        "express": "^5.2.1",
++        "@hono/node-server": "2.1.1",
++        "hono": "4.13.7",
+         "http-proxy": "^1.18.1",
+         "openclaw": "2026.9.3",
+         "ws": "^8.19.0"
+@@ -1166,7 +1168,6 @@
+       "resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz",
+       "integrity": "sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==",
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "@hono/node-server": "^1.19.9 || ^2.0.5",
+         "ajv": "^8.17.1",
+@@ -2098,7 +2099,6 @@
+       "integrity": "sha512-8MVGEFnJIcdGjcbfKmeq8z0pZHH0JlVtoVZH9Q/qwUp6wyFnEJUBMrw9DCaj+ra3vShGmhavjalMIhPNxZAUcw==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "@bcoe/v8-coverage": "^1.0.2",
+         "@vitest/utils": "4.1.11",
+@@ -2225,8 +2225,7 @@
+       "resolved": "https://registry.npmjs.org/@xterm/xterm/-/xterm-5.5.0.tgz",
+       "integrity": "sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==",
+       "dev": true,
+-      "license": "MIT",
+-      "peer": true
++      "license": "MIT"
+     },
+     "node_modules/abort-controller": {
+       "version": "3.0.0",
+@@ -3356,7 +3355,6 @@
+       "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
+       "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "accepts": "^2.0.0",
+         "body-parser": "^2.2.1",
+@@ -3912,7 +3910,6 @@
+       "resolved": "https://registry.npmjs.org/grammy/-/grammy-1.46.0.tgz",
+       "integrity": "sha512-/8Qw+iisrUdOMk+p2mjEHouMm/BBdBEN1DHh16wiTpRUZkxDG3PxexdjCvR+wvK3LWPdrEvnQbdrwpU954sPhg==",
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "@grammyjs/types": "5.0.0",
+         "abort-controller": "^3.0.0",
+@@ -4007,7 +4004,6 @@
+       "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.7.tgz",
+       "integrity": "sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==",
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=16.9.0"
+       }
+@@ -5744,7 +5740,6 @@
+         }
+       ],
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "nanoid": "^3.3.18",
+         "picocolors": "^1.1.1",
+@@ -5894,7 +5889,6 @@
+       "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "funding": {
+         "type": "opencollective",
+         "url": "https://opencollective.com/preact"
+@@ -7048,7 +7042,6 @@
+       "integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=12"
+       },
+@@ -7235,7 +7228,6 @@
+       "resolved": "https://registry.npmjs.org/undici/-/undici-8.10.2.tgz",
+       "integrity": "sha512-/y4/bH9YNU5hi9NIrpOuvGXFcxrj3CMrV+/AYpowAYTpHn8gX/XPFjNy766FPoYY0miQhdW977JFWKGNhBdwyQ==",
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=22.19.0"
+       }
+@@ -7288,7 +7280,6 @@
+       "integrity": "sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "@vitest/expect": "4.1.11",
+         "@vitest/mocker": "4.1.11",
+@@ -7373,448 +7364,6 @@
+         }
+       }
+     },
+-    "node_modules/vitest/node_modules/@esbuild/aix-ppc64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.28.2.tgz",
+-      "integrity": "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==",
+-      "cpu": [
+-        "ppc64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "aix"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/android-arm": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.28.2.tgz",
+-      "integrity": "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg==",
+-      "cpu": [
+-        "arm"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "android"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/android-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.28.2.tgz",
+-      "integrity": "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "android"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/android-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.28.2.tgz",
+-      "integrity": "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "android"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/darwin-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.2.tgz",
+-      "integrity": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "darwin"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/darwin-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.28.2.tgz",
+-      "integrity": "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "darwin"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/freebsd-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.28.2.tgz",
+-      "integrity": "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "freebsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/freebsd-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.28.2.tgz",
+-      "integrity": "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "freebsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-arm": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.28.2.tgz",
+-      "integrity": "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w==",
+-      "cpu": [
+-        "arm"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.2.tgz",
+-      "integrity": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-ia32": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.28.2.tgz",
+-      "integrity": "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ==",
+-      "cpu": [
+-        "ia32"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-loong64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.28.2.tgz",
+-      "integrity": "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ==",
+-      "cpu": [
+-        "loong64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-mips64el": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.28.2.tgz",
+-      "integrity": "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA==",
+-      "cpu": [
+-        "mips64el"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-ppc64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.28.2.tgz",
+-      "integrity": "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ==",
+-      "cpu": [
+-        "ppc64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-riscv64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.28.2.tgz",
+-      "integrity": "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA==",
+-      "cpu": [
+-        "riscv64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-s390x": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.28.2.tgz",
+-      "integrity": "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg==",
+-      "cpu": [
+-        "s390x"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/linux-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.2.tgz",
+-      "integrity": "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "linux"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/netbsd-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.28.2.tgz",
+-      "integrity": "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "netbsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/netbsd-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.28.2.tgz",
+-      "integrity": "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "netbsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/openbsd-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.28.2.tgz",
+-      "integrity": "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "openbsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/openbsd-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.28.2.tgz",
+-      "integrity": "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "openbsd"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/openharmony-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.28.2.tgz",
+-      "integrity": "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "openharmony"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/sunos-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.28.2.tgz",
+-      "integrity": "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "sunos"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/win32-arm64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.28.2.tgz",
+-      "integrity": "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ==",
+-      "cpu": [
+-        "arm64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "win32"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/win32-ia32": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.28.2.tgz",
+-      "integrity": "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA==",
+-      "cpu": [
+-        "ia32"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "win32"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+-    "node_modules/vitest/node_modules/@esbuild/win32-x64": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.2.tgz",
+-      "integrity": "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g==",
+-      "cpu": [
+-        "x64"
+-      ],
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "os": [
+-        "win32"
+-      ],
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+     "node_modules/vitest/node_modules/@vitest/mocker": {
+       "version": "4.1.11",
+       "resolved": "https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.11.tgz",
+@@ -7842,50 +7391,6 @@
+         }
+       }
+     },
+-    "node_modules/vitest/node_modules/esbuild": {
+-      "version": "0.28.2",
+-      "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.2.tgz",
+-      "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==",
+-      "dev": true,
+-      "hasInstallScript": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "peer": true,
+-      "bin": {
+-        "esbuild": "bin/esbuild"
+-      },
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "optionalDependencies": {
+-        "@esbuild/aix-ppc64": "0.28.2",
+-        "@esbuild/android-arm": "0.28.2",
+-        "@esbuild/android-arm64": "0.28.2",
+-        "@esbuild/android-x64": "0.28.2",
+-        "@esbuild/darwin-arm64": "0.28.2",
+-        "@esbuild/darwin-x64": "0.28.2",
+-        "@esbuild/freebsd-arm64": "0.28.2",
+-        "@esbuild/freebsd-x64": "0.28.2",
+-        "@esbuild/linux-arm": "0.28.2",
+-        "@esbuild/linux-arm64": "0.28.2",
+-        "@esbuild/linux-ia32": "0.28.2",
+-        "@esbuild/linux-loong64": "0.28.2",
+-        "@esbuild/linux-mips64el": "0.28.2",
+-        "@esbuild/linux-ppc64": "0.28.2",
+-        "@esbuild/linux-riscv64": "0.28.2",
+-        "@esbuild/linux-s390x": "0.28.2",
+-        "@esbuild/linux-x64": "0.28.2",
+-        "@esbuild/netbsd-arm64": "0.28.2",
+-        "@esbuild/netbsd-x64": "0.28.2",
+-        "@esbuild/openbsd-arm64": "0.28.2",
+-        "@esbuild/openbsd-x64": "0.28.2",
+-        "@esbuild/openharmony-arm64": "0.28.2",
+-        "@esbuild/sunos-x64": "0.28.2",
+-        "@esbuild/win32-arm64": "0.28.2",
+-        "@esbuild/win32-ia32": "0.28.2",
+-        "@esbuild/win32-x64": "0.28.2"
+-      }
+-    },
+     "node_modules/vitest/node_modules/picomatch": {
+       "version": "4.0.7",
+       "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz",
+@@ -7905,7 +7410,6 @@
+       "integrity": "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q==",
+       "dev": true,
+       "license": "MIT",
+-      "peer": true,
+       "dependencies": {
+         "lightningcss": "^1.33.0",
+         "picomatch": "^4.0.5",
+@@ -8122,7 +7626,6 @@
+       "resolved": "https://registry.npmjs.org/ws/-/ws-8.21.3.tgz",
+       "integrity": "sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==",
+       "license": "MIT",
+-      "peer": true,
+       "engines": {
+         "node": ">=10.0.0"
+       },
+@@ -8228,7 +7731,6 @@
+       "resolved": "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz",
+       "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==",
+       "license": "MIT",
+-      "peer": true,
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"
+       }
+diff --git a/package.json b/package.json
+index 4e7a61c..2405173 100644
+--- a/package.json
++++ b/package.json
+@@ -32,7 +32,8 @@
+     "prepack": "npm run build:ui"
+   },
+   "dependencies": {
+-    "express": "^5.2.1",
++    "@hono/node-server": "2.1.1",
++    "hono": "4.13.7",
+     "http-proxy": "^1.18.1",
+     "openclaw": "2026.9.3",
+     "ws": "^8.19.0"
+diff --git a/tests/server/express-runtime-guard.test.js b/tests/server/express-runtime-guard.test.js
+index ce4a680..15f5ff5 100644
+--- a/tests/server/express-runtime-guard.test.js
++++ b/tests/server/express-runtime-guard.test.js
+@@ -1,11 +1,63 @@
+-const expressPackage = require("express/package.json");
++const fs = require("fs");
++const path = require("path");
++
++const kRepoRoot = path.resolve(__dirname, "..", "..");
++
++const readJson = (relativePath) =>
++  JSON.parse(fs.readFileSync(path.join(kRepoRoot, relativePath), "utf8"));
++
++const collectJavaScriptFiles = (relativeDir) => {
++  const absoluteDir = path.join(kRepoRoot, relativeDir);
++  if (!fs.existsSync(absoluteDir)) return [];
++  const files = [];
++  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
++    const relativePath = path.join(relativeDir, entry.name);
++    if (entry.isDirectory()) {
++      files.push(...collectJavaScriptFiles(relativePath));
++    } else if (entry.isFile() && entry.name.endsWith(".js")) {
++      files.push(relativePath);
++    }
++  }
++  return files;
++};
++
++const expressImportPattern =
++  /(?:require\s*\(\s*["']express["']\s*\)|from\s+["']express["']|import\s*\(\s*["']express["']\s*\))/;
+ 
+ describe("server runtime dependency guard", () => {
+-  it("resolves express v5 at top-level runtime", () => {
+-    const majorVersion = Number.parseInt(
+-      String(expressPackage.version || "").split(".")[0] || "0",
+-      10,
++  it("declares Hono and the Node adapter as direct runtime dependencies", () => {
++    const packageJson = readJson("package.json");
++    expect(packageJson.dependencies.hono).toBe("4.13.7");
++    expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.1");
++    expect(packageJson.dependencies.express).toBeUndefined();
++  });
++
++  it("resolves the pinned Hono and Node adapter versions", () => {
++    const honoPackage = readJson("node_modules/hono/package.json");
++    const nodeServerPackage = readJson(
++      "node_modules/@hono/node-server/package.json",
+     );
+-    expect(majorVersion).toBe(5);
++    expect(honoPackage.version).toBe("4.13.7");
++    expect(nodeServerPackage.version).toBe("2.1.1");
++  });
++
++  it("keeps Express out of the migrated production HTTP layer", () => {
++    const files = [
++      "lib/server.js",
++      ...collectJavaScriptFiles("lib/server/http"),
++      ...collectJavaScriptFiles("lib/server/init"),
++      ...collectJavaScriptFiles("lib/server/routes"),
++      "lib/server/webhook-middleware.js",
++      "lib/server/oauth-callback-middleware.js",
++      "lib/server/operation-events.js",
++      "lib/server/watchdog-terminal-ws.js",
++    ];
++
++    const offenders = files.filter((relativePath) => {
++      const source = fs.readFileSync(path.join(kRepoRoot, relativePath), "utf8");
++      return expressImportPattern.test(source);
++    });
++
++    expect(offenders).toEqual([]);
+   });
+ });
+diff --git a/tests/server/helpers/hono-test-app.js b/tests/server/helpers/hono-test-app.js
+new file mode 100644
+index 0000000..e4beb56
+--- /dev/null
++++ b/tests/server/helpers/hono-test-app.js
+@@ -0,0 +1,72 @@
++const { getRequestListener, createAdaptorServer } = require("@hono/node-server");
++const { createHonoApp } = require("../../../lib/server/http/hono-app");
++const {
++  createJsonBodyMiddleware,
++  createRawBodyMiddleware,
++  createV1BodyMiddleware,
++} = require("../../../lib/server/http/body-limits");
++
++const kDefaultJsonLimit = 5 * 1024 * 1024;
++const kDefaultV1Limit = 50 * 1024 * 1024;
++
++const parseByteLimit = (value, fallback) => {
++  if (typeof value === "number" && Number.isFinite(value)) return value;
++  if (typeof value !== "string") return fallback;
++  const match = value.trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(kb|mb|gb|b)?$/);
++  if (!match) return fallback;
++  const amount = Number(match[1]);
++  const unit = match[2] || "b";
++  const multipliers = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
++  return Math.floor(amount * multipliers[unit]);
++};
++
++const createTestHonoApp = ({
++  trustProxy,
++  jsonLimit = kDefaultJsonLimit,
++  v1JsonLimit = kDefaultV1Limit,
++  v1Enabled = true,
++  raw = true,
++} = {}) => {
++  const app = createHonoApp();
++
++  if (trustProxy !== undefined) {
++    app.hono.use("*", async (context, next) => {
++      context.set("alphaclaw.trustProxyHops", trustProxy);
++      await next();
++    });
++  }
++  if (raw) {
++    app.hono.use(
++      "*",
++      createRawBodyMiddleware({ limitBytes: parseByteLimit(jsonLimit, kDefaultJsonLimit) }),
++    );
++  }
++  app.hono.use(
++    "*",
++    createV1BodyMiddleware({
++      limitBytes: parseByteLimit(v1JsonLimit, kDefaultV1Limit),
++      isEnabled: () => v1Enabled,
++    }),
++  );
++  app.hono.use(
++    "*",
++    createJsonBodyMiddleware({
++      limitBytes: parseByteLimit(jsonLimit, kDefaultJsonLimit),
++    }),
++  );
++
++  const listener = getRequestListener(app.fetch);
++  Object.assign(listener, app);
++  return listener;
++};
++
++const createTestServer = (options = {}) => {
++  const app = createTestHonoApp(options);
++  return createAdaptorServer({ fetch: app.fetch });
++};
++
++module.exports = {
++  createTestHonoApp,
++  createTestServer,
++  parseByteLimit,
++};
+diff --git a/tests/server/hono-server-contract.test.js b/tests/server/hono-server-contract.test.js
+new file mode 100644
+index 0000000..d63d7f1
+--- /dev/null
++++ b/tests/server/hono-server-contract.test.js
+@@ -0,0 +1,254 @@
++const http = require("http");
++const zlib = require("zlib");
++const request = require("supertest");
++
++const { createTestHonoApp } = require("./helpers/hono-test-app");
++const { createPublicStaticMiddleware } = require("../../lib/server/http/static-files");
++const { registerAuthRoutes } = require("../../lib/server/routes/auth");
++const { registerPageRoutes } = require("../../lib/server/routes/pages");
++const { registerProxyRoutes } = require("../../lib/server/routes/proxy");
++const { registerChatRoutes } = require("../../lib/server/routes/chat");
++
++const createLoginThrottleMock = () => ({
++  getClientKey: vi.fn(() => "client-key"),
++  getOrCreateLoginAttemptState: vi.fn(() => ({ attempts: 0 })),
++  evaluateLoginThrottle: vi.fn(() => ({ blocked: false, retryAfterSec: 0 })),
++  recordLoginFailure: vi.fn(() => ({ lockMs: 0, locked: false })),
++  recordLoginSuccess: vi.fn(),
++  cleanupLoginAttemptStates: vi.fn(),
++});
++
++const withServer = async (app, run) => {
++  const server = http.createServer(app);
++  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
++  try {
++    return await run(server.address().port);
++  } finally {
++    await new Promise((resolve) => server.close(resolve));
++  }
++};
++
++const httpRequest = ({ port, method = "GET", path, headers = {}, body }) =>
++  new Promise((resolve, reject) => {
++    const req = http.request(
++      { port, host: "127.0.0.1", method, path, headers },
++      (res) => {
++        const chunks = [];
++        res.on("data", (chunk) => chunks.push(chunk));
++        res.on("end", () =>
++          resolve({
++            status: res.statusCode,
++            headers: res.headers,
++            text: Buffer.concat(chunks).toString("utf8"),
++          }),
++        );
++      },
++    );
++    req.on("error", reject);
++    if (body) req.write(body);
++    req.end();
++  });
++
++const buildAuthApp = ({ trustProxy } = {}) => {
++  process.env.SETUP_PASSWORD = "secret";
++  const app = createTestHonoApp({ trustProxy });
++  app.use(createPublicStaticMiddleware());
++  const throttle = createLoginThrottleMock();
++  const { requireAuth } = registerAuthRoutes({
++    app,
++    loginThrottle: throttle,
++  });
++  registerPageRoutes({
++    app,
++    requireAuth,
++    isGatewayRunning: async () => true,
++  });
++  app.get("/api/protected", (req, res) => res.json({ ok: true }));
++  app.get("/setup/protected", (req, res) => res.json({ ok: true }));
++  app.get("/auth/protected", (req, res) => res.json({ ok: true }));
++  return { app, throttle };
++};
++
++describe("Hono server contract", () => {
++  afterEach(() => {
++    delete process.env.SETUP_PASSWORD;
++  });
++
++  it("keeps public routes public and protects exact and nested prefixes", async () => {
++    const { app } = buildAuthApp();
++
++    const health = await request(app).get("/health");
++    expect(health.status).toBe(200);
++    expect(health.body).toEqual({ status: "healthy", gateway: "running" });
++
++    expect((await request(app).get("/login.html")).status).toBe(200);
++    expect((await request(app).get("/")).status).toBe(302);
++    expect((await request(app).get("/setup")).status).toBe(302);
++    expect((await request(app).get("/setup/protected")).status).toBe(302);
++    expect((await request(app).get("/auth/protected")).status).toBe(302);
++
++    const api = await request(app).get("/api/protected");
++    expect(api.status).toBe(401);
++    expect(api.body).toEqual({ error: "Unauthorized" });
++
++    const status = await request(app).get("/api/auth/status");
++    expect(status.status).toBe(200);
++    expect(status.body).toEqual({ authEnabled: true });
++  });
++
++  it("sets a session cookie and rejects query-string setup tokens", async () => {
++    const { app } = buildAuthApp();
++    const login = await request(app)
++      .post("/api/auth/login")
++      .send({ password: "secret" });
++    expect(login.status).toBe(200);
++    expect(login.body).toEqual({ ok: true });
++    const setCookie = login.headers["set-cookie"][0];
++    expect(setCookie).toContain("HttpOnly");
++    expect(setCookie).toContain("SameSite=Lax");
++    expect(setCookie).toContain("Path=/");
++    expect(setCookie).toContain("Max-Age=604800");
++
++    const cookie = setCookie.split(";")[0];
++    expect(
++      (await request(app).get("/api/protected").set("Cookie", cookie)).status,
++    ).toBe(200);
++    expect(
++      (await request(app).get("/setup/protected").set("Cookie", cookie)).status,
++    ).toBe(200);
++
++    const queryToken = cookie.slice("setup_token=".length);
++    const rejected = await request(app).get(
++      `/api/protected?token=${queryToken}`,
++    );
++    expect(rejected.status).toBe(401);
++    expect(rejected.body).toEqual({ error: "Unauthorized" });
++  });
++
++  it("returns JSON 404 for unwhitelisted /v1 paths without contacting the gateway", async () => {
++    const app = createTestHonoApp();
++    const getGatewayUrl = vi.fn(() => "http://127.0.0.1:1");
++    registerProxyRoutes({
++      app,
++      proxy: {},
++      getGatewayUrl,
++      getGatewayToken: () => "gateway-token",
++      isOpenAiCompatApiEnabled: () => true,
++      openAiCompatApiThrottle: null,
++      SETUP_API_PREFIXES: [],
++      requireAuth: (_req, _res, next) => next(),
++      oauthCallbackMiddleware: (_req, res) => res.status(204).end(),
++      webhookMiddleware: (_req, res) => res.status(204).end(),
++    });
++
++    for (const path of ["/v1/unknown", "/v1/models/a/b", "/v1"]) {
++      const response = await request(app).get(path);
++      expect(response.status).toBe(404);
++      expect(response.body).toEqual({ error: "Not found" });
++    }
++    expect(getGatewayUrl).not.toHaveBeenCalled();
++
++    const unauthorized = await request(app)
++      .post("/v1/chat/completions")
++      .send({ model: "openclaw/default" });
++    expect(unauthorized.status).toBe(401);
++    expect(unauthorized.body).toEqual({ error: "Unauthorized" });
++  });
++
++  it("serves GET /api/chat/history with authentication and payload contracts", async () => {
++    const app = createTestHonoApp();
++    const fetchHistory = vi.fn(async (sessionKey) => ({
++      messages: [{ role: "user", content: sessionKey }],
++      rawHistory: { sessionKey },
++    }));
++    registerChatRoutes({
++      app,
++      isAuthorizedRequest: (req) => req.headers.cookie === "setup_token=ok",
++      chatWsService: { fetchHistory },
++    });
++
++    const unauthorized = await request(app).get("/api/chat/history");
++    expect(unauthorized.status).toBe(401);
++    expect(unauthorized.body).toEqual({ ok: false, error: "Unauthorized" });
++
++    const missing = await request(app)
++      .get("/api/chat/history")
++      .set("Cookie", "setup_token=ok");
++    expect(missing.status).toBe(400);
++    expect(missing.body).toEqual({
++      ok: false,
++      error: "sessionKey is required",
++    });
++
++    const success = await request(app)
++      .get("/api/chat/history?sessionKey=agent%3Amain%3Amain")
++      .set("Cookie", "setup_token=ok");
++    expect(success.status).toBe(200);
++    expect(success.body).toEqual({
++      ok: true,
++      sessionKey: "agent:main:main",
++      messages: [{ role: "user", content: "agent:main:main" }],
++      rawHistory: { sessionKey: "agent:main:main" },
++    });
++    expect(fetchHistory).toHaveBeenCalledWith("agent:main:main");
++
++    fetchHistory.mockRejectedValueOnce(new Error("gateway exploded"));
++    const failed = await request(app)
++      .get("/api/chat/history?sessionKey=agent%3Amain%3Amain")
++      .set("Cookie", "setup_token=ok");
++    expect(failed.status).toBe(502);
++    expect(failed.body).toEqual({
++      ok: false,
++      error: "gateway exploded",
++    });
++  });
++
++  it("inflates gzip JSON request bodies before parsing", async () => {
++    const app = createTestHonoApp();
++    app.post("/api/echo", (req, res) => res.json({ body: req.body }));
++
++    const payload = { hello: "world", nested: { ok: true } };
++    const compressed = zlib.gzipSync(JSON.stringify(payload));
++
++    await withServer(app, async (port) => {
++      const response = await httpRequest({
++        port,
++        method: "POST",
++        path: "/api/echo",
++        headers: {
++          "content-type": "application/json",
++          "content-encoding": "gzip",
++          "content-length": String(compressed.length),
++        },
++        body: compressed,
++      });
++      expect(response.status).toBe(200);
++      expect(JSON.parse(response.text)).toEqual({ body: payload });
++    });
++  });
++
++  it("rejects oversized JSON bodies before the handler runs", async () => {
++    const app = createTestHonoApp({ jsonLimit: "1kb" });
++    const handler = vi.fn((req, res) => res.json({ ok: true }));
++    app.post("/api/echo", handler);
++
++    await withServer(app, async (port) => {
++      const body = Buffer.from(
++        JSON.stringify({ value: "x".repeat(4096) }),
++        "utf8",
++      );
++      const response = await httpRequest({
++        port,
++        method: "POST",
++        path: "/api/echo",
++        headers: {
++          "content-type": "application/json",
++          "content-length": String(body.length),
++        },
++        body,
++      });
++      expect(response.status).toBe(413);
++    });
++    expect(handler).not.toHaveBeenCalled();
++  });
++});
+diff --git a/tests/server/oauth-callback-middleware.test.js b/tests/server/oauth-callback-middleware.test.js
+index 3fc2dd0..5849e64 100644
+--- a/tests/server/oauth-callback-middleware.test.js
++++ b/tests/server/oauth-callback-middleware.test.js
+@@ -1,5 +1,5 @@
+ const http = require("http");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { createWebhookMiddleware } = require("../../lib/server/webhook-middleware");
+@@ -42,8 +42,7 @@ const createApp = ({
+   getOauthCallbackById = () => null,
+   markOauthCallbackUsed = () => {},
+ }) => {
+-  const app = express();
+-  app.use(["/hooks", "/webhook"], express.raw({ type: "*/*", limit: "5mb" }));
++  const app = createTestHonoApp();
+   const webhookMiddleware = createWebhookMiddleware({
+     gatewayUrl,
+     insertRequest: () => {},
+diff --git a/tests/server/routes-agents.test.js b/tests/server/routes-agents.test.js
+index cc36434..18075dc 100644
+--- a/tests/server/routes-agents.test.js
++++ b/tests/server/routes-agents.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerAgentRoutes } = require("../../lib/server/routes/agents");
+@@ -90,8 +90,7 @@ const createApp = (
+   restartRequiredState = { markRequired: vi.fn() },
+   operationEvents = null,
+ ) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerAgentRoutes({
+     app,
+     agentsService,
+diff --git a/tests/server/routes-auth.test.js b/tests/server/routes-auth.test.js
+index 979b2cc..43672e9 100644
+--- a/tests/server/routes-auth.test.js
++++ b/tests/server/routes-auth.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ const { createLoginThrottle } = require("../../lib/server/login-throttle");
+ const { kLoginGlobalMaxAttempts } = require("../../lib/server/constants");
+@@ -31,9 +31,7 @@ const createTestApp = ({ setupPassword, loginThrottle, trustProxy } = {}) => {
+   }
+ 
+   const { registerAuthRoutes } = loadAuthRoutes();
+-  const app = express();
+-  if (trustProxy !== undefined) app.set("trust proxy", trustProxy);
+-  app.use(express.json());
++  const app = createTestHonoApp({ trustProxy });
+   const throttle = loginThrottle || createLoginThrottleMock();
+   registerAuthRoutes({ app, loginThrottle: throttle });
+ 
+diff --git a/tests/server/routes-browse.test.js b/tests/server/routes-browse.test.js
+index e8a1027..b152fb2 100644
+--- a/tests/server/routes-browse.test.js
++++ b/tests/server/routes-browse.test.js
+@@ -2,7 +2,7 @@ const fs = require("fs");
+ const os = require("os");
+ const path = require("path");
+ const { execSync } = require("child_process");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerBrowseRoutes } = require("../../lib/server/routes/browse");
+@@ -11,8 +11,7 @@ const createTestRoot = () =>
+   fs.mkdtempSync(path.join(os.tmpdir(), "alphaclaw-browse-test-"));
+ 
+ const createApp = (kRootDir) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerBrowseRoutes({ app, fs, kRootDir });
+   return app;
+ };
+diff --git a/tests/server/routes-codex.test.js b/tests/server/routes-codex.test.js
+index e294d6b..2daf6a0 100644
+--- a/tests/server/routes-codex.test.js
++++ b/tests/server/routes-codex.test.js
+@@ -1,10 +1,9 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ const { registerCodexRoutes } = require("../../lib/server/routes/codex");
+ 
+ const createApp = ({ changed = true } = {}) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   const onAuthChanged = vi.fn();
+   registerCodexRoutes({
+     app,
+diff --git a/tests/server/routes-cron.test.js b/tests/server/routes-cron.test.js
+index 93e004a..ad8292a 100644
+--- a/tests/server/routes-cron.test.js
++++ b/tests/server/routes-cron.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerCronRoutes } = require("../../lib/server/routes/cron");
+@@ -77,8 +77,7 @@ const createDeps = () => ({
+ });
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerCronRoutes({
+     app,
+     ...deps,
+diff --git a/tests/server/routes-doctor.test.js b/tests/server/routes-doctor.test.js
+index 9067a69..45145eb 100644
+--- a/tests/server/routes-doctor.test.js
++++ b/tests/server/routes-doctor.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerDoctorRoutes } = require("../../lib/server/routes/doctor");
+@@ -48,8 +48,7 @@ const createDoctorService = () => ({
+ });
+ 
+ const createApp = (doctorService) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerDoctorRoutes({
+     app,
+     requireAuth: (req, res, next) => next(),
+diff --git a/tests/server/routes-models.test.js b/tests/server/routes-models.test.js
+index e600877..fc74a90 100644
+--- a/tests/server/routes-models.test.js
++++ b/tests/server/routes-models.test.js
+@@ -1,7 +1,7 @@
+ const fs = require("fs");
+ const os = require("os");
+ const path = require("path");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const {
+@@ -53,8 +53,7 @@ const createModelDeps = () => {
+ };
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   const tempRoot = fs.mkdtempSync(
+     path.join(os.tmpdir(), "alphaclaw-routes-models-"),
+   );
+diff --git a/tests/server/routes-nodes.test.js b/tests/server/routes-nodes.test.js
+index 25e448e..62d8f8e 100644
+--- a/tests/server/routes-nodes.test.js
++++ b/tests/server/routes-nodes.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerNodeRoutes } = require("../../lib/server/routes/nodes");
+@@ -34,8 +34,7 @@ const withNodeTimeoutEnv = async (values, fn) => {
+ };
+ 
+ const createApp = ({ clawCmd, fsModule } = {}) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerNodeRoutes({
+     app,
+     clawCmd,
+diff --git a/tests/server/routes-onboarding.test.js b/tests/server/routes-onboarding.test.js
+index 666f481..3e911c2 100644
+--- a/tests/server/routes-onboarding.test.js
++++ b/tests/server/routes-onboarding.test.js
+@@ -1,7 +1,7 @@
+ const fs = require("fs");
+ const path = require("path");
+ const os = require("os");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerOnboardingRoutes } = require("../../lib/server/routes/onboarding");
+@@ -76,8 +76,7 @@ const createBaseDeps = ({ onboarded = false, hasCodexOauth = false } = {}) => {
+ };
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerOnboardingRoutes({ app, ...deps });
+   return app;
+ };
+diff --git a/tests/server/routes-pairings.test.js b/tests/server/routes-pairings.test.js
+index c4161da..b8f16d4 100644
+--- a/tests/server/routes-pairings.test.js
++++ b/tests/server/routes-pairings.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const fs = require("fs");
+ const os = require("os");
+ const path = require("path");
+@@ -14,8 +14,7 @@ const createApp = ({
+   approveDevicePairingDirect,
+   openclawDir = "/tmp/openclaw",
+ }) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerPairingRoutes({
+     app,
+     clawCmd,
+diff --git a/tests/server/routes-proxy.test.js b/tests/server/routes-proxy.test.js
+index 3e7d611..03037dd 100644
+--- a/tests/server/routes-proxy.test.js
++++ b/tests/server/routes-proxy.test.js
+@@ -1,10 +1,15 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const http = require("http");
+ const zlib = require("zlib");
+ const request = require("supertest");
+ 
+ const { createLoginThrottle } = require("../../lib/server/login-throttle");
+-const { registerProxyRoutes } = require("../../lib/server/routes/proxy");
++const {
++  registerProxyRoutes,
++} = require("../../lib/server/routes/proxy");
++const {
++  proxyGatewayRequest,
++} = require("../../lib/server/http/gateway-proxy");
+ 
+ const listen = (server) =>
+   new Promise((resolve) => {
+@@ -26,15 +31,11 @@ const createApp = ({
+   openAiCompatApiEnabled = true,
+   openAiCompatApiThrottle = null,
+ }) => {
+-  const app = express();
+-  const openAiParser = express.json({ limit: openAiJsonLimit });
+-  app.use("/v1", (req, res, next) => {
+-    if (!openAiCompatApiEnabled) {
+-      return res.status(404).json({ error: "Not found" });
+-    }
+-    return openAiParser(req, res, next);
++  const app = createTestHonoApp({
++    jsonLimit: globalJsonLimit,
++    v1JsonLimit: openAiJsonLimit,
++    v1Enabled: openAiCompatApiEnabled,
+   });
+-  app.use(express.json({ limit: globalJsonLimit }));
+   registerProxyRoutes({
+     app,
+     proxy: {
+@@ -388,4 +389,53 @@ describe("server/routes/proxy OpenAI compatibility", () => {
+     expect(res.status).toBe(200);
+     expect(seenUrls).toEqual(["/v1/models/openclaw%2Fdefault"]);
+   });
++
++  it("streams non-v1 gateway request bodies without a 50 MB cap", async () => {
++    const kChunk = Buffer.alloc(64 * 1024, 0x61);
++    const kTotalBytes = 51 * 1024 * 1024;
++    let receivedBytes = 0;
++    upstream = http.createServer((req, res) => {
++      req.on("data", (chunk) => {
++        receivedBytes += chunk.length;
++      });
++      req.on("end", () => {
++        res.writeHead(200, { "content-type": "application/json" });
++        res.end(JSON.stringify({ receivedBytes }));
++      });
++    });
++    const port = await listen(upstream);
++
++    let sentBytes = 0;
++    const bodyStream = new ReadableStream({
++      pull(controller) {
++        if (sentBytes >= kTotalBytes) {
++          controller.close();
++          return;
++        }
++        const size = Math.min(kChunk.length, kTotalBytes - sentBytes);
++        sentBytes += size;
++        controller.enqueue(kChunk.subarray(0, size));
++      },
++    });
++
++    const response = await proxyGatewayRequest({
++      req: {
++        method: "POST",
++        url: "/openclaw/upload",
++        headers: {
++          host: "alphaclaw.example.com",
++          "content-type": "application/octet-stream",
++          "content-length": String(kTotalBytes),
++        },
++      },
++      context: {
++        get: () => undefined,
++        req: { raw: { body: bodyStream } },
++      },
++      getGatewayUrl: () => `http://127.0.0.1:${port}`,
++    });
++
++    expect(response.status).toBe(200);
++    expect(await response.json()).toEqual({ receivedBytes: kTotalBytes });
++  });
+ });
+diff --git a/tests/server/routes-system.test.js b/tests/server/routes-system.test.js
+index 386d417..a955a3a 100644
+--- a/tests/server/routes-system.test.js
++++ b/tests/server/routes-system.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerSystemRoutes } = require("../../lib/server/routes/system");
+@@ -102,8 +102,7 @@ const createSystemDeps = () => {
+ };
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerSystemRoutes({
+     app,
+     ...deps,
+diff --git a/tests/server/routes-usage.test.js b/tests/server/routes-usage.test.js
+index 7ad9cbe..ae7b6fb 100644
+--- a/tests/server/routes-usage.test.js
++++ b/tests/server/routes-usage.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const topicRegistry = require("../../lib/server/topic-registry");
+@@ -57,8 +57,7 @@ const createDeps = () => ({
+ });
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerUsageRoutes({
+     app,
+     ...deps,
+diff --git a/tests/server/routes-watchdog-test-notification.test.js b/tests/server/routes-watchdog-test-notification.test.js
+index 7af93d4..c784a73 100644
+--- a/tests/server/routes-watchdog-test-notification.test.js
++++ b/tests/server/routes-watchdog-test-notification.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerWatchdogRoutes } = require("../../lib/server/routes/watchdog");
+@@ -31,8 +31,7 @@ const createDeps = (overrides = {}) => {
+ };
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerWatchdogRoutes({ app, ...deps });
+   return app;
+ };
+diff --git a/tests/server/routes-watchdog.test.js b/tests/server/routes-watchdog.test.js
+index b718089..ff6cc58 100644
+--- a/tests/server/routes-watchdog.test.js
++++ b/tests/server/routes-watchdog.test.js
+@@ -1,4 +1,4 @@
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { registerWatchdogRoutes } = require("../../lib/server/routes/watchdog");
+@@ -24,8 +24,7 @@ const createDeps = () => {
+ };
+ 
+ const createApp = (deps) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerWatchdogRoutes({
+     app,
+     ...deps,
+diff --git a/tests/server/routes-webhooks.test.js b/tests/server/routes-webhooks.test.js
+index a02f0c1..1f03bbb 100644
+--- a/tests/server/routes-webhooks.test.js
++++ b/tests/server/routes-webhooks.test.js
+@@ -1,5 +1,5 @@
+ const path = require("path");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const {
+@@ -38,8 +38,7 @@ const createMemoryFs = (initialFiles = {}) => {
+ };
+ 
+ const createApp = ({ fs, constants, webhooksDb }) => {
+-  const app = express();
+-  app.use(express.json());
++  const app = createTestHonoApp();
+   registerWebhookRoutes({
+     app,
+     fs,
+diff --git a/tests/server/server-lifecycle.test.js b/tests/server/server-lifecycle.test.js
+new file mode 100644
+index 0000000..d24bccc
+--- /dev/null
++++ b/tests/server/server-lifecycle.test.js
+@@ -0,0 +1,99 @@
++const {
++  registerServerShutdown,
++  startServerLifecycle,
++} = require("../../lib/server/init/server-lifecycle");
++
++const flush = () => new Promise((resolve) => setImmediate(resolve));
++
++describe("server lifecycle", () => {
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  it("listens on the configured port and runs onboarding when onboarded", () => {
++    const runOnboardedBootSequence = vi.fn();
++    const server = { listen: vi.fn((_port, _host, callback) => callback()) };
++    const log = vi.spyOn(console, "log").mockImplementation(() => {});
++
++    startServerLifecycle({
++      server,
++      PORT: 4321,
++      isOnboarded: () => true,
++      runOnboardedBootSequence,
++    });
++
++    expect(server.listen).toHaveBeenCalledWith(
++      4321,
++      "0.0.0.0",
++      expect.any(Function),
++    );
++    expect(runOnboardedBootSequence).toHaveBeenCalledTimes(1);
++    expect(log).toHaveBeenCalledWith(
++      expect.stringContaining(":4321"),
++    );
++  });
++
++  it("logs the waiting message without booting when not onboarded", () => {
++    const runOnboardedBootSequence = vi.fn();
++    const server = { listen: vi.fn((_port, _host, callback) => callback()) };
++    const log = vi.spyOn(console, "log").mockImplementation(() => {});
++
++    startServerLifecycle({
++      server,
++      PORT: 3000,
++      isOnboarded: () => false,
++      runOnboardedBootSequence,
++    });
++
++    expect(runOnboardedBootSequence).not.toHaveBeenCalled();
++    expect(log).toHaveBeenCalledWith(
++      expect.stringContaining("Awaiting onboarding"),
++    );
++  });
++
++  it("stops the Gmail watch service and disposes the terminal on SIGTERM and SIGINT", async () => {
++    const listeners = new Map();
++    vi.spyOn(process, "on").mockImplementation((event, handler) => {
++      listeners.set(event, handler);
++      return process;
++    });
++    const gmailWatchService = { stop: vi.fn(async () => {}) };
++    const watchdogTerminal = { disposeSession: vi.fn() };
++
++    registerServerShutdown({ gmailWatchService, watchdogTerminal });
++
++    expect(typeof listeners.get("SIGTERM")).toBe("function");
++    expect(typeof listeners.get("SIGINT")).toBe("function");
++
++    listeners.get("SIGTERM")();
++    await flush();
++    expect(gmailWatchService.stop).toHaveBeenCalledTimes(1);
++    expect(watchdogTerminal.disposeSession).toHaveBeenCalledTimes(1);
++
++    listeners.get("SIGINT")();
++    await flush();
++    expect(gmailWatchService.stop).toHaveBeenCalledTimes(2);
++    expect(watchdogTerminal.disposeSession).toHaveBeenCalledTimes(2);
++  });
++
++  it("disposes the terminal even when Gmail shutdown rejects", async () => {
++    const listeners = new Map();
++    vi.spyOn(process, "on").mockImplementation((event, handler) => {
++      listeners.set(event, handler);
++      return process;
++    });
++    const gmailWatchService = {
++      stop: vi.fn(async () => {
++        throw new Error("stop failed");
++      }),
++    };
++    const watchdogTerminal = { disposeSession: vi.fn() };
++
++    registerServerShutdown({ gmailWatchService, watchdogTerminal });
++    listeners.get("SIGTERM")();
++    await flush();
++
++    expect(gmailWatchService.stop).toHaveBeenCalledTimes(1);
++    expect(watchdogTerminal.disposeSession).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/tests/server/webhook-middleware.test.js b/tests/server/webhook-middleware.test.js
+index 66e7192..e61713f 100644
+--- a/tests/server/webhook-middleware.test.js
++++ b/tests/server/webhook-middleware.test.js
+@@ -1,5 +1,5 @@
+ const http = require("http");
+-const express = require("express");
++const { createTestHonoApp } = require("./helpers/hono-test-app");
+ const request = require("supertest");
+ 
+ const { createWebhookMiddleware } = require("../../lib/server/webhook-middleware");
+@@ -31,10 +31,14 @@ const createGatewaySpyServer = async () => {
+   return { server, calls, gatewayUrl };
+ };
+ 
+-const createHookApp = ({ gatewayUrl, insertRequest = () => {} }) => {
+-  const app = express();
+-  app.use(["/hooks", "/webhook"], express.raw({ type: "*/*", limit: "5mb" }));
+-  app.use(
++const createHookApp = ({
++  gatewayUrl,
++  insertRequest = () => {},
++  appOptions = {},
++}) => {
++  const app = createTestHonoApp(appOptions);
++  app.all(
++    "*",
+     createWebhookMiddleware({
+       gatewayUrl,
+       insertRequest,
+@@ -44,6 +48,37 @@ const createHookApp = ({ gatewayUrl, insertRequest = () => {} }) => {
+   return app;
+ };
+ 
++const withServer = async (app, run) => {
++  const server = http.createServer(app);
++  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
++  try {
++    return await run(server.address().port);
++  } finally {
++    await new Promise((resolve) => server.close(resolve));
++  }
++};
++
++const httpRequest = ({ port, method, path, headers = {}, body }) =>
++  new Promise((resolve, reject) => {
++    const req = http.request(
++      { port, host: "127.0.0.1", method, path, headers },
++      (res) => {
++        const chunks = [];
++        res.on("data", (chunk) => chunks.push(chunk));
++        res.on("end", () =>
++          resolve({
++            status: res.statusCode,
++            headers: res.headers,
++            text: Buffer.concat(chunks).toString("utf8"),
++          }),
++        );
++      },
++    );
++    req.on("error", reject);
++    if (body) req.write(body);
++    req.end();
++  });
++
+ describe("server/webhook-middleware", () => {
+   it("maps hook query params into forwarded JSON body", async () => {
+     const { server, calls, gatewayUrl } = await createGatewaySpyServer();
+@@ -67,6 +102,64 @@ describe("server/webhook-middleware", () => {
+     }
+   });
+ 
++  it("forwards raw GET hook bodies as a POST payload", async () => {
++    const { server, calls, gatewayUrl } = await createGatewaySpyServer();
++    const app = createHookApp({ gatewayUrl });
++
++    try {
++      const body = Buffer.from(JSON.stringify({ event: "signed" }), "utf8");
++      const response = await withServer(app, (port) =>
++        httpRequest({
++          port,
++          method: "GET",
++          path: "/hooks/schwab-oauth?session=SESSION_ID",
++          headers: {
++            "content-type": "application/json",
++            "content-length": String(body.length),
++          },
++          body,
++        }),
++      );
++
++      expect(response.status).toBe(200);
++      expect(calls).toHaveLength(1);
++      expect(calls[0].method).toBe("POST");
++      expect(calls[0].headers["content-type"]).toContain("application/json");
++      expect(JSON.parse(calls[0].bodyText)).toEqual({
++        session: "SESSION_ID",
++        event: "signed",
++      });
++    } finally {
++      await new Promise((resolve) => server.close(resolve));
++    }
++  });
++
++  it("rejects oversized raw GET hook bodies before forwarding", async () => {
++    const { server, calls, gatewayUrl } = await createGatewaySpyServer();
++    const app = createHookApp({ gatewayUrl, appOptions: { jsonLimit: "1kb" } });
++
++    try {
++      const body = Buffer.alloc(4096, 0x61);
++      const response = await withServer(app, (port) =>
++        httpRequest({
++          port,
++          method: "GET",
++          path: "/hooks/schwab-oauth",
++          headers: {
++            "content-type": "application/octet-stream",
++            "content-length": String(body.length),
++          },
++          body,
++        }),
++      );
++
++      expect(response.status).toBe(413);
++      expect(calls).toHaveLength(0);
++    } finally {
++      await new Promise((resolve) => server.close(resolve));
++    }
++  });
++
+   it("keeps explicit JSON body values over query params", async () => {
+     const { server, calls, gatewayUrl } = await createGatewaySpyServer();
+     const app = createHookApp({ gatewayUrl });

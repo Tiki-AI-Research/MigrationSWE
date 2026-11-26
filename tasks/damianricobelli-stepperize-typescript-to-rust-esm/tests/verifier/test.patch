@@ -1,0 +1,5509 @@
+diff --git a/tests/shared/batches/BATCH-DIFFERENTIAL-0001/observations.mjs b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/observations.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-DIFFERENTIAL-0001/observations.mjs
+@@ -0,0 +1,375 @@
++import { execFile } from "node:child_process";
++import { createHash } from "node:crypto";
++import { readFile } from "node:fs/promises";
++import { resolve } from "node:path";
++import { promisify } from "node:util";
++import {
++	emptySteps,
++	issueSchema,
++	labeledSteps,
++	makeSchema,
++	parsedSchema,
++	schemaSteps,
++	steps,
++	twoSteps,
++} from "../../../fixtures/batches/BATCH-DIFFERENTIAL-0001/steps.mjs";
++
++const execFileAsync = promisify(execFile);
++
++export const publicFunctions = [
++	"createStepMap",
++	"getInitialStepIndex",
++	"parseStep",
++	"getInitialData",
++	"validateStep",
++	"getStepStatus",
++	"getStepStatuses",
++	"matchStep",
++];
++
++export const publicTypes = ["Step", "StepMap", "StepStatus", "ValidationResult", "StandardSchemaV1", "Get"];
++
++function norm(value) {
++	if (value === undefined) return "<undefined>";
++	if (value === null) return null;
++	if (Array.isArray(value)) return value.map(norm);
++	if (typeof value === "object") {
++		const result = {};
++		for (const key of Object.keys(value).sort()) {
++			result[key] = norm(value[key]);
++		}
++		return result;
++	}
++	return value;
++}
++
++function idOf(step) {
++	return step === undefined ? "<undefined>" : step.id;
++}
++
++async function readText(path) {
++	return readFile(path, "utf8");
++}
++
++async function declarationNames(root) {
++	const declaration = await readText(resolve(root, "packages/core/dist/index.d.ts"));
++	const typesSource = await readText(resolve(root, "packages/core/src/types.ts"));
++	const exported = publicTypes.filter((name) => new RegExp(`\\b${name}\\b`).test(declaration));
++	const declared = publicTypes.filter((name) =>
++		new RegExp(`(?:type|interface|namespace)\\s+${name}\\b`).test(typesSource),
++	);
++	return { exported, declared };
++}
++
++async function catchError(operation) {
++	try {
++		await operation();
++		return undefined;
++	} catch (error) {
++		return error;
++	}
++}
++
++function catchSync(operation) {
++	try {
++		operation();
++		return undefined;
++	} catch (error) {
++		return error;
++	}
++}
++
++export async function collectRuntimeObservations(core, root) {
++	const result = {};
++
++	result["DIFF-001"] = (() => {
++		const map = core.createStepMap([{ id: "a" }]);
++		return norm({
++			createStepMapIsFunction: typeof core.createStepMap === "function",
++			ids: map.ids,
++		});
++	})();
++
++	result["DIFF-002"] = norm(
++		Object.fromEntries(publicFunctions.map((name) => [name, typeof core[name] === "function"])),
++	);
++
++	result["DIFF-003"] = await (async () => {
++		const pending = core.validateStep([{ id: "a" }], "a", { x: 1 });
++		const thenable = typeof pending?.then === "function";
++		const resolved = await pending;
++		return norm({ thenable, result: resolved });
++	})();
++
++	result["DIFF-004"] = (() => {
++		const map = core.createStepMap([{ id: "a" }]);
++		return norm({
++			stepsIsArray: Array.isArray(map.steps),
++			idsIsArray: Array.isArray(map.ids),
++			functions: [
++				"get",
++				"at",
++				"indexOf",
++				"has",
++				"first",
++				"last",
++				"next",
++				"prev",
++				"neighbors",
++			].filter((name) => typeof map[name] === "function"),
++			valueTypes: { steps: typeof map.steps, ids: typeof map.ids },
++		});
++	})();
++
++	result["DIFF-005"] = norm(await declarationNames(root));
++
++	result["DIFF-006"] = await (async () => {
++		const manifest = JSON.parse(await readText(resolve(root, "packages/core/package.json")));
++		const rootExport = manifest.exports?.["."] ?? {};
++		const declaration = await readText(resolve(root, "packages/core/dist/index.d.ts"));
++		return norm({
++			type: manifest.type,
++			main: manifest.main,
++			module: manifest.module,
++			types: manifest.types,
++			import: rootExport.import,
++			exportTypes: rootExport.types,
++			declarationPresent: declaration.length > 0,
++		});
++	})();
++
++	result["DIFF-007"] = (() => {
++		const map = core.createStepMap(steps);
++		return norm({ ids: map.ids, steps: map.steps.map((step) => step.id) });
++	})();
++
++	result["DIFF-008"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ b: idOf(map.get("b")), missing: idOf(map.get("missing")) });
++	})();
++
++	result["DIFF-009"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ at1: idOf(map.at(1)), at2: idOf(map.at(2)) });
++	})();
++
++	result["DIFF-010"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ b: map.indexOf("b"), missing: map.indexOf("missing") });
++	})();
++
++	result["DIFF-011"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ a: map.has("a"), missing: map.has("missing") });
++	})();
++
++	result["DIFF-012"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		const empty = core.createStepMap(emptySteps);
++		return norm({
++			first: idOf(map.first()),
++			last: idOf(map.last()),
++			emptyFirst: idOf(empty.first()),
++			emptyLast: idOf(empty.last()),
++		});
++	})();
++
++	result["DIFF-013"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ a: idOf(map.next("a")), b: idOf(map.next("b")), missing: idOf(map.next("missing")) });
++	})();
++
++	result["DIFF-014"] = (() => {
++		const map = core.createStepMap(twoSteps);
++		return norm({ b: idOf(map.prev("b")), a: idOf(map.prev("a")), missing: idOf(map.prev("missing")) });
++	})();
++
++	result["DIFF-015"] = (() => {
++		const map = core.createStepMap(steps);
++		return norm({
++			b: { prev: idOf(map.neighbors("b").prev), next: idOf(map.neighbors("b").next) },
++			a: { prev: idOf(map.neighbors("a").prev), next: idOf(map.neighbors("a").next) },
++			c: { prev: idOf(map.neighbors("c").prev), next: idOf(map.neighbors("c").next) },
++			missing: {
++				prev: idOf(map.neighbors("missing").prev),
++				next: idOf(map.neighbors("missing").next),
++			},
++		});
++	})();
++
++	result["DIFF-016"] = norm({
++		b: core.getInitialStepIndex(twoSteps, "b"),
++		omitted: core.getInitialStepIndex(twoSteps),
++		unknown: core.getInitialStepIndex(twoSteps, "missing"),
++	});
++
++	result["DIFF-017"] = norm({
++		b: core.parseStep(twoSteps, "b"),
++		missing: core.parseStep(twoSteps, "missing"),
++		null: core.parseStep(twoSteps, null),
++		undefined: core.parseStep(twoSteps, undefined),
++		number: core.parseStep(twoSteps, 42),
++	});
++
++	result["DIFF-018"] = (() => {
++		const empty = core.getInitialData();
++		const data = { a: 1, b: 2 };
++		const copy = core.getInitialData(data);
++		return norm({
++			emptyKeys: Object.keys(empty),
++			entries: copy,
++			sameReference: copy === data,
++		});
++	})();
++
++	result["DIFF-019"] = norm({
++		a: core.getStepStatus(steps, 1, "a"),
++		b: core.getStepStatus(steps, 1, "b"),
++		c: core.getStepStatus(steps, 1, "c"),
++	});
++
++	result["DIFF-020"] = norm(core.getStepStatuses(steps, 1));
++
++	result["DIFF-021"] = await (async () => {
++		const error = await catchError(() => core.validateStep([{ id: "a" }], "missing", null));
++		return norm({
++			isError: error instanceof Error,
++			hasNotFound: error instanceof Error && /not found/.test(error.message),
++		});
++	})();
++
++	result["DIFF-022"] = norm(await core.validateStep([{ id: "a" }], "a", { x: 1 }));
++
++	result["DIFF-023"] = await (async () => {
++		const parsed = await core.validateStep(schemaSteps, "parsed", "value");
++		const issues = await core.validateStep(schemaSteps, "issues", "value");
++		return norm({ parsed, issues });
++	})();
++
++	result["DIFF-024"] = (() => {
++		const calls = [];
++		const matched = core.matchStep(labeledSteps, "b", {
++			a: (step) => {
++				calls.push(`a:${step.id}`);
++				return step.label;
++			},
++			b: (step) => {
++				calls.push(`b:${step.id}`);
++				return step.label;
++			},
++		});
++		return norm({ calls, matched });
++	})();
++
++	result["DIFF-025"] = (() => {
++		const missing = catchSync(() => core.matchStep(labeledSteps, "missing", {}));
++		const noHandler = catchSync(() => core.matchStep(labeledSteps, "b", { a: (step) => step.id }));
++		return norm({
++			missingIsError: missing instanceof Error,
++			missingHasNotFound: missing instanceof Error && /not found/.test(missing.message),
++			noHandlerIsError: noHandler instanceof Error,
++			noHandlerHasMessage: noHandler instanceof Error && /No match handler/.test(noHandler.message),
++		});
++	})();
++
++	result["DIFF-026"] = (() => {
++		const calls = [];
++		const handlers = {
++			a: () => calls.push("a"),
++			b: () => calls.push("b"),
++		};
++		const missing = catchSync(() => core.matchStep(labeledSteps, "missing", handlers));
++		const noHandler = catchSync(() => core.matchStep(labeledSteps, "b", { a: () => calls.push("a") }));
++		return norm({
++			missingThrew: missing instanceof Error,
++			noHandlerThrew: noHandler instanceof Error,
++			calls,
++		});
++	})();
++
++	result["DIFF-027"] = await (async () => {
++		const names = await declarationNames(root);
++		const map = core.createStepMap(steps);
++		const statuses = core.getStepStatuses(steps, 0);
++		return norm({
++			functions: publicFunctions.filter((name) => typeof core[name] === "function"),
++			types: names.exported,
++			mapIds: map.ids,
++			statuses,
++		});
++	})();
++
++	result["DIFF-032"] = await (async () => {
++		const source = await readText(resolve(root, "packages/core/src/tests/utils.test.ts"));
++		return norm({
++			testFilePresent: source.length > 0,
++			skipped: (source.match(/\.(?:skip|todo)\b/g) ?? []).length,
++			focused: (source.match(/\.only\b/g) ?? []).length,
++			hasAssertions: /expect\s*\(/.test(source),
++		});
++	})();
++
++	return result;
++}
++
++async function gitLines(root, args) {
++	const { stdout } = await execFileAsync("git", args, { cwd: root });
++	return stdout
++		.split("\n")
++		.map((line) => line.trim())
++		.filter(Boolean);
++}
++
++const allowedRootConfig = new Set([
++	"package.json",
++	"pnpm-lock.yaml",
++	"pnpm-workspace.yaml",
++	"turbo.json",
++	".npmrc",
++	"biome.json",
++]);
++
++function inScope(path) {
++	return path.startsWith("packages/core/") || allowedRootConfig.has(path);
++}
++
++export async function collectStructuralObservations(root, mode) {
++	if (mode === "source") {
++		return {
++			"DIFF-028": norm({ outOfScope: [] }),
++			"DIFF-029": await typesFingerprint(root),
++			"DIFF-030": norm({ reactChanges: [] }),
++			"DIFF-031": norm({ docsChanges: [] }),
++		};
++	}
++
++	const [tracked, untracked] = await Promise.all([
++		gitLines(root, ["diff", "--name-only", "HEAD"]),
++		gitLines(root, ["ls-files", "--others", "--exclude-standard"]),
++	]);
++	const changed = [...new Set([...tracked, ...untracked])].sort();
++	const outOfScope = changed.filter((path) => !inScope(path));
++	const reactChanges = changed.filter((path) => path.startsWith("packages/react/"));
++	const docsChanges = changed.filter((path) => path.startsWith("apps/docs/"));
++
++	return {
++		"DIFF-028": norm({ outOfScope }),
++		"DIFF-029": await typesFingerprint(root),
++		"DIFF-030": norm({ reactChanges }),
++		"DIFF-031": norm({ docsChanges }),
++	};
++}
++
++async function typesFingerprint(root) {
++	const source = await readText(resolve(root, "packages/core/src/types.ts"));
++	return norm({
++		typesHash: createHash("sha256").update(source).digest("hex"),
++		importsNative: /from\s+["']\.\/native["']/.test(source),
++	});
++}
++
++export function makeSchemaFixture(validate) {
++	return makeSchema(validate);
++}
++
++export { parsedSchema, issueSchema };
+diff --git a/tests/shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs b/tests/shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs
+@@ -0,0 +1,87 @@
++import assert from "node:assert/strict";
++import { execFile } from "node:child_process";
++import { readFile, realpath, stat } from "node:fs/promises";
++import { isAbsolute, relative, resolve } from "node:path";
++import { promisify } from "node:util";
++
++const execFileAsync = promisify(execFile);
++
++export async function assertFileUnderRoot(root, relativePath) {
++	const rootReal = await realpath(root);
++	const real = await realpath(resolve(root, relativePath));
++	const inside = relative(rootReal, real);
++	assert.ok(
++		inside !== "" && !inside.startsWith("..") && !isAbsolute(inside),
++		`${relativePath} must resolve inside ${root}`,
++	);
++	const info = await stat(real);
++	assert.ok(info.isFile(), `${relativePath} must be a regular file`);
++	return real;
++}
++
++export async function assertFilesUnderRoot(root, files) {
++	for (const file of files) {
++		await assertFileUnderRoot(root, file);
++	}
++	return files.length;
++}
++
++export async function hasGitMetadata(root) {
++	try {
++		const info = await stat(resolve(root, ".git"));
++		return info.isDirectory() || info.isFile();
++	} catch {
++		return false;
++	}
++}
++
++export async function assertGitCheckout(root) {
++	assert.ok(await hasGitMetadata(root), `${root} must retain its git checkout`);
++	const { stdout } = await execFileAsync("git", ["rev-parse", "--verify", "HEAD"], { cwd: root });
++	assert.match(stdout.trim(), /^[0-9a-f]{40}$/, "HEAD must resolve to the supplied baseline commit");
++	return stdout.trim();
++}
++
++export async function collectChangedPaths(root) {
++	const { stdout } = await execFileAsync(
++		"git",
++		["status", "--porcelain=v1", "-z", "--untracked-files=all"],
++		{ cwd: root, maxBuffer: 16 * 1024 * 1024 },
++	);
++	const entries = stdout.split("\0").filter(Boolean);
++	const paths = [];
++	for (let index = 0; index < entries.length; index += 1) {
++		const entry = entries[index];
++		const status = entry.slice(0, 2);
++		if (status.includes("R") || status.includes("C")) {
++			paths.push(entry.slice(3));
++			const next = entries[index + 1];
++			if (next) {
++				paths.push(next);
++				index += 1;
++			}
++		} else {
++			paths.push(entry.slice(3));
++		}
++	}
++	return paths;
++}
++
++export function isAllowedWorkspaceChange(path, prefixes, files) {
++	return (
++		prefixes.some((prefix) => path.startsWith(prefix)) ||
++		files.some((entry) => (entry.endsWith("/") ? path.startsWith(entry) : path === entry))
++	);
++}
++
++export async function assertDiffRelativeToBaseline(root, prefixes, files) {
++	const head = await assertGitCheckout(root);
++	const changed = await collectChangedPaths(root);
++	const outside = changed.filter((path) => !isAllowedWorkspaceChange(path, prefixes, files));
++	assert.deepEqual(outside, [], `changes must stay within the migration scope; found: ${outside.join(", ")}`);
++	return { head, changed };
++}
++
++export async function readJson(root, relativePath) {
++	return JSON.parse(await readFile(resolve(root, relativePath), "utf8"));
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0001/assertions.mjs b/tests/shared/batches/BATCH-F2P-0001/assertions.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/assertions.mjs
+@@ -0,0 +1,56 @@
++import assert from "node:assert/strict";
++
++export class InfrastructureError extends Error {
++	constructor(message, cause) {
++		super(message, { cause });
++		this.name = "InfrastructureError";
++	}
++}
++
++export function assertFunction(value, name) {
++	assert.equal(typeof value, "function", `${name} must be a function`);
++}
++
++export function assertDeepEqual(actual, expected, label = "value") {
++	assert.deepEqual(actual, expected, `${label} mismatch`);
++}
++
++export function assertUndefined(value, label = "value") {
++	assert.equal(value, undefined, `${label} must be undefined`);
++}
++
++export function assertSameReference(actual, expected, label = "value") {
++	assert.equal(actual, expected, `${label} must preserve object identity`);
++}
++
++export function assertDifferentReference(actual, expected, label = "value") {
++	assert.notEqual(actual, expected, `${label} must be a defensive copy`);
++}
++
++export async function assertRejectsWith(operation, pattern, label = "operation") {
++	let error;
++	try {
++		await operation;
++	} catch (caught) {
++		error = caught;
++	}
++	assert.ok(error instanceof Error, `${label} must reject with an Error`);
++	if (pattern) {
++		assert.match(error.message, pattern, `${label} rejection message mismatch`);
++	}
++	return error;
++}
++
++export function assertThrowsWith(operation, pattern, label = "operation") {
++	let error;
++	try {
++		operation();
++	} catch (caught) {
++		error = caught;
++	}
++	assert.ok(error instanceof Error, `${label} must throw an Error`);
++	if (pattern) {
++		assert.match(error.message, pattern, `${label} rejection message mismatch`);
++	}
++	return error;
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0001/checks.mjs b/tests/shared/batches/BATCH-F2P-0001/checks.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/checks.mjs
+@@ -0,0 +1,675 @@
++import assert from "node:assert/strict";
++import { existsSync } from "node:fs";
++import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
++import { createRequire } from "node:module";
++import { tmpdir } from "node:os";
++import { dirname, join, resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++import {
++	assertDeepEqual,
++	assertDifferentReference,
++	assertRejectsWith,
++	assertSameReference,
++	assertThrowsWith,
++	assertUndefined,
++	InfrastructureError,
++} from "./assertions.mjs";
++import {
++	asyncRejectingSchema,
++	duplicateSteps,
++	emptyIssuesSchema,
++	emptySteps,
++	makeSchema,
++	passThroughSchema,
++	receiverSchema,
++	rejectingSchema,
++	schemaSteps,
++	steps,
++	twoSteps,
++} from "../../../fixtures/batches/BATCH-F2P-0001/steps.mjs";
++
++export const observationIds = [
++	"F2P-001",
++	"F2P-002",
++	"F2P-004",
++	"F2P-005",
++	"F2P-006",
++	"F2P-008",
++	"F2P-010",
++	"F2P-013",
++	"F2P-017",
++	"F2P-019",
++	"F2P-016",
++	"F2P-003",
++	"F2P-007",
++	"F2P-009",
++	"F2P-011",
++	"F2P-012",
++	"F2P-014",
++	"F2P-015",
++	"F2P-018",
++	"F2P-020",
++	"F2P-021",
++	"F2P-022",
++	"F2P-023",
++	"F2P-024",
++];
++
++class SemanticFailure extends Error {
++	constructor(message) {
++		super(message);
++		this.name = "SemanticFailure";
++	}
++}
++
++const requireFromChecks = createRequire(import.meta.url);
++let importSequence = 0;
++
++function coreDir(root) {
++	return resolve(root, "packages/core");
++}
++
++async function readJson(file) {
++	return JSON.parse(await readFile(file, "utf8"));
++}
++
++function findNativeModule(baseDir) {
++	const base = resolve(baseDir);
++	for (const [file, module] of Object.entries(requireFromChecks.cache)) {
++		if (file.endsWith(".node") && resolve(file).startsWith(base)) {
++			return { path: file, exports: module.exports };
++		}
++	}
++	return undefined;
++}
++
++function findLoadedNative(baseDir) {
++	const base = resolve(baseDir);
++	const candidates = Object.keys(requireFromChecks.cache).filter((file) => file.endsWith(".node"));
++	const scoped = candidates.find((file) => resolve(file).startsWith(base));
++	const selected = scoped ?? candidates[candidates.length - 1];
++	if (!selected) {
++		return undefined;
++	}
++	return { path: selected, exports: requireFromChecks.cache[selected].exports };
++}
++
++async function loadCore(root, tag) {
++	const dist = resolve(coreDir(root), "dist/index.js");
++	if (!existsSync(dist)) {
++		throw new InfrastructureError(`built module not found at ${dist}`);
++	}
++	importSequence += 1;
++	const core = await import(`${pathToFileURL(dist).href}?f2p-0001=${tag}-${importSequence}`);
++	const native = findLoadedNative(coreDir(root));
++	return { root, core, dist, native };
++}
++
++function instrumentNative(info, names) {
++	if (!info.native) {
++		throw new SemanticFailure("no native addon was loaded by the public package");
++	}
++	const counts = Object.fromEntries(names.map((name) => [name, 0]));
++	const originals = {};
++	for (const name of names) {
++		const original = info.native.exports[name];
++		if (typeof original !== "function") {
++			throw new SemanticFailure(`native addon does not export the required ${name} operation`);
++		}
++		assert.match(
++			Function.prototype.toString.call(original),
++			/\[native code\]/,
++			`${name} must be implemented by a native addon`,
++		);
++		originals[name] = original;
++		info.native.exports[name] = function instrumentedNativeCall(...args) {
++			counts[name] += 1;
++			return original.apply(this, args);
++		};
++	}
++	return {
++		counts,
++		restore() {
++			for (const name of names) {
++				info.native.exports[name] = originals[name];
++			}
++		},
++	};
++}
++
++async function withCore(root, tag, nativeNames, body) {
++	const info = await loadCore(root, tag);
++	const binding = info.native
++		? instrumentNative(info, nativeNames)
++		: {
++				counts: Object.fromEntries(nativeNames.map((name) => [name, 0])),
++				restore() {},
++			};
++	try {
++		const result = await body(info);
++		if (!info.native) {
++			throw new SemanticFailure("no native addon was loaded by the public package");
++		}
++		for (const name of nativeNames) {
++			assert.ok(
++				binding.counts[name] > 0,
++				`${name} was not invoked on the Rust native execution path`,
++			);
++		}
++		return result;
++	} finally {
++		binding.restore();
++	}
++}
++
++async function listFiles(directory) {
++	const entries = await readdir(directory, { withFileTypes: true });
++	const files = [];
++	for (const entry of entries) {
++		const file = join(directory, entry.name);
++		if (entry.isDirectory()) {
++			files.push(...(await listFiles(file)));
++		} else if (entry.isFile()) {
++			files.push(file);
++		}
++	}
++	return files;
++}
++
++async function assertNoDelegationFallback(root) {
++	const directory = coreDir(root);
++	const files = await listFiles(directory);
++	const productionFiles = files.filter((file) => {
++		if (file.includes(`${join(directory, "src", "tests")}`)) {
++			return false;
++		}
++		if (file.includes(`${join(directory, "native", "target")}`)) {
++			return false;
++		}
++		return /\.(ts|js|mjs|cjs|rs)$/.test(file) && (file.includes(`${join(directory, "src")}`) || file.includes(`${join(directory, "dist")}`));
++	});
++	const forbidden = [
++		"child_process",
++		"worker_threads",
++		"spawnSync",
++		"execSync",
++		"execFileSync",
++		"fork(",
++		"new Worker(",
++	];
++	for (const file of productionFiles) {
++		const content = await readFile(file, "utf8");
++		for (const token of forbidden) {
++			assert.ok(
++				!content.includes(token),
++				`production file ${file} must not delegate through ${token}`,
++			);
++		}
++	}
++}
++
++async function assertFailsWithoutNative(root, tag) {
++	const directory = coreDir(root);
++	const temp = await mkdtemp(join(tmpdir(), "f2p-0001-no-native-"));
++	try {
++		await cp(join(directory, "dist"), join(temp, "dist"), { recursive: true });
++		const entry = join(temp, "dist/index.js");
++		let loaded = false;
++		try {
++			await import(`${pathToFileURL(entry).href}?no-native=${tag}`);
++			loaded = true;
++		} catch (error) {
++			assert.ok(
++				error instanceof Error && /\.node|Cannot find module|native/i.test(error.message),
++				`unexpected error without the native artifact: ${error}`,
++			);
++		}
++		assert.equal(
++			loaded,
++			false,
++			"the package must fail to load without the Rust native artifact instead of falling back to TypeScript",
++		);
++	} finally {
++		await rm(temp, { recursive: true, force: true });
++	}
++}
++
++async function assertRustNativeBuild(root, info) {
++	const directory = coreDir(root);
++	const manifest = await readJson(join(directory, "package.json"));
++	assert.equal(manifest.type, "module", "core package must remain an ESM package");
++	assert.ok(
++		Array.isArray(manifest.files) && manifest.files.some((entry) => entry.includes(".node")),
++		"core package must publish the native artifact",
++	);
++	const build = manifest.scripts?.build ?? "";
++	assert.match(build, /build:native|cargo|native/i, "build script must compile the Rust crate");
++	assert.match(build, /copy:native|copy-native|\.node/i, "build script must copy the native artifact");
++	assert.match(
++		manifest.scripts?.test ?? "",
++		/vitest|test/i,
++		"test script must remain available under the test name",
++	);
++
++	const toolchain = await readFile(join(directory, "native/rust-toolchain.toml"), "utf8");
++	assert.match(toolchain, /channel\s*=\s*"1\.85\.0"/, "Rust toolchain must be pinned to 1.85.0");
++	const cargo = await readFile(join(directory, "native/Cargo.toml"), "utf8");
++	assert.match(cargo, /rust-version\s*=\s*"1\.85\.0"/, "Cargo manifest must require Rust 1.85.0");
++	assert.ok(existsSync(join(directory, "native/build.rs")), "Rust build script must exist");
++	assert.ok(existsSync(join(directory, "native/src/lib.rs")), "Rust native source must exist");
++	assert.ok(existsSync(join(directory, "scripts/copy-native.mjs")), "native copy script must exist");
++
++	const bytes = await readFile(info.native.path);
++	const artifact = bytes.toString("latin1");
++	assert.ok(
++		artifact.includes("/rustc/") || artifact.includes("src/lib.rs"),
++		"loaded native addon must contain Rust compilation metadata",
++	);
++
++	const map = info.core.createStepMap(twoSteps);
++	assertSameReference(map.next("a"), twoSteps[1], "next from the native artifact");
++	await assertFailsWithoutNative(root, "rust-build");
++}
++
++async function copyPublishedFiles(directory, destination) {
++	const manifest = await readJson(join(directory, "package.json"));
++	await mkdir(destination, { recursive: true });
++	for (const pattern of manifest.files ?? []) {
++		if (pattern.includes("*")) {
++			const [parent, glob] = pattern.split("/*");
++			const sourceDirectory = join(directory, parent);
++			if (!existsSync(sourceDirectory)) {
++				continue;
++			}
++			const suffix = glob.replaceAll("*", "");
++			const targetDirectory = join(destination, parent);
++			await mkdir(targetDirectory, { recursive: true });
++			for (const name of await readdir(sourceDirectory)) {
++				if (name.endsWith(suffix)) {
++					await cp(join(sourceDirectory, name), join(targetDirectory, name));
++				}
++			}
++			continue;
++		}
++		const source = join(directory, pattern);
++		if (existsSync(source)) {
++			await cp(source, join(destination, pattern), { recursive: true });
++		}
++	}
++	await cp(join(directory, "package.json"), join(destination, "package.json"));
++	return manifest;
++}
++
++async function importPackedPackage(root, tag) {
++	const directory = coreDir(root);
++	const temp = await mkdtemp(join(tmpdir(), "f2p-0001-consumer-"));
++	const packageDestination = join(temp, "node_modules", "@stepperize/core");
++	const manifest = await copyPublishedFiles(directory, packageDestination);
++	const consumer = join(temp, "consumer.mjs");
++	await writeFile(consumer, "export {};\n");
++	const requireFromConsumer = createRequire(pathToFileURL(consumer));
++	const entry = requireFromConsumer.resolve("@stepperize/core");
++	importSequence += 1;
++	const core = await import(`${pathToFileURL(entry).href}?packed=${tag}-${importSequence}`);
++	return { temp, core, manifest, packageDestination };
++}
++
++async function assertPackedConsumer(root, tag) {
++	const { temp, core, manifest, packageDestination } = await importPackedPackage(root, tag);
++	try {
++		assert.ok(
++			Array.isArray(manifest.files) && manifest.files.some((entry) => entry.includes(".node")),
++			"published files must include the native artifact",
++		);
++		const native = findNativeModule(packageDestination);
++		if (!native) {
++			throw new SemanticFailure("packed consumer did not load the native addon");
++		}
++		const binding = instrumentNative({ native }, ["stepIds"]);
++		try {
++			assertDeepEqual(
++				core.createStepMap([{ id: "a" }]).ids,
++				["a"],
++				"packed consumer ids",
++			);
++		} finally {
++			binding.restore();
++		}
++		assert.ok(binding.counts.stepIds > 0, "packed consumer must execute the native stepIds operation");
++	} finally {
++		await rm(temp, { recursive: true, force: true });
++	}
++}
++
++async function assertTypeContract(root) {
++	const directory = coreDir(root);
++	const manifest = await readJson(join(directory, "package.json"));
++	if (manifest.exports?.["."]?.types) {
++		assert.match(manifest.exports["."].types, /dist\/index\.d\.ts$/, "root types entry must resolve to dist/index.d.ts");
++	}
++	const declarations = await readFile(join(directory, "dist/index.d.ts"), "utf8");
++	assert.ok(declarations.includes("type Step"), "Step type must remain exported");
++	assert.ok(declarations.includes("type StepMap"), "StepMap type must remain exported");
++	assert.ok(declarations.includes("type StepStatus"), "StepStatus type must remain exported");
++	assert.ok(declarations.includes("type ValidationResult"), "ValidationResult type must remain exported");
++	assert.ok(declarations.includes("StandardSchemaV1"), "StandardSchemaV1 type must remain exported");
++}
++
++async function assertDuplicateSemantics(core, includeMatchFailure) {
++	const map = core.createStepMap(duplicateSteps);
++	assertSameReference(map.get("a"), duplicateSteps[0], "duplicate get");
++	assertDeepEqual(map.indexOf("a"), 0, "duplicate indexOf");
++	assertSameReference(map.next("a"), duplicateSteps[1], "duplicate next");
++	if (!includeMatchFailure) {
++		return;
++	}
++	const calls = [];
++	assertThrowsWith(
++		() =>
++			core.matchStep(steps, "missing", {
++				a: () => calls.push("a"),
++				b: () => calls.push("b"),
++				c: () => calls.push("c"),
++			}),
++		/not found/,
++		"matchStep missing",
++	);
++	assertDeepEqual(calls, [], "matchStep must not invoke any handler when the id is unknown");
++	assertThrowsWith(
++		() => core.matchStep(steps, "b", { a: () => calls.push("a") }),
++		/No match handler/,
++		"matchStep missing handler",
++	);
++	assertDeepEqual(calls, [], "matchStep must not invoke another handler when the selected handler is absent");
++}
++
++async function assertAtBoundaries(core) {
++	const map = core.createStepMap(twoSteps);
++	assertSameReference(map.at(1), twoSteps[1], "at(1)");
++	for (const index of [-1, 1.5, Number.NaN, 2]) {
++		assertUndefined(map.at(index), `at(${String(index)})`);
++	}
++}
++
++async function assertStepIdentity(core) {
++	const map = core.createStepMap(twoSteps);
++	assertSameReference(map.get("a"), twoSteps[0], "get identity");
++	assertSameReference(map.first(), twoSteps[0], "first identity");
++	assertSameReference(map.next("a"), twoSteps[1], "next identity");
++	assert.equal(map.has("a"), true, "has(a)");
++	assert.equal(map.has("missing"), false, "has(missing)");
++}
++
++async function assertBoomRejection(core) {
++	await assertRejectsWith(
++		core.validateStep(schemaSteps, "async-reject", "x"),
++		/boom/,
++		"validateStep rejected schema",
++	);
++}
++
++async function assertReceiverSchema(core) {
++	const result = await core.validateStep(schemaSteps, "receiver", "ok");
++	assertDeepEqual(result, { success: true, data: "ok" }, "validateStep receiver schema");
++
++	const standard = receiverSchema["~standard"];
++	const detached = standard.validate;
++	let detachedFailed = false;
++	try {
++		const detachedResult = detached.call(undefined, "ok");
++		detachedFailed = Boolean(detachedResult && detachedResult.issues);
++	} catch {
++		detachedFailed = true;
++	}
++	assert.ok(detachedFailed, "detached validate must fail without the ~standard receiver");
++}
++
++async function assertEmptyIssues(core) {
++	const result = await core.validateStep(schemaSteps, "empty", "x");
++	assertDeepEqual(result, { success: false, issues: [] }, "validateStep empty issues");
++}
++
++const checks = {
++	"F2P-001": (root) =>
++		withCore(root, "001", ["stepGet", "stepIndexOf", "stepNext", "matchStep"], async ({ core }) => {
++			await assertDuplicateSemantics(core, true);
++		}),
++	"F2P-002": (root) =>
++		withCore(root, "002", ["stepAt", "stepPrev"], async ({ core }) => {
++			await assertAtBoundaries(core);
++			const map = core.createStepMap(twoSteps);
++			assertSameReference(map.prev("b"), twoSteps[0], "prev(b)");
++			assertUndefined(map.prev("a"), "prev(a)");
++			assertUndefined(map.prev("missing"), "prev(missing)");
++		}),
++	"F2P-004": (root) =>
++		withCore(root, "004", ["validateStepPrepare", "validateStepFinish", "stepIndexOf"], async ({ core }) => {
++			await assertReceiverSchema(core);
++			const map = core.createStepMap(twoSteps);
++			assertDeepEqual(map.indexOf("b"), 1, "indexOf(b)");
++			assertDeepEqual(map.indexOf("missing"), -1, "indexOf(missing)");
++		}),
++	"F2P-005": (root) =>
++		withCore(root, "005", ["stepGet", "stepFirst", "stepNext", "stepHas"], async ({ core }) => {
++			await assertStepIdentity(core);
++		}),
++	"F2P-006": (root) =>
++		withCore(root, "006", ["validateStepPrepare", "stepFirst", "stepLast"], async ({ core }) => {
++			await assertBoomRejection(core);
++			const map = core.createStepMap(twoSteps);
++			assertSameReference(map.first(), twoSteps[0], "first()");
++			assertSameReference(map.last(), twoSteps[1], "last()");
++			const empty = core.createStepMap(emptySteps);
++			assertUndefined(empty.first(), "empty first()");
++			assertUndefined(empty.last(), "empty last()");
++		}),
++	"F2P-008": (root) =>
++		withCore(root, "008", ["stepNext"], async (info) => {
++			await assertRustNativeBuild(root, info);
++		}),
++	"F2P-010": (root) =>
++		withCore(root, "010", ["stepIds"], async ({ core }) => {
++			const required = [
++				"packages/core/native/Cargo.toml",
++				"packages/core/native/build.rs",
++				"packages/core/native/rust-toolchain.toml",
++				"packages/core/native/src/lib.rs",
++				"packages/core/scripts/copy-native.mjs",
++				"packages/core/src/index.ts",
++				"packages/core/src/native.ts",
++				"packages/core/src/utils.ts",
++				"packages/core/package.json",
++				"packages/core/tsconfig.json",
++			];
++			for (const path of required) {
++				assert.ok(existsSync(resolve(root, path)), `${path} must exist under the repository root`);
++			}
++			assertDeepEqual(core.createStepMap([{ id: "a" }]).ids, ["a"], "native ids");
++			await assertPackedConsumer(root, "010");
++		}),
++	"F2P-013": (root) =>
++		withCore(root, "013", ["validateStepPrepare", "validateStepFinish", "stepIndexOf"], async ({ core }) => {
++			await assertEmptyIssues(core);
++			const map = core.createStepMap(twoSteps);
++			assertDeepEqual(map.indexOf("b"), 1, "indexOf(b)");
++			assertDeepEqual(map.indexOf("missing"), -1, "indexOf(missing)");
++		}),
++	"F2P-017": (root) =>
++		withCore(root, "017", ["stepIds"], async ({ core }) => {
++			const map = core.createStepMap([{ id: "a" }]);
++			assertDeepEqual(map.ids, ["a"], "synchronous ids");
++			await assertTypeContract(root);
++		}),
++	"F2P-019": (root) =>
++		withCore(root, "019", ["stepIds"], async ({ core }) => {
++			const map = core.createStepMap([{ id: "a" }]);
++			assertDeepEqual(map.ids, ["a"], "ids without indirection");
++			await assertNoDelegationFallback(root);
++		}),
++	"F2P-016": (root) =>
++		withCore(root, "016", ["validateStepPrepare", "getStepStatus"], async ({ core }) => {
++			await assertBoomRejection(core);
++			assertDeepEqual(core.getStepStatus(steps, 1, "a"), "previous", "status previous");
++			assertDeepEqual(core.getStepStatus(steps, 1, "b"), "active", "status active");
++			assertDeepEqual(core.getStepStatus(steps, 1, "c"), "upcoming", "status upcoming");
++		}),
++	"F2P-003": (root) =>
++		withCore(root, "003", ["stepGet", "stepIndexOf", "stepNext", "getInitialData"], async ({ core }) => {
++			await assertDuplicateSemantics(core, false);
++			const empty = core.getInitialData();
++			assertDeepEqual(empty, {}, "getInitialData()");
++			const sourceData = { a: 1, b: 2 };
++			const copy = core.getInitialData(sourceData);
++			assertDeepEqual(copy, sourceData, "getInitialData copy");
++			assertDifferentReference(copy, sourceData, "getInitialData defensive copy");
++		}),
++	"F2P-007": (root) =>
++		withCore(root, "007", ["stepAt", "getInitialData"], async ({ core }) => {
++			await assertAtBoundaries(core);
++			const sourceData = { a: 1, b: 2 };
++			const copy = core.getInitialData(sourceData);
++			assertDeepEqual(copy, sourceData, "getInitialData copy");
++			assertDifferentReference(copy, sourceData, "getInitialData defensive copy");
++		}),
++	"F2P-009": (root) =>
++		withCore(root, "009", ["stepNext", "matchStep"], async (info) => {
++			await assertRustNativeBuild(root, info);
++			const calls = [];
++			const result = info.core.matchStep(twoSteps, "b", {
++				a: (step) => {
++					calls.push("a");
++					return step.label;
++				},
++				b: (step) => {
++					calls.push("b");
++					return step.label;
++				},
++			});
++			assertDeepEqual(result, "B", "matchStep dispatch");
++			assertDeepEqual(calls, ["b"], "matchStep must invoke only the selected handler");
++		}),
++	"F2P-011": (root) =>
++		withCore(root, "011", ["validateStepPrepare", "validateStepFinish", "getStepStatus"], async ({ core }) => {
++			await assertReceiverSchema(core);
++			assertDeepEqual(core.getStepStatus(steps, 1, "a"), "previous", "status previous");
++			assertDeepEqual(core.getStepStatus(steps, 1, "b"), "active", "status active");
++			assertDeepEqual(core.getStepStatus(steps, 1, "c"), "upcoming", "status upcoming");
++		}),
++	"F2P-012": (root) =>
++		withCore(root, "012", ["validateStepPrepare", "validateStepFinish"], async ({ core }) => {
++			await assertReceiverSchema(core);
++			const passed = await core.validateStep([{ id: "pass", schema: passThroughSchema }], "pass", "value");
++			assertDeepEqual(passed, { success: true, data: "value" }, "validateStep pass-through schema");
++			const rejected = await core.validateStep([{ id: "reject", schema: rejectingSchema }], "reject", "x");
++			assertDeepEqual(rejected, { success: false, issues: [{ message: "Required" }] }, "validateStep rejecting schema");
++		}),
++	"F2P-014": (root) =>
++		withCore(root, "014", ["validateStepPrepare", "parseStep"], async ({ core }) => {
++			await assertBoomRejection(core);
++			assertDeepEqual(core.parseStep(twoSteps, "b"), "b", "parseStep(b)");
++			for (const value of ["missing", null, undefined, 42]) {
++				assertUndefined(core.parseStep(twoSteps, value), `parseStep(${String(value)})`);
++			}
++		}),
++	"F2P-015": (root) =>
++		withCore(root, "015", ["stepAt", "stepIds"], async ({ core }) => {
++			await assertAtBoundaries(core);
++			const map = core.createStepMap(steps);
++			assertSameReference(map.steps, steps, "steps order");
++			assertDeepEqual(map.ids, ["a", "b", "c"], "ids order");
++		}),
++	"F2P-018": (root) =>
++		withCore(root, "018", ["stepIds"], async ({ core }) => {
++			const map = core.createStepMap([{ id: "a" }]);
++			assertDeepEqual(map.ids, ["a"], "synchronous ids");
++			await assertTypeContract(root);
++			const manifest = await readJson(resolve(coreDir(root), "package.json"));
++			assert.equal(manifest.type, "module", "core package must remain an ESM package");
++		}),
++	"F2P-020": (root) =>
++		withCore(root, "020", ["stepNext"], async (info) => {
++			await assertRustNativeBuild(root, info);
++			assert.ok(
++				!existsSync(resolve(root, "packages/react/native")),
++				"Rust native files must remain inside packages/core",
++			);
++		}),
++	"F2P-021": (root) =>
++		withCore(
++			root,
++			"021",
++			["validateStepPrepare", "stepIds", "stepGet", "stepFirst", "stepNext", "getStepStatuses", "matchStep"],
++			async ({ core }) => {
++				await assertBoomRejection(core);
++				const map = core.createStepMap(steps);
++				assertDeepEqual(map.ids, ["a", "b", "c"], "ids");
++				assertSameReference(map.get("a"), steps[0], "get");
++				assertSameReference(map.first(), steps[0], "first");
++				assertSameReference(map.next("a"), steps[1], "next");
++				assertDeepEqual(core.getStepStatuses(steps, 1), { a: "previous", b: "active", c: "upcoming" }, "statuses");
++				assertDeepEqual(
++					core.matchStep(steps, "b", {
++						a: (step) => step.label,
++						b: (step) => step.label,
++						c: (step) => step.label,
++					}),
++					"B",
++					"matchStep",
++				);
++			},
++		),
++	"F2P-022": (root) =>
++		withCore(root, "022", ["stepGet", "stepFirst", "stepNext", "matchStep"], async ({ core }) => {
++			await assertStepIdentity(core);
++			const calls = [];
++			const result = core.matchStep(twoSteps, "b", {
++				a: (step) => {
++					calls.push("a");
++					return step.label;
++				},
++				b: (step) => {
++					calls.push("b");
++					return step.label;
++				},
++			});
++			assertDeepEqual(result, "B", "matchStep dispatch");
++			assertDeepEqual(calls, ["b"], "matchStep must invoke only the selected handler");
++		}),
++	"F2P-023": (root) =>
++		withCore(root, "023", ["stepGet", "stepIndexOf", "stepNext", "matchStep"], async ({ core }) => {
++			await assertDuplicateSemantics(core, true);
++		}),
++	"F2P-024": (root) =>
++		withCore(root, "024", ["validateStepPrepare", "validateStepFinish"], async ({ core }) => {
++			await assertEmptyIssues(core);
++			await assertRejectsWith(core.validateStep([{ id: "a" }], "missing", null), /not found/, "validateStep unknown step");
++		}),
++};
++
++export async function runObservations(root = process.cwd()) {
++	const observations = [];
++	for (const observationId of observationIds) {
++		const check = checks[observationId];
++		try {
++			await check(root);
++			observations.push({ observation_id: observationId, status: "PASS", detail: "target postcondition satisfied" });
++		} catch (error) {
++			const status = error instanceof InfrastructureError ? "INFRA_ERROR" : "FAIL";
++			observations.push({
++				observation_id: observationId,
++				status,
++				detail: error instanceof Error ? error.message : String(error),
++			});
++		}
++	}
++	return observations;
++}
++
++export async function cli(root = process.argv[2] ?? process.cwd()) {
++	const observations = await runObservations(root);
++	const result = { root: resolve(root), observations };
++	console.log(JSON.stringify(result, null, 2));
++	const failed = observations.filter((observation) => observation.status === "FAIL");
++	const infra = observations.filter((observation) => observation.status === "INFRA_ERROR");
++	return { failed, infra };
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0002/checks.mjs b/tests/shared/batches/BATCH-F2P-0002/checks.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0002/checks.mjs
+@@ -0,0 +1,688 @@
++import assert from "node:assert/strict";
++import { spawnSync } from "node:child_process";
++import { existsSync, readFileSync, readdirSync } from "node:fs";
++import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
++import { createRequire } from "node:module";
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++import * as fixtures from "../../../fixtures/batches/BATCH-F2P-0002/steps.mjs";
++
++export const observationIds = [
++	"F2P-028",
++	"F2P-032",
++	"F2P-035",
++	"F2P-044",
++	"F2P-038",
++	"F2P-025",
++	"F2P-026",
++	"F2P-027",
++	"F2P-029",
++	"F2P-030",
++	"F2P-031",
++	"F2P-033",
++	"F2P-034",
++	"F2P-036",
++	"F2P-037",
++	"F2P-039",
++	"F2P-040",
++	"F2P-041",
++	"F2P-042",
++	"F2P-043",
++	"F2P-045",
++	"F2P-046",
++	"F2P-047",
++	"F2P-048",
++];
++
++class InfraError extends Error {
++	constructor(message) {
++		super(message);
++		this.name = "InfraError";
++	}
++}
++
++let importSequence = 0;
++
++function coreDir(root) {
++	return resolve(root, "packages/core");
++}
++
++function findNativeArtifact(root) {
++	const nativeDir = resolve(coreDir(root), "native");
++	if (!existsSync(nativeDir)) {
++		throw new Error(`Rust native directory is missing at ${nativeDir}`);
++	}
++	const artifacts = readdirSync(nativeDir)
++		.filter((name) => name.endsWith(".node"))
++		.sort();
++	if (artifacts.length === 0) {
++		throw new Error(`Rust native artifact is missing from ${nativeDir}`);
++	}
++	return resolve(nativeDir, artifacts[0]);
++}
++
++function loadNative(root) {
++	const artifact = findNativeArtifact(root);
++	const require = createRequire(resolve(coreDir(root), "package.json"));
++	try {
++		return { artifact, native: require(artifact) };
++	} catch (error) {
++		throw new InfraError(`cannot load native artifact ${artifact}: ${error.message}`);
++	}
++}
++
++async function importCore(root) {
++	const entry = resolve(coreDir(root), "dist/index.js");
++	if (!existsSync(entry)) {
++		throw new InfraError(`built package entry is missing at ${entry}`);
++	}
++	importSequence += 1;
++	return import(`${pathToFileURL(entry).href}?f2p-0002=${importSequence}`);
++}
++
++function instrument(native) {
++	const originals = new Map(
++		Object.entries(native).filter(([, value]) => typeof value === "function"),
++	);
++	let calls = [];
++
++	return {
++		install() {
++			calls = [];
++			for (const [name, original] of originals) {
++				native[name] = function instrumented(...args) {
++					calls.push(name);
++					return original.apply(this, args);
++				};
++			}
++		},
++		restore() {
++			for (const [name, original] of originals) {
++				native[name] = original;
++			}
++		},
++		calls() {
++			return calls;
++		},
++		stub(name, implementation) {
++			native[name] = function stub(...args) {
++				calls.push(name);
++				return implementation(...args);
++			};
++		},
++	};
++}
++
++function assertNativeCalls(context, names) {
++	const observed = context.calls();
++	const missing = names.filter((name) => !observed.includes(name));
++	assert.equal(
++		missing.length,
++		0,
++		`execution path must call native ${names.join(", ")}; observed ${observed.join(", ") || "none"}`,
++	);
++}
++
++async function copyBuiltPackage(root, destination) {
++	const core = coreDir(root);
++	await mkdir(destination, { recursive: true });
++	await cp(join(core, "package.json"), join(destination, "package.json"));
++	await cp(join(core, "dist"), join(destination, "dist"), { recursive: true });
++	await mkdir(join(destination, "native"), { recursive: true });
++	for (const name of readdirSync(join(core, "native"))) {
++		if (name.endsWith(".node")) {
++			await cp(join(core, "native", name), join(destination, "native", name));
++		}
++	}
++}
++
++async function assertPublicCallsFailWithoutNative(root) {
++	const temporary = await mkdtemp(join(tmpdir(), "f2p-0002-removal-"));
++	try {
++		const packageRoot = join(temporary, "packages/core");
++		await copyBuiltPackage(root, packageRoot);
++		for (const name of await readdir(join(packageRoot, "native"))) {
++			if (name.endsWith(".node")) {
++				await rm(join(packageRoot, "native", name));
++			}
++		}
++
++		let failure;
++		try {
++			const namespace = await import(
++				`${pathToFileURL(join(packageRoot, "dist/index.js")).href}?removed=${Date.now()}`
++			);
++			try {
++				namespace.createStepMap([{ id: "a" }]).ids;
++			} catch (error) {
++				failure = error;
++			}
++		} catch (error) {
++			failure = error;
++		}
++		assert.ok(failure, "public calls must fail when the Rust native module is removed");
++	} finally {
++		await rm(temporary, { recursive: true, force: true });
++	}
++}
++
++async function assertPackagedConsumer(root) {
++	const temporary = await mkdtemp(join(tmpdir(), "f2p-0002-consumer-"));
++	try {
++		const packageRoot = join(temporary, "node_modules/@stepperize/core");
++		await copyBuiltPackage(root, packageRoot);
++		await writeFile(
++			join(temporary, "consumer.mjs"),
++			[
++				'import { createStepMap } from "@stepperize/core";',
++				'console.log(JSON.stringify(createStepMap([{ id: "a" }]).ids));',
++				"",
++			].join("\n"),
++		);
++		const result = spawnSync(process.execPath, [join(temporary, "consumer.mjs")], {
++			cwd: temporary,
++			encoding: "utf8",
++			env: process.env,
++		});
++		assert.equal(
++			result.status,
++			0,
++			`packaged consumer failed: ${(result.stderr || result.stdout || "").trim()}`,
++		);
++		assert.deepEqual(JSON.parse(result.stdout.trim()), ["a"]);
++	} finally {
++		await rm(temporary, { recursive: true, force: true });
++	}
++}
++
++function sourceFiles(directory) {
++	const files = [];
++	for (const entry of readdirSync(directory, { withFileTypes: true })) {
++		const location = join(directory, entry.name);
++		if (entry.isDirectory()) {
++			files.push(...sourceFiles(location));
++		} else if (/\.(?:ts|js|mjs|cjs)$/.test(entry.name)) {
++			files.push(location);
++		}
++	}
++	return files;
++}
++
++function assertNoFallbackIndirection(root) {
++	const files = sourceFiles(resolve(coreDir(root), "src"));
++	files.push(resolve(coreDir(root), "dist/index.js"));
++	const forbidden = ["child_process", "worker_threads", "spawnSync", "execFileSync", "execSync"];
++	for (const file of files) {
++		if (!existsSync(file)) continue;
++		const contents = readFileSync(file, "utf8");
++		for (const token of forbidden) {
++			assert.ok(!contents.includes(token), `${file} must not use ${token}`);
++		}
++	}
++}
++
++const checks = {
++	async "F2P-028"(context) {
++		const map = context.core.createStepMap([{ id: "a" }]);
++		assert.equal(map.has("a"), true);
++		assert.equal(map.has("missing"), false);
++
++		const { data, symbol } = fixtures.makeOwnKeyData();
++		const copy = context.core.getInitialData(data);
++		assert.notEqual(copy, data, "getInitialData must return a different object");
++		assert.equal(
++			Object.prototype.hasOwnProperty.call(copy, "__proto__"),
++			true,
++			"copy must own __proto__",
++		);
++		assert.deepEqual(copy["__proto__"], { polluted: true });
++		assert.equal(Object.getPrototypeOf(copy), Object.prototype);
++		const symbols = Object.getOwnPropertySymbols(copy);
++		assert.ok(symbols.includes(symbol), "copy must retain the symbol-keyed property");
++		assert.equal(copy[symbol], "symbol");
++		assertNativeCalls(context, ["stepHas", "getInitialData"]);
++	},
++
++	async "F2P-032"(context) {
++		const manifest = JSON.parse(readFileSync(join(coreDir(context.root), "package.json"), "utf8"));
++		assert.equal(manifest.type, "module");
++		assert.match(manifest.scripts.build, /build:native/);
++		assert.match(manifest.scripts.build, /tsup/);
++		assert.match(manifest.scripts.build, /copy:native/);
++		assert.match(manifest.scripts["build:native"], /cargo build/);
++		assert.match(manifest.scripts.test, /build:native/);
++		assert.match(manifest.scripts.test, /copy:native/);
++		assert.match(manifest.scripts.test, /vitest/);
++		assert.ok(
++			Array.isArray(manifest.files) && manifest.files.some((entry) => entry.includes(".node")),
++			"published files must include the native artifact",
++		);
++		assert.ok(existsSync(findNativeArtifact(context.root)));
++		assert.ok(existsSync(join(coreDir(context.root), "dist/index.js")));
++		assert.deepEqual(context.core.createStepMap([{ id: "a" }]).ids, ["a"]);
++		assertNativeCalls(context, ["stepIds"]);
++	},
++
++	async "F2P-035"(context) {
++		const steps = [
++			{ id: "a" },
++			{ id: "b" },
++			{ id: "c" },
++		];
++		assert.equal(context.core.getStepStatus(steps, 1, "a"), "previous");
++		assert.equal(context.core.getStepStatus(steps, 1, "b"), "active");
++		assert.equal(context.core.getStepStatus(steps, 1, "c"), "upcoming");
++
++		const two = [{ id: "a" }, { id: "b" }];
++		assert.deepEqual(context.core.createStepMap(two).neighbors("a"), {
++			prev: undefined,
++			next: two[1],
++		});
++		assertNativeCalls(context, ["stepNeighbors", "getStepStatus"]);
++
++		const sentinel = { prev: "native-stub-prev", next: "native-stub-next" };
++		context.stub("stepNeighbors", () => sentinel);
++		const replaced = await context.fresh();
++		assert.deepEqual(replaced.createStepMap(two).neighbors("a"), sentinel);
++	},
++
++	async "F2P-044"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		assert.deepEqual(context.core.createStepMap(two).next("a"), two[1]);
++		assert.equal(context.core.parseStep(two, "b"), "b");
++		assert.deepEqual(await context.core.validateStep(two, "a", 42), { success: true, data: 42 });
++		assert.equal(context.core.getStepStatus(two, 1, "a"), "previous");
++		assert.equal(context.core.matchStep(two, "b", { b: (step) => step.id }), "b");
++		assertNativeCalls(context, [
++			"stepNext",
++			"parseStep",
++			"validateStepPrepare",
++			"getStepStatus",
++			"matchStep",
++		]);
++		await assertPublicCallsFailWithoutNative(context.root);
++	},
++
++	async "F2P-038"(context) {
++		const steps = [{ id: "a" }, { id: "b" }];
++		const map = context.core.createStepMap(steps);
++		assert.deepEqual(map.at(1), { id: "b" });
++		for (const index of [-1, 1.5, Number.NaN, 2]) {
++			assert.equal(map.at(index), undefined, `at(${String(index)}) must be undefined`);
++		}
++		assertNativeCalls(context, ["stepAt"]);
++	},
++
++	async "F2P-025"(context) {
++		assert.equal(context.core.getInitialStepIndex(fixtures.twoSteps, "b"), 1);
++		assert.equal(context.core.getInitialStepIndex(fixtures.twoSteps), 0);
++		const steps = [{ id: "a", schema: fixtures.emptyIssuesSchema }];
++		assert.deepEqual(await context.core.validateStep(steps, "a", "x"), {
++			success: false,
++			issues: [],
++		});
++		assertNativeCalls(context, [
++			"getInitialStepIndex",
++			"validateStepPrepare",
++			"validateStepFinish",
++		]);
++	},
++
++	async "F2P-026"(context) {
++		const steps = [{ id: "a" }, { id: "b" }];
++		const invoked = [];
++		assert.throws(
++			() =>
++				context.core.matchStep(steps, "missing", {
++					a: () => invoked.push("a"),
++					b: () => invoked.push("b"),
++				}),
++			/not found/,
++		);
++		assert.deepEqual(invoked, []);
++		assert.throws(
++			() => context.core.matchStep(steps, "b", { a: () => invoked.push("a") }),
++			/No match handler/,
++		);
++		assert.deepEqual(invoked, []);
++		assert.deepEqual(context.core.createStepMap(steps).at(1), steps[1]);
++		assertNativeCalls(context, ["matchStep", "stepAt"]);
++	},
++
++	async "F2P-027"(context) {
++		const map = context.core.createStepMap(fixtures.threeSteps);
++		assert.deepEqual(map.ids, ["a", "b", "c"]);
++		assert.deepEqual(map.neighbors("b"), { prev: fixtures.steps[0], next: fixtures.steps[2] });
++		assert.deepEqual(map.neighbors("a"), { prev: undefined, next: fixtures.steps[1] });
++		assert.deepEqual(map.neighbors("c"), { prev: fixtures.steps[1], next: undefined });
++		assert.deepEqual(map.neighbors("missing"), { prev: undefined, next: undefined });
++		const declarations = readFileSync(join(coreDir(context.root), "dist/index.d.ts"), "utf8");
++		assert.match(declarations, /\bStep\b/);
++		assert.match(declarations, /\bStepMap\b/);
++		assertNativeCalls(context, ["stepIds", "stepNeighbors"]);
++	},
++
++	async "F2P-029"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		const map = context.core.createStepMap(two);
++		assert.equal(map.get("b"), two[1]);
++		assert.equal(map.get("missing"), undefined);
++		const steps = [{ id: "a", schema: fixtures.emptyIssuesSchema }];
++		assert.deepEqual(await context.core.validateStep(steps, "a", "x"), {
++			success: false,
++			issues: [],
++		});
++		assertNativeCalls(context, ["stepGet", "validateStepPrepare", "validateStepFinish"]);
++	},
++
++	async "F2P-030"(context) {
++		const duplicate = fixtures.duplicateSteps;
++		const map = context.core.createStepMap(duplicate);
++		assert.equal(map.get("a"), duplicate[0]);
++		assert.equal(map.indexOf("a"), 0);
++		assert.equal(map.next("a"), duplicate[1]);
++		assert.deepEqual(map.neighbors("a"), { prev: undefined, next: duplicate[1] });
++		assert.deepEqual(map.steps, duplicate);
++		assert.deepEqual(map.ids, ["a", "a"]);
++		assertNativeCalls(context, ["stepGet", "stepIndexOf", "stepNext", "stepNeighbors"]);
++	},
++
++	async "F2P-031"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		const map = context.core.createStepMap(two);
++		assert.equal(map.at(1), two[1]);
++		assert.equal(map.at(2), undefined);
++
++		const duplicate = fixtures.duplicateSteps;
++		const duplicateMap = context.core.createStepMap(duplicate);
++		assert.equal(duplicateMap.get("a"), duplicate[0]);
++		assert.equal(duplicateMap.indexOf("a"), 0);
++		assert.equal(duplicateMap.next("a"), duplicate[1]);
++		assertNativeCalls(context, ["stepAt", "stepGet", "stepIndexOf", "stepNext"]);
++	},
++
++	async "F2P-033"(context) {
++		const value = { x: 1 };
++		assert.deepEqual(await context.core.validateStep([{ id: "a" }], "a", value), {
++			success: true,
++			data: value,
++		});
++		assert.deepEqual(context.core.createStepMap([{ id: "a" }]).ids, ["a"]);
++		assertNativeCalls(context, ["validateStepPrepare", "stepIds"]);
++		assertNoFallbackIndirection(context.root);
++	},
++
++	async "F2P-034"(context) {
++		const steps = [{ id: "receiver", schema: fixtures.receiverSchema }];
++		assert.deepEqual(await context.core.validateStep(steps, "receiver", "ok"), {
++			success: true,
++			data: "ok",
++		});
++
++		let directFailure;
++		try {
++			const unboundValidate = fixtures.receiverSchema["~standard"].validate;
++			unboundValidate("ok");
++		} catch (error) {
++			directFailure = error;
++		}
++		assert.ok(directFailure instanceof Error, "validate without its receiver must fail");
++		assert.deepEqual(context.core.createStepMap([{ id: "a" }]).ids, ["a"]);
++		assertNativeCalls(context, ["validateStepPrepare", "stepIds"]);
++	},
++
++	async "F2P-036"(context) {
++		const two = fixtures.twoSteps;
++		assert.equal(context.core.parseStep(two, "b"), "b");
++		for (const value of ["missing", null, undefined, 42]) {
++			assert.equal(context.core.parseStep(two, value), undefined);
++		}
++
++		const duplicate = fixtures.duplicateSteps;
++		const map = context.core.createStepMap(duplicate);
++		assert.equal(map.get("a"), duplicate[0]);
++		assert.equal(map.indexOf("a"), 0);
++		assert.equal(map.next("a"), duplicate[1]);
++		assertNativeCalls(context, ["parseStep", "stepGet", "stepIndexOf", "stepNext"]);
++	},
++
++	async "F2P-037"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		assert.throws(() => context.core.matchStep(two, "missing", { a: () => 1 }), /not found/);
++		assert.throws(() => context.core.matchStep(two, "b", { a: () => 1 }), /No match handler/);
++		const map = context.core.createStepMap(two);
++		assert.deepEqual(map.at(1), { id: "b" });
++		for (const index of [-1, 1.5, Number.NaN, 2]) {
++			assert.equal(map.at(index), undefined);
++		}
++		assertNativeCalls(context, ["matchStep", "stepAt"]);
++	},
++
++	async "F2P-039"(context) {
++		const steps = [
++			{ id: "pass", schema: fixtures.passThroughSchema },
++			{ id: "reject", schema: fixtures.rejectingSchema },
++		];
++		assert.deepEqual(await context.core.validateStep(steps, "pass", "parsed"), {
++			success: true,
++			data: "parsed",
++		});
++		assert.deepEqual(await context.core.validateStep(steps, "reject", "x"), {
++			success: false,
++			issues: [{ message: "Required" }],
++		});
++
++		const duplicate = fixtures.duplicateSteps;
++		const map = context.core.createStepMap(duplicate);
++		assert.equal(map.get("a"), duplicate[0]);
++		assert.equal(map.indexOf("a"), 0);
++		assert.equal(map.next("a"), duplicate[1]);
++		assertNativeCalls(context, [
++			"validateStepPrepare",
++			"validateStepFinish",
++			"stepGet",
++			"stepIndexOf",
++			"stepNext",
++		]);
++	},
++
++	async "F2P-040"(context) {
++		const steps = [
++			{ id: "a" },
++			{ id: "b" },
++			{ id: "c" },
++		];
++		assert.deepEqual(context.core.getStepStatuses(steps, 1), {
++			a: "previous",
++			b: "active",
++			c: "upcoming",
++		});
++		const schemaSteps = [{ id: "a", schema: fixtures.emptyIssuesSchema }];
++		assert.deepEqual(await context.core.validateStep(schemaSteps, "a", "x"), {
++			success: false,
++			issues: [],
++		});
++		assertNativeCalls(context, [
++			"getStepStatuses",
++			"validateStepPrepare",
++			"validateStepFinish",
++		]);
++	},
++
++	async "F2P-041"(context) {
++		const data = { a: { saved: true } };
++		const copy = context.core.getInitialData(data);
++		assert.notEqual(copy, data);
++		assert.equal(copy.a, data.a);
++		assert.deepEqual(copy, data);
++		assert.deepEqual(context.core.getInitialData(), {});
++
++		const steps = [{ id: "a", schema: fixtures.emptyIssuesSchema }];
++		assert.deepEqual(await context.core.validateStep(steps, "a", "x"), {
++			success: false,
++			issues: [],
++		});
++		assertNativeCalls(context, [
++			"getInitialData",
++			"validateStepPrepare",
++			"validateStepFinish",
++		]);
++	},
++
++	async "F2P-042"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		const map = context.core.createStepMap(two);
++		assert.equal(map.get("b"), two[1]);
++		assert.equal(map.get("missing"), undefined);
++		assert.equal(map.at(1), two[1]);
++		assert.equal(map.at(2), undefined);
++		assert.equal(map.indexOf("b"), 1);
++		assert.equal(map.indexOf("missing"), -1);
++
++		const steps = [{ id: "receiver", schema: fixtures.receiverSchema }];
++		assert.deepEqual(await context.core.validateStep(steps, "receiver", "ok"), {
++			success: true,
++			data: "ok",
++		});
++		assertNativeCalls(context, ["stepGet", "stepAt", "stepIndexOf", "validateStepPrepare"]);
++	},
++
++	async "F2P-043"(context) {
++		const toolchain = readFileSync(
++			join(coreDir(context.root), "native/rust-toolchain.toml"),
++			"utf8",
++		);
++		assert.match(toolchain, /1\.85\.0/);
++		const cargo = readFileSync(join(coreDir(context.root), "native/Cargo.toml"), "utf8");
++		assert.match(cargo, /rust-version\s*=\s*"1\.85\.0"/);
++		assert.ok(existsSync(findNativeArtifact(context.root)));
++
++		const steps = [{ id: "a" }, { id: "b" }];
++		assert.deepEqual(context.core.createStepMap(steps).next("a"), { id: "b" });
++		const declarations = readFileSync(join(coreDir(context.root), "dist/index.d.ts"), "utf8");
++		assert.match(declarations, /createStepMap/);
++		assert.match(declarations, /\bStep\b/);
++		assertNativeCalls(context, ["stepNext"]);
++		await assertPublicCallsFailWithoutNative(context.root);
++	},
++
++	async "F2P-045"(context) {
++		const manifest = JSON.parse(readFileSync(join(coreDir(context.root), "package.json"), "utf8"));
++		assert.ok(
++			Array.isArray(manifest.files) && manifest.files.some((entry) => entry.includes(".node")),
++			"published files must include native/*.node",
++		);
++		assert.deepEqual(context.core.createStepMap([{ id: "a" }]).ids, ["a"]);
++		assertNativeCalls(context, ["stepIds"]);
++		await assertPackagedConsumer(context.root);
++	},
++
++	async "F2P-046"(context) {
++		const two = [{ id: "a" }, { id: "b" }];
++		assert.deepEqual(context.core.createStepMap(two).neighbors("a"), {
++			prev: undefined,
++			next: two[1],
++		});
++		assertNativeCalls(context, ["stepNeighbors"]);
++
++		const sentinel = { prev: { id: "stub-prev" }, next: { id: "stub-next" } };
++		context.stub("stepNeighbors", () => sentinel);
++		const replaced = await context.fresh();
++		assert.deepEqual(replaced.createStepMap(two).neighbors("a"), sentinel);
++	},
++
++	async "F2P-047"(context) {
++		const steps = [
++			{ id: "a" },
++			{ id: "b" },
++			{ id: "c" },
++		];
++		const map = context.core.createStepMap(steps);
++		assert.deepEqual(map.steps, steps);
++		assert.equal(map.steps[0], steps[0]);
++		assert.equal(map.steps[2], steps[2]);
++		assert.deepEqual(map.ids, ["a", "b", "c"]);
++
++		const schemaSteps = [{ id: "a", schema: fixtures.emptyIssuesSchema }];
++		assert.deepEqual(await context.core.validateStep(schemaSteps, "a", "x"), {
++			success: false,
++			issues: [],
++		});
++		assertNativeCalls(context, ["stepIds", "validateStepPrepare", "validateStepFinish"]);
++	},
++
++	async "F2P-048"(context) {
++		const required = [
++			"packages/core/native/Cargo.toml",
++			"packages/core/native/Cargo.lock",
++			"packages/core/native/rust-toolchain.toml",
++			"packages/core/native/build.rs",
++			"packages/core/native/src/lib.rs",
++			"packages/core/scripts/copy-native.mjs",
++			"packages/core/src/native.ts",
++			"packages/core/package.json",
++			"packages/core/dist/index.js",
++		];
++		for (const relative of required) {
++			assert.ok(existsSync(resolve(context.root, relative)), `missing required file ${relative}`);
++		}
++		const manifest = JSON.parse(readFileSync(join(coreDir(context.root), "package.json"), "utf8"));
++		assert.match(manifest.scripts.build, /build:native/);
++		assert.match(manifest.scripts.test, /build:native/);
++		assert.match(manifest.scripts.test, /copy:native/);
++		assert.match(manifest.scripts.test, /vitest/);
++		assert.ok(existsSync(findNativeArtifact(context.root)));
++
++		const steps = [{ id: "a" }, { id: "b" }];
++		assert.deepEqual(context.core.createStepMap(steps).next("a"), { id: "b" });
++		assertNativeCalls(context, ["stepNext"]);
++	},
++};
++
++export async function runChecks(root = process.cwd()) {
++	const results = {};
++	let loaded;
++	try {
++		loaded = loadNative(root);
++	} catch (error) {
++		for (const id of observationIds) {
++			results[id] = { status: "FAIL", detail: error.message };
++		}
++		return results;
++	}
++
++	const probe = instrument(loaded.native);
++	for (const id of observationIds) {
++		probe.install();
++		try {
++			const core = await importCore(root);
++			await checks[id]({
++				root,
++				core,
++				native: loaded.native,
++				artifact: loaded.artifact,
++				calls: () => probe.calls(),
++				stub: (name, implementation) => probe.stub(name, implementation),
++				fresh: () => importCore(root),
++			});
++			results[id] = { status: "PASS" };
++		} catch (error) {
++			results[id] = {
++				status: error instanceof InfraError ? "INFRA_ERROR" : "FAIL",
++				detail: error.message,
++			};
++		} finally {
++			probe.restore();
++		}
++	}
++	return results;
++}
++
++export function reportResults(results) {
++	const summary = {};
++	for (const id of observationIds) {
++		summary[id] = results[id] ?? { status: "INFRA_ERROR", detail: "observation was not executed" };
++	}
++	return summary;
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0003/harness.mjs b/tests/shared/batches/BATCH-F2P-0003/harness.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0003/harness.mjs
+@@ -0,0 +1,129 @@
++import assert from "node:assert/strict";
++import { existsSync, readFileSync, readdirSync } from "node:fs";
++import { createRequire } from "node:module";
++import { resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++
++let importSequence = 0;
++
++export const nativeFunctions = Object.freeze([
++	"stepIds",
++	"stepGet",
++	"stepAt",
++	"stepIndexOf",
++	"stepHas",
++	"stepFirst",
++	"stepLast",
++	"stepNext",
++	"stepPrev",
++	"stepNeighbors",
++	"getInitialStepIndex",
++	"parseStep",
++	"getInitialData",
++	"validateStepPrepare",
++	"validateStepFinish",
++	"getStepStatus",
++	"getStepStatuses",
++	"matchStep",
++]);
++
++export async function importFresh(file) {
++	importSequence += 1;
++	return import(`${pathToFileURL(file).href}?f2p0003=${importSequence}`);
++}
++
++function platformArtifactName() {
++	const platform = process.platform === "linux" ? `${process.platform}-${process.arch}-gnu` : `${process.platform}-${process.arch}`;
++	return `stepperize_core_native.${platform}.node`;
++}
++
++function selectNativeArtifact(nativeFiles) {
++	const expected = platformArtifactName();
++	return nativeFiles.includes(expected) ? expected : nativeFiles[0];
++}
++
++export async function createEnv(root, { requireNative = true } = {}) {
++	const coreDir = resolve(root, "packages/core");
++	const distFile = resolve(coreDir, "dist/index.js");
++	const nativeDir = resolve(coreDir, "native");
++	const manifest = JSON.parse(readFileSync(resolve(coreDir, "package.json"), "utf8"));
++	const nativeFiles = existsSync(nativeDir) ? readdirSync(nativeDir).filter((name) => name.endsWith(".node")) : [];
++
++	let native = null;
++	let nativeFile = null;
++	if (requireNative) {
++		if (nativeFiles.length === 0) {
++			throw new Error("target package must contain a built native module");
++		}
++		nativeFile = resolve(nativeDir, selectNativeArtifact(nativeFiles));
++		const require = createRequire(pathToFileURL(distFile).href);
++		native = require(nativeFile);
++		for (const name of nativeFunctions) {
++			assert.equal(typeof native[name], "function", `native binding ${name} must be a function`);
++		}
++	}
++
++	const calls = new Map();
++	const originals = new Map();
++	const wrappers = new Map();
++	if (native) {
++		for (const name of nativeFunctions) {
++			const original = native[name];
++			originals.set(name, original);
++			const wrapper = function instrumentedNativeBinding(...args) {
++				calls.set(name, (calls.get(name) ?? 0) + 1);
++				return original.apply(this, args);
++			};
++			wrappers.set(name, wrapper);
++			native[name] = wrapper;
++		}
++	}
++
++	const core = await importFresh(distFile);
++
++	const env = {
++		root,
++		coreDir,
++		distFile,
++		nativeDir,
++		native,
++		nativeFile,
++		nativeFiles,
++		manifest,
++		calls,
++		originals,
++		wrappers,
++		core,
++		restore() {
++			if (!native) return;
++			for (const [name, original] of originals) {
++				native[name] = original;
++			}
++		},
++	};
++
++	return env;
++}
++
++function snapshotCalls(env) {
++	return new Map(env.calls);
++}
++
++export async function withNative(env, requiredBindings, operation) {
++	const before = snapshotCalls(env);
++	const result = await operation(env);
++
++	if (!env.native) {
++		throw new Error("target native module is not present on the execution path");
++	}
++
++	for (const name of requiredBindings) {
++		const previous = before.get(name) ?? 0;
++		const current = env.calls.get(name) ?? 0;
++		if (current <= previous) {
++			throw new Error(`native binding ${name} was not invoked by the public operation`);
++		}
++	}
++
++	return result;
++}
+diff --git a/tests/shared/batches/BATCH-F2P-0003/observations.mjs b/tests/shared/batches/BATCH-F2P-0003/observations.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0003/observations.mjs
+@@ -0,0 +1,394 @@
++import assert from "node:assert/strict";
++import { spawnSync } from "node:child_process";
++import {
++	cpSync,
++	existsSync,
++	mkdirSync,
++	mkdtempSync,
++	readFileSync,
++	rmSync,
++	writeFileSync,
++} from "node:fs";
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++import {
++	asyncRejectingSteps,
++	duplicateSteps,
++	emptySteps,
++	makeProtoSymbolData,
++	receiverSchema,
++	receiverSteps,
++	schemaSteps,
++	steps,
++	twoSteps,
++} from "../../../fixtures/batches/BATCH-F2P-0003/cases.mjs";
++import { withNative } from "./harness.mjs";
++
++function assertNativeArtifact(env) {
++	assert.ok(env.nativeFiles.length > 0, "target package must contain a built native module");
++	assert.ok(env.nativeFile && existsSync(env.nativeFile), "native artifact must exist on disk");
++}
++
++function assertPinnedRustToolchain(env) {
++	assertNativeArtifact(env);
++	const toolchainFile = resolve(env.nativeDir, "rust-toolchain.toml");
++	assert.ok(existsSync(toolchainFile), "native crate must pin the Rust toolchain");
++	assert.match(readFileSync(toolchainFile, "utf8"), /1\.85\.0/, "Rust toolchain must be pinned to 1.85.0");
++	const cargoToml = readFileSync(resolve(env.nativeDir, "Cargo.toml"), "utf8");
++	assert.match(cargoToml, /rust-version\s*=\s*"1\.85\.0"/, "Cargo manifest must declare rust-version 1.85.0");
++}
++
++function assertChangeScope(env) {
++	const gitDir = resolve(env.root, ".git");
++	if (!existsSync(gitDir)) return;
++	const result = spawnSync("git", ["-C", env.root, "diff", "--name-only", "HEAD"], { encoding: "utf8" });
++	if (result.status !== 0) return;
++	const allowed =
++		/^(packages\/core\/|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|turbo\.json$|\.cargo\/|vendor\/|apps\/docs\/\.source\/)/;
++	for (const file of result.stdout.split("\n").filter(Boolean)) {
++		assert.match(file, allowed, `unexpected repository change outside the migration scope: ${file}`);
++	}
++}
++
++async function assertFailsWithoutNative(env) {
++	const temporary = mkdtempSync(join(tmpdir(), "stepperize-no-native-"));
++	try {
++		cpSync(resolve(env.coreDir, "dist"), resolve(temporary, "dist"), { recursive: true });
++		const entry = resolve(temporary, "dist", "index.js");
++		let error;
++		try {
++			await import(`${pathToFileURL(entry).href}?without-native=${Date.now()}`);
++		} catch (caught) {
++			error = caught;
++		}
++		assert.ok(error, "package must fail to load without its native module instead of using a TypeScript fallback");
++	} finally {
++		rmSync(temporary, { recursive: true, force: true });
++	}
++}
++
++function assertProtoSymbolCopy(env) {
++	const { data, key } = makeProtoSymbolData();
++	const copy = env.core.getInitialData(data);
++	assert.notEqual(copy, data, "getInitialData must return a defensive copy");
++	assert.ok(Object.prototype.hasOwnProperty.call(copy, "__proto__"), "copy must keep an own __proto__ entry");
++	assert.equal(Object.getPrototypeOf(copy), Object.prototype, "copy prototype must stay Object.prototype");
++	assert.deepEqual(Object.getOwnPropertyDescriptor(copy, "__proto__")?.value, { polluted: true });
++	assert.equal(copy[key], "symbol", "copy must retain symbol-keyed own entries");
++}
++
++function assertDuplicateSemantics(env) {
++	const map = env.core.createStepMap(duplicateSteps);
++	assert.equal(map.get("a"), duplicateSteps[0], "duplicate get must return the first step");
++	assert.equal(map.indexOf("a"), 0, "duplicate indexOf must return the first index");
++	assert.equal(map.next("a"), duplicateSteps[1], "duplicate next must advance past the first duplicate");
++}
++
++function assertCombinedCoreCalls(env) {
++	const map = env.core.createStepMap(twoSteps);
++	assert.equal(map.next("a"), steps[1], "next");
++	assert.equal(env.core.parseStep(twoSteps, "b"), "b", "parseStep");
++	return env.core.validateStep(twoSteps, "a", 42).then((result) => {
++		assert.deepEqual(result, { success: true, data: 42 }, "validateStep");
++		assert.equal(env.core.getStepStatus(twoSteps, 1, "a"), "previous", "getStepStatus");
++		assert.equal(env.core.matchStep(twoSteps, "b", { b: (step) => step.id }), "b", "matchStep");
++	});
++}
++
++export const observations = {
++	"F2P-059": (env) =>
++		withNative(env, ["stepGet", "stepIndexOf", "stepNext"], async () => {
++			assertDuplicateSemantics(env);
++		}),
++
++	"F2P-072": (env) =>
++		withNative(env, ["stepIds"], async () => {
++			assertNativeArtifact(env);
++			assert.ok(Array.isArray(env.manifest.files), "package manifest must declare a files list");
++			assert.ok(
++				env.manifest.files.some((entry) => entry === "native/*.node" || entry.endsWith(".node")),
++				"package manifest must publish the native artifact",
++			);
++			assert.ok(env.manifest.files.some((entry) => entry === "dist"), "package manifest must publish dist");
++			assert.deepEqual(env.core.createStepMap([{ id: "a" }]).ids, ["a"], "native ids");
++
++			const temporary = mkdtempSync(join(tmpdir(), "stepperize-consumer-"));
++			try {
++				const packageDir = join(temporary, "node_modules", "@stepperize", "core");
++				mkdirSync(join(packageDir, "native"), { recursive: true });
++				cpSync(resolve(env.coreDir, "package.json"), join(packageDir, "package.json"));
++				cpSync(resolve(env.coreDir, "dist"), join(packageDir, "dist"), { recursive: true });
++				for (const file of env.nativeFiles) {
++					cpSync(resolve(env.nativeDir, file), join(packageDir, "native", file));
++				}
++				writeFileSync(join(temporary, "package.json"), JSON.stringify({ type: "module", private: true }));
++				writeFileSync(
++					join(temporary, "consumer.mjs"),
++					'import { createStepMap } from "@stepperize/core";\nprocess.stdout.write(JSON.stringify(createStepMap([{ id: "a" }]).ids));\n',
++				);
++				const consumer = spawnSync(process.execPath, [join(temporary, "consumer.mjs")], {
++					cwd: temporary,
++					encoding: "utf8",
++				});
++				assert.equal(consumer.status, 0, `packed consumer failed: ${consumer.stderr || consumer.stdout}`);
++				assert.deepEqual(JSON.parse(consumer.stdout.trim()), ["a"], "packed consumer ids");
++			} finally {
++				rmSync(temporary, { recursive: true, force: true });
++			}
++		}),
++
++	"F2P-049": (env) =>
++		withNative(env, ["validateStepPrepare", "validateStepFinish"], async () => {
++			const result = await env.core.validateStep(receiverSteps, "receiver", "ok");
++			assert.deepEqual(result, { success: true, data: "ok" }, "receiver-bound schema result");
++			const wrongReceiver = receiverSchema["~standard"].validate.call(undefined, "ok");
++			assert.ok(wrongReceiver.issues && wrongReceiver.issues.length > 0, "schema must be receiver sensitive");
++		}),
++
++	"F2P-050": (env) =>
++		withNative(env, ["getInitialData"], async () => {
++			assertProtoSymbolCopy(env);
++		}),
++
++	"F2P-051": (env) =>
++		withNative(env, ["stepNeighbors"], async () => {
++			const map = env.core.createStepMap(steps);
++			assert.deepEqual(map.neighbors("a"), { prev: undefined, next: steps[1] }, "neighbors(a)");
++			if (!env.native) return;
++			const sentinel = { prev: "native-prev-sentinel", next: "native-next-sentinel" };
++			const wrapper = env.wrappers.get("stepNeighbors");
++			env.native.stepNeighbors = function nativeNeighborsStub() {
++				env.calls.set("stepNeighbors", (env.calls.get("stepNeighbors") ?? 0) + 1);
++				return sentinel;
++			};
++			try {
++				assert.equal(map.neighbors("a"), sentinel, "public neighbors must delegate to the native binding");
++			} finally {
++				env.native.stepNeighbors = wrapper;
++			}
++		}),
++
++	"F2P-052": (env) =>
++		withNative(env, ["stepIndexOf", "getInitialData"], async () => {
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.indexOf("b"), 1, "indexOf(b)");
++			assert.equal(map.indexOf("missing"), -1, "indexOf(missing)");
++			assertProtoSymbolCopy(env);
++		}),
++
++	"F2P-053": (env) =>
++		withNative(env, ["getInitialStepIndex", "stepGet", "stepIndexOf", "stepNext"], async () => {
++			assert.equal(env.core.getInitialStepIndex(twoSteps, "b"), 1, "getInitialStepIndex(b)");
++			assert.equal(env.core.getInitialStepIndex(twoSteps), 0, "getInitialStepIndex()");
++			assert.equal(env.core.getInitialStepIndex(twoSteps, "missing"), 0, "getInitialStepIndex(missing)");
++			assertDuplicateSemantics(env);
++		}),
++
++	"F2P-054": (env) =>
++		withNative(
++			env,
++			["getInitialData", "stepNext", "parseStep", "validateStepPrepare", "getStepStatus", "matchStep"],
++			async () => {
++				assert.deepEqual(env.core.getInitialData(), {}, "getInitialData()");
++				const data = { a: 1, b: 2 };
++				const copy = env.core.getInitialData(data);
++				assert.deepEqual(copy, data, "getInitialData entries");
++				assert.notEqual(copy, data, "getInitialData reference");
++				await assertCombinedCoreCalls(env);
++			},
++		),
++
++	"F2P-055": (env) =>
++		withNative(env, ["validateStepPrepare", "validateStepFinish"], async () => {
++			const plain = await env.core.validateStep(schemaSteps, "plain", { anything: true });
++			assert.deepEqual(plain, { success: true, data: { anything: true } }, "schema-less validateStep");
++			const receiver = await env.core.validateStep(receiverSteps, "receiver", "ok");
++			assert.deepEqual(receiver, { success: true, data: "ok" }, "receiver validateStep");
++		}),
++
++	"F2P-056": (env) =>
++		withNative(env, ["stepIds"], async () => {
++			assertPinnedRustToolchain(env);
++			assert.equal(typeof env.core.createStepMap, "function", "createStepMap export");
++			assert.deepEqual(env.core.createStepMap([{ id: "a" }]).ids, ["a"], "synchronous named export");
++			const declarations = resolve(env.coreDir, "dist", "index.d.ts");
++			assert.ok(existsSync(declarations), "package must ship root type declarations");
++		}),
++
++	"F2P-057": (env) =>
++		withNative(env, ["stepAt", "validateStepPrepare"], async () => {
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.at(1), steps[1], "at(1)");
++			assert.equal(map.at(-1), undefined, "at(-1)");
++			assert.equal(map.at(1.5), undefined, "at(1.5)");
++			assert.equal(map.at(Number.NaN), undefined, "at(NaN)");
++			assert.equal(map.at(2), undefined, "at(2)");
++			const result = await env.core.validateStep([{ id: "a" }], "a", { x: 1 });
++			assert.deepEqual(result, { success: true, data: { x: 1 } }, "schema-less validateStep");
++		}),
++
++	"F2P-058": (env) =>
++		withNative(env, ["validateStepPrepare"], async () => {
++			assertPinnedRustToolchain(env);
++			let error;
++			try {
++				await env.core.validateStep([{ id: "a" }], "missing", null);
++			} catch (caught) {
++				error = caught;
++			}
++			assert.ok(error instanceof Error, "unknown step must reject with an Error");
++			assert.match(error.message, /not found/, "unknown step message");
++			await assertFailsWithoutNative(env);
++		}),
++
++	"F2P-060": (env) =>
++		withNative(env, ["getInitialStepIndex", "validateStepPrepare"], async () => {
++			assert.equal(env.core.getInitialStepIndex(twoSteps, "b"), 1, "getInitialStepIndex(b)");
++			assert.equal(env.core.getInitialStepIndex(twoSteps), 0, "getInitialStepIndex()");
++			assert.equal(env.core.getInitialStepIndex(twoSteps, "missing"), 0, "getInitialStepIndex(missing)");
++			let error;
++			try {
++				await env.core.validateStep(asyncRejectingSteps, "async-reject", "x");
++			} catch (caught) {
++				error = caught;
++			}
++			assert.ok(error instanceof Error, "rejected schema must reject with an Error");
++			assert.equal(error.message, "boom", "rejected schema message");
++		}),
++
++	"F2P-061": (env) =>
++		withNative(env, ["stepIds", "stepNext"], async () => {
++			assert.deepEqual(env.core.createStepMap([{ id: "a" }]).ids, ["a"], "synchronous ids");
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.next("a"), steps[1], "next(a)");
++			assert.equal(map.next("b"), undefined, "next(b)");
++			assert.equal(map.next("missing"), undefined, "next(missing)");
++			const declarations = readFileSync(resolve(env.coreDir, "dist", "index.d.ts"), "utf8");
++			assert.match(declarations, /\bStep\b/, "Step type declaration");
++			assert.match(declarations, /\bStepMap\b/, "StepMap type declaration");
++		}),
++
++	"F2P-062": (env) =>
++		withNative(env, ["matchStep", "stepGet", "stepIndexOf", "stepNext"], async () => {
++			const result = env.core.matchStep(steps, "b", {
++				a: (step) => step.label,
++				b: (step) => step.label,
++				c: (step) => step.label,
++			});
++			assert.equal(result, "B", "matchStep handler result");
++			assertDuplicateSemantics(env);
++		}),
++
++	"F2P-063": (env) =>
++		withNative(env, ["stepGet", "getInitialData"], async () => {
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.get("b"), steps[1], "get(b)");
++			assert.equal(map.get("missing"), undefined, "get(missing)");
++			assertProtoSymbolCopy(env);
++		}),
++
++	"F2P-064": (env) =>
++		withNative(env, ["stepFirst", "stepLast", "getInitialData"], async () => {
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.first(), steps[0], "first");
++			assert.equal(map.last(), steps[1], "last");
++			const empty = env.core.createStepMap(emptySteps);
++			assert.equal(empty.first(), undefined, "empty first");
++			assert.equal(empty.last(), undefined, "empty last");
++			assertProtoSymbolCopy(env);
++		}),
++
++	"F2P-065": (env) =>
++		withNative(env, ["validateStepPrepare", "validateStepFinish", "getInitialData"], async () => {
++			const result = await env.core.validateStep(schemaSteps, "async", "valid");
++			assert.deepEqual(result, { success: true, data: "parsed" }, "parsed schema result");
++			assertProtoSymbolCopy(env);
++		}),
++
++	"F2P-066": (env) =>
++		withNative(
++			env,
++			["getStepStatus", "getStepStatuses", "stepGet", "stepIndexOf", "stepNext"],
++			async () => {
++				assert.equal(env.core.getStepStatus(steps, 1, "a"), "previous", "previous status");
++				assert.equal(env.core.getStepStatus(steps, 1, "b"), "active", "active status");
++				assert.equal(env.core.getStepStatus(steps, 1, "c"), "upcoming", "upcoming status");
++				assert.deepEqual(
++					env.core.getStepStatuses(steps, 1),
++					{ a: "previous", b: "active", c: "upcoming" },
++					"status record",
++				);
++				assertDuplicateSemantics(env);
++			},
++		),
++
++	"F2P-067": (env) =>
++		withNative(env, ["getInitialStepIndex", "stepGet", "stepFirst", "stepNext"], async () => {
++			assert.equal(env.core.getInitialStepIndex(twoSteps, "b"), 1, "matching index");
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.get("a"), steps[0], "get identity");
++			assert.equal(map.first(), steps[0], "first identity");
++			assert.equal(map.next("a"), steps[1], "next identity");
++		}),
++
++	"F2P-068": (env) =>
++		withNative(env, ["stepIds", "stepNext"], async () => {
++			assertPinnedRustToolchain(env);
++			assertChangeScope(env);
++			const map = env.core.createStepMap(twoSteps);
++			assert.equal(map.next("a"), steps[1], "native next");
++		}),
++
++	"F2P-069": (env) =>
++		withNative(
++			env,
++			["stepAt", "stepNext", "parseStep", "validateStepPrepare", "getStepStatus", "matchStep"],
++			async () => {
++				const map = env.core.createStepMap(twoSteps);
++				assert.equal(map.at(1), steps[1], "at(1)");
++				assert.equal(map.at(2), undefined, "at(2)");
++				await assertCombinedCoreCalls(env);
++			},
++		),
++
++	"F2P-070": (env) =>
++		withNative(env, ["stepIds", "stepAt"], async () => {
++			const map = env.core.createStepMap(steps);
++			assert.deepEqual(map.steps, steps, "steps in order");
++			assert.deepEqual(map.ids, ["a", "b", "c"], "ids in order");
++			assert.equal(map.at(1), steps[1], "at(1)");
++			assert.equal(map.at(-1), undefined, "at(-1)");
++			assert.equal(map.at(1.5), undefined, "at(1.5)");
++			assert.equal(map.at(Number.NaN), undefined, "at(NaN)");
++			assert.equal(map.at(3), undefined, "at(3)");
++		}),
++
++	"F2P-071": (env) =>
++		withNative(env, ["getInitialStepIndex", "stepGet", "stepIndexOf", "stepNext"], async () => {
++			assert.equal(env.core.getInitialStepIndex(steps), 0, "default index");
++			assert.equal(env.core.getInitialStepIndex(steps, "missing"), 0, "missing index");
++			assertDuplicateSemantics(env);
++		}),
++};
++
++export async function runObservation(env, id) {
++	const observation = observations[id];
++	if (!observation) {
++		throw new Error(`unknown observation ${id}`);
++	}
++	try {
++		await observation(env);
++		return { id, status: "PASS" };
++	} catch (error) {
++		return { id, status: "FAIL", error: error instanceof Error ? error.message : String(error) };
++	}
++}
++
++export async function runAll(env) {
++	const results = [];
++	for (const id of Object.keys(observations)) {
++		results.push(await runObservation(env, id));
++	}
++	return results;
++}
+diff --git a/tests/shared/batches/BATCH-P2P-0001/checks.mjs b/tests/shared/batches/BATCH-P2P-0001/checks.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0001/checks.mjs
+@@ -0,0 +1,432 @@
++import assert from "node:assert/strict";
++import { createHash } from "node:crypto";
++import { existsSync } from "node:fs";
++import { readFile, readdir } from "node:fs/promises";
++import { spawnSync } from "node:child_process";
++import { resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++import { steps2, steps3, emptySteps, parsedSchema, issuesSchema } from "../../../fixtures/batches/BATCH-P2P-0001/steps.mjs";
++
++let importSequence = 0;
++
++async function importFresh(file) {
++	importSequence += 1;
++	return import(`${pathToFileURL(file).href}?p2p=${importSequence}`);
++}
++
++function hash(content) {
++	return createHash("sha256").update(content).digest("hex");
++}
++
++async function hashDirectory(root, relativePaths) {
++	const hashState = createHash("sha256");
++	const entries = [];
++	for (const relativePath of relativePaths) {
++		const absolutePath = resolve(root, relativePath);
++		if (!existsSync(absolutePath)) continue;
++		const children = await readdir(absolutePath, { withFileTypes: true }).catch(() => []);
++		if (children.length === 0) {
++			entries.push(relativePath);
++			continue;
++		}
++		for (const child of children) {
++			if (child.isDirectory()) {
++				if (child.name === "node_modules" || child.name === "dist") continue;
++				const nested = await hashDirectory(root, [`${relativePath}/${child.name}`]);
++				entries.push(...nested.entries);
++			} else if (child.isFile()) {
++				entries.push(`${relativePath}/${child.name}`);
++			}
++		}
++	}
++	entries.sort();
++	for (const entry of entries) {
++		hashState.update(entry);
++		hashState.update("\0");
++		hashState.update(await readFile(resolve(root, entry)));
++		hashState.update("\0");
++	}
++	return { digest: hashState.digest("hex"), entries };
++}
++
++function runCommand(root, command, args) {
++	const result = spawnSync(command, args, {
++		cwd: root,
++		encoding: "utf8",
++		env: {
++			...process.env,
++			CI: "1",
++			COREPACK_ENABLE_NETWORK: "0",
++			COREPACK_DEFAULT_TO_LATEST: "0",
++		},
++		timeout: 600000,
++	});
++	if (result.error) throw result.error;
++	if (result.status !== 0) {
++		const detail = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim().split("\n").slice(-12).join("\n");
++		throw new Error(`${command} ${args.join(" ")} exited ${result.status}\n${detail}`);
++	}
++	return { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
++}
++
++function hasSkipMarkers(source) {
++	return /\b(?:describe|it|test)\.(?:skip|todo|only)\b/.test(source);
++}
++
++function stepLabel(step) {
++	return step && typeof step === "object" ? step.label ?? null : null;
++}
++
++export async function runP2PChecks(root = process.cwd()) {
++	const core = await importFresh(resolve(root, "packages/core/dist/index.js"));
++	const results = {};
++
++	const record = async (id, operation) => {
++		try {
++			results[id] = await operation();
++		} catch (error) {
++			results[id] = { result: "FAIL", error: error instanceof Error ? error.message : String(error) };
++		}
++	};
++
++	const checks = [
++		[
++			"P2P-021",
++			async () => {
++				const registry = JSON.parse(await readFile(resolve(root, "apps/docs/registry.json"), "utf8"));
++				const registryDir = resolve(root, "apps/docs/public/r");
++				const missing = [];
++				const withoutContent = [];
++				const withoutDependency = [];
++				for (const block of registry.items ?? []) {
++					const builtPath = resolve(registryDir, `${block.name}.json`);
++					if (!existsSync(builtPath)) {
++						missing.push(block.name);
++						continue;
++					}
++					const item = JSON.parse(await readFile(builtPath, "utf8"));
++					if (item.name !== block.name) missing.push(block.name);
++					if (!(item.files?.[0]?.content?.length > 0)) withoutContent.push(block.name);
++					if (!Array.isArray(item.dependencies) || !item.dependencies.includes("@stepperize/react")) {
++						withoutDependency.push(block.name);
++					}
++				}
++				assert.deepEqual(missing, [], "missing built registry items");
++				assert.deepEqual(withoutContent, [], "registry items without inlined content");
++				assert.deepEqual(withoutDependency, [], "registry items without @stepperize/react");
++				return {
++					blocks: (registry.items ?? []).length,
++					missing,
++					withoutContent,
++					withoutDependency,
++					result: "PASS",
++				};
++			},
++		],
++		[
++			"P2P-011",
++			async () => ({
++				second: core.getInitialStepIndex(steps2, "b"),
++				omitted: core.getInitialStepIndex(steps2),
++				missing: core.getInitialStepIndex(steps2, "missing"),
++			}),
++		],
++		[
++			"P2P-001",
++			async () => {
++				const pass = await core.validateStep([{ id: "a", schema: parsedSchema }], "a", { input: true });
++				const fail = await core.validateStep([{ id: "a", schema: issuesSchema }], "a", { input: true });
++				assert.equal(pass.success, true);
++				assert.equal(pass.data, "parsed");
++				assert.equal(fail.success, false);
++				assert.deepEqual(fail.issues, [{ message: "bad" }]);
++				return {
++					pass: { success: pass.success, data: pass.data },
++					fail: { success: fail.success, issues: fail.issues },
++				};
++			},
++		],
++		[
++			"P2P-002",
++			async () => {
++				const targetFiles = [
++					"packages/core/native/Cargo.toml",
++					"packages/core/native/src/lib.rs",
++					"packages/core/scripts/copy-native.mjs",
++					"packages/core/src/native.ts",
++					"packages/core/src/utils.ts",
++					"packages/core/src/index.ts",
++					"packages/core/src/types.ts",
++					"packages/core/package.json",
++				];
++				const sourceFiles = [
++					"packages/core/src/utils.ts",
++					"packages/core/src/index.ts",
++					"packages/core/src/types.ts",
++					"packages/core/src/tests/utils.test.ts",
++					"packages/core/package.json",
++				];
++				const required = existsSync(resolve(root, "packages/core/native")) ? targetFiles : sourceFiles;
++				const absent = required.filter((relativePath) => !existsSync(resolve(root, relativePath)));
++				assert.deepEqual(absent, [], "required migration files must exist inside the repository");
++				return { result: "PASS" };
++			},
++		],
++		[
++			"P2P-004",
++			async () => {
++				const data = { a: { saved: true } };
++				const copy = core.getInitialData(data);
++				assert.deepEqual(copy, data);
++				assert.notEqual(copy, data);
++				assert.equal(copy.a, data.a);
++				return { equal: true, differentReference: true, nestedReferencePreserved: true };
++			},
++		],
++		[
++			"P2P-005",
++			async () => {
++				assert.equal(existsSync(resolve(root, "package.json")), true);
++				assert.equal(existsSync(resolve(root, "pnpm-workspace.yaml")), true);
++				return { result: "PASS" };
++			},
++		],
++		[
++			"P2P-009",
++			async () => {
++				const pending = core.validateStep([{ id: "a" }], "a", { x: 1 });
++				assert.equal(pending instanceof Promise, true);
++				const resolved = await pending;
++				assert.deepEqual(resolved, { success: true, data: { x: 1 } });
++				return { isPromise: true, success: resolved.success, data: resolved.data };
++			},
++		],
++		[
++			"P2P-012",
++			async () => {
++				let invoked = null;
++				const returned = core.matchStep(steps2, "b", {
++					a: (step) => {
++						invoked = "a";
++						return step.label;
++					},
++					b: (step) => {
++						invoked = "b";
++						return step.label;
++					},
++				});
++				assert.equal(returned, "B");
++				assert.equal(invoked, "b");
++				return { returned, invoked };
++			},
++		],
++		[
++			"P2P-013",
++			async () => {
++				const map = core.createStepMap(steps2);
++				const empty = core.createStepMap(emptySteps);
++				assert.equal(map.first(), steps2[0]);
++				assert.equal(map.last(), steps2[1]);
++				assert.equal(empty.first(), undefined);
++				assert.equal(empty.last(), undefined);
++				return {
++					first: map.first().id,
++					last: map.last().id,
++					emptyFirst: null,
++					emptyLast: null,
++				};
++			},
++		],
++		[
++			"P2P-014",
++			async () => ({
++				a: core.getStepStatus(steps3, 1, "a"),
++				b: core.getStepStatus(steps3, 1, "b"),
++				c: core.getStepStatus(steps3, 1, "c"),
++			}),
++		],
++		[
++			"P2P-017",
++			async () => {
++				runCommand(root, "pnpm", ["--filter", "docs", "exec", "vitest", "run", "src/lib/seo.test.ts"]);
++				return { result: "PASS" };
++			},
++		],
++		[
++			"P2P-018",
++			async () => {
++				const map = core.createStepMap(steps3);
++				assert.equal(map.steps.length, 3);
++				assert.equal(map.steps[0], steps3[0]);
++				assert.equal(map.steps[1], steps3[1]);
++				assert.equal(map.steps[2], steps3[2]);
++				assert.deepEqual(map.ids, ["a", "b", "c"]);
++				return {
++					steps: map.steps.map((step) => step.id),
++					ids: map.ids,
++				};
++			},
++		],
++		[
++			"P2P-003",
++			async () => {
++				const names = [
++					"createStepMap",
++					"getInitialStepIndex",
++					"parseStep",
++					"getInitialData",
++					"validateStep",
++					"getStepStatus",
++					"getStepStatuses",
++					"matchStep",
++				];
++				for (const name of names) assert.equal(typeof core[name], "function", `${name} must be callable`);
++				return { functions: names };
++			},
++		],
++		[
++			"P2P-006",
++			async () => {
++				let unknownMessage = "";
++				let handlerMessage = "";
++				try {
++					core.matchStep(steps2, "missing", {});
++				} catch (error) {
++					unknownMessage = error instanceof Error ? error.message : String(error);
++				}
++				try {
++					core.matchStep(steps2, "b", { a: (step) => step.id });
++				} catch (error) {
++					handlerMessage = error instanceof Error ? error.message : String(error);
++				}
++				assert.match(unknownMessage, /not found/);
++				assert.match(handlerMessage, /No match handler/);
++				return { notFound: true, missingHandler: true };
++			},
++		],
++		[
++			"P2P-007",
++			async () => {
++				const map = core.createStepMap(steps2);
++				assert.equal(map.indexOf("b"), 1);
++				assert.equal(map.indexOf("missing"), -1);
++				return { b: map.indexOf("b"), missing: map.indexOf("missing") };
++			},
++		],
++		[
++			"P2P-008",
++			async () => {
++				const map = core.createStepMap(steps2);
++				assert.equal(map.next("a"), steps2[1]);
++				assert.equal(map.next("b"), undefined);
++				assert.equal(map.next("missing"), undefined);
++				return {
++					a: stepLabel(map.next("a")),
++					b: map.next("b") === undefined ? null : stepLabel(map.next("b")),
++					missing: map.next("missing") === undefined ? null : stepLabel(map.next("missing")),
++				};
++			},
++		],
++		[
++			"P2P-010",
++			async () => {
++				const typeSource = await readFile(resolve(root, "packages/core/src/types.ts"));
++				const text = typeSource.toString("utf8");
++				for (const name of ["Step", "StepMap", "StepStatus", "ValidationResult", "StandardSchemaV1", "Get"]) {
++					assert.match(text, new RegExp(`\\b${name}\\b`), `${name} must remain declared`);
++				}
++				return { typesSha256: hash(typeSource), result: "PASS" };
++			},
++		],
++		[
++			"P2P-015",
++			async () => {
++				const reactDigest = await hashDirectory(root, ["packages/react/src"]);
++				runCommand(root, "pnpm", ["--filter", "@stepperize/react", "exec", "vitest", "run"]);
++				return { reactSha256: reactDigest.digest, reactTest: "PASS" };
++			},
++		],
++		[
++			"P2P-016",
++			async () => {
++				const map = core.createStepMap([{ id: "a" }]);
++				const expectedKeys = [
++					"at",
++					"first",
++					"get",
++					"has",
++					"ids",
++					"indexOf",
++					"last",
++					"neighbors",
++					"next",
++					"prev",
++					"steps",
++				];
++				assert.deepEqual(Object.keys(map).sort(), expectedKeys);
++				for (const name of ["get", "at", "indexOf", "has", "first", "last", "next", "prev", "neighbors"]) {
++					assert.equal(typeof map[name], "function", `${name} must be a function`);
++				}
++				assert.equal(Array.isArray(map.steps), true);
++				assert.equal(Array.isArray(map.ids), true);
++				return {
++					keys: Object.keys(map).sort(),
++					functions: ["get", "at", "indexOf", "has", "first", "last", "next", "prev", "neighbors"],
++				};
++			},
++		],
++		[
++			"P2P-019",
++			async () => {
++				const map = core.createStepMap([{ id: "a" }]);
++				assert.equal(map.has("a"), true);
++				assert.equal(map.has("missing"), false);
++				return { a: map.has("a"), missing: map.has("missing") };
++			},
++		],
++		[
++			"P2P-020",
++			async () => {
++				const map = core.createStepMap(steps2);
++				assert.equal(map.at(1), steps2[1]);
++				assert.equal(map.at(2), undefined);
++				return { one: stepLabel(map.at(1)), two: map.at(2) === undefined ? null : stepLabel(map.at(2)) };
++			},
++		],
++		[
++			"P2P-022",
++			async () => {
++				const statuses = core.getStepStatuses(steps3, 1);
++				assert.deepEqual(statuses, { a: "previous", b: "active", c: "upcoming" });
++				return { a: statuses.a, b: statuses.b, c: statuses.c };
++			},
++		],
++		[
++			"P2P-023",
++			async () => {
++				const testSource = await readFile(resolve(root, "packages/core/src/tests/utils.test.ts"), "utf8");
++				assert.equal(hasSkipMarkers(testSource), false);
++				runCommand(root, "pnpm", ["--filter", "@stepperize/core", "exec", "vitest", "run"]);
++				return { result: "PASS", skipped: false };
++			},
++		],
++		[
++			"P2P-024",
++			async () => {
++				const empty = core.getInitialData();
++				const data = { a: 1, b: 2 };
++				const copy = core.getInitialData(data);
++				assert.deepEqual(empty, {});
++				assert.deepEqual(copy, data);
++				assert.notEqual(copy, data);
++				return { empty, copy, differentReference: true };
++			},
++		],
++	];
++
++	for (const [id, check] of checks) {
++		await record(id, check);
++	}
++
++	return results;
++}
+diff --git a/tests/shared/batches/BATCH-P2P-0002/runner.mjs b/tests/shared/batches/BATCH-P2P-0002/runner.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0002/runner.mjs
+@@ -0,0 +1,321 @@
++import { execFileSync } from "node:child_process";
++import { createHash } from "node:crypto";
++import { existsSync, readFileSync, readdirSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import { importFresh } from "../../skeleton/assertions.mjs";
++import { twoSteps } from "../../../fixtures/skeleton/steps.mjs";
++import {
++	DOCS_DIGEST_SHA256,
++	DOCS_PUBLIC_REGISTRY_DIR,
++	DOCS_REGISTRY_PATH,
++	OBSERVATION_IDS,
++	REACT_GUARD_TEST_TITLE,
++	RUNTIME_EXPORTS,
++	TYPE_NAMES,
++	TYPES_FILE_SHA256,
++} from "../../../fixtures/batches/BATCH-P2P-0002/constants.mjs";
++
++function requireFile(path) {
++	if (!existsSync(path)) {
++		throw new Error(`required file is missing: ${path}`);
++	}
++	return path;
++}
++
++function run(command, args, root) {
++	return execFileSync(command, args, {
++		cwd: root,
++		encoding: "utf8",
++		env: process.env,
++		stdio: "pipe",
++	});
++}
++
++function ensureCoreBuilt(root) {
++	const distIndex = resolve(root, "packages/core/dist/index.js");
++	if (!existsSync(distIndex)) {
++		run("pnpm", ["--filter", "@stepperize/core", "build"], root);
++	}
++	requireFile(distIndex);
++	requireFile(resolve(root, "packages/core/dist/index.d.ts"));
++	return distIndex;
++}
++
++async function loadCore(root) {
++	return importFresh(ensureCoreBuilt(root));
++}
++
++function stepId(step) {
++	return step === undefined ? null : { id: step.id };
++}
++
++function valueOrNull(value) {
++	return value === undefined ? null : value;
++}
++
++function captureSync(operation) {
++	try {
++		operation();
++		return null;
++	} catch (error) {
++		return error instanceof Error ? error : new Error(String(error));
++	}
++}
++
++async function captureAsync(operation) {
++	try {
++		await operation();
++		return null;
++	} catch (error) {
++		return error instanceof Error ? error : new Error(String(error));
++	}
++}
++
++function docsFiles(root) {
++	const registry = resolve(root, DOCS_REGISTRY_PATH);
++	requireFile(registry);
++	const publicDir = resolve(root, DOCS_PUBLIC_REGISTRY_DIR);
++	const publicFiles = readdirSync(publicDir)
++		.filter((name) => name.endsWith(".json"))
++		.sort()
++		.map((name) => `${DOCS_PUBLIC_REGISTRY_DIR}/${name}`);
++	return [DOCS_REGISTRY_PATH, ...publicFiles];
++}
++
++function digestFiles(root, relativeFiles) {
++	const hash = createHash("sha256");
++	for (const relative of relativeFiles) {
++		hash.update(relative);
++		hash.update("\0");
++		hash.update(readFileSync(resolve(root, relative)));
++		hash.update("\0");
++	}
++	return hash.digest("hex");
++}
++
++function assertDocsUnchanged(root) {
++	const files = docsFiles(root);
++	const digest = digestFiles(root, files);
++	if (digest !== DOCS_DIGEST_SHA256) {
++		throw new Error(`apps/docs registry inputs changed: ${digest}`);
++	}
++	return { fileCount: files.length, sha256: digest };
++}
++
++function assertTypesUnchanged(root) {
++	const typesPath = resolve(root, "packages/core/src/types.ts");
++	requireFile(typesPath);
++	const digest = createHash("sha256").update(readFileSync(typesPath)).digest("hex");
++	if (digest !== TYPES_FILE_SHA256) {
++		throw new Error(`packages/core/src/types.ts changed: ${digest}`);
++	}
++	const declaration = readFileSync(resolve(root, "packages/core/dist/index.d.ts"), "utf8");
++	const exports = TYPE_NAMES.map((name) => [
++		name,
++		new RegExp(`(^|[^A-Za-z0-9_$])${name}([^A-Za-z0-9_$]|$)`).test(declaration),
++	]);
++	if (exports.some(([, present]) => !present)) {
++		throw new Error("one or more public type exports are missing from dist/index.d.ts");
++	}
++	return { typesFileSha256: digest, typeExports: exports };
++}
++
++function packageProjection(root) {
++	const coreDir = resolve(root, "packages/core");
++	const manifest = JSON.parse(readFileSync(requireFile(resolve(coreDir, "package.json")), "utf8"));
++	const typesRelative = typeof manifest.types === "string" ? manifest.types.replace(/^\.\//, "") : "";
++	const rootExport = manifest.exports?.["."] ?? {};
++	return {
++		name: manifest.name,
++		type: manifest.type,
++		main: manifest.main,
++		module: manifest.module,
++		types: manifest.types,
++		typesExists: Boolean(typesRelative) && existsSync(resolve(coreDir, typesRelative)),
++		rootExportTypes: rootExport.types,
++		rootExportImport: rootExport.import,
++	};
++}
++
++function runReactGuardTest(root) {
++	const testPath = resolve(root, "packages/react/src/tests/define-stepper.test.tsx");
++	const testSource = readFileSync(requireFile(testPath), "utf8");
++	if (!testSource.includes(REACT_GUARD_TEST_TITLE)) {
++		throw new Error(`react guard-context test is missing: ${REACT_GUARD_TEST_TITLE}`);
++	}
++	const report = join(tmpdir(), `p2p-0002-react-${process.pid}-${Date.now()}.json`);
++	run(
++		"pnpm",
++		[
++			"--filter",
++			"@stepperize/react",
++			"exec",
++			"vitest",
++			"run",
++			"--reporter=json",
++			`--outputFile=${report}`,
++			"-t",
++			REACT_GUARD_TEST_TITLE,
++		],
++		root,
++	);
++	const parsed = JSON.parse(readFileSync(report, "utf8"));
++	if ((parsed.numPassedTests ?? 0) < 1 || (parsed.numFailedTests ?? 0) !== 0) {
++		throw new Error(`react guard-context test did not pass: ${JSON.stringify(parsed)}`);
++	}
++	return { test: REACT_GUARD_TEST_TITLE, present: true, status: "PASS" };
++}
++
++async function projectionFor(id, root) {
++	if (id === "P2P-025") {
++		const core = await loadCore(root);
++		const map = core.createStepMap(twoSteps);
++		return {
++			prevB: stepId(map.prev("b")),
++			prevA: stepId(map.prev("a")),
++			prevMissing: stepId(map.prev("missing")),
++		};
++	}
++
++	if (id === "P2P-026") {
++		return assertDocsUnchanged(root);
++	}
++
++	if (id === "P2P-027") {
++		const core = await loadCore(root);
++		const error = await captureAsync(() => core.validateStep([{ id: "a" }], "missing", null));
++		return {
++			isError: error instanceof Error,
++			messageIncludesNotFound: Boolean(error && /not found/.test(error.message)),
++		};
++	}
++
++	if (id === "P2P-028") {
++		const core = await loadCore(root);
++		const result = await core.validateStep([{ id: "a" }], "a", { x: 1 });
++		return { success: result.success, data: result.data };
++	}
++
++	if (id === "P2P-029") {
++		const core = await loadCore(root);
++		return {
++			withB: core.getInitialStepIndex(twoSteps, "b"),
++			omitted: core.getInitialStepIndex(twoSteps),
++			unknown: core.getInitialStepIndex(twoSteps, "missing"),
++		};
++	}
++
++	if (id === "P2P-030") {
++		const core = await loadCore(root);
++		return {
++			createStepMapType: typeof core.createStepMap,
++			ids: core.createStepMap([{ id: "a" }]).ids,
++		};
++	}
++
++	if (id === "P2P-031") {
++		const core = await loadCore(root);
++		const calls = [];
++		const error = captureSync(() =>
++			core.matchStep(twoSteps, "b", {
++				a: (step) => {
++					calls.push(step.id);
++					return step.id;
++				},
++			}),
++		);
++		return {
++			isError: error instanceof Error,
++			messageIncludesNoMatchHandler: Boolean(error && /No match handler/.test(error.message)),
++			otherHandlerCalls: calls.length,
++		};
++	}
++
++	if (id === "P2P-032") {
++		const core = await loadCore(root);
++		const map = core.createStepMap(twoSteps);
++		return { getB: stepId(map.get("b")), getMissing: stepId(map.get("missing")) };
++	}
++
++	if (id === "P2P-033") {
++		const core = await loadCore(root);
++		return { runtimeExports: RUNTIME_EXPORTS.map((name) => [name, typeof core[name]]) };
++	}
++
++	if (id === "P2P-034") {
++		return packageProjection(root);
++	}
++
++	if (id === "P2P-035") {
++		const core = await loadCore(root);
++		return {
++			second: valueOrNull(core.parseStep(twoSteps, "b")),
++			missing: valueOrNull(core.parseStep(twoSteps, "missing")),
++			nullValue: valueOrNull(core.parseStep(twoSteps, null)),
++			undefinedValue: valueOrNull(core.parseStep(twoSteps, undefined)),
++			numberValue: valueOrNull(core.parseStep(twoSteps, 42)),
++		};
++	}
++
++	if (id === "P2P-036") {
++		const core = await loadCore(root);
++		const map = core.createStepMap(twoSteps);
++		return { ids: map.ids, statuses: core.getStepStatuses(twoSteps, 0) };
++	}
++
++	if (id === "P2P-037") {
++		const core = await loadCore(root);
++		return {
++			missing: valueOrNull(core.parseStep(twoSteps, "missing")),
++			nullValue: valueOrNull(core.parseStep(twoSteps, null)),
++			undefinedValue: valueOrNull(core.parseStep(twoSteps, undefined)),
++			numberValue: valueOrNull(core.parseStep(twoSteps, 42)),
++		};
++	}
++
++	if (id === "P2P-038") {
++		const core = await loadCore(root);
++		const map = core.createStepMap(twoSteps);
++		const neighbors = (stepIdValue) => {
++			const value = map.neighbors(stepIdValue);
++			return { prev: stepId(value.prev), next: stepId(value.next) };
++		};
++		return {
++			a: neighbors("a"),
++			b: neighbors("b"),
++			missing: neighbors("missing"),
++		};
++	}
++
++	if (id === "P2P-039") {
++		return assertTypesUnchanged(root);
++	}
++
++	if (id === "P2P-040") {
++		return runReactGuardTest(root);
++	}
++
++	throw new Error(`unknown observation id: ${id}`);
++}
++
++export const projections = Object.freeze(
++	Object.fromEntries(OBSERVATION_IDS.map((id) => [id, async (root) => projectionFor(id, root)])),
++);
++
++export async function runObservation(id, root) {
++	if (!Object.hasOwn(projections, id)) {
++		throw new Error(`unknown observation id: ${id}`);
++	}
++	return projections[id](root);
++}
++
++export async function runProjections(root) {
++	const result = {};
++	for (const id of OBSERVATION_IDS) {
++		result[id] = await runObservation(id, root);
++	}
++	return result;
++}
++
++export { OBSERVATION_IDS };
+diff --git a/tests/shared/integration/observations.json b/tests/shared/integration/observations.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/observations.json
+@@ -0,0 +1,732 @@
++[
++  {
++    "id": "DIFF-001",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-002",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-003",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-004",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-005",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-006",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-007",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-008",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-009",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-010",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-011",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-012",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-013",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-014",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-015",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-016",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-017",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-018",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-019",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-020",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-021",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-022",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-023",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-024",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-025",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-026",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-027",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-028",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-029",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-030",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-031",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-032",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0001"
++  },
++  {
++    "id": "DIFF-033",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0002"
++  },
++  {
++    "id": "DIFF-034",
++    "kind": "DIFFERENTIAL",
++    "batch_id": "BATCH-DIFFERENTIAL-0002"
++  },
++  {
++    "id": "F2P-001",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-002",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-003",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-004",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-005",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-006",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-007",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-008",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-009",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-010",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-011",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-012",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-013",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-014",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-015",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-016",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-017",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-018",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-019",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-020",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-021",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-022",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-023",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-024",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0001"
++  },
++  {
++    "id": "F2P-025",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-026",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-027",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-028",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-029",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-030",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-031",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-032",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-033",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-034",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-035",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-036",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-037",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-038",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-039",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-040",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-041",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-042",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-043",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-044",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-045",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-046",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-047",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-048",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0002"
++  },
++  {
++    "id": "F2P-049",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-050",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-051",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-052",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-053",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-054",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-055",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-056",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-057",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-058",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-059",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-060",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-061",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-062",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-063",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-064",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-065",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-066",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-067",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-068",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-069",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-070",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-071",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "F2P-072",
++    "kind": "F2P",
++    "batch_id": "BATCH-F2P-0003"
++  },
++  {
++    "id": "P2P-001",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-002",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-003",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-004",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-005",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-006",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-007",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-008",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-009",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-010",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-011",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-012",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-013",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-014",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-015",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-016",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-017",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-018",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-019",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-020",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-021",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-022",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-023",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-024",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0001"
++  },
++  {
++    "id": "P2P-025",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-026",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-027",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-028",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-029",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-030",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-031",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-032",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-033",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-034",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-035",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-036",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-037",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-038",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-039",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  },
++  {
++    "id": "P2P-040",
++    "kind": "P2P",
++    "batch_id": "BATCH-P2P-0002"
++  }
++]
+diff --git a/tests/shared/integration/run-source.mjs b/tests/shared/integration/run-source.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/run-source.mjs
+@@ -0,0 +1,11 @@
++import { dirname, resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { writeReport } from "./runner-lib.mjs";
++
++const assetsRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
++const reportPath = process.argv[2];
++
++writeReport({ side: "source", assetsRoot, reportPath }).catch((error) => {
++	console.error(error);
++	process.exitCode = 1;
++});
+diff --git a/tests/shared/integration/runner-lib.mjs b/tests/shared/integration/runner-lib.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/runner-lib.mjs
+@@ -0,0 +1,370 @@
++import { spawnSync } from "node:child_process";
++import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
++import { dirname, resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++
++export const REPORT_SCHEMA_VERSION = "migration-observations:v6";
++
++const BATCH_DEFINITIONS = Object.freeze([
++	{ id: "BATCH-P2P-0001", adapter: "p2p-0001" },
++	{ id: "BATCH-P2P-0002", adapter: "p2p-0002" },
++	{ id: "BATCH-F2P-0001", adapter: "f2p-0001" },
++	{ id: "BATCH-F2P-0002", adapter: "f2p-0002" },
++	{ id: "BATCH-F2P-0003", adapter: "f2p-0003" },
++	{ id: "BATCH-DIFFERENTIAL-0001", adapter: "differential-0001" },
++	{ id: "BATCH-DIFFERENTIAL-0002", adapter: "differential-0002" },
++]);
++
++const INFRASTRUCTURE_PREFIXES = Object.freeze([
++	".cargo/",
++	"vendor/",
++	".pnpm-store/",
++	"node_modules/",
++	"apps/docs/.source/",
++]);
++
++function resolveRepoRoot() {
++	for (const key of ["MIGRATION_REPO_ROOT", "MIGRATION_REPO", "REPO_ROOT", "REPO"]) {
++		const value = process.env[key];
++		if (typeof value === "string" && value.trim().length > 0) {
++			return resolve(value);
++		}
++	}
++	return process.cwd();
++}
++
++function isInfrastructurePath(path) {
++	return INFRASTRUCTURE_PREFIXES.some(
++		(prefix) => path === prefix.slice(0, -1) || path.startsWith(prefix),
++	);
++}
++
++function stableValue(value) {
++	if (value === undefined) return null;
++	if (typeof value === "number" && !Number.isFinite(value)) return String(value);
++	if (Array.isArray(value)) return value.map(stableValue);
++	if (value && typeof value === "object") {
++		const result = {};
++		for (const key of Object.keys(value).sort()) {
++			result[key] = stableValue(value[key]);
++		}
++		return result;
++	}
++	return value;
++}
++
++function sanitizeDetail(detail, root, assetsRoot) {
++	let text = detail instanceof Error ? detail.message : String(detail ?? "");
++	for (const [prefix, replacement] of [
++		[root, "<repo>"],
++		[assetsRoot, "<assets>"],
++	]) {
++		if (prefix) text = text.split(prefix).join(replacement);
++	}
++	return text;
++}
++
++function normalizeStatus(status) {
++	const value = String(status ?? "").toUpperCase();
++	if (["PASS", "FAIL", "NA", "INFRA_ERROR", "INCONCLUSIVE", "TIMEOUT"].includes(value)) {
++		return value;
++	}
++	return "INCONCLUSIVE";
++}
++
++function resultFromProbe(entry, defaultStatus = "PASS") {
++	if (!entry) return { status: "INCONCLUSIVE", value: null };
++	if (typeof entry === "string") return { status: normalizeStatus(entry), value: null };
++	const status = entry.status ?? entry.result ?? defaultStatus;
++	return {
++		status: normalizeStatus(status),
++		value: entry.error ?? entry.detail ?? entry.observation ?? entry,
++	};
++}
++
++async function importProbe(assetsRoot, side, batchId) {
++	const file = resolve(assetsRoot, side, "batches", batchId, "probe.mjs");
++	return import(pathToFileURL(file).href);
++}
++
++function runPnpm(root, args, label) {
++	const result = spawnSync("pnpm", args, {
++		cwd: root,
++		encoding: "utf8",
++		env: { ...process.env, CI: "1" },
++		timeout: 900000,
++	});
++	if (result.error || result.status !== 0) {
++		const detail = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim().split("\n").slice(-8).join("\n");
++		throw new Error(`${label}: ${detail}`);
++	}
++}
++
++async function ensureCoreBuild(root) {
++	if (existsSync(resolve(root, "packages/core/dist/index.js"))) return;
++	if (!existsSync(resolve(root, "node_modules"))) {
++		runPnpm(root, ["install", "--frozen-lockfile"], "unable to install workspace dependencies");
++	}
++	runPnpm(root, ["--filter", "@stepperize/core", "build"], "unable to build packages/core before integration probes");
++}
++
++async function runP2P0001(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-P2P-0001");
++	const fn = context.side === "source" ? probe.probeSource : probe.probeTarget;
++	const raw = await fn(context.root);
++	const results = {};
++	for (const id of context.ids) {
++		const entry = raw?.[id];
++		const status = entry && entry.result === "FAIL" ? "FAIL" : entry ? "PASS" : "INCONCLUSIVE";
++		results[id] = {
++			status,
++			value: entry ?? null,
++		};
++	}
++	return results;
++}
++
++async function runP2P0002(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-P2P-0002");
++	const results = {};
++	for (const id of context.ids) {
++		try {
++			const value = await probe.runObservation(id, context.root);
++			results[id] = {
++				status: value && value.status === "FAIL" ? "FAIL" : "PASS",
++				value,
++			};
++		} catch (error) {
++			results[id] = {
++				status: "FAIL",
++				value: { error: context.sanitize(error) },
++			};
++		}
++	}
++	return results;
++}
++
++async function runF2P0001(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-F2P-0001");
++	const fn = context.side === "source" ? probe.probeSource : probe.probeTarget;
++	const entries = await fn(context.root);
++	const byId = new Map(entries.map((entry) => [entry.observation_id, entry]));
++	const results = {};
++	for (const id of context.ids) {
++		const entry = byId.get(id);
++		results[id] = entry
++			? { status: normalizeStatus(entry.status), value: { detail: context.sanitize(entry.detail) } }
++			: { status: "INCONCLUSIVE", value: null };
++	}
++	return results;
++}
++
++async function runF2P0002(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-F2P-0002");
++	const fn = context.side === "source" ? probe.probeSource : probe.probeTarget;
++	const raw = await fn(context.root);
++	const results = {};
++	for (const id of context.ids) {
++		const entry = raw?.[id];
++		results[id] = entry
++			? { status: normalizeStatus(entry.status), value: { detail: context.sanitize(entry.detail) } }
++			: { status: "INCONCLUSIVE", value: null };
++	}
++	return results;
++}
++
++async function runF2P0003(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-F2P-0003");
++	const fn = context.side === "source" ? probe.probeSource : probe.probeTarget;
++	const entries = await fn(context.root);
++	const byId = new Map(entries.map((entry) => [entry.id, entry]));
++	const results = {};
++	for (const id of context.ids) {
++		const entry = byId.get(id);
++		results[id] = entry
++			? {
++					status: normalizeStatus(entry.status),
++					value: { detail: context.sanitize(entry.error ?? "") },
++				}
++			: { status: "INCONCLUSIVE", value: null };
++	}
++	return results;
++}
++
++function filterStructural(raw, context) {
++	const value = stableValue(raw ?? {});
++	if (Array.isArray(value.outOfScope)) {
++		value.outOfScope = value.outOfScope.filter((path) => !isInfrastructurePath(path)).sort();
++	}
++	if (Array.isArray(value.reactChanges)) {
++		value.reactChanges = value.reactChanges.filter((path) => !isInfrastructurePath(path)).sort();
++	}
++	if (Array.isArray(value.docsChanges)) {
++		value.docsChanges = value.docsChanges.filter((path) => !isInfrastructurePath(path)).sort();
++	}
++	return value;
++}
++
++function differentialStatus(id, value) {
++	if (id === "DIFF-028") return value.outOfScope?.length === 0 ? "PASS" : "FAIL";
++	if (id === "DIFF-030") return value.reactChanges?.length === 0 ? "PASS" : "FAIL";
++	if (id === "DIFF-031") return value.docsChanges?.length === 0 ? "PASS" : "FAIL";
++	return "PASS";
++}
++
++async function runDifferential0001(context) {
++	const probe = await importProbe(context.assetsRoot, context.side, "BATCH-DIFFERENTIAL-0001");
++	const fn = context.side === "source" ? probe.probeSource : probe.probeTarget;
++	const raw = await fn(context.root);
++	const results = {};
++	for (const id of context.ids) {
++		const entry = raw?.[id];
++		if (entry === undefined) {
++			results[id] = { status: "INCONCLUSIVE", value: null };
++			continue;
++		}
++		const value = filterStructural(entry, context);
++		results[id] = { status: differentialStatus(id, value), value };
++	}
++	return results;
++}
++
++async function runDifferential0002(context) {
++	const fixtures = await import(
++		pathToFileURL(resolve(context.assetsRoot, "fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs")).href
++	);
++	const helpers = await import(
++		pathToFileURL(
++			resolve(context.assetsRoot, "shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs"),
++		).href
++	);
++
++	const baselineCount = await helpers.assertFilesUnderRoot(context.root, fixtures.baselineFiles);
++	const requiredFiles =
++		context.side === "source" ? fixtures.sourceRequiredFiles : fixtures.targetRequiredFiles;
++	const requiredCount = await helpers.assertFilesUnderRoot(context.root, requiredFiles);
++	const workspace = await helpers.readJson(context.root, "package.json");
++	const core = await helpers.readJson(context.root, "packages/core/package.json");
++	const types = readFileSync(resolve(context.root, "packages/core/src/types.ts"), "utf8");
++
++	if (workspace.private !== true) {
++		throw new Error("the workspace baseline manifest must remain private");
++	}
++	if (core.name !== "@stepperize/core") {
++		throw new Error("the supplied @stepperize/core manifest must remain in place");
++	}
++	if (types.length === 0) {
++		throw new Error("the baseline types layer must remain present");
++	}
++
++	let diffWithinScope = true;
++	if (context.side === "target") {
++		await helpers.assertGitCheckout(context.root);
++		const changed = (await helpers.collectChangedPaths(context.root)).filter(
++			(path) => !isInfrastructurePath(path),
++		);
++		const outside = changed.filter(
++			(path) =>
++				!helpers.isAllowedWorkspaceChange(
++					path,
++					fixtures.allowedWorkspaceChangePrefixes,
++					fixtures.allowedWorkspaceChangeFiles,
++				),
++		);
++		diffWithinScope = outside.length === 0;
++	}
++
++	const filesPresent =
++		baselineCount === fixtures.baselineFiles.length && requiredCount === requiredFiles.length;
++	const status = filesPresent && diffWithinScope ? "PASS" : "FAIL";
++
++	return {
++		"DIFF-033": {
++			status,
++			value: {
++				baselineFiles: baselineCount,
++				baselinePresent: filesPresent,
++				diffWithinScope,
++			},
++		},
++		"DIFF-034": {
++			status,
++			value: {
++				coreName: core.name,
++				workspacePrivate: workspace.private === true,
++				requiredFilesPresent: filesPresent,
++				typesLayerPresent: types.length > 0,
++			},
++		},
++	};
++}
++
++const ADAPTERS = Object.freeze({
++	"p2p-0001": runP2P0001,
++	"p2p-0002": runP2P0002,
++	"f2p-0001": runF2P0001,
++	"f2p-0002": runF2P0002,
++	"f2p-0003": runF2P0003,
++	"differential-0001": runDifferential0001,
++	"differential-0002": runDifferential0002,
++});
++
++export function loadObservationInventory(assetsRoot) {
++	const file = resolve(assetsRoot, "shared/integration/observations.json");
++	return JSON.parse(readFileSync(file, "utf8"));
++}
++
++export async function collectSideObservations({ side, assetsRoot, root = resolveRepoRoot() }) {
++	await ensureCoreBuild(root);
++	const inventory = loadObservationInventory(assetsRoot);
++	const collected = new Map();
++	const sanitize = (detail) => sanitizeDetail(detail, root, assetsRoot);
++
++	for (const definition of BATCH_DEFINITIONS) {
++		const ids = inventory
++			.filter((entry) => entry.batch_id === definition.id)
++			.map((entry) => entry.id);
++		if (ids.length === 0) continue;
++		const adapter = ADAPTERS[definition.adapter];
++		try {
++			const results = await adapter({ side, assetsRoot, root, ids, sanitize });
++			for (const id of ids) {
++				collected.set(id, results[id] ?? { status: "INCONCLUSIVE", value: null });
++			}
++		} catch (error) {
++			for (const id of ids) {
++				collected.set(id, {
++					status: "INFRA_ERROR",
++					value: { error: sanitize(error) },
++				});
++			}
++		}
++	}
++
++	return inventory.map((entry) => {
++		const result = collected.get(entry.id) ?? { status: "INCONCLUSIVE", value: null };
++		return {
++			id: entry.id,
++			kind: entry.kind,
++			status: normalizeStatus(result.status),
++			value: { type: "json", value: stableValue(result.value) },
++		};
++	});
++}
++
++export async function writeReport({ side, assetsRoot, reportPath }) {
++	const observations = await collectSideObservations({ side, assetsRoot });
++	const report = {
++		schema_version: REPORT_SCHEMA_VERSION,
++		observations,
++	};
++	const serialized = `${JSON.stringify(report, null, 2)}\n`;
++	if (reportPath) {
++		mkdirSync(dirname(resolve(reportPath)), { recursive: true });
++		writeFileSync(resolve(reportPath), serialized);
++	}
++	process.stdout.write(serialized);
++	return report;
++}
++
++export { resolveRepoRoot };
+diff --git a/tests/shared/skeleton/assertions.mjs b/tests/shared/skeleton/assertions.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/skeleton/assertions.mjs
+@@ -0,0 +1,55 @@
++import assert from "node:assert/strict";
++import { pathToFileURL } from "node:url";
++
++let importSequence = 0;
++
++export async function importFresh(file) {
++	importSequence += 1;
++	return import(`${pathToFileURL(file).href}?skeleton=${importSequence}`);
++}
++
++export function assertFunction(value, name) {
++	assert.equal(typeof value, "function", `${name} must be a function`);
++}
++
++export function assertCallableSurface(namespace, names) {
++	for (const name of names) {
++		assertFunction(namespace[name], name);
++	}
++}
++
++export function assertDeepEqual(actual, expected, label = "value") {
++	assert.deepEqual(actual, expected, `${label} mismatch`);
++}
++
++export function assertUndefined(value, label = "value") {
++	assert.equal(value, undefined, `${label} must be undefined`);
++}
++
++export function assertSameReference(actual, expected, label = "value") {
++	assert.equal(actual, expected, `${label} must preserve object identity`);
++}
++
++export function assertDifferentReference(actual, expected, label = "value") {
++	assert.notEqual(actual, expected, `${label} must be a defensive copy`);
++}
++
++export async function assertResolves(operation, expected, label = "operation") {
++	const actual = await operation;
++	assert.deepEqual(actual, expected, `${label} resolved value mismatch`);
++	return actual;
++}
++
++export async function assertRejectsWith(operation, pattern, label = "operation") {
++	let error;
++	try {
++		await operation;
++	} catch (caught) {
++		error = caught;
++	}
++	assert.ok(error instanceof Error, `${label} must reject with an Error`);
++	if (pattern) {
++		assert.match(error.message, pattern, `${label} rejection message mismatch`);
++	}
++	return error;
++}
+diff --git a/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.mjs b/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-DIFFERENTIAL-0001/probe.mjs
+@@ -0,0 +1,31 @@
++import { resolve } from "node:path";
++import { fileURLToPath, pathToFileURL } from "node:url";
++import {
++	collectRuntimeObservations,
++	collectStructuralObservations,
++} from "../../../shared/batches/BATCH-DIFFERENTIAL-0001/observations.mjs";
++
++let importSequence = 0;
++
++async function importFresh(file) {
++	importSequence += 1;
++	return import(`${pathToFileURL(file).href}?differential-source=${importSequence}`);
++}
++
++export async function probeSource(root = process.cwd()) {
++	const core = await importFresh(resolve(root, "packages/core/dist/index.js"));
++	const runtime = await collectRuntimeObservations(core, root);
++	const structural = await collectStructuralObservations(root, "source");
++	return { ...runtime, ...structural };
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd())
++		.then((observations) => {
++			process.stdout.write(`${JSON.stringify(observations)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/batches/BATCH-DIFFERENTIAL-0002/probe.mjs b/tests/source/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+@@ -0,0 +1,44 @@
++import { readFile } from "node:fs/promises";
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	baselineFiles,
++	sourceRequiredFiles,
++} from "../../../fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs";
++import {
++	assertFilesUnderRoot,
++	hasGitMetadata,
++	readJson,
++} from "../../../shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs";
++
++export async function probeSource(root = process.cwd()) {
++	const baselineCount = await assertFilesUnderRoot(root, baselineFiles);
++	const requiredCount = await assertFilesUnderRoot(root, sourceRequiredFiles);
++
++	const workspace = await readJson(root, "package.json");
++	if (workspace.private !== true) {
++		throw new Error("the supplied workspace baseline manifest must remain private");
++	}
++	const core = await readJson(root, "packages/core/package.json");
++	if (core.name !== "@stepperize/core") {
++		throw new Error("the supplied @stepperize/core baseline manifest must remain in place");
++	}
++	const types = await readFile(resolve(root, "packages/core/src/types.ts"), "utf8");
++	if (types.length === 0) {
++		throw new Error("the baseline types layer must remain present");
++	}
++
++	return {
++		observation: "DIFF-033/DIFF-034",
++		baselineFiles: baselineCount,
++		requiredFiles: requiredCount,
++		gitCheckoutRetained: await hasGitMetadata(root),
++	};
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd()).catch((error) => {
++		console.error(error);
++		process.exitCode = 1;
++	});
++}
+diff --git a/tests/source/batches/BATCH-F2P-0001/probe.mjs b/tests/source/batches/BATCH-F2P-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0001/probe.mjs
+@@ -0,0 +1,20 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { cli, observationIds, runObservations } from "../../../shared/batches/BATCH-F2P-0001/checks.mjs";
++
++export { observationIds };
++
++export async function probeSource(root = process.cwd()) {
++	return runObservations(root);
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	cli(process.argv[2] ?? process.cwd())
++		.then(({ infra }) => {
++			process.exitCode = infra.length > 0 ? 1 : 0;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/batches/BATCH-F2P-0002/probe.mjs b/tests/source/batches/BATCH-F2P-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0002/probe.mjs
+@@ -0,0 +1,26 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	observationIds,
++	reportResults,
++	runChecks,
++} from "../../../shared/batches/BATCH-F2P-0002/checks.mjs";
++
++export { observationIds };
++
++export async function probeSource(root = process.cwd()) {
++	return reportResults(await runChecks(root));
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd())
++		.then((results) => {
++			console.log(JSON.stringify(results, null, 2));
++			const unexpected = Object.values(results).filter((result) => result.status !== "FAIL");
++			if (unexpected.length > 0) process.exitCode = 1;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/batches/BATCH-F2P-0003/probe.mjs b/tests/source/batches/BATCH-F2P-0003/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0003/probe.mjs
+@@ -0,0 +1,29 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { createEnv } from "../../../shared/batches/BATCH-F2P-0003/harness.mjs";
++import { observations, runAll } from "../../../shared/batches/BATCH-F2P-0003/observations.mjs";
++
++export const observationIds = Object.freeze(Object.keys(observations));
++export const expectedStatus = "FAIL";
++
++export async function probeSource(root = process.cwd()) {
++	const env = await createEnv(root, { requireNative: false });
++	try {
++		return await runAll(env);
++	} finally {
++		env.restore();
++	}
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd())
++		.then((results) => {
++			process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
++			const unexpected = results.filter((result) => result.status !== expectedStatus);
++			process.exitCode = unexpected.length === 0 ? 0 : 1;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/batches/BATCH-P2P-0001/probe.mjs b/tests/source/batches/BATCH-P2P-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-P2P-0001/probe.mjs
+@@ -0,0 +1,18 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { runP2PChecks } from "../../../shared/batches/BATCH-P2P-0001/checks.mjs";
++
++export async function probeSource(root = process.cwd()) {
++	return runP2PChecks(root);
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd())
++		.then((result) => {
++			process.stdout.write(`${JSON.stringify(result)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/batches/BATCH-P2P-0002/probe.mjs b/tests/source/batches/BATCH-P2P-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-P2P-0002/probe.mjs
+@@ -0,0 +1,37 @@
++import { existsSync } from "node:fs";
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	OBSERVATION_IDS,
++	projections,
++	runObservation,
++	runProjections,
++} from "../../../shared/batches/BATCH-P2P-0002/runner.mjs";
++
++function defaultRoot() {
++	const fromFile = fileURLToPath(new URL("../../../", import.meta.url));
++	return existsSync(resolve(fromFile, "packages/core")) ? fromFile : process.cwd();
++}
++
++export async function probeSource(root = defaultRoot()) {
++	return runProjections(root);
++}
++
++export async function probe(root = defaultRoot()) {
++	return runProjections(root);
++}
++
++export { OBSERVATION_IDS, projections, runObservation, runProjections };
++
++export default probeSource;
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? defaultRoot())
++		.then((result) => {
++			process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/source/run.sh b/tests/source/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/run.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++git --version
++git diff --exit-code
++set +e
++/assets/source/runner /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/source/runner b/tests/source/runner
+new file mode 100644
+--- /dev/null
++++ b/tests/source/runner
+@@ -0,0 +1,4 @@
++#!/bin/sh
++set -eu
++SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++exec node "$SCRIPT_DIR/../shared/integration/run-source.mjs" "$@"
+diff --git a/tests/source/skeleton/probe.mjs b/tests/source/skeleton/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/skeleton/probe.mjs
+@@ -0,0 +1,73 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	assertCallableSurface,
++	assertDeepEqual,
++	assertDifferentReference,
++	assertSameReference,
++	assertUndefined,
++	importFresh,
++} from "../../shared/skeleton/assertions.mjs";
++import { schemaSteps, steps, twoSteps } from "../../fixtures/skeleton/steps.mjs";
++
++export const publicFunctions = [
++	"createStepMap",
++	"getInitialStepIndex",
++	"parseStep",
++	"getInitialData",
++	"validateStep",
++	"getStepStatus",
++	"getStepStatuses",
++	"matchStep",
++];
++
++export async function probeSource(root = process.cwd()) {
++	const core = await importFresh(resolve(root, "packages/core/dist/index.js"));
++	assertCallableSurface(core, publicFunctions);
++
++	const map = core.createStepMap(steps);
++	assertDeepEqual(map.ids, ["a", "b", "c"], "ids");
++	assertSameReference(map.get("a"), steps[0], "get");
++	assertSameReference(map.at(1), steps[1], "at");
++	assertUndefined(map.at(-1), "at(-1)");
++	assertUndefined(map.at(1.5), "at(1.5)");
++	assertUndefined(map.at(Number.NaN), "at(NaN)");
++	assertDeepEqual(map.neighbors("a"), { prev: undefined, next: steps[1] }, "neighbors(a)");
++	assertDeepEqual(map.neighbors("b"), { prev: steps[0], next: steps[2] }, "neighbors(b)");
++	assertDeepEqual(map.neighbors("c"), { prev: steps[1], next: undefined }, "neighbors(c)");
++
++	assertDeepEqual(core.getInitialStepIndex(twoSteps, "b"), 1, "getInitialStepIndex");
++	assertDeepEqual(core.parseStep(twoSteps, "b"), "b", "parseStep");
++	assertUndefined(core.parseStep(twoSteps, null), "parseStep(null)");
++
++	const data = { a: { saved: true } };
++	const copy = core.getInitialData(data);
++	assertDifferentReference(copy, data, "getInitialData");
++	assertSameReference(copy.a, data.a, "getInitialData nested value");
++
++	const plain = await core.validateStep(schemaSteps, "plain", 42);
++	assertDeepEqual(plain, { success: true, data: 42 }, "validateStep plain");
++	const parsed = await core.validateStep(schemaSteps, "async", "valid");
++	assertDeepEqual(parsed, { success: true, data: "parsed" }, "validateStep async");
++	const empty = await core.validateStep(schemaSteps, "empty", "x");
++	assertDeepEqual(empty, { success: false, issues: [] }, "validateStep empty issues");
++
++	assertDeepEqual(core.getStepStatus(steps, 1, "a"), "previous", "getStepStatus previous");
++	assertDeepEqual(core.getStepStatuses(steps, 1), { a: "previous", b: "active", c: "upcoming" }, "getStepStatuses");
++
++	const matched = core.matchStep(steps, "b", {
++		a: (step) => step.label,
++		b: (step) => step.label,
++		c: (step) => step.label,
++	});
++	assertDeepEqual(matched, "B", "matchStep");
++
++	return core;
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeSource(process.argv[2] ?? process.cwd()).catch((error) => {
++		console.error(error);
++		process.exitCode = 1;
++	});
++}
+diff --git a/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.mjs b/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-DIFFERENTIAL-0001/probe.mjs
+@@ -0,0 +1,37 @@
++import { readdir } from "node:fs/promises";
++import { resolve } from "node:path";
++import { fileURLToPath, pathToFileURL } from "node:url";
++import {
++	collectRuntimeObservations,
++	collectStructuralObservations,
++} from "../../../shared/batches/BATCH-DIFFERENTIAL-0001/observations.mjs";
++
++let importSequence = 0;
++
++async function importFresh(file) {
++	importSequence += 1;
++	return import(`${pathToFileURL(file).href}?differential-target=${importSequence}`);
++}
++
++export async function probeTarget(root = process.cwd()) {
++	const nativeFiles = await readdir(resolve(root, "packages/core/native"));
++	if (!nativeFiles.some((name) => name.endsWith(".node"))) {
++		throw new Error("target package must contain a built native module");
++	}
++
++	const core = await importFresh(resolve(root, "packages/core/dist/index.js"));
++	const runtime = await collectRuntimeObservations(core, root);
++	const structural = await collectStructuralObservations(root, "target");
++	return { ...runtime, ...structural };
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd())
++		.then((observations) => {
++			process.stdout.write(`${JSON.stringify(observations)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs b/tests/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+@@ -0,0 +1,47 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	allowedWorkspaceChangeFiles,
++	allowedWorkspaceChangePrefixes,
++	baselineFiles,
++	targetRequiredFiles,
++} from "../../../fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs";
++import {
++	assertDiffRelativeToBaseline,
++	assertFilesUnderRoot,
++	readJson,
++} from "../../../shared/batches/BATCH-DIFFERENTIAL-0002/repo-assertions.mjs";
++
++export async function probeTarget(root = process.cwd()) {
++	const baselineCount = await assertFilesUnderRoot(root, baselineFiles);
++	const requiredCount = await assertFilesUnderRoot(root, targetRequiredFiles);
++	const { head, changed } = await assertDiffRelativeToBaseline(
++		root,
++		allowedWorkspaceChangePrefixes,
++		allowedWorkspaceChangeFiles,
++	);
++
++	const workspace = await readJson(root, "package.json");
++	if (workspace.private !== true) {
++		throw new Error("the supplied workspace baseline manifest must remain private");
++	}
++	const core = await readJson(root, "packages/core/package.json");
++	if (core.name !== "@stepperize/core") {
++		throw new Error("the supplied @stepperize/core baseline manifest must remain in place");
++	}
++
++	return {
++		observation: "DIFF-033/DIFF-034",
++		baselineFiles: baselineCount,
++		requiredFiles: requiredCount,
++		head,
++		changedPaths: changed.length,
++	};
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd()).catch((error) => {
++		console.error(error);
++		process.exitCode = 1;
++	});
++}
+diff --git a/tests/target/batches/BATCH-F2P-0001/probe.mjs b/tests/target/batches/BATCH-F2P-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/probe.mjs
+@@ -0,0 +1,20 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { cli, observationIds, runObservations } from "../../../shared/batches/BATCH-F2P-0001/checks.mjs";
++
++export { observationIds };
++
++export async function probeTarget(root = process.cwd()) {
++	return runObservations(root);
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	cli(process.argv[2] ?? process.cwd())
++		.then(({ infra }) => {
++			process.exitCode = infra.length > 0 ? 1 : 0;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/batches/BATCH-F2P-0002/probe.mjs b/tests/target/batches/BATCH-F2P-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0002/probe.mjs
+@@ -0,0 +1,26 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	observationIds,
++	reportResults,
++	runChecks,
++} from "../../../shared/batches/BATCH-F2P-0002/checks.mjs";
++
++export { observationIds };
++
++export async function probeTarget(root = process.cwd()) {
++	return reportResults(await runChecks(root));
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd())
++		.then((results) => {
++			console.log(JSON.stringify(results, null, 2));
++			const unexpected = Object.values(results).filter((result) => result.status !== "PASS");
++			if (unexpected.length > 0) process.exitCode = 1;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/batches/BATCH-F2P-0003/probe.mjs b/tests/target/batches/BATCH-F2P-0003/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0003/probe.mjs
+@@ -0,0 +1,29 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { createEnv } from "../../../shared/batches/BATCH-F2P-0003/harness.mjs";
++import { observations, runAll } from "../../../shared/batches/BATCH-F2P-0003/observations.mjs";
++
++export const observationIds = Object.freeze(Object.keys(observations));
++export const expectedStatus = "PASS";
++
++export async function probeTarget(root = process.cwd()) {
++	const env = await createEnv(root, { requireNative: true });
++	try {
++		return await runAll(env);
++	} finally {
++		env.restore();
++	}
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd())
++		.then((results) => {
++			process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
++			const unexpected = results.filter((result) => result.status !== expectedStatus);
++			process.exitCode = unexpected.length === 0 ? 0 : 1;
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/batches/BATCH-P2P-0001/probe.mjs b/tests/target/batches/BATCH-P2P-0001/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-P2P-0001/probe.mjs
+@@ -0,0 +1,18 @@
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { runP2PChecks } from "../../../shared/batches/BATCH-P2P-0001/checks.mjs";
++
++export async function probeTarget(root = process.cwd()) {
++	return runP2PChecks(root);
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd())
++		.then((result) => {
++			process.stdout.write(`${JSON.stringify(result)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/batches/BATCH-P2P-0002/probe.mjs b/tests/target/batches/BATCH-P2P-0002/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-P2P-0002/probe.mjs
+@@ -0,0 +1,37 @@
++import { existsSync } from "node:fs";
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	OBSERVATION_IDS,
++	projections,
++	runObservation,
++	runProjections,
++} from "../../../shared/batches/BATCH-P2P-0002/runner.mjs";
++
++function defaultRoot() {
++	const fromFile = fileURLToPath(new URL("../../../", import.meta.url));
++	return existsSync(resolve(fromFile, "packages/core")) ? fromFile : process.cwd();
++}
++
++export async function probeTarget(root = defaultRoot()) {
++	return runProjections(root);
++}
++
++export async function probe(root = defaultRoot()) {
++	return runProjections(root);
++}
++
++export { OBSERVATION_IDS, projections, runObservation, runProjections };
++
++export default probeTarget;
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? defaultRoot())
++		.then((result) => {
++			process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
++		})
++		.catch((error) => {
++			console.error(error);
++			process.exitCode = 1;
++		});
++}
+diff --git a/tests/target/run.sh b/tests/target/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/run.sh
+@@ -0,0 +1,15 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++node --version
++pnpm --version
++cargo --version
++rustc --version
++pnpm install --frozen-lockfile --offline --store-dir /opt/migration/dependencies/pnpm-store
++pnpm --filter @stepperize/core build
++pnpm --filter @stepperize/core test
++pnpm --filter @stepperize/core exec vitest run --reporter=junit --outputFile=/logs/native-report.xml
++set +e
++node /assets/harness.mjs /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/target/skeleton/probe.mjs b/tests/target/skeleton/probe.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/target/skeleton/probe.mjs
+@@ -0,0 +1,84 @@
++import { readdir, readFile } from "node:fs/promises";
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import {
++	assertCallableSurface,
++	assertDeepEqual,
++	assertDifferentReference,
++	assertSameReference,
++	assertUndefined,
++	importFresh,
++} from "../../shared/skeleton/assertions.mjs";
++import { schemaSteps, steps, twoSteps } from "../../fixtures/skeleton/steps.mjs";
++
++export const publicFunctions = [
++	"createStepMap",
++	"getInitialStepIndex",
++	"parseStep",
++	"getInitialData",
++	"validateStep",
++	"getStepStatus",
++	"getStepStatuses",
++	"matchStep",
++];
++
++export async function probeTarget(root = process.cwd()) {
++	const coreDir = resolve(root, "packages/core");
++	const manifest = JSON.parse(await readFile(resolve(coreDir, "package.json"), "utf8"));
++	const nativeFiles = await readdir(resolve(coreDir, "native"));
++	if (!nativeFiles.some((name) => name.endsWith(".node"))) {
++		throw new Error("target package must contain a built native module");
++	}
++	if (!Array.isArray(manifest.files) || !manifest.files.some((entry) => entry.includes(".node"))) {
++		throw new Error("target manifest must publish the native module");
++	}
++
++	const core = await importFresh(resolve(coreDir, "dist/index.js"));
++	assertCallableSurface(core, publicFunctions);
++
++	const map = core.createStepMap(steps);
++	assertDeepEqual(map.ids, ["a", "b", "c"], "ids");
++	assertSameReference(map.get("a"), steps[0], "get");
++	assertSameReference(map.at(1), steps[1], "at");
++	assertUndefined(map.at(-1), "at(-1)");
++	assertUndefined(map.at(1.5), "at(1.5)");
++	assertUndefined(map.at(Number.NaN), "at(NaN)");
++	assertDeepEqual(map.neighbors("a"), { prev: undefined, next: steps[1] }, "neighbors(a)");
++	assertDeepEqual(map.neighbors("b"), { prev: steps[0], next: steps[2] }, "neighbors(b)");
++	assertDeepEqual(map.neighbors("c"), { prev: steps[1], next: undefined }, "neighbors(c)");
++
++	assertDeepEqual(core.getInitialStepIndex(twoSteps, "b"), 1, "getInitialStepIndex");
++	assertDeepEqual(core.parseStep(twoSteps, "b"), "b", "parseStep");
++	assertUndefined(core.parseStep(twoSteps, null), "parseStep(null)");
++
++	const data = { a: { saved: true } };
++	const copy = core.getInitialData(data);
++	assertDifferentReference(copy, data, "getInitialData");
++	assertSameReference(copy.a, data.a, "getInitialData nested value");
++
++	const plain = await core.validateStep(schemaSteps, "plain", 42);
++	assertDeepEqual(plain, { success: true, data: 42 }, "validateStep plain");
++	const parsed = await core.validateStep(schemaSteps, "async", "valid");
++	assertDeepEqual(parsed, { success: true, data: "parsed" }, "validateStep async");
++	const empty = await core.validateStep(schemaSteps, "empty", "x");
++	assertDeepEqual(empty, { success: false, issues: [] }, "validateStep empty issues");
++
++	assertDeepEqual(core.getStepStatus(steps, 1, "a"), "previous", "getStepStatus previous");
++	assertDeepEqual(core.getStepStatuses(steps, 1), { a: "previous", b: "active", c: "upcoming" }, "getStepStatuses");
++
++	const matched = core.matchStep(steps, "b", {
++		a: (step) => step.label,
++		b: (step) => step.label,
++		c: (step) => step.label,
++	});
++	assertDeepEqual(matched, "B", "matchStep");
++
++	return core;
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++	probeTarget(process.argv[2] ?? process.cwd()).catch((error) => {
++		console.error(error);
++		process.exitCode = 1;
++	});
++}
+diff --git a/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/steps.mjs b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/steps.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0001/steps.mjs
+@@ -0,0 +1,34 @@
++export const steps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const twoSteps = Object.freeze([steps[0], steps[1]]);
++
++export const emptySteps = Object.freeze([]);
++
++export function makeSchema(validate, extra = {}) {
++	return Object.freeze({
++		"~standard": Object.freeze({
++			version: 1,
++			vendor: "differential",
++			validate,
++			...extra,
++		}),
++	});
++}
++
++export const parsedSchema = makeSchema(() => ({ value: "parsed" }));
++export const issueSchema = makeSchema(() => ({ issues: [{ message: "bad" }] }));
++
++export const schemaSteps = Object.freeze([
++	Object.freeze({ id: "plain" }),
++	Object.freeze({ id: "parsed", schema: parsedSchema }),
++	Object.freeze({ id: "issues", schema: issueSchema }),
++]);
++
++export const labeledSteps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++]);
+diff --git a/tests/fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-DIFFERENTIAL-0002/repo.mjs
+@@ -0,0 +1,44 @@
++export const baselineFiles = Object.freeze([
++	"package.json",
++	"pnpm-workspace.yaml",
++	"packages/core/package.json",
++	"packages/core/src/index.ts",
++	"packages/core/src/types.ts",
++	"packages/core/src/utils.ts",
++	"packages/react/package.json",
++	"apps/docs/package.json",
++	"apps/docs/registry.json",
++]);
++
++export const sourceRequiredFiles = Object.freeze([
++	"package.json",
++	"pnpm-workspace.yaml",
++	"packages/core/package.json",
++	"packages/core/tsconfig.json",
++	"packages/core/tsup.config.ts",
++	"packages/core/src/index.ts",
++	"packages/core/src/types.ts",
++	"packages/core/src/utils.ts",
++]);
++
++export const targetRequiredFiles = Object.freeze([
++	...sourceRequiredFiles,
++	"packages/core/native/Cargo.toml",
++	"packages/core/native/build.rs",
++	"packages/core/native/rust-toolchain.toml",
++	"packages/core/native/src/lib.rs",
++	"packages/core/scripts/copy-native.mjs",
++	"packages/core/src/native.ts",
++]);
++
++export const allowedWorkspaceChangePrefixes = Object.freeze(["packages/core/"]);
++
++export const allowedWorkspaceChangeFiles = Object.freeze([
++	"package.json",
++	"pnpm-lock.yaml",
++	"pnpm-workspace.yaml",
++	"turbo.json",
++	".npmrc",
++	".cargo/",
++	"vendor/",
++]);
+diff --git a/tests/fixtures/batches/BATCH-F2P-0001/steps.mjs b/tests/fixtures/batches/BATCH-F2P-0001/steps.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0001/steps.mjs
+@@ -0,0 +1,53 @@
++export const steps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const twoSteps = Object.freeze([steps[0], steps[1]]);
++
++export const emptySteps = Object.freeze([]);
++
++export const duplicateSteps = Object.freeze([
++	Object.freeze({ id: "a", label: "first" }),
++	Object.freeze({ id: "a", label: "second" }),
++]);
++
++export function makeSchema(validate, extra = {}) {
++	return Object.freeze({
++		"~standard": Object.freeze({
++			version: 1,
++			vendor: "f2p-0001",
++			validate,
++			...extra,
++		}),
++	});
++}
++
++export const passThroughSchema = makeSchema((value) => ({ value }));
++
++export const rejectingSchema = makeSchema(() => ({ issues: [{ message: "Required" }] }));
++
++export const emptyIssuesSchema = makeSchema(() => ({ issues: [] }));
++
++export const asyncSchema = makeSchema(async (value) =>
++	value === "valid" ? { value: "parsed" } : { issues: [{ message: "Invalid" }] },
++);
++
++export const asyncRejectingSchema = makeSchema(async () => {
++	throw new Error("boom");
++});
++
++export const receiverSchema = makeSchema(function validate(value) {
++	return value === this.expected ? { value } : { issues: [{ message: "Unexpected" }] };
++}, { expected: "ok" });
++
++export const schemaSteps = Object.freeze([
++	Object.freeze({ id: "pass", schema: passThroughSchema }),
++	Object.freeze({ id: "reject", schema: rejectingSchema }),
++	Object.freeze({ id: "empty", schema: emptyIssuesSchema }),
++	Object.freeze({ id: "async", schema: asyncSchema }),
++	Object.freeze({ id: "async-reject", schema: asyncRejectingSchema }),
++	Object.freeze({ id: "receiver", schema: receiverSchema }),
++	Object.freeze({ id: "plain" }),
++]);
+diff --git a/tests/fixtures/batches/BATCH-F2P-0002/steps.mjs b/tests/fixtures/batches/BATCH-F2P-0002/steps.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0002/steps.mjs
+@@ -0,0 +1,59 @@
++export const steps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const twoSteps = Object.freeze([steps[0], steps[1]]);
++
++export const threeSteps = steps;
++
++export const emptySteps = Object.freeze([]);
++
++export const duplicateSteps = Object.freeze([
++	Object.freeze({ id: "a", label: "first" }),
++	Object.freeze({ id: "a", label: "second" }),
++]);
++
++export function makeSchema(validate, extra = {}) {
++	return Object.freeze({
++		"~standard": Object.freeze({
++			version: 1,
++			vendor: "f2p-0002",
++			validate,
++			...extra,
++		}),
++	});
++}
++
++export const passThroughSchema = makeSchema((value) => ({ value }));
++
++export const rejectingSchema = makeSchema(() => ({ issues: [{ message: "Required" }] }));
++
++export const emptyIssuesSchema = makeSchema(() => ({ issues: [] }));
++
++export const asyncSchema = makeSchema(async (value) =>
++	value === "valid" ? { value: "parsed" } : { issues: [{ message: "Invalid" }] },
++);
++
++export const receiverSchema = makeSchema(function validate(value) {
++	return value === this.expected ? { value } : { issues: [{ message: "Unexpected" }] };
++}, { expected: "ok" });
++
++export const schemaSteps = Object.freeze([
++	Object.freeze({ id: "pass", schema: passThroughSchema }),
++	Object.freeze({ id: "reject", schema: rejectingSchema }),
++	Object.freeze({ id: "empty", schema: emptyIssuesSchema }),
++	Object.freeze({ id: "async", schema: asyncSchema }),
++	Object.freeze({ id: "receiver", schema: receiverSchema }),
++	Object.freeze({ id: "plain" }),
++]);
++
++export function makeOwnKeyData() {
++	const symbol = Symbol("meta");
++	const data = {
++		["__proto__"]: { polluted: true },
++		[symbol]: "symbol",
++	};
++	return { data, symbol };
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/cases.mjs b/tests/fixtures/batches/BATCH-F2P-0003/cases.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/cases.mjs
+@@ -0,0 +1,66 @@
++export const steps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const twoSteps = Object.freeze([steps[0], steps[1]]);
++
++export const emptySteps = Object.freeze([]);
++
++export const duplicateSteps = Object.freeze([
++	Object.freeze({ id: "a", label: "first" }),
++	Object.freeze({ id: "a", label: "second" }),
++]);
++
++export function makeSchema(validate, extra = {}) {
++	return {
++		"~standard": {
++			version: 1,
++			vendor: "f2p-0003",
++			validate,
++			...extra,
++		},
++	};
++}
++
++export const passThroughSchema = makeSchema((value) => ({ value }));
++
++export const rejectingSchema = makeSchema(() => ({ issues: [{ message: "Required" }] }));
++
++export const emptyIssuesSchema = makeSchema(() => ({ issues: [] }));
++
++export const asyncSchema = makeSchema(async (value) =>
++	value === "valid" ? { value: "parsed" } : { issues: [{ message: "Invalid" }] },
++);
++
++export const asyncRejectingSchema = makeSchema(async () => {
++	throw new Error("boom");
++});
++
++export const receiverSchema = makeSchema(function validate(value) {
++	return this && this.expected === value ? { value } : { issues: [{ message: "Unexpected" }] };
++}, { expected: "ok" });
++
++export const schemaSteps = Object.freeze([
++	Object.freeze({ id: "pass", schema: passThroughSchema }),
++	Object.freeze({ id: "reject", schema: rejectingSchema }),
++	Object.freeze({ id: "empty", schema: emptyIssuesSchema }),
++	Object.freeze({ id: "async", schema: asyncSchema }),
++	Object.freeze({ id: "async-reject", schema: asyncRejectingSchema }),
++	Object.freeze({ id: "receiver", schema: receiverSchema }),
++	Object.freeze({ id: "plain" }),
++]);
++
++export const receiverSteps = Object.freeze([Object.freeze({ id: "receiver", schema: receiverSchema })]);
++
++export const asyncRejectingSteps = Object.freeze([Object.freeze({ id: "async-reject", schema: asyncRejectingSchema })]);
++
++export function makeProtoSymbolData() {
++	const key = Symbol("meta");
++	const data = {
++		["__proto__"]: { polluted: true },
++		[key]: "symbol",
++	};
++	return { data, key };
++}
+diff --git a/tests/fixtures/batches/BATCH-P2P-0001/steps.mjs b/tests/fixtures/batches/BATCH-P2P-0001/steps.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-P2P-0001/steps.mjs
+@@ -0,0 +1,23 @@
++export const steps3 = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const steps2 = Object.freeze([steps3[0], steps3[1]]);
++
++export const emptySteps = Object.freeze([]);
++
++export function makeSchema(validate) {
++	return Object.freeze({
++		"~standard": Object.freeze({
++			version: 1,
++			vendor: "p2p",
++			validate,
++		}),
++	});
++}
++
++export const parsedSchema = makeSchema(() => ({ value: "parsed" }));
++
++export const issuesSchema = makeSchema(() => ({ issues: [{ message: "bad" }] }));
+diff --git a/tests/fixtures/batches/BATCH-P2P-0002/constants.mjs b/tests/fixtures/batches/BATCH-P2P-0002/constants.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-P2P-0002/constants.mjs
+@@ -0,0 +1,48 @@
++export const RUNTIME_EXPORTS = Object.freeze([
++	"createStepMap",
++	"getInitialData",
++	"getInitialStepIndex",
++	"getStepStatus",
++	"getStepStatuses",
++	"matchStep",
++	"parseStep",
++	"validateStep",
++]);
++
++export const TYPE_NAMES = Object.freeze([
++	"Get",
++	"StandardSchemaV1",
++	"Step",
++	"StepMap",
++	"StepStatus",
++	"ValidationResult",
++]);
++
++export const TYPES_FILE_SHA256 = "51cca31128474a42f3d3eae3dfcf6a18093710ee39f399ff1bc555e5020f888b";
++
++export const DOCS_DIGEST_SHA256 = "46e03c6d36ce0c0c557abdd4443740da8bd2c9a7da1273f4a458a200b9d8ecf3";
++
++export const DOCS_REGISTRY_PATH = "apps/docs/registry.json";
++
++export const DOCS_PUBLIC_REGISTRY_DIR = "apps/docs/public/r";
++
++export const REACT_GUARD_TEST_TITLE = "supports explicit guard-context validation by id or step object";
++
++export const OBSERVATION_IDS = Object.freeze([
++	"P2P-037",
++	"P2P-040",
++	"P2P-033",
++	"P2P-031",
++	"P2P-028",
++	"P2P-025",
++	"P2P-026",
++	"P2P-027",
++	"P2P-029",
++	"P2P-030",
++	"P2P-032",
++	"P2P-034",
++	"P2P-035",
++	"P2P-036",
++	"P2P-038",
++	"P2P-039",
++]);
+diff --git a/tests/fixtures/skeleton/steps.mjs b/tests/fixtures/skeleton/steps.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/skeleton/steps.mjs
+@@ -0,0 +1,53 @@
++export const steps = Object.freeze([
++	Object.freeze({ id: "a", label: "A" }),
++	Object.freeze({ id: "b", label: "B" }),
++	Object.freeze({ id: "c", label: "C" }),
++]);
++
++export const twoSteps = Object.freeze([steps[0], steps[1]]);
++
++export const emptySteps = Object.freeze([]);
++
++export const duplicateSteps = Object.freeze([
++	Object.freeze({ id: "a", label: "first" }),
++	Object.freeze({ id: "a", label: "second" }),
++]);
++
++export function makeSchema(validate, extra = {}) {
++	return Object.freeze({
++		"~standard": Object.freeze({
++			version: 1,
++			vendor: "skeleton",
++			validate,
++			...extra,
++		}),
++	});
++}
++
++export const passThroughSchema = makeSchema((value) => ({ value }));
++
++export const rejectingSchema = makeSchema(() => ({ issues: [{ message: "Required" }] }));
++
++export const emptyIssuesSchema = makeSchema(() => ({ issues: [] }));
++
++export const asyncSchema = makeSchema(async (value) =>
++	value === "valid" ? { value: "parsed" } : { issues: [{ message: "Invalid" }] },
++);
++
++export const asyncRejectingSchema = makeSchema(async () => {
++	throw new Error("boom");
++});
++
++export const receiverSchema = makeSchema(function validate(value) {
++	return value === this.expected ? { value } : { issues: [{ message: "Unexpected" }] };
++}, { expected: "ok" });
++
++export const schemaSteps = Object.freeze([
++	Object.freeze({ id: "pass", schema: passThroughSchema }),
++	Object.freeze({ id: "reject", schema: rejectingSchema }),
++	Object.freeze({ id: "empty", schema: emptyIssuesSchema }),
++	Object.freeze({ id: "async", schema: asyncSchema }),
++	Object.freeze({ id: "async-reject", schema: asyncRejectingSchema }),
++	Object.freeze({ id: "receiver", schema: receiverSchema }),
++	Object.freeze({ id: "plain" }),
++]);

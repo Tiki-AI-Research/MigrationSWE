@@ -1,0 +1,59 @@
+schema_version = "1.3"
+artifacts = ["/logs/artifacts"]
+
+[task]
+name = "tikiai/QuiteAFancyEmerald-InvisiProxy"
+description = "Migrate the InvisiProxy HTTP backend from Fastify 5.12.3 to Express 5.1.0."
+
+[metadata]
+category = "Framework_migration"
+language = "javascript"
+repository_id = "3eaabe59-2f2b-4d40-95b9-105bd575e6a3"
+task_id = "tp-43578c1bbfc8b9c5c007f2bcb1e6cca6"
+repository_url = "https://github.com/QuiteAFancyEmerald/InvisiProxy"
+base_commit_hash = "3d8e4b8089233b343eda2e9694483df3b57f9ce6"
+
+[metadata.tests]
+fail_to_pass_count = 106
+pass_to_pass_count = 25
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:quiteafancyemerald-invisiproxy-verifier-image-20261126"
+image_digest = "sha256:5e710046d303ef6b941682a187363a754e48ac0743c88737fd5623d9369459bc"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 3d8e4b8089233b343eda2e9694483df3b57f9ce6 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:quiteafancyemerald-invisiproxy-task-image-20261126"
+image_digest = "sha256:25439125ef40f2795db0bec84e1855dc5a7f6da88ddec250db3cfc40df33c249"

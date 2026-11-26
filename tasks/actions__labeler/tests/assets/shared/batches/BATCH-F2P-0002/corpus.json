@@ -1,0 +1,36 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "source_version": "6.0.3",
+    "target_language": "Go",
+    "target_version": "1.24.0"
+  },
+  "shared_corpus_required": true,
+  "fixtures": {
+    "max_files_branch_only_config": "fixtures/batches/BATCH-F2P-0002/max_files_branch_only.yml",
+    "branch_only_event": "fixtures/batches/BATCH-F2P-0002/event_branch_only.json",
+    "changed_files_exceed": "fixtures/batches/BATCH-F2P-0002/changed_files_exceed.json",
+    "contents_base64": "fixtures/batches/BATCH-F2P-0002/contents_base64.json",
+    "config_negative_limit": "fixtures/batches/BATCH-F2P-0002/config_negative_limit.yml",
+    "config_unknown_key": "fixtures/batches/BATCH-F2P-0002/config_unknown_key.yml",
+    "pr_number_invalid": "fixtures/batches/BATCH-F2P-0002/pr_number_invalid.json"
+  },
+  "consumers": {
+    "source": "source/batches/BATCH-F2P-0002/manifest.json",
+    "target": "target/batches/BATCH-F2P-0002/manifest.json"
+  },
+  "predicate": "Go 1.24.0 implementation is the real execution path for the labeler and the named target postcondition holds when that Go code is built and run",
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "timeout_seconds": 300,
+    "source_test_command": ["timeout", "600", "go", "test", "./..."],
+    "target_build_command": ["timeout", "300", "go", "build", "./..."],
+    "target_test_command": ["timeout", "600", "go", "test", "./..."],
+    "source_build_command": ["timeout", "300", "go", "build", "./..."],
+    "exclude_privileged_or_blocking_cases": true
+  }
+}

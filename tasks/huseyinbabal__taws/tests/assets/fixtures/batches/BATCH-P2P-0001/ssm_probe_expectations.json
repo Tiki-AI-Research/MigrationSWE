@@ -1,0 +1,36 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "observation_id": "P2P-001",
+  "requirement_ids": ["R022"],
+  "surface": "SSM session exit reporting",
+  "projection": "observable-result",
+  "normalization": "strip ANSI escapes and trim leading/trailing whitespace; compare process exit status and normalised boolean facts only",
+  "invocation": {
+    "entry": "taws",
+    "subcommand": "ssm start-session",
+    "reports_code_line_prefix": "SSM session exited with code:"
+  },
+  "cases": [
+    {
+      "subprocess_exit_code": 0,
+      "expected_process_exit_status": 0,
+      "prints_code_line": false,
+      "reports_exit_code": null,
+      "prints_not_connected_hint": false
+    },
+    {
+      "subprocess_exit_code": 1,
+      "expected_process_exit_status": 0,
+      "prints_code_line": true,
+      "reports_exit_code": 1,
+      "prints_not_connected_hint": false
+    },
+    {
+      "subprocess_exit_code": 254,
+      "expected_process_exit_status": 0,
+      "prints_code_line": true,
+      "reports_exit_code": 254,
+      "prints_not_connected_hint": true
+    }
+  ]
+}

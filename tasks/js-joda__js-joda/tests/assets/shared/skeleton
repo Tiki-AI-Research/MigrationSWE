@@ -1,0 +1,40 @@
+'use strict';
+
+const MIGRATION = Object.freeze({
+  category: 'version_upgrade',
+  name: 'js-joda',
+  sourceVersion: '6.1.0',
+  targetVersion: '6.3.2',
+});
+
+const PACKAGES = Object.freeze([
+  'core',
+  'timezone',
+  'locale',
+  'extra',
+  'examples',
+]);
+
+const KNOWN_FIXES = Object.freeze([
+  'instant-parse-offset',
+  'negative-duration-minute-boundary',
+  'pre-epoch-truncation-floor',
+  'prefixed-fixed-zone-id',
+  'parsed-excess-days-zero',
+]);
+
+function packagePath(repoRoot, name) {
+  return `${repoRoot}/packages/${name}`;
+}
+
+function coreManifestPath(repoRoot) {
+  return `${packagePath(repoRoot, 'core')}/package.json`;
+}
+
+module.exports = {
+  MIGRATION,
+  PACKAGES,
+  KNOWN_FIXES,
+  packagePath,
+  coreManifestPath,
+};

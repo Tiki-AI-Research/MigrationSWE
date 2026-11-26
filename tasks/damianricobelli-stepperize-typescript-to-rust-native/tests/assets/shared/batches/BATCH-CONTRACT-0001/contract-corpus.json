@@ -1,0 +1,45 @@
+{
+  "schema_version": "migration-contract-corpus:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "kind": "CONTRACT",
+  "normalization": {
+    "trim_strings": true,
+    "collapse_whitespace": true,
+    "absent": null,
+    "error_surface": "code_or_type"
+  },
+  "steps": [
+    { "id": "first", "label": "Step 1" },
+    { "id": "second", "label": "Step 2" },
+    { "id": "third", "label": "Step 3" }
+  ],
+  "schema_steps": [
+    { "id": "name", "schema": "string-non-empty" },
+    { "id": "done" }
+  ],
+  "cases": [
+    { "observation_id": "CONTRACT-002", "operation": "createStepMap.ids", "input": ["first", "second", "third"] },
+    { "observation_id": "CONTRACT-003", "operation": "createStepMap.get", "input": ["second", "missing"] },
+    { "observation_id": "CONTRACT-004", "operation": "createStepMap.at", "input": [0, 9] },
+    { "observation_id": "CONTRACT-005", "operation": "createStepMap.indexOf", "input": ["third", "missing"] },
+    { "observation_id": "CONTRACT-006", "operation": "createStepMap.has", "input": ["second", "missing"] },
+    { "observation_id": "CONTRACT-007", "operation": "createStepMap.first_last", "input": ["nonempty", "empty"] },
+    { "observation_id": "CONTRACT-008", "operation": "createStepMap.next_prev_neighbors", "input": ["first", "second", "third", "missing"] },
+    { "observation_id": "CONTRACT-009", "operation": "getInitialStepIndex", "input": ["second", null, "missing"] },
+    { "observation_id": "CONTRACT-010", "operation": "parseStep", "input": ["second", "missing", null, "undefined", 42] },
+    { "observation_id": "CONTRACT-011", "operation": "getInitialData", "input": ["present", "absent"] },
+    { "observation_id": "CONTRACT-012", "operation": "validateStep.no_schema", "input": ["done", { "anything": true }] },
+    { "observation_id": "CONTRACT-013", "operation": "validateStep.schema_accepts", "input": ["name", "Ada"] },
+    { "observation_id": "CONTRACT-014", "operation": "validateStep.schema_rejects", "input": ["name", ""] },
+    { "observation_id": "CONTRACT-015", "operation": "validateStep.unknown_id", "input": ["missing"] },
+    { "observation_id": "CONTRACT-016", "operation": "validateStep.validator_modes", "input": ["sync", "async"] },
+    { "observation_id": "CONTRACT-017", "operation": "getStepStatus", "input": [1, "first", "second", "third"] },
+    { "observation_id": "CONTRACT-018", "operation": "getStepStatuses", "input": [1] },
+    { "observation_id": "CONTRACT-019", "operation": "matchStep.handler", "input": ["second"] },
+    { "observation_id": "CONTRACT-020", "operation": "matchStep.unknown_id", "input": ["missing"] },
+    { "observation_id": "CONTRACT-021", "operation": "matchStep.missing_handler", "input": ["third"] },
+    { "observation_id": "CONTRACT-022", "operation": "public_capability_set", "input": ["createStepMap", "getInitialStepIndex", "parseStep", "getInitialData", "validateStep", "getStepStatus", "getStepStatuses", "matchStep"] },
+    { "observation_id": "CONTRACT-023", "operation": "protected_artifacts", "input": ["named_exports", "error_wording", "standard_schema_boundary", "reference_test_unmodified"] },
+    { "observation_id": "CONTRACT-024", "operation": "assertion_integrity", "input": ["no_removed_assertions", "no_weakened_comparisons", "no_hardcoded_inputs"] }
+  ]
+}

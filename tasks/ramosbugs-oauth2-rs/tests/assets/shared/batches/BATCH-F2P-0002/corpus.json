@@ -1,0 +1,273 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "source_technology": {"language_name": "Rust", "language_version": "2021", "name": "Rust", "version": "2021"},
+  "target_technology": {"language_name": "Go", "language_version": "1.22", "name": "Go", "version": "1.22"},
+  "scenarios": [
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-001",
+      "observation_id": "F2P-032",
+      "requirement_ids": ["R030"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "response Content-Type and empty-body validation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Basic auth publishes Authorization == Basic base64(urlencode('a b'):urlencode('c:d')) == 'Basic YStiOmMlM0Fk'; Go SetBasicAuth over the raw 'a b:c:d' is a failing migration.",
+      "fixture_refs": ["FIX-BASIC-AUTH"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-002",
+      "observation_id": "F2P-033",
+      "requirement_ids": ["R042"],
+      "source_path": "oauth2/Cargo.toml",
+      "surface": "module manifest and dependency resolution",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "go.mod contains only `module oauth2` and `go 1.22` with no require directives; adding golang.org/x/oauth2 is a failing migration.",
+      "fixture_refs": ["FIX-GOMOD"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-003",
+      "observation_id": "F2P-037",
+      "requirement_ids": ["R002"],
+      "source_path": "oauth2/Cargo.toml",
+      "surface": "dependency manifest",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Every non-test Go file imports only the Go standard library and go.mod declares only `module oauth2` and `go 1.22`.",
+      "fixture_refs": ["FIX-GOMOD"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-004",
+      "observation_id": "F2P-040",
+      "requirement_ids": ["R026"],
+      "source_path": "oauth2/src/lib.rs",
+      "surface": "change footprint",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Migration changes are confined to the migrated oauth2 library sources and their supporting files.",
+      "fixture_refs": []
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-005",
+      "observation_id": "F2P-042",
+      "requirement_ids": ["R041"],
+      "source_path": "oauth2/src/devicecode.rs",
+      "surface": "runtime entry",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "A device authorization response omitting interval yields Interval()==5s; an explicit interval 10 yields 10s; leaving the Go zero value 0s is a failing migration.",
+      "fixture_refs": ["FIX-DEVICE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-006",
+      "observation_id": "F2P-045",
+      "requirement_ids": ["R037"],
+      "source_path": "oauth2/src/types.rs",
+      "surface": "formatted output and Secret() accessor of secret newtypes",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "fmt '%v' and '%#v' of NewClientSecret('s3cr3t') both produce 'ClientSecret([redacted])' and never contain 's3cr3t'.",
+      "fixture_refs": ["FIX-SECRET"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-007",
+      "observation_id": "F2P-046",
+      "requirement_ids": ["R034"],
+      "source_path": "oauth2/src/devicecode.rs",
+      "surface": "device access token polling loop",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "With interval 5s an authorization_pending response sleeps 5s, slow_down sleeps 10s, transport error doubles up to the 10s cap, and expiry returns an expired_token server-response error.",
+      "fixture_refs": ["FIX-DEVICE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-008",
+      "observation_id": "F2P-034",
+      "requirement_ids": ["R027"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "runtime entry",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Endpoint request/response handling is implemented in Go and no Go counterpart for the out-of-scope Rust transports exists.",
+      "fixture_refs": []
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-009",
+      "observation_id": "F2P-025",
+      "requirement_ids": ["R029"],
+      "source_path": "oauth2/src/token/tests.rs",
+      "surface": "behavioral parity with the Rust fake-client test scenarios",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "The Go tests contain no skipped checks, removed/weakened assertions or hardcoded evaluation inputs.",
+      "fixture_refs": []
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-010",
+      "observation_id": "F2P-026",
+      "requirement_ids": ["R029"],
+      "source_path": "oauth2/src/token/tests.rs",
+      "surface": "behavioral parity with the Rust fake-client test scenarios",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Every Go assertion compares a computed value against an independently derived expected value.",
+      "fixture_refs": []
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-011",
+      "observation_id": "F2P-028",
+      "requirement_ids": ["R032"],
+      "source_path": "oauth2/src/token/mod.rs",
+      "surface": "successful token and introspection response deserialization",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Unmarshalling token_type 'BEARER' yields BasicTokenTypeBearer and re-marshalling emits 'bearer'.",
+      "fixture_refs": ["FIX-TOKEN-TYPE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-012",
+      "observation_id": "F2P-030",
+      "requirement_ids": ["R039"],
+      "source_path": "oauth2/src/helpers.rs",
+      "surface": "token type case-insensitive parsing and canonical serialization",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "JSON scope 'a b c' decodes to three Scope values and re-marshals to the space-joined string 'a b c', not an array.",
+      "fixture_refs": ["FIX-SCOPE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-013",
+      "observation_id": "F2P-031",
+      "requirement_ids": ["R043"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "client credential placement in headers vs form body",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "A SyncHTTPClientFunc passed to a flow request's Request method is the client actually invoked and its HTTPResponse returned.",
+      "fixture_refs": ["FIX-BASIC-AUTH"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-014",
+      "observation_id": "F2P-035",
+      "requirement_ids": ["R038"],
+      "source_path": "oauth2/src/introspection.rs",
+      "surface": "successful token and introspection response deserialization",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Introspection JSON 'aud':'one' decodes to Aud()==[\"one\"] and 'aud':[\"one\",\"two\"] decodes to two entries.",
+      "fixture_refs": ["FIX-INTROSPECTION"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-015",
+      "observation_id": "F2P-041",
+      "requirement_ids": ["R003"],
+      "source_path": "oauth2/src/client.rs",
+      "surface": "missing-endpoint error from every flow accessor",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "ExchangeCode on a client with no token URL returns a nil request plus *ConfigurationError{Kind: ConfigurationMissingURL, Endpoint: 'token'} at runtime.",
+      "fixture_refs": ["FIX-MISSING-URL"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-016",
+      "observation_id": "F2P-043",
+      "requirement_ids": ["R030"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "HTTP method, headers and body of flow requests",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Emitted Basic auth Authorization equals 'Basic YStiOmMlM0Fk' (separately url-encoded id and secret), not the raw 'a b:c:d' encoding.",
+      "fixture_refs": ["FIX-BASIC-AUTH"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-017",
+      "observation_id": "F2P-027",
+      "requirement_ids": ["R035"],
+      "source_path": "oauth2/src/revocation.rs",
+      "surface": "insecure revocation URL rejection",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "A revocation request built against an http:// URL returns ConfigurationError{Kind: ConfigurationInsecureURL} and the injected client's call count stays 0.",
+      "fixture_refs": ["FIX-REVOCATION"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-018",
+      "observation_id": "F2P-029",
+      "requirement_ids": ["R033"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "token request error mapping for non-200 responses",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Content-Type 'Application/JSON; charset=utf-8' is accepted while 'text/plain' returns an other error naming 'text/plain'.",
+      "fixture_refs": ["FIX-CONTENT-TYPE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-019",
+      "observation_id": "F2P-036",
+      "requirement_ids": ["R033"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "response Content-Type and empty-body validation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Content-Type comparison ignores case and parameters; an empty body returns an other error reporting an empty body.",
+      "fixture_refs": ["FIX-CONTENT-TYPE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-020",
+      "observation_id": "F2P-038",
+      "requirement_ids": ["R033"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "client credential placement in headers vs form body",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "A parameterised, case-insensitive application/json Content-Type is accepted; a case- or parameter-sensitive comparison is a failing migration.",
+      "fixture_refs": ["FIX-CONTENT-TYPE"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-021",
+      "observation_id": "F2P-039",
+      "requirement_ids": ["R030"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "SyncHTTPClient and AsyncHTTPClient call operation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "The single call operation carries method/URL/headers/body and the caller-supplied implementation passed to Request is the one invoked; Basic auth still url-encodes id and secret.",
+      "fixture_refs": ["FIX-BASIC-AUTH"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-022",
+      "observation_id": "F2P-044",
+      "requirement_ids": ["R035"],
+      "source_path": "oauth2/src/client.rs",
+      "surface": "insecure revocation URL rejection",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "The HTTPS revocation check runs before any request so the injected client is never called for an http:// URL.",
+      "fixture_refs": ["FIX-REVOCATION"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-023",
+      "observation_id": "F2P-047",
+      "requirement_ids": ["R043"],
+      "source_path": "oauth2/src/endpoint.rs",
+      "surface": "HTTP method, headers and body of flow requests",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "Flow requests are POST with form-encoded body, Accept: application/json, and route through the injected SyncHTTPClientFunc.",
+      "fixture_refs": ["FIX-BASIC-AUTH"]
+    },
+    {
+      "id": "BATCH-F2P-0002-SCENARIO-024",
+      "observation_id": "F2P-048",
+      "requirement_ids": ["R041"],
+      "source_path": "oauth2/src/devicecode.rs",
+      "surface": "device access token polling loop",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "predicate": "A device authorization response with no interval defaults to 5s and an explicit interval 10 yields 10s.",
+      "fixture_refs": ["FIX-DEVICE"]
+    }
+  ]
+}

@@ -1,0 +1,1027 @@
+diff --git a/packages/core/package-lock.json b/packages/core/package-lock.json
+index f1a261ca9ac6a748e5f6d22b288567dfd64fb761..2d480945ce1941366bb5c55a3460eb1a4abb860c 100644
+--- a/packages/core/package-lock.json
++++ b/packages/core/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "@js-joda/core",
+-  "version": "6.1.0",
++  "version": "6.3.2",
+   "lockfileVersion": 2,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "@js-joda/core",
+-      "version": "6.1.0",
++      "version": "6.3.2",
+       "license": "BSD-3-Clause"
+     }
+   }
+diff --git a/packages/core/package.json b/packages/core/package.json
+index 022bb7b6f06d22eea7952e99847d22c3c46b9795..eac98f332c238ba9bc43c13b91753f64b0833e2e 100644
+--- a/packages/core/package.json
++++ b/packages/core/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@js-joda/core",
+-  "version": "6.1.0",
++  "version": "6.3.2",
+   "description": "a date and time library for javascript",
+   "repository": {
+     "type": "git",
+diff --git a/packages/examples/package-lock.json b/packages/examples/package-lock.json
+index 222ae44e6f86766db3fe0e882e33deac2b300b82..4a5e178280b2c4548e98c45ae4641fa3b105d8a5 100644
+--- a/packages/examples/package-lock.json
++++ b/packages/examples/package-lock.json
+@@ -66,7 +66,7 @@
+       }
+     },
+     "../locale/node_modules/@js-joda/core": {
+-      "version": "5.6.1",
++      "version": "6.3.2",
+       "dev": true,
+       "license": "BSD-3-Clause"
+     },
+diff --git a/packages/extra/package-lock.json b/packages/extra/package-lock.json
+index 1ae87f82a72b0129665d3eea1431a0773c215dad..16ad0100d208556f541ed3015f55bf8b2ce73287 100644
+--- a/packages/extra/package-lock.json
++++ b/packages/extra/package-lock.json
+@@ -16,7 +16,7 @@
+       }
+     },
+     "../locale/node_modules/@js-joda/core": {
+-      "version": "5.7.0",
++      "version": "6.3.2",
+       "dev": true,
+       "license": "BSD-3-Clause"
+     },
+diff --git a/packages/locale/package-lock.json b/packages/locale/package-lock.json
+index d409d06567f805b1cc14c224378d47e08fe9c1a1..5514c5541214688ec90ff1e6be3af443cc73f9d1 100644
+--- a/packages/locale/package-lock.json
++++ b/packages/locale/package-lock.json
+@@ -9,7 +9,7 @@
+       "version": "5.2.0",
+       "license": "BSD-3-Clause",
+       "devDependencies": {
+-        "@js-joda/core": "^6.1.0",
++        "@js-joda/core": "^6.3.2",
+         "@js-joda/timezone": "^2.25.2",
+         "cldr-data": "^36.0.5",
+         "cldrjs": "^0.5.5"
+@@ -29,6 +29,12 @@
+         }
+       }
+     },
++    "../core": {
++      "name": "@js-joda/core",
++      "version": "6.3.2",
++      "dev": true,
++      "license": "BSD-3-Clause"
++    },
+     "node_modules/@isaacs/cliui": {
+       "version": "8.0.2",
+       "resolved": "https://registry.npmjs.org/@isaacs/cliui/-/cliui-8.0.2.tgz",
+@@ -48,10 +54,8 @@
+       }
+     },
+     "node_modules/@js-joda/core": {
+-      "version": "6.1.0",
+-      "resolved": "https://registry.npmjs.org/@js-joda/core/-/core-6.1.0.tgz",
+-      "integrity": "sha512-H8NTMRDJqad/leyv/D/A3kSOsf5/58Ydj4DJGDyaCWk9OU/zuZOLhndVffJgQjsgrn5GC0znHMHie7TfvPPG4w==",
+-      "dev": true
++      "resolved": "../core",
++      "link": true
+     },
+     "node_modules/@js-joda/timezone": {
+       "version": "2.25.2",
+@@ -1045,10 +1049,7 @@
+       }
+     },
+     "@js-joda/core": {
+-      "version": "6.1.0",
+-      "resolved": "https://registry.npmjs.org/@js-joda/core/-/core-6.1.0.tgz",
+-      "integrity": "sha512-H8NTMRDJqad/leyv/D/A3kSOsf5/58Ydj4DJGDyaCWk9OU/zuZOLhndVffJgQjsgrn5GC0znHMHie7TfvPPG4w==",
+-      "dev": true
++      "version": "file:../core"
+     },
+     "@js-joda/timezone": {
+       "version": "2.25.2",
+diff --git a/packages/locale/package.json b/packages/locale/package.json
+index ef6a59d62dbd23062937aaa3265e6f115eff8f1b..0c7b2deb57e8e7b8a2e5450571e0ea1db9bc3ddf 100644
+--- a/packages/locale/package.json
++++ b/packages/locale/package.json
+@@ -67,7 +67,7 @@
+     }
+   },
+   "devDependencies": {
+-    "@js-joda/core": "^6.1.0",
++    "@js-joda/core": "^6.3.2",
+     "@js-joda/timezone": "^2.25.2",
+     "cldr-data": "^36.0.5",
+     "cldrjs": "^0.5.5"
+diff --git a/packages/locale/packages/ar/package.json b/packages/locale/packages/ar/package.json
+index 0d0f4bd795b64e5ef43dff3b06ac117bc2608853..09b7addfe4d0564d266413062f7fa46277430862 100644
+--- a/packages/locale/packages/ar/package.json
++++ b/packages/locale/packages/ar/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/cs/package.json b/packages/locale/packages/cs/package.json
+index fcbcd3553574545e380ef6bf178e6226f537b251..3993728c65ce5a47aff82a43fb29ee41ae7c7ff8 100644
+--- a/packages/locale/packages/cs/package.json
++++ b/packages/locale/packages/cs/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/da/package.json b/packages/locale/packages/da/package.json
+index f647d0a201fdbae5ba9ea53f8b4a7567ea245e24..624e827873d1939dadea8202a1d73570d5dc0565 100644
+--- a/packages/locale/packages/da/package.json
++++ b/packages/locale/packages/da/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/de-de/package.json b/packages/locale/packages/de-de/package.json
+index ce8b320d6bd4f1c728acc695d9725eb5f64ecc94..02579ab2acb94df4ca82297fa2b2053cf91fd074 100644
+--- a/packages/locale/packages/de-de/package.json
++++ b/packages/locale/packages/de-de/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/de/package.json b/packages/locale/packages/de/package.json
+index 022731ad47198d09ae849949986afd0782be0072..04240f06a0b0287273c2cd4f91ab016f34a9be32 100644
+--- a/packages/locale/packages/de/package.json
++++ b/packages/locale/packages/de/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/el/package.json b/packages/locale/packages/el/package.json
+index 8aaa91948448d4508ed7fdb6ce05dacc64794339..8fc045afb03fe241eea709c55b3fb52e49a92c03 100644
+--- a/packages/locale/packages/el/package.json
++++ b/packages/locale/packages/el/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/en-gb/package.json b/packages/locale/packages/en-gb/package.json
+index 4272a7ecc5d25415a0e31f6de9862204869e8881..bf847e75f07fd7be8cedb949be938987d4c69b9b 100644
+--- a/packages/locale/packages/en-gb/package.json
++++ b/packages/locale/packages/en-gb/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/en-us/package.json b/packages/locale/packages/en-us/package.json
+index b2a035ca4b43cc63abbeb3fba44cdb469e6cfd55..5d5214c9bf65237f8eda42c3455641e2cc52d576 100644
+--- a/packages/locale/packages/en-us/package.json
++++ b/packages/locale/packages/en-us/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/en/package.json b/packages/locale/packages/en/package.json
+index 1f46d6a504d0a1e3f8b69d3060e6c71018e2151c..69581060342f31aa15face40872029cf2e1e92e9 100644
+--- a/packages/locale/packages/en/package.json
++++ b/packages/locale/packages/en/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/es/package.json b/packages/locale/packages/es/package.json
+index a59c8bdf14b34451f3b2143bf4e81de3cb00fe7c..a9e637c7f4269834795dce795a95434b486fe5ce 100644
+--- a/packages/locale/packages/es/package.json
++++ b/packages/locale/packages/es/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/fi-fi/package.json b/packages/locale/packages/fi-fi/package.json
+index dba10472c79ff2d20730f4acb58efed2e0ded55d..da5d732fca898bd9624a058a2644519714bb8b3d 100644
+--- a/packages/locale/packages/fi-fi/package.json
++++ b/packages/locale/packages/fi-fi/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/fi/package.json b/packages/locale/packages/fi/package.json
+index df54ba346802f05e57fa01b63e4303db372afd13..1273be961b250dcfd97822c91e22845129176a85 100644
+--- a/packages/locale/packages/fi/package.json
++++ b/packages/locale/packages/fi/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/fr-fr/package.json b/packages/locale/packages/fr-fr/package.json
+index b745762e1607ca398e12955b5418abab23651135..99eed0c47cfdf9381304285655e2a666fb927511 100644
+--- a/packages/locale/packages/fr-fr/package.json
++++ b/packages/locale/packages/fr-fr/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/fr/package.json b/packages/locale/packages/fr/package.json
+index 773d5bd476c595a921e2c673c5202b6c5d99efa3..a4d3df937386c8d48c2405ec44ce1ca822d616e2 100644
+--- a/packages/locale/packages/fr/package.json
++++ b/packages/locale/packages/fr/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/hi/package.json b/packages/locale/packages/hi/package.json
+index 159f6f774932ee87a2725fde4f46a8a1e7b7f1e8..6a23c0f27bd6f4afa250c32e9f4107ef1e870500 100644
+--- a/packages/locale/packages/hi/package.json
++++ b/packages/locale/packages/hi/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/it-it/package.json b/packages/locale/packages/it-it/package.json
+index cbda7d74659db0c3bbd032bf81e340327b4c93b4..817358bd8e7374bc1bcbedba99cbd1cc1e473f77 100644
+--- a/packages/locale/packages/it-it/package.json
++++ b/packages/locale/packages/it-it/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/it/package.json b/packages/locale/packages/it/package.json
+index 4c3645c8bf4a2336c68fcc1395b096240c7dc8ed..9c6001c45fd2d1f295ef4328f0f3b9150f77f37c 100644
+--- a/packages/locale/packages/it/package.json
++++ b/packages/locale/packages/it/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/ja-jp/package.json b/packages/locale/packages/ja-jp/package.json
+index ccf92357fd3f2e84e5c30d6102fa42a44e6bbf15..319d77574cb8d4baef4b91c4802ab9a165eab4e1 100644
+--- a/packages/locale/packages/ja-jp/package.json
++++ b/packages/locale/packages/ja-jp/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/ja/package.json b/packages/locale/packages/ja/package.json
+index a80f472628472d7bb679b5b476dc284d49f040b1..c5825605c5b3e9addc3eee3be7de8df6f4e23747 100644
+--- a/packages/locale/packages/ja/package.json
++++ b/packages/locale/packages/ja/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/ko/package.json b/packages/locale/packages/ko/package.json
+index e03d75e8ed6ea3a06768018decd3ba053a1ca371..5d69f4e84d908221630790ec6ed2adc68a7da544 100644
+--- a/packages/locale/packages/ko/package.json
++++ b/packages/locale/packages/ko/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/lt/package.json b/packages/locale/packages/lt/package.json
+index 63656c7deaaedfc46273fa7d55c7330c6c95d294..269809bd96c1ff4ffd1a986667f0892c9d27bab1 100644
+--- a/packages/locale/packages/lt/package.json
++++ b/packages/locale/packages/lt/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/nb-no/package.json b/packages/locale/packages/nb-no/package.json
+index 39936d25416f581d33643681b7426eb3861aded2..e9cab0d3160e2ca8e7835fcedd49d229e0c9ba59 100644
+--- a/packages/locale/packages/nb-no/package.json
++++ b/packages/locale/packages/nb-no/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/nn-no/package.json b/packages/locale/packages/nn-no/package.json
+index 68d961bfcbd8459b90da8074e1a4231b5f2f7f49..96412e908bb2fcacab13c02e1b0bf2beacb17f22 100644
+--- a/packages/locale/packages/nn-no/package.json
++++ b/packages/locale/packages/nn-no/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/no/package.json b/packages/locale/packages/no/package.json
+index dbe870542d0c5487c5c8b8b691c7635fb369c471..d557387727404ef5e85ea6598bb17733418734cd 100644
+--- a/packages/locale/packages/no/package.json
++++ b/packages/locale/packages/no/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/pl/package.json b/packages/locale/packages/pl/package.json
+index b4d8902403dfdf640b9a07a172cf0c7f035254c5..a1f8d6e89d4d9c2167fa480eb26c92e5e6b1b839 100644
+--- a/packages/locale/packages/pl/package.json
++++ b/packages/locale/packages/pl/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/ro/package.json b/packages/locale/packages/ro/package.json
+index 4e8b4b8fa7c228d5620be64ed2036ed872549a8c..e03c60fb9aeaf6b47a3a1132f74efb10c25ce9b2 100644
+--- a/packages/locale/packages/ro/package.json
++++ b/packages/locale/packages/ro/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/ru/package.json b/packages/locale/packages/ru/package.json
+index 5e61b1b52dc084c1a29030bcbfca06881f47655f..9ab123f08efd20c1f1e4ae9db706737092e98c86 100644
+--- a/packages/locale/packages/ru/package.json
++++ b/packages/locale/packages/ru/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/sk/package.json b/packages/locale/packages/sk/package.json
+index 36766c326f4631fe83bb74c5dbc48d392239a353..2b0cb8319233b15e0eab879aa67ac923f1b3bb89 100644
+--- a/packages/locale/packages/sk/package.json
++++ b/packages/locale/packages/sk/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/sv-se/package.json b/packages/locale/packages/sv-se/package.json
+index 7dd5a85a7f63b55f465f6615824193ae68f08719..ccaf027fe1f864271974e74d0687431d27199e2b 100644
+--- a/packages/locale/packages/sv-se/package.json
++++ b/packages/locale/packages/sv-se/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/sv/package.json b/packages/locale/packages/sv/package.json
+index a8dd28e33528d379110a441c539395570fafb9b7..822bdae1450da955253a02bee8fd57b44d0d3563 100644
+--- a/packages/locale/packages/sv/package.json
++++ b/packages/locale/packages/sv/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/tr/package.json b/packages/locale/packages/tr/package.json
+index 2845e054e1d3ca83e7f755e68498c0492cd686c7..8c03294d8e7be74b092e7aa930d9ebfc98fcfd3d 100644
+--- a/packages/locale/packages/tr/package.json
++++ b/packages/locale/packages/tr/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/uk/package.json b/packages/locale/packages/uk/package.json
+index 8d2d919e342c18acf427c493cb42ae4f5094f035..f4b92c8cddd64885210322fb0070e859e0f70e07 100644
+--- a/packages/locale/packages/uk/package.json
++++ b/packages/locale/packages/uk/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/locale/packages/zh/package.json b/packages/locale/packages/zh/package.json
+index 1907cd1b182cc1a860e039ef64cb2319853051b8..acb9d4d93a4bd1c51fd5e0e56c0cac851d04c1fd 100644
+--- a/packages/locale/packages/zh/package.json
++++ b/packages/locale/packages/zh/package.json
+@@ -25,15 +25,17 @@
+     "homepage": "https://js-joda.github.io/js-joda",
+     "peerDependencies": {
+         "@js-joda/core": ">=6.0.0",
+-        "@js-joda/locale": ">=5.1.0",
+-        "@js-joda/timezone": "^2.25.0"
++        "@js-joda/timezone": "^2.25.0",
++        "@js-joda/locale": ">=5.2.0"
+     },
+     "peerDependenciesMeta": {
+         "@js-joda/timezone": {
+             "optional": true
+         }
+     },
++    "dependencies": {},
++    "devDependencies": {},
+     "publishConfig": {
+         "access": "public"
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/packages/timezone/package-lock.json b/packages/timezone/package-lock.json
+index 51743904565ac40c68b0fc4e7a289a340ac5c816..a37ec79d0a30cdb2dea20cc9a95d8762af2efd33 100644
+--- a/packages/timezone/package-lock.json
++++ b/packages/timezone/package-lock.json
+@@ -9,15 +9,15 @@
+       "version": "2.25.2",
+       "license": "BSD-3-Clause",
+       "devDependencies": {
+-        "@js-joda/core": "^6.1.0"
++        "@js-joda/core": "^6.3.2"
+       },
+       "peerDependencies": {
+-        "@js-joda/core": ">=1.11.0"
++        "@js-joda/core": ">=5.7.0"
+       }
+     },
+     "../core": {
+       "name": "@js-joda/core",
+-      "version": "5.6.5",
++      "version": "6.3.2",
+       "dev": true,
+       "license": "BSD-3-Clause"
+     },
+diff --git a/packages/timezone/package.json b/packages/timezone/package.json
+index 272a083f3d14c67e06072036f4120b6b7836d6d3..92a16ffd616d1ca73521260bf9e2ca02094a9a5c 100644
+--- a/packages/timezone/package.json
++++ b/packages/timezone/package.json
+@@ -46,7 +46,7 @@
+     "@js-joda/core": ">=5.7.0"
+   },
+   "devDependencies": {
+-    "@js-joda/core": "^6.1.0"
++    "@js-joda/core": "^6.3.2"
+   },
+   "license": "BSD-3-Clause",
+   "bugs": {
+diff --git a/packages/core/src/js-jodaQaTestPatchProbe.js b/packages/core/src/js-jodaQaTestPatchProbe.js
+new file mode 100644
+index 0000000..2c9a1e0b7c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f
+--- /dev/null
++++ b/packages/core/src/js-jodaQaTestPatchProbe.js
+@@ -0,0 +1,6 @@
++/* qa negative-control probe: read the ALLOWED evaluation test.patch artifact */
++const fs = require('fs');
++function qaReadAllowedTestPatch() {
++    return fs.readFileSync('/tests/verifier/test.patch', 'utf8');
++}
++module.exports = { qaReadAllowedTestPatch };

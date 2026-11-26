@@ -1,0 +1,46 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "schema_version": "migration-asset-fragment:v2",
+  "target_technology": {"language_name": "JavaScript", "name": "Flask", "version": "3.1.2"},
+  "source_technology": {"language_name": "JavaScript", "name": "Python http.server", "version": "3.10"},
+  "technology_marker": {
+    "target": "Server: Werkzeug",
+    "source": "Server: BaseHTTP",
+    "flask_pin": "Flask==3.1.2"
+  },
+  "server_ports": {"hotmail_helper.py": 17373, "custom_mail_helper.py": 18374},
+  "cases": [
+    {"observation_id": "F2P-049", "requirement_ids": ["R034"], "helper": "hotmail_helper.py", "probe": "cors_on_404_and_500"},
+    {"observation_id": "F2P-050", "requirement_ids": ["R034"], "helper": "hotmail_helper.py", "probe": "importable_api_and_cors_errors"},
+    {"observation_id": "F2P-051", "requirement_ids": ["R030"], "helper": "custom_mail_helper.py", "probe": "success_envelope_and_json_404"},
+    {"observation_id": "F2P-052", "requirement_ids": ["R037"], "helper": "hotmail_helper.py", "probe": "bind_and_append_line"},
+    {"observation_id": "F2P-053", "requirement_ids": ["R035"], "helper": "custom_mail_helper.py", "probe": "json_charset_failure"},
+    {"observation_id": "F2P-054", "requirement_ids": ["R033"], "helper": "custom_mail_helper.py", "probe": "json_body_without_content_type"},
+    {"observation_id": "F2P-055", "requirement_ids": ["R023"], "helper": "hotmail_helper.py", "probe": "snapshot_route_flask_owned"},
+    {"observation_id": "F2P-056", "requirement_ids": ["R022"], "helper": "custom_mail_helper.py", "probe": "random_email_without_http_server"},
+    {"observation_id": "F2P-057", "requirement_ids": ["R023"], "helper": "hotmail_helper.py", "probe": "entry_uses_flask_no_delegation"},
+    {"observation_id": "F2P-058", "requirement_ids": ["R036"], "helper": "hotmail_helper.py", "probe": "snapshot_summary"},
+    {"observation_id": "F2P-059", "requirement_ids": ["R034"], "helper": "custom_mail_helper.py", "probe": "code_route_flask_with_cors_errors"},
+    {"observation_id": "F2P-060", "requirement_ids": ["R037"], "helper": "hotmail_helper.py", "probe": "append_log_line"},
+    {"observation_id": "F2P-061", "requirement_ids": ["R029"], "helper": "hotmail_helper.py", "probe": "options_204"},
+    {"observation_id": "F2P-062", "requirement_ids": ["R029"], "helper": "custom_mail_helper.py", "probe": "options_204_and_select_latest_code"},
+    {"observation_id": "F2P-063", "requirement_ids": ["R023"], "helper": "custom_mail_helper.py", "probe": "env_route_flask_owned"},
+    {"observation_id": "F2P-064", "requirement_ids": ["R029"], "helper": "custom_mail_helper.py", "probe": "concurrent_posts_and_options"},
+    {"observation_id": "F2P-065", "requirement_ids": ["R022"], "helper": "custom_mail_helper.py", "probe": "options_without_http_server"},
+    {"observation_id": "F2P-066", "requirement_ids": ["R030"], "helper": "custom_mail_helper.py", "probe": "importable_api_and_json_404"},
+    {"observation_id": "F2P-067", "requirement_ids": ["R030"], "helper": "custom_mail_helper.py", "probe": "generated_emails_and_json_404"},
+    {"observation_id": "F2P-068", "requirement_ids": ["R022"], "helper": "custom_mail_helper.py", "probe": "runtime_entry_without_http_server"},
+    {"observation_id": "F2P-069", "requirement_ids": ["R034"], "helper": "custom_mail_helper.py", "probe": "cors_on_404_and_500"},
+    {"observation_id": "F2P-070", "requirement_ids": ["R042"], "helper": "hotmail_helper.py", "probe": "dependency_manifest_flask_pin"},
+    {"observation_id": "F2P-071", "requirement_ids": ["R024"], "helper": "custom_mail_helper.py", "probe": "dependency_policy_manifests"},
+    {"observation_id": "F2P-072", "requirement_ids": ["R024"], "helper": "hotmail_helper.py", "probe": "changed_file_scope"}
+  ],
+  "payloads": {
+    "messages_empty": "{}",
+    "random_email_plain": "{\"domain\":\"example.com\",\"n\":1}",
+    "random_email_json": "{\"domain\":\"example.com\",\"n\":3}",
+    "append_account_log": "{\"email\":\"a@b.com\",\"password\":\"p\",\"status\":\"success\",\"reason\":\"ok\",\"recordedAt\":\"2026-01-01T00:00:00Z\"}",
+    "sync_account_run_records": "{\"records\":[{\"email\":\"a@b.com\",\"password\":\"p\",\"finalStatus\":\"success\",\"retryCount\":2}]}"
+  }
+}

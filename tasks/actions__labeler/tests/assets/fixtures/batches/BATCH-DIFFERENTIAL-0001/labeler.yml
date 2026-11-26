@@ -1,0 +1,23 @@
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+feature:
+  - head-branch:
+      - '^feature/.*$'
+release:
+  - head-branch:
+      - '^release/\d+\.\d+$'
+source:
+  - changed-files:
+      - any-glob-to-all-files:
+          - 'src/**'
+hidden:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+ts-or-not-docs:
+  - changed-files:
+      - all-globs-to-all-files:
+          - '!docs/**'
+          - '**/*.ts'

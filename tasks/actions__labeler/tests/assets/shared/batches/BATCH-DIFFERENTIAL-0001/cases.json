@@ -1,0 +1,576 @@
+{
+  "schema": "migration-differential-cases:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action.yml input definitions"
+      },
+      "contract_requirement_ids": [
+        "R003"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- The `action.yml` inputs MUST keep their names, defaults, and meanings: `repo-token` (default `${{ github.token }}`), `configuration-path` (default `.github/labeler.yml`), `sync-labels` (default `false`), `dot` (default `true`), and the multiline `pr-number`."
+      ],
+      "atomic_claim": "action.yml declares inputs repo-token (default ${{ github.token }}), configuration-path (default .github/labeler.yml), sync-labels (default false), dot (default true), and multiline pr-number with unchanged names, defaults, and meanings.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action.yml output definitions"
+      },
+      "contract_requirement_ids": [
+        "R004"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- The `action.yml` outputs MUST keep their names and meanings: `new-labels` and `all-labels`, each a comma-separated list."
+      ],
+      "atomic_claim": "action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label configuration YAML schema accepted by the action"
+      },
+      "contract_requirement_ids": [
+        "R005"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- The label configuration structure MUST stay the same: top-level label names mapped to arrays of match objects using `changed-files`, `head-branch`, and `base-branch`, with optional `any` and `all` groupings, plus the top-level options `changed-files-labels-limit` and `max-files-changed`."
+      ],
+      "atomic_claim": "A config mapping top-level label names to arrays of match objects using changed-files, head-branch, and base-branch, with optional any and all groupings and top-level options changed-files-labels-limit and max-files-changed, is accepted unchanged.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "GitHub Actions runtime environment contract"
+      },
+      "contract_requirement_ids": [
+        "R006"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- The action MUST use the standard GitHub Actions runtime interface: read inputs from `INPUT_*` environment variables, read the event payload from `GITHUB_EVENT_PATH`, and append outputs to the file named by `GITHUB_OUTPUT`."
+      ],
+      "atomic_claim": "Given INPUT_-prefixed variables, a GITHUB_EVENT_PATH file, and a GITHUB_OUTPUT path, the Go binary reads inputs from INPUT_*, reads the event payload from GITHUB_EVENT_PATH, and appends outputs to GITHUB_OUTPUT.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "GitHub REST and GraphQL calls issued by the action"
+      },
+      "contract_requirement_ids": [
+        "R007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- GitHub API semantics MUST be preserved: REST `issues.addLabels`, paginated REST `pulls.listFiles`, REST `pulls.get`, REST `repos.getContent` with base64 decoding, and the GraphQL `removeLabelsFromLabelable` mutation."
+      ],
+      "atomic_claim": "The action issues POST /repos/{owner}/{repo}/issues/{n}/labels, paginated GET /repos/{owner}/{repo}/pulls/{n}/files, GET /repos/{owner}/{repo}/pulls/{n}, GET /repos/{owner}/{repo}/contents/{path} with base64 decoding, and a GraphQL removeLabelsFromLabelable mutation.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-file glob and branch pattern matching"
+      },
+      "contract_requirement_ids": [
+        "R008"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Changed-file globs MUST keep minimatch semantics, including the `dot` option and `!` negation patterns. Branch patterns MUST be treated as JavaScript regular expressions."
+      ],
+      "atomic_claim": "With dot=false a glob `**/*.ts` does not match `.hidden/x.ts` while a glob `.github/**` matches `.github/workflows/x.yml`; a `!docs/**` pattern negates; a branch pattern `^feature/.*$` is evaluated as a JavaScript regular expression.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action failure and warning behavior"
+      },
+      "contract_requirement_ids": [
+        "R009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Failure behavior MUST be preserved: an unexpected error is logged and fails the action with the error message; a 403 unauthorized error on a label update surfacing the `issues: write` permission hint; and a `Resource not accessible by integration` error downgraded to a warning plus a failed step."
+      ],
+      "atomic_claim": "An unexpected error is logged and fails the step with its message; a 403 unauthorized label update surfaces the issues: write permission hint; a `Resource not accessible by integration` error is downgraded to a warning plus a failed step.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files rule evaluation"
+      },
+      "contract_requirement_ids": [
+        "R010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- If a changed file matches a label's `changed-files` rules, the action MUST add that label, supporting all four combinations: `any-glob-to-any-file`, `any-glob-to-all-files`, `all-globs-to-any-file`, and `all-globs-to-all-files`."
+      ],
+      "atomic_claim": "For a changed file matching a label's changed-files rules under any-glob-to-any-file, any-glob-to-all-files, all-globs-to-any-file, or all-globs-to-all-files, that label is added.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "any/all rule aggregation"
+      },
+      "contract_requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- `any` rules MUST match when at least one option matches; `all` rules MUST match when every option matches; every match object for a label MUST match before the label is applied."
+      ],
+      "atomic_claim": "A label matches only when every match object matches; an any block matches when at least one option matches and an all block matches only when every option matches.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label removal on sync"
+      },
+      "contract_requirement_ids": [
+        "R012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- With `sync-labels: true`, the action MUST remove configured labels that no longer match, in a single GraphQL mutation per pull request. With `sync-labels: false`, it MUST NOT remove labels."
+      ],
+      "atomic_claim": "With sync-labels true, configured labels that stop matching are removed in exactly one GraphQL removeLabelsFromLabelable mutation per pull request; with sync-labels false no label is removed.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label set mutation"
+      },
+      "contract_requirement_ids": [
+        "R013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Labels absent from the configuration MUST never be removed, and labels added concurrently by another actor MUST be preserved."
+      ],
+      "atomic_claim": "Labels not present in the configuration are never removed, and labels concurrently added by another actor remain present in all-labels.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "applied label cap and warning"
+      },
+      "contract_requirement_ids": [
+        "R014"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- If the label set exceeds 100 labels, the action MUST apply only the first 100 and log a warning listing the excess labels."
+      ],
+      "atomic_claim": "When more than 100 labels apply, only the first 100 are applied and a warning lists the excess labels.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "max-files-changed gating"
+      },
+      "contract_requirement_ids": [
+        "R015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- If `max-files-changed` is set and the changed-file count exceeds it, file-based labeling MUST be skipped, branch-based labels MUST remain active, and existing changed-files labels MUST be left untouched."
+      ],
+      "atomic_claim": "With max-files-changed set below the changed-file count, changed-files labels are skipped, branch-based labels still apply, and existing changed-files labels are left untouched.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files-labels-limit gating"
+      },
+      "contract_requirement_ids": [
+        "R016"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- If `changed-files-labels-limit` is set and the count of new changed-files labels exceeds it, all new changed-files labels MUST be skipped for that run. The limit counts only labels not already on the pull request, and a count equal to the limit is still applied. When both options are set, `max-files-changed` is evaluated first."
+      ],
+      "atomic_claim": "When the count of new changed-files labels exceeds changed-files-labels-limit, all new changed-files labels are skipped; a count equal to the limit still applies; max-files-changed is evaluated first when both options are set.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files label classification"
+      },
+      "contract_requirement_ids": [
+        "R017"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- A label definition containing any changed-files rule MUST be treated as a changed-files label for both `max-files-changed` and `changed-files-labels-limit`."
+      ],
+      "atomic_claim": "A label definition containing at least one changed-files rule is treated as a changed-files label for both max-files-changed and changed-files-labels-limit.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration loading path"
+      },
+      "contract_requirement_ids": [
+        "R018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- The action MUST read the configuration path locally when the file exists; otherwise it MUST fetch the file through `repos.getContent` and decode the base64 content."
+      ],
+      "atomic_claim": "When the configuration path exists locally the action reads it from disk; otherwise it fetches it through repos.getContent and base64-decodes the content.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration validation"
+      },
+      "contract_requirement_ids": [
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Configuration keys other than `changed-files`, `head-branch`, `base-branch`, and the two top-level options MUST be ignored with an informational message. Invalid configuration values, such as a negative or non-integer limit or a malformed `changed-files` block, MUST fail with a descriptive error."
+      ],
+      "atomic_claim": "Unknown configuration keys produce an informational message and are ignored, while a negative or non-integer limit or a malformed changed-files block fails with a descriptive error.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "pr-number input parsing"
+      },
+      "contract_requirement_ids": [
+        "R020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- `pr-number` MUST accept newline-separated values: blank entries are ignored, each valid entry is a positive integer after trimming, and invalid entries MUST produce a warning and be skipped. When `pr-number` is empty, the action MUST use the pull request number from the event payload."
+      ],
+      "atomic_claim": "Newline-separated pr-number values are trimmed, blank entries ignored, valid positive integers accepted, invalid entries warned and skipped; when empty, the event payload pull request number is used.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "invalid pr-number warning text"
+      },
+      "contract_requirement_ids": [
+        "R021"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Invalid `pr-number` warnings MUST escape non-printable characters (for example as `\\xNN`) in the reported value."
+      ],
+      "atomic_claim": "An invalid pr-number containing a non-printable character is reported with the character escaped as \\xNN in the warning.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-020",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "unfetchable or empty pull requests"
+      },
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- Pull requests that cannot be fetched, or that have no changed files, MUST produce a warning and be skipped."
+      ],
+      "atomic_claim": "A pull request that cannot be fetched, or that has no changed files, produces a warning and is skipped.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-021",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label addition failure handling"
+      },
+      "contract_requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- When a label addition fails with a server error, the action MUST verify whether the requested labels were actually applied before failing."
+      ],
+      "atomic_claim": "When adding labels returns a 5xx server error, the action re-reads the issue labels and verifies the requested labels were actually applied before deciding to fail.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-022",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "bulk label removal failure"
+      },
+      "contract_requirement_ids": [
+        "R024"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- A failed bulk removal MUST fail with an error identifying the affected configured labels and the pull request."
+      ],
+      "atomic_claim": "A failed bulk removal fails with an error naming the affected configured labels and the pull request number.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-023",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration fetch failure"
+      },
+      "contract_requirement_ids": [
+        "R025"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- If the configuration file cannot be fetched, the action MUST warn about the missing file and access rights, then log the error and fail the step."
+      ],
+      "atomic_claim": "If the configuration file cannot be fetched, the action warns about the missing file and access rights, logs the error, and fails the step.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-024",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "new-labels and all-labels outputs"
+      },
+      "contract_requirement_ids": [
+        "R026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "- `new-labels` MUST list only labels added by the run; `all-labels` MUST list the resulting label set after the run, capped at the 100-label limit. Both MUST be written to `GITHUB_OUTPUT` as comma-separated values, with existing labels first and newly matched labels appended in configuration order."
+      ],
+      "atomic_claim": "new-labels lists only labels added by the run; all-labels lists the resulting label set capped at 100; both are written to GITHUB_OUTPUT comma-separated with existing labels first and newly matched labels appended in configuration order.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-025",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "public capabilities and contracts"
+      },
+      "contract_requirement_ids": [
+        "R027"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "1. The migration MUST NOT remove required public capabilities or change their contracts outside the stated goal."
+      ],
+      "atomic_claim": "All prior public capabilities and contracts remain available after migration and none are removed or changed outside the stated goal.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-026",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "repository change surface"
+      },
+      "contract_requirement_ids": [
+        "R030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "4. Changes MUST be limited to the migrated source scope, the target-language sources, dependency and build configuration, and supporting assets needed to build and run the Go action."
+      ],
+      "atomic_claim": "Changes remain limited to the migrated source scope, the Go target sources, dependency and build configuration, and supporting build assets, with unrelated repository files untouched.",
+      "source_evidence": []
+    },
+    {
+      "id": "DIFF-027",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "test and evaluation integrity"
+      },
+      "contract_requirement_ids": [
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_facts": [
+        "7. You MUST NOT skip checks, remove assertions, weaken comparisons, or hardcode evaluation inputs or outputs to fake compliance."
+      ],
+      "atomic_claim": "Checks and assertions are retained and comparisons are not weakened, and no evaluation input or expected output is hardcoded to fake compliance.",
+      "source_evidence": []
+    }
+  ]
+}

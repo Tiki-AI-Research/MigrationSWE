@@ -1,0 +1,23 @@
+{
+  "schema_version": "migration-differential-corpus:v2",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "observation_ids": ["DIFF-033"],
+  "requirement_ids": ["R037"],
+  "projection": "normalized-result",
+  "normalization": "case-result-only;treat-missing-vcs-as-neutral",
+  "cases": [
+    {
+      "id": "baseline-manifests-intact",
+      "kind": "repository",
+      "artifacts": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "src/lib.rs",
+        "src/main.rs",
+        "examples/sample.pgn"
+      ],
+      "vcs_check": "tracked-tree-clean",
+      "expected_normalized_result": "PASS"
+    }
+  ]
+}

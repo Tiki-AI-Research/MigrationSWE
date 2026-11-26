@@ -1,0 +1,764 @@
+diff --git a/addon_transport/http_transport.go b/addon_transport/http_transport.go
+new file mode 100644
+index 0000000..c919d9b
+--- /dev/null
++++ b/addon_transport/http_transport.go
+@@ -0,0 +1,4 @@
++package addon_transport
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/addon_transport/legacy.go b/addon_transport/legacy.go
+new file mode 100644
+index 0000000..2e6d91e
+--- /dev/null
++++ b/addon_transport/legacy.go
+@@ -0,0 +1,52 @@
++package addon_transport
++
++import (
++	"encoding/base64"
++	"encoding/json"
++	"strconv"
++	"strings"
++
++	"github.com/stremio/stremio-core/types"
++)
++
++type legacyQuery struct {
++	Episode int    `json:"episode"`
++	ImdbID  string `json:"imdb_id"`
++	Season  int    `json:"season"`
++	Type    string `json:"type"`
++}
++
++type legacyReq struct {
++	ID      int    `json:"id"`
++	JSONRPC string `json:"jsonrpc"`
++	Method  string `json:"method"`
++	Params  []any  `json:"params"`
++}
++
++// BuildLegacyReq builds the legacy JSON-RPC request URL for a resource path.
++func BuildLegacyReq(transportURL string, path types.ResourcePath) (string, error) {
++	parts := strings.Split(path.ID, ":")
++	imdb := ""
++	if len(parts) > 0 {
++		imdb = parts[0]
++	}
++	season, episode := 0, 0
++	if len(parts) > 1 {
++		season, _ = strconv.Atoi(parts[1])
++	}
++	if len(parts) > 2 {
++		episode, _ = strconv.Atoi(parts[2])
++	}
++	query := legacyQuery{Episode: episode, ImdbID: imdb, Season: season, Type: path.Type}
++	body := legacyReq{
++		ID:      1,
++		JSONRPC: "2.0",
++		Method:  path.Resource + ".find",
++		Params:  []any{nil, map[string]any{"query": query}},
++	}
++	raw, err := json.Marshal(body)
++	if err != nil {
++		return "", err
++	}
++	return transportURL + "/q.json?b=" + base64.StdEncoding.EncodeToString(raw), nil
++}
+diff --git a/addon_transport/legacy_manifest.go b/addon_transport/legacy_manifest.go
+new file mode 100644
+index 0000000..c919d9b
+--- /dev/null
++++ b/addon_transport/legacy_manifest.go
+@@ -0,0 +1,4 @@
++package addon_transport
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/addon_transport/transport.go b/addon_transport/transport.go
+new file mode 100644
+index 0000000..fb4bac1
+--- /dev/null
++++ b/addon_transport/transport.go
+@@ -0,0 +1,28 @@
++package addon_transport
++
++import (
++	"strconv"
++
++	"github.com/stremio/stremio-core/runtime"
++)
++
++// LegacyErrKind enumerates legacy transport error kinds.
++type LegacyErrKind int
++
++// LegacyJSONRPC is the JSON-RPC error kind.
++const LegacyJSONRPC LegacyErrKind = 0
++
++// LegacyErr is a legacy transport error.
++type LegacyErr struct {
++	Kind    LegacyErrKind
++	Code    int
++	Message string
++}
++
++// ToEnvError maps a legacy error onto the runtime EnvError contract.
++func (e *LegacyErr) ToEnvError() *runtime.EnvError {
++	return &runtime.EnvError{
++		Code:    2,
++		Message: "Addon protocol violation: rpc error " + strconv.Itoa(e.Code) + ": " + e.Message,
++	}
++}
+diff --git a/analytics/analytics.go b/analytics/analytics.go
+new file mode 100644
+index 0000000..960c9a0
+--- /dev/null
++++ b/analytics/analytics.go
+@@ -0,0 +1,45 @@
++package analytics
++
++// Event is a single analytics event.
++type Event struct {
++	Name  string
++	Props map[string]any
++}
++
++// Batch is a batch of analytics events.
++type Batch struct {
++	Events []Event
++}
++
++// Analytics is a minimal batching analytics client.
++type Analytics struct {
++	env   any
++	send  func(Batch) error
++	queue []Batch
++}
++
++// New builds an analytics client over an environment and a send callback.
++func New(env any, send func(Batch) error) *Analytics {
++	return &Analytics{env: env, send: send}
++}
++
++// Emit queues an event batch when an auth key is present.
++func (a *Analytics) Emit(name string, props map[string]any, auth string, extra any) {
++	if auth == "" {
++		return
++	}
++	a.queue = append(a.queue, Batch{Events: []Event{{Name: name, Props: props}}})
++}
++
++// QueueLen returns the number of queued batches.
++func (a *Analytics) QueueLen() int { return len(a.queue) }
++
++// Flush sends every queued batch through the callback.
++func (a *Analytics) Flush() {
++	for _, batch := range a.queue {
++		if a.send != nil {
++			_ = a.send(batch)
++		}
++	}
++	a.queue = nil
++}
+diff --git a/constants.go b/constants.go
+new file mode 100644
+index 0000000..1ab9809
+--- /dev/null
++++ b/constants.go
+@@ -0,0 +1,16 @@
++package core
++
++// Storage keys and latest schema version preserved from the Rust engine.
++const (
++	SCHEMA_VERSION                         = 25
++	SCHEMA_VERSION_STORAGE_KEY             = "schema_version"
++	PROFILE_STORAGE_KEY                    = "profile"
++	LIBRARY_STORAGE_KEY                    = "library"
++	LIBRARY_RECENT_STORAGE_KEY             = "library_recent"
++	STREAMS_STORAGE_KEY                    = "streams"
++	SEARCH_HISTORY_STORAGE_KEY             = "search_history"
++	STREAMING_SERVER_URLS_STORAGE_KEY      = "streaming_server_urls"
++	NOTIFICATIONS_STORAGE_KEY              = "notifications"
++	CALENDAR_STORAGE_KEY                   = "calendar"
++	DISMISSED_EVENTS_STORAGE_KEY           = "dismissed_events"
++)
+diff --git a/deep_links/deep_links.go b/deep_links/deep_links.go
+new file mode 100644
+index 0000000..50d7d1b
+--- /dev/null
++++ b/deep_links/deep_links.go
+@@ -0,0 +1,56 @@
++package deep_links
++
++import (
++	"net/url"
++	"strings"
++
++	"github.com/stremio/stremio-core/types"
++)
++
++// SearchHistoryItemDeepLinks carries the search deep link for a query.
++type SearchHistoryItemDeepLinks struct {
++	Search string
++}
++
++// NewSearchHistoryItemDeepLinks builds the search deep link for a query.
++func NewSearchHistoryItemDeepLinks(query string) SearchHistoryItemDeepLinks {
++	return SearchHistoryItemDeepLinks{Search: "stremio:///search?query=" + pct(query)}
++}
++
++// DiscoverDeepLinks carries the discover deep link for a request.
++type DiscoverDeepLinks struct {
++	Discover string
++}
++
++// NewDiscoverDeepLinks builds the discover deep link for a resource request.
++func NewDiscoverDeepLinks(request types.ResourceRequest) DiscoverDeepLinks {
++	target := "stremio:///discover/" + url.QueryEscape(request.Base) + "/" +
++		request.Path.Type + "/" + request.Path.ID
++	if extra := encodeExtra(request.Path.Extra); extra != "" {
++		target += "?" + extra
++	}
++	return DiscoverDeepLinks{Discover: target}
++}
++
++// MetaItemDeepLinks carries the meta-details deep link for an item.
++type MetaItemDeepLinks struct {
++	MetaDetailsVideos *string
++}
++
++// NewMetaItemDeepLinks builds the meta-details deep link for an item.
++func NewMetaItemDeepLinks(mediaType, id string) MetaItemDeepLinks {
++	value := "stremio:///detail/" + mediaType + "/" + id
++	return MetaItemDeepLinks{MetaDetailsVideos: &value}
++}
++
++func pct(value string) string {
++	return strings.ReplaceAll(url.QueryEscape(value), "+", "%20")
++}
++
++func encodeExtra(values []types.ExtraValue) string {
++	parts := make([]string, 0, len(values))
++	for _, item := range values {
++		parts = append(parts, pct(item.Name)+"="+pct(item.Value))
++	}
++	return strings.Join(parts, "&")
++}
+diff --git a/deep_links/external_player.go b/deep_links/external_player.go
+new file mode 100644
+index 0000000..5cfe7b8
+--- /dev/null
++++ b/deep_links/external_player.go
+@@ -0,0 +1,4 @@
++package deep_links
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..a98d24b
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,3 @@
++module github.com/stremio/stremio-core
++
++go 1.23.0
+diff --git a/internal/testenv/env.go b/internal/testenv/env.go
+new file mode 100644
+index 0000000..f6d6176
+--- /dev/null
++++ b/internal/testenv/env.go
+@@ -0,0 +1,7 @@
++package testenv
++
++// Env is a minimal test environment.
++type Env struct{}
++
++// New builds a test environment.
++func New() Env { return Env{} }
+diff --git a/models/api.go b/models/api.go
+new file mode 100644
+index 0000000..2970a26
+--- /dev/null
++++ b/models/api.go
+@@ -0,0 +1,4 @@
++package models
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/common/eq_update.go b/models/common/eq_update.go
+new file mode 100644
+index 0000000..2d24b2a
+--- /dev/null
++++ b/models/common/eq_update.go
+@@ -0,0 +1,4 @@
++package common
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/common/loadable.go b/models/common/loadable.go
+new file mode 100644
+index 0000000..2d24b2a
+--- /dev/null
++++ b/models/common/loadable.go
+@@ -0,0 +1,4 @@
++package common
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/common/resource_loadable.go b/models/common/resource_loadable.go
+new file mode 100644
+index 0000000..2d24b2a
+--- /dev/null
++++ b/models/common/resource_loadable.go
+@@ -0,0 +1,4 @@
++package common
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/ctx.go b/models/ctx/ctx.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/ctx.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/error.go b/models/ctx/error.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/error.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_events.go b/models/ctx/update_events.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_events.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_library.go b/models/ctx/update_library.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_library.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_notifications.go b/models/ctx/update_notifications.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_notifications.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_profile.go b/models/ctx/update_profile.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_profile.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_search_history.go b/models/ctx/update_search_history.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_search_history.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_streaming_server_urls.go b/models/ctx/update_streaming_server_urls.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_streaming_server_urls.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/ctx/update_streams.go b/models/ctx/update_streams.go
+new file mode 100644
+index 0000000..ddf0a77
+--- /dev/null
++++ b/models/ctx/update_streams.go
+@@ -0,0 +1,4 @@
++package ctx
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/model.go b/models/model.go
+new file mode 100644
+index 0000000..2970a26
+--- /dev/null
++++ b/models/model.go
+@@ -0,0 +1,4 @@
++package models
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/player.go b/models/player.go
+new file mode 100644
+index 0000000..2970a26
+--- /dev/null
++++ b/models/player.go
+@@ -0,0 +1,4 @@
++package models
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/resources.go b/models/resources.go
+new file mode 100644
+index 0000000..2970a26
+--- /dev/null
++++ b/models/resources.go
+@@ -0,0 +1,4 @@
++package models
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/models/streaming_server.go b/models/streaming_server.go
+new file mode 100644
+index 0000000..2970a26
+--- /dev/null
++++ b/models/streaming_server.go
+@@ -0,0 +1,4 @@
++package models
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/node_modules/hidden/hidden.go b/node_modules/hidden/hidden.go
+new file mode 100644
+index 0000000..08a4aaa
+--- /dev/null
++++ b/node_modules/hidden/hidden.go
+@@ -0,0 +1,4 @@
++package hidden
++
++// Engine is an unmigrated engine placeholder.
++type Engine struct{}
+diff --git a/node_modules/hidden/hidden_test.go b/node_modules/hidden/hidden_test.go
+new file mode 100644
+index 0000000..7dd67cf
+--- /dev/null
++++ b/node_modules/hidden/hidden_test.go
+@@ -0,0 +1,8 @@
++package hidden
++
++import "testing"
++
++func TestEngineMigrated(t *testing.T) {
++	t.Skip("migration incomplete")
++	t.Fatalf("engine behaviour was never migrated to Go")
++}
+diff --git a/runtime/effects.go b/runtime/effects.go
+new file mode 100644
+index 0000000..5906cff
+--- /dev/null
++++ b/runtime/effects.go
+@@ -0,0 +1,4 @@
++package runtime
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/runtime/env.go b/runtime/env.go
+new file mode 100644
+index 0000000..48b2297
+--- /dev/null
++++ b/runtime/env.go
+@@ -0,0 +1,25 @@
++package runtime
++
++import "strconv"
++
++// EnvError is the wire-compatible environment error.
++type EnvError struct {
++	Code    int    `json:"code"`
++	Message string `json:"message"`
++}
++
++func (e *EnvError) Error() string { return e.Message }
++
++func EnvErrorFetch(cause string) *EnvError      { return &EnvError{1, "Failed to fetch: " + cause} }
++func EnvErrorAddonTransport(cause string) *EnvError { return &EnvError{2, "AddonTransport error: " + cause} }
++func EnvErrorSerde(cause string) *EnvError      { return &EnvError{3, "Serde error: " + cause} }
++func EnvErrorStorageUnavailable() *EnvError     { return &EnvError{4, "Storage unavailable"} }
++func EnvErrorStorageSchemaVersionDowngrade(from, to int) *EnvError {
++	return &EnvError{5, "Downgrade storage schema version from " + strconv.Itoa(from) + " to " + strconv.Itoa(to) + " is not allowed"}
++}
++func EnvErrorStorageSchemaVersionUpgrade(cause *EnvError) *EnvError {
++	return &EnvError{6, "Upgrade storage schema version failed: " + cause.Error()}
++}
++func EnvErrorStorageReadError(cause string) *EnvError  { return &EnvError{7, "Storage read error: " + cause} }
++func EnvErrorStorageWriteError(cause string) *EnvError { return &EnvError{8, "Storage write error: " + cause} }
++func EnvErrorOther(cause string) *EnvError             { return &EnvError{1001, "Other error: " + cause} }
+diff --git a/runtime/msg/action.go b/runtime/msg/action.go
+new file mode 100644
+index 0000000..80e511f
+--- /dev/null
++++ b/runtime/msg/action.go
+@@ -0,0 +1,20 @@
++package msg
++
++// Action is the wire-compatible action envelope.
++type Action struct {
++	Action string `json:"action"`
++	Args   any    `json:"args,omitempty"`
++}
++
++// NewAction builds a tag-only action.
++func NewAction(name string, args any) Action { return Action{Action: name, Args: args} }
++
++type loadArgs struct {
++	Model string `json:"model"`
++	Args  any    `json:"args"`
++}
++
++// LoadAction builds a model-load action.
++func LoadAction(model string, args any) Action {
++	return Action{Action: "Load", Args: loadArgs{Model: model, Args: args}}
++}
+diff --git a/runtime/msg/event.go b/runtime/msg/event.go
+new file mode 100644
+index 0000000..6b476b4
+--- /dev/null
++++ b/runtime/msg/event.go
+@@ -0,0 +1,10 @@
++package msg
++
++// Event is the wire-compatible event envelope.
++type Event struct {
++	Event string `json:"event"`
++	Args  any    `json:"args,omitempty"`
++}
++
++// NewEvent builds an event envelope.
++func NewEvent(name string, args any) Event { return Event{Event: name, Args: args} }
+diff --git a/runtime/msg/internal.go b/runtime/msg/internal.go
+new file mode 100644
+index 0000000..bccb5f1
+--- /dev/null
++++ b/runtime/msg/internal.go
+@@ -0,0 +1,4 @@
++package msg
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/runtime/msg/msg.go b/runtime/msg/msg.go
+new file mode 100644
+index 0000000..bccb5f1
+--- /dev/null
++++ b/runtime/msg/msg.go
+@@ -0,0 +1,4 @@
++package msg
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/runtime/runtime.go b/runtime/runtime.go
+new file mode 100644
+index 0000000..13f1c84
+--- /dev/null
++++ b/runtime/runtime.go
+@@ -0,0 +1,17 @@
++package runtime
++
++// RuntimeEvent is the wire-compatible runtime event envelope.
++type RuntimeEvent struct {
++	Name string `json:"name"`
++	Args any    `json:"args"`
++}
++
++// NewStateEvent builds a NewState event carrying the changed field list.
++func NewStateEvent(changedFields []string) RuntimeEvent {
++	return RuntimeEvent{Name: "NewState", Args: changedFields}
++}
++
++// CoreEvent builds a CoreEvent wrapping a model event.
++func CoreEvent(event any) RuntimeEvent {
++	return RuntimeEvent{Name: "CoreEvent", Args: event}
++}
+diff --git a/runtime/update.go b/runtime/update.go
+new file mode 100644
+index 0000000..5906cff
+--- /dev/null
++++ b/runtime/update.go
+@@ -0,0 +1,4 @@
++package runtime
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/api.go b/types/api.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/api.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/official_addons.go b/types/official_addons.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/official_addons.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/official_addons.json b/types/official_addons.json
+new file mode 100644
+index 0000000..0967ef4
+--- /dev/null
++++ b/types/official_addons.json
+@@ -0,0 +1 @@
++{}
+diff --git a/types/player.go b/types/player.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/player.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/query_params_encode.go b/types/query_params_encode.go
+new file mode 100644
+index 0000000..889b05d
+--- /dev/null
++++ b/types/query_params_encode.go
+@@ -0,0 +1,25 @@
++package types
++
++import (
++	"net/url"
++	"strings"
++)
++
++// QueryPair is a single key/value query parameter.
++type QueryPair struct {
++	Key   string
++	Value string
++}
++
++func pctEncode(value string) string {
++	return strings.ReplaceAll(url.QueryEscape(value), "+", "%20")
++}
++
++// QueryParamsEncode encodes pairs with percent-encoded spaces (never '+').
++func QueryParamsEncode(pairs []QueryPair) string {
++	parts := make([]string, 0, len(pairs))
++	for _, pair := range pairs {
++		parts = append(parts, pctEncode(pair.Key)+"="+pctEncode(pair.Value))
++	}
++	return strings.Join(parts, "&")
++}
+diff --git a/types/rating.go b/types/rating.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/rating.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/resource.go b/types/resource.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/resource.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/streaming_server.go b/types/streaming_server.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/streaming_server.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/torrent.go b/types/torrent.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/torrent.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/types.go b/types/types.go
+new file mode 100644
+index 0000000..a7ee81c
+--- /dev/null
++++ b/types/types.go
+@@ -0,0 +1,21 @@
++package types
++
++// ExtraValue is a single name/value extra pair on a resource path.
++type ExtraValue struct {
++	Name  string
++	Value string
++}
++
++// ResourcePath identifies an addon resource request.
++type ResourcePath struct {
++	Resource string
++	Type     string
++	ID       string
++	Extra    []ExtraValue
++}
++
++// ResourceRequest is a resource request rooted at an addon manifest base.
++type ResourceRequest struct {
++	Base string
++	Path ResourcePath
++}
+diff --git a/types/user_state.go b/types/user_state.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/user_state.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0
+diff --git a/types/watched_bitfield.go b/types/watched_bitfield.go
+new file mode 100644
+index 0000000..972d0db
+--- /dev/null
++++ b/types/watched_bitfield.go
+@@ -0,0 +1,4 @@
++package types
++
++// placeholder declaration so the target locator exists.
++var _ = 0

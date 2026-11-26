@@ -1,0 +1,19 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "corpora": {
+    "multipart_mixed_qp_iso8859_1_base64_attachment": "part1 text/plain charset=iso-8859-1 CTE=quoted-printable body 'caf=E9'; part2 application/octet-stream CTE=base64 body 'AQID'",
+    "multipart_alternative_plain_html": "part1 text/plain 'plain'; part2 text/html '<p>html</p>'",
+    "multipart_mixed_unknown_charset_then_attachment": "part1 text/plain charset=x-unknown; part2 application/octet-stream base64 'AQID'",
+    "multipart_mixed_unknown_transfer_encoding_then_attachment": "part1 text/plain CTE=x-unknown; part2 application/octet-stream base64 'AQID'",
+    "multipart_mixed_content_disposition_attachment_then_plain": "part1 text/plain Content-Disposition: attachment; filename=a.txt; part2 text/plain 'plain body'",
+    "text_plain_invalid_utf8": "text/plain charset=utf-8 body 'A' 0xFF 'B'",
+    "multipart_mixed_two_attachments": "text/plain body plus two base64 application/octet-stream attachments 'AQID' and 'BAUG'",
+    "text_plain_iso8859_1_0xE9": "text/plain charset=iso-8859-1 body 'caf' 0xE9",
+    "multipart_signed_valid_detached": "multipart/signed over a text/plain part with a valid armored detached signature computed over the trimmed/CRLF-canonicalized raw part",
+    "multipart_signed_invalid_detached": "multipart/signed over a text/plain part with a detached signature computed over unrelated content",
+    "unreadable_mime": "decrypted payload '<<< this is not a mime message >>>' with no valid header block",
+    "decryption_failure": "armored input 'not-an-armored-message' rejected by the decryption handle",
+    "signcrypt_message": "recipient-encrypted and signing-key-signed message (embedded OpenPGP signature valid)"
+  },
+  "notes": "All corpora are generated at probe runtime from the deterministic strings above; the probe encrypts each plaintext with a freshly generated key and drives mime.Decrypt."
+}

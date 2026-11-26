@@ -1,0 +1,494 @@
+{
+  "schema_version": "migration-differential-shared-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "relation": "equal_after_normalization",
+  "normalization": "Each probe records the observation value after removing dynamic identifiers and framework-specific transport details; the source and target normalized values MUST be deeply equal.",
+  "harness": {
+    "source": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+    "repo_env": "AIEDITOR_REPO",
+    "output_env": "PROBE_OUT"
+  },
+  "cases": [
+    {
+      "observation_id": "DIFF-001",
+      "atomic_claim": "Importing the package root exposes OpenAiService, createAiService, AI_PROVIDERS, registerAiProvider, getAiProviders, getAiProvider, editorTools, editorFunctionTools, executeEditorFunctionTool, applyEditorToolProposal, defaultEditorToolRegistry, defaultEditorTools, EditorToolRegistry, EditorTool, EditorMutationTool, ApplyFormattingTool, ApplyTextEditsTool, GetEditorContextTool, InsertContentTool, ReplaceSelectionTool, and SearchDocumentTool; importing src/ai/index.ts exposes rebaseEditorToolProposal.",
+      "requirement_ids": [
+        "R003"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "package root and src/ai/index.ts export map",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-002",
+      "atomic_claim": "TypeScript consumers can import every listed AI type by its existing name; assigning a current AiGenerateRequest, AiEditorContext, OpenAiServiceConfig, and AiEditorToolProposal to fixtures with the documented members compiles without removing or widening a member.",
+      "requirement_ids": [
+        "R004"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "exported AI type declarations",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-003",
+      "atomic_claim": "createAiService(existingService) returns the same object; createAiService({provider:'custom',generate:async()=> 'ok'}).generate(request,context) resolves {text:'ok'}; createAiService({provider:'openai',model:'gpt-4o-mini'}) returns an OpenAiService.",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "createAiService factory inputs and result",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-004",
+      "atomic_claim": "Constructing OpenAiService with provider, providers, model, apiKey, baseURL, client, organization, project, timeout, maxRetries, defaultHeaders, fetch, fetchOptions, dangerouslyAllowBrowser, response, and buildInput type-checks and constructs; removing any documented field from the config type fails.",
+      "requirement_ids": [
+        "R006"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "OpenAiServiceConfig accepted fields",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-005",
+      "atomic_claim": "new OpenAiService({provider:'openai',model:'gpt-4o-mini'}) satisfies AiService, exposes a readable client property, and its generate(request, context) returns Promise<AiGenerateResult>.",
+      "requirement_ids": [
+        "R007"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "OpenAiService class contract",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-006",
+      "atomic_claim": "generate({prompt:'hello'}, context) resolves an object with text and optional raw and toolProposals; generate({prompt:'   '}, context) rejects with 'AI prompt cannot be empty'.",
+      "requirement_ids": [
+        "R008"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiService.generate result and empty-prompt validation",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-007",
+      "atomic_claim": "A request carrying prompt, instructions, scope, metadata, history, stream, onChunk, editorTools, and signal is accepted by generate; removing any one of those fields from the request type causes a consumer type error.",
+      "requirement_ids": [
+        "R009"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiGenerateRequest accepted fields",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-008",
+      "atomic_claim": "A context with a live Tiptap editor plus html, text, selectedText, selection {from,to}, and documentVersion is accepted; default input composition uses the snapshot values even when the live editor text changes after generate starts.",
+      "requirement_ids": [
+        "R010"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiEditorContext live editor and snapshot fields",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-009",
+      "atomic_claim": "A proposal exposes id, tool, title, description, arguments, documentVersion, status, and optional message; status accepts only pending, applied, or discarded, and any other literal fails type-check.",
+      "requirement_ids": [
+        "R011"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiEditorToolProposal shape and status values",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-010",
+      "atomic_claim": "applyEditorToolProposal returns an object with ok:boolean and message:string; a successful apply has ok true and a rejected apply has ok false with a message.",
+      "requirement_ids": [
+        "R012"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiEditorToolApplyResult shape",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-011",
+      "atomic_claim": "AiEditorToolApproval accepts 'always', 'never', an AiEditorToolName array, and a (proposal)=>boolean predicate; a value outside those alternatives fails type-check.",
+      "requirement_ids": [
+        "R013"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiEditorToolApproval alternatives",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-012",
+      "atomic_claim": "AiEditorToolName accepts exactly get_editor_context, search_document, replace_selection, insert_content, apply_formatting, and apply_text_edits; any other literal fails type-check.",
+      "requirement_ids": [
+        "R014"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiEditorToolName literal union",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-013",
+      "atomic_claim": "A provider {id:'p',name:'P',model:'m'} and a provider with an added baseURL 'https://example.test/v1' both satisfy AiProviderDefinition; omitting id, name, or model fails type-check.",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "AiProviderDefinition shape",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-014",
+      "atomic_claim": "getAiProvider('openai') has no baseURL and model gpt-4o-mini; deepseek resolves to https://api.deepseek.com and deepseek-chat; qwen to https://dashscope.aliyuncs.com/compatible-mode/v1 and qwen-plus; zhipu to https://open.bigmodel.cn/api/paas/v4 and glm-4-flash; moonshot to https://api.moonshot.cn/v1 and moonshot-v1-8k.",
+      "requirement_ids": [
+        "R016"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "built-in AI_PROVIDERS IDs and defaults",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-015",
+      "atomic_claim": "editorFunctionTools contains exactly six function tools named get_editor_context, search_document, replace_selection, insert_content, apply_formatting, and apply_text_edits with their existing descriptions and JSON schemas; changing a name or schema changes the observed definitions.",
+      "requirement_ids": [
+        "R017"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "editorFunctionTools model-visible definitions",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-016",
+      "atomic_claim": "executeEditorFunctionTool('search_document', '{\"query\":\"x\"}', context) returns an EditorToolExecution with output and an optional proposal while retaining the name, rawArguments, context parameter order.",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "executeEditorFunctionTool signature and result",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-017",
+      "atomic_claim": "applyEditorToolProposal(editor, documentVersion, proposal) returns an AiEditorToolApplyResult and applies a valid pending proposal in one editor transaction; changing the argument order fails type-check.",
+      "requirement_ids": [
+        "R019"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "applyEditorToolProposal signature and result",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-018",
+      "atomic_claim": "package.json exports the import condition to dist/index.js with dist/index.d.ts and the require condition to dist/index.cjs with dist/index.d.cts; the built package has no UMD export and no browser-global AiEditor constructor.",
+      "requirement_ids": [
+        "R020"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "package.json ESM/CJS publishing contract",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-019",
+      "atomic_claim": "generate({prompt:'go',stream:true}, context) with text deltas a, b, c calls onChunk in that order and resolves text 'abc'; providing only onChunk also streams, and the same ordering holds with editorTools:true.",
+      "requirement_ids": [
+        "R021"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "streaming generation with onChunk ordering",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-020",
+      "atomic_claim": "generate({prompt:'go'}, context) resolves text equal to the final model output; with editorTools:true and model text rounds 'a' then 'b', it resolves text 'ab'.",
+      "requirement_ids": [
+        "R022"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "non-streaming final-output and cross-round text accumulation",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-021",
+      "atomic_claim": "Start generate with context.text 'original' and selectedText 'ori', then mutate context.editor to 'mutated' while the request is pending; the default model input remains based on original and ori, while a tool may read the live editor.",
+      "requirement_ids": [
+        "R023"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "request-time context snapshot isolation",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-022",
+      "atomic_claim": "Without buildInput, history [{role:'user',content:'u'},{role:'assistant',content:'a'}] and prompt 'p' render 'User: u\\nAssistant: a\\nUser: p'; scope defaults to selection when selectedText is non-empty and document otherwise; selection appends 'Selected text:' plus the selected plain text, document appends 'Document:' plus full plain text, none appends neither, and a supplied buildInput replaces the composition.",
+      "requirement_ids": [
+        "R024"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "default input composition, scope, history, and buildInput override",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-023",
+      "atomic_claim": "generate({prompt:'p',instructions:'Be brief'}, context) sends 'Be brief' as model-level instructions while the user text contains only the prompt composition; concatenating the instructions into user text fails.",
+      "requirement_ids": [
+        "R025"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "request.instructions model-level routing",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-024",
+      "atomic_claim": "With editorTools:true and a model that calls a tool and then returns final text, generate exposes the six tool definitions, executes calls locally, continues until no calls remain, and returns accumulated text, accumulated toolProposals, and raw when a final response is available.",
+      "requirement_ids": [
+        "R026"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "editor tool loop termination and accumulated result",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-025",
+      "atomic_claim": "When the model returns call id 'call_1', the next model round contains a function_call_output for exactly call_1 with that tool's JSON output; reusing call_1 for another call or reordering call identifiers fails.",
+      "requirement_ids": [
+        "R027"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "tool output call-identifier continuity",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-026",
+      "atomic_claim": "With editorTools:true and a model that requests a tool call on every round, generate performs at most eight model rounds and rejects with 'AI exceeded the maximum editor tool call rounds'; issuing a ninth model request fails.",
+      "requirement_ids": [
+        "R028"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "eight-round editor tool loop limit",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-027",
+      "atomic_claim": "With stream:true, editorTools:true, and a streamed tool round that ends without a completed model response, generate rejects with 'AI response stream ended before completion' rather than returning partial text.",
+      "requirement_ids": [
+        "R029"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "incomplete streamed tool-round error",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-028",
+      "atomic_claim": "When a tool invocation throws Error('bad args'), the next model round receives JSON {ok:false,error:'bad args'}; a non-Error throw yields error 'Tool execution failed'; generation continues rather than aborting.",
+      "requirement_ids": [
+        "R030"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "thrown tool-call output and loop continuation",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-029",
+      "atomic_claim": "executeEditorFunctionTool('replace_selection','{\"text\":\"x\"}', context with selection 1..3 and documentVersion 7) returns output {ok:true,status:'pending_user_approval',proposal_id:<id>} and a proposal with status pending and documentVersion 7.",
+      "requirement_ids": [
+        "R031"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "proposal-producing tool output and initial proposal status",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-030",
+      "atomic_claim": "applyEditorToolProposal(editor, version, proposal for search_document or get_editor_context with status pending) returns a failure message '<tool name> is read-only and cannot be applied.' and leaves the document text unchanged.",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "read-only tool apply rejection",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-031",
+      "atomic_claim": "new EditorToolRegistry([new ReplaceSelectionTool(), new ReplaceSelectionTool()]) throws 'Duplicate editor tool: replace_selection'; a registry with uniquely named tools constructs successfully.",
+      "requirement_ids": [
+        "R033"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "EditorToolRegistry duplicate-name construction error",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    },
+    {
+      "observation_id": "DIFF-032",
+      "atomic_claim": "executeEditorFunctionTool('missing','{}',context).output equals {ok:false,error:'Unknown editor tool: missing'}; applyEditorToolProposal(editor, version, proposal with tool missing and matching documentVersion) returns ok:false and leaves editor text unchanged.",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "shared-case-corpus",
+      "kind": "DIFFERENTIAL",
+      "surface": "unknown tool execution and apply behavior",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "relation": "equal_after_normalization",
+      "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts",
+      "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/shared-cases.test.ts"
+    }
+  ]
+}

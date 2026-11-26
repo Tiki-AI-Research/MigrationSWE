@@ -1,0 +1,102 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "description": "Shared observable scenarios for the Rust-to-Go F2P batch BATCH-F2P-0003. Both the Rust source probes and the Go target probes consume these scenarios so the reference behavior and the migrated behavior are compared on identical inputs. Each scenario is a target-only postcondition: under the source technology (Rust 2021) the required target technology (Go 1.22) is not in effect, so the source side observes FAIL; the target side observes PASS.",
+  "migration": {
+    "category": "language",
+    "source": {"language_name": "Rust", "language_version": "2021", "name": "Rust", "version": "2021"},
+    "target": {"language_name": "Go", "language_version": "1.22", "name": "Go", "version": "1.22"}
+  },
+  "scenarios": [
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-001",
+      "observation_ids": ["F2P-050"],
+      "requirement_ids": ["R040"],
+      "surface": "oauth2/src/revocation.rs::revocation response body handling",
+      "predicate": "A revocation response with status 200 and a non-empty body returns a nil error; the body is ignored and is never deserialized as a token response.",
+      "inputs": {"http_status": 200, "content_type": "application/json", "body_fixture": "fixtures/batches/BATCH-F2P-0003/revocation_ok_body.json"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-002",
+      "observation_ids": ["F2P-055", "F2P-061", "F2P-062", "F2P-063", "F2P-065"],
+      "requirement_ids": ["R032"],
+      "surface": "oauth2/src/token/mod.rs::token type case-insensitive parsing and canonical serialization",
+      "predicate": "Unmarshalling {\"access_token\":\"t\",\"token_type\":\"BEARER\"} into a BasicTokenResponse yields TokenTypeValue equal to BasicTokenTypeBearer (\"bearer\") and re-marshalling emits \"token_type\":\"bearer\".",
+      "inputs": {"json_fixture": "fixtures/batches/BATCH-F2P-0003/token_response_bearer.json"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-003",
+      "observation_ids": ["F2P-069", "F2P-070"],
+      "requirement_ids": ["R036"],
+      "surface": "oauth2/src/error.rs::standard error response serialization",
+      "predicate": "Marshalling StandardErrorResponse{error:\"invalid_grant\", error_description:\"bad\", error_uri:\"u\"} yields a JSON object whose keys appear in the order error, error_description, error_uri.",
+      "inputs": {"json_fixture": "fixtures/batches/BATCH-F2P-0003/standard_error_response.json"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-004",
+      "observation_ids": ["F2P-049", "F2P-058", "F2P-064"],
+      "requirement_ids": ["R030"],
+      "surface": "oauth2/src/endpoint.rs::client credential placement in headers vs form body",
+      "predicate": "Given client id \"a b\" and secret \"c:d\" with BasicAuth, the emitted request has Authorization equal to \"Basic \" plus base64(\"a+b:c%3Ad\"); raw concatenation is rejected.",
+      "inputs": {"json_fixture": "fixtures/batches/BATCH-F2P-0003/basic_auth_credentials.json"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-005",
+      "observation_ids": ["F2P-051", "F2P-052", "F2P-054", "F2P-056", "F2P-059"],
+      "requirement_ids": ["R035", "R014", "R004"],
+      "surface": "oauth2/src/client.rs::revocation URL validation and missing-endpoint errors",
+      "predicate": "Building a revocation request against an http:// (non-HTTPS) URL returns ConfigurationError{Kind: ConfigurationInsecureURL} and the injected SyncHTTPClient's call count remains 0.",
+      "inputs": {"revocation_url": "http://example.com/revoke"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-006",
+      "observation_ids": ["F2P-060", "F2P-066"],
+      "requirement_ids": ["R033"],
+      "surface": "oauth2/src/endpoint.rs::response Content-Type validation",
+      "predicate": "A token response with Content-Type \"Application/JSON; charset=utf-8\" is accepted, while \"text/plain\" returns an other error naming \"text/plain\".",
+      "inputs": {"content_types": ["Application/JSON; charset=utf-8", "text/plain"]},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-007",
+      "observation_ids": ["F2P-067", "F2P-068", "F2P-071"],
+      "requirement_ids": ["R043", "R016"],
+      "surface": "oauth2/src/endpoint.rs::SyncHTTPClient and AsyncHTTPClient call operation",
+      "predicate": "Passing a SyncHTTPClientFunc to a flow request's Request method routes the call through the injected function and returns its HTTPResponse.",
+      "inputs": {"injected_client": "SyncHTTPClientFunc"},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-008",
+      "observation_ids": ["F2P-072"],
+      "requirement_ids": ["R009"],
+      "surface": "oauth2/src/token/mod.rs::AddExtraParam on every request type",
+      "predicate": "AddExtraParam(name, value) on a request type appends the supplied name/value to the outgoing request body.",
+      "inputs": {"extra_param": {"name": "extra", "value": "1"}},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "SCENARIO-BATCH-F2P-0003-009",
+      "observation_ids": ["F2P-053", "F2P-057"],
+      "requirement_ids": ["R027"],
+      "surface": "oauth2/src/endpoint.rs::out-of-scope components left unmigrated",
+      "predicate": "The oauth2-reqwest crate, curl_client.rs, reqwest_client.rs, ureq_client.rs, wasm32/browser targets and client UI have no Go migration counterpart.",
+      "inputs": {"forbidden_references": ["reqwest", "curl_client", "ureq", "wasm32"]},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

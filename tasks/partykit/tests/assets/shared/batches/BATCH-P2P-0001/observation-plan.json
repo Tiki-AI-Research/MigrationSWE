@@ -1,0 +1,533 @@
+{
+  "schema_version": "migration-p2p-observation-plan:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "source_root": "/input/source",
+  "target_root": "/input/target",
+  "side_files": {
+    "source": {
+      "adapter": "source/batches/BATCH-P2P-0001/adapter.p2p.test.ts",
+      "exports": "source/batches/BATCH-P2P-0001/exports.p2p.test.ts",
+      "typecheck": "source/batches/BATCH-P2P-0001/generics.typecheck.ts"
+    },
+    "target": {
+      "adapter": "target/batches/BATCH-P2P-0001/adapter.p2p.test.ts",
+      "exports": "target/batches/BATCH-P2P-0001/exports.p2p.test.ts",
+      "typecheck": "target/batches/BATCH-P2P-0001/generics.typecheck.ts"
+    }
+  },
+  "commands": {
+    "source_adapter": [
+      "node_modules/.bin/vitest",
+      "run",
+      "source/batches/BATCH-P2P-0001/adapter.p2p.test.ts"
+    ],
+    "target_adapter": [
+      "node_modules/.bin/vitest",
+      "run",
+      "target/batches/BATCH-P2P-0001/adapter.p2p.test.ts"
+    ],
+    "source_exports": [
+      "node_modules/.bin/vitest",
+      "run",
+      "source/batches/BATCH-P2P-0001/exports.p2p.test.ts"
+    ],
+    "target_exports": [
+      "node_modules/.bin/vitest",
+      "run",
+      "target/batches/BATCH-P2P-0001/exports.p2p.test.ts"
+    ],
+    "source_typecheck": [
+      "node_modules/.bin/tsc",
+      "--noEmit",
+      "--strict",
+      "--skipLibCheck",
+      "--target",
+      "ESNext",
+      "--module",
+      "ESNext",
+      "--moduleResolution",
+      "Bundler",
+      "--allowImportingTsExtensions",
+      "--lib",
+      "ESNext,DOM",
+      "--types",
+      "@cloudflare/workers-types",
+      "source/batches/BATCH-P2P-0001/generics.typecheck.ts"
+    ],
+    "target_typecheck": [
+      "node_modules/.bin/tsc",
+      "--noEmit",
+      "--strict",
+      "--skipLibCheck",
+      "--target",
+      "ESNext",
+      "--module",
+      "ESNext",
+      "--moduleResolution",
+      "Bundler",
+      "--allowImportingTsExtensions",
+      "--lib",
+      "ESNext,DOM",
+      "--types",
+      "@cloudflare/workers-types",
+      "target/batches/BATCH-P2P-0001/generics.typecheck.ts"
+    ]
+  },
+  "native_tests": [
+    {
+      "observation_id": "P2P-001",
+      "runner": "vitest",
+      "file": "packages/partysocket/src/tests/partysocket-url.test.ts",
+      "test_name": "passes custom WebSocket constructor",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-url.test.ts",
+        "-t",
+        "passes custom WebSocket constructor"
+      ],
+      "target_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-url.test.ts",
+        "-t",
+        "passes custom WebSocket constructor"
+      ]
+    },
+    {
+      "observation_id": "P2P-004",
+      "runner": "vitest",
+      "file": "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+      "test_name": "omits null and undefined query parameters",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+        "-t",
+        "omits null and undefined query parameters"
+      ],
+      "target_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+        "-t",
+        "omits null and undefined query parameters"
+      ]
+    },
+    {
+      "observation_id": "P2P-006",
+      "runner": "vitest",
+      "file": "packages/partysocket/src/tests/error-handling.test.ts",
+      "test_name": "propagates fetch errors",
+      "projection": "exception",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/error-handling.test.ts",
+        "-t",
+        "propagates fetch errors"
+      ],
+      "target_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/error-handling.test.ts",
+        "-t",
+        "propagates fetch errors"
+      ]
+    },
+    {
+      "observation_id": "P2P-012",
+      "runner": "vitest",
+      "file": "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+      "test_name": "works without optional parameters",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+        "-t",
+        "works without optional parameters"
+      ],
+      "target_command": [
+        "node_modules/.bin/vitest",
+        "run",
+        "packages/partysocket/src/tests/partysocket-fetch.test.ts",
+        "-t",
+        "works without optional parameters"
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "observation_id": "P2P-005",
+      "source_test": "P2P-005 forwards onBeforeRequest replacements and in-place mutations",
+      "target_test": "P2P-005 forwards onBeforeRequest replacements and in-place mutations",
+      "projection": "observable-result",
+      "normalized_value": {
+        "replacementHeader": "yes",
+        "mutationHeader": "yes"
+      }
+    },
+    {
+      "observation_id": "P2P-008",
+      "source_test": "P2P-008 forwards a 101 response with the PartyServer web socket handle",
+      "target_test": "P2P-008 forwards a 101 response with the PartyServer web socket handle",
+      "projection": "observable-result",
+      "normalized_value": {
+        "status": 101,
+        "downstreamCalls": 0,
+        "sameWebSocket": true
+      }
+    },
+    {
+      "observation_id": "P2P-009",
+      "source_test": "P2P-009 invokes both hooks with request, lobby and context",
+      "target_test": "P2P-009 invokes both hooks with request, lobby and context",
+      "projection": "observable-result",
+      "normalized_value": {
+        "calls": [
+          {
+            "kind": "request",
+            "length": 3,
+            "contextIsObject": true
+          },
+          {
+            "kind": "connect",
+            "length": 3,
+            "contextIsObject": true
+          }
+        ]
+      }
+    },
+    {
+      "observation_id": "P2P-011",
+      "source_test": "P2P-011 forwards url, method, body, bindings and options",
+      "target_test": "P2P-011 forwards url, method, body, bindings and options",
+      "projection": "observable-result",
+      "normalized_value": {
+        "status": 200,
+        "method": "POST",
+        "path": "/parties/chat/room",
+        "body": "payload",
+        "binding": "yes",
+        "optionKeys": [
+          "prefix"
+        ]
+      }
+    },
+    {
+      "observation_id": "P2P-013",
+      "source_test": "P2P-013 passes a non-upgrade response through unchanged",
+      "target_test": "P2P-013 passes a non-upgrade response through unchanged",
+      "projection": "return-value",
+      "normalized_value": {
+        "status": 201,
+        "header": "v",
+        "body": "hello"
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "source_test": "P2P-014 lets onBeforeRequest take over the response",
+      "target_test": "P2P-014 lets onBeforeRequest take over the response",
+      "projection": "observable-result",
+      "normalized_value": {
+        "status": 401,
+        "body": "blocked",
+        "downstreamCalls": 0
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "source_test": "P2P-016 falls through when PartyServer returns null",
+      "target_test": "P2P-016 falls through when PartyServer returns null",
+      "projection": "observable-result",
+      "normalized_value": {
+        "status": 200,
+        "body": "next"
+      }
+    },
+    {
+      "observation_id": "P2P-018",
+      "source_test": "P2P-018 delegates to routePartykitRequest exactly once",
+      "target_test": "P2P-018 delegates to routePartykitRequest exactly once",
+      "projection": "observable-result",
+      "normalized_value": {
+        "calls": 1,
+        "status": 202,
+        "body": "routed"
+      }
+    },
+    {
+      "observation_id": "P2P-021",
+      "source_test": "P2P-021 invokes onError and then continues downstream",
+      "target_test": "P2P-021 invokes onError and then continues downstream",
+      "projection": "observable-result",
+      "normalized_value": {
+        "errors": [
+          "boom"
+        ],
+        "status": 200,
+        "body": "next"
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "source_test": "typecheck generics.typecheck.ts",
+      "target_test": "typecheck generics.typecheck.ts",
+      "projection": "compile-result",
+      "normalized_value": {
+        "typecheck": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "source_test": "P2P-023 preserves the public middleware capability",
+      "target_test": "P2P-023 preserves the public middleware capability",
+      "projection": "observable-result",
+      "normalized_value": {
+        "exported": "function",
+        "status": 200,
+        "body": "next",
+        "optionKeys": [
+          "cors",
+          "jurisdiction",
+          "locationHint",
+          "prefix",
+          "props",
+          "routingRetry"
+        ],
+        "errorWasRecorded": true
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "source_test": "P2P-024 handles hook errors with and without onError",
+      "target_test": "P2P-024 handles hook errors with and without onError",
+      "projection": "observable-result",
+      "normalized_value": {
+        "errors": [
+          "connect"
+        ],
+        "withHandler": {
+          "status": 200,
+          "body": "next"
+        },
+        "withoutHandler": {
+          "downstreamCalls": 0,
+          "errorSurfaced": true
+        }
+      }
+    },
+    {
+      "observation_id": "P2P-007",
+      "source_test": "P2P-007 preserves ./provider",
+      "target_test": "P2P-007 preserves ./provider",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-007",
+        "subpath": "./provider",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./provider",
+        "packagePath": "packages/y-partyserver/package.json",
+        "sourceFile": "src/provider/index.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "source_test": "P2P-010 preserves ./server",
+      "target_test": "P2P-010 preserves ./server",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-010",
+        "subpath": "./server",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./server",
+        "packagePath": "packages/partysub/package.json",
+        "sourceFile": "src/server/index.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "source_test": "P2P-015 preserves ./ws",
+      "target_test": "P2P-015 preserves ./ws",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-015",
+        "subpath": "./ws",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./ws",
+        "packagePath": "packages/partysocket/package.json",
+        "sourceFile": "src/ws.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "source_test": "P2P-017 preserves ./react",
+      "target_test": "P2P-017 preserves ./react",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-017",
+        "subpath": "./react",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./react",
+        "packagePath": "packages/partysocket/package.json",
+        "sourceFile": "src/react.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "source_test": "P2P-019 preserves ./event-target-polyfill",
+      "target_test": "P2P-019 preserves ./event-target-polyfill",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-019",
+        "subpath": "./event-target-polyfill",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./event-target-polyfill",
+        "packagePath": "packages/partysocket/package.json",
+        "sourceFile": "src/event-target-polyfill.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-020",
+      "source_test": "P2P-020 preserves ./use-ws",
+      "target_test": "P2P-020 preserves ./use-ws",
+      "projection": "public-surface",
+      "normalized_value": {
+        "observationId": "P2P-020",
+        "subpath": "./use-ws",
+        "declared": true,
+        "hasImportTarget": true,
+        "sourcePresent": true
+      },
+      "public_surface": {
+        "subpath": "./use-ws",
+        "packagePath": "packages/partysocket/package.json",
+        "sourceFile": "src/use-ws.ts"
+      }
+    },
+    {
+      "observation_id": "P2P-001",
+      "source_test": "P2P-001 passes custom WebSocket constructor",
+      "target_test": "P2P-001 passes custom WebSocket constructor",
+      "projection": "return-value",
+      "normalized_value": {
+        "created": true,
+        "host": "example.com",
+        "room": "my-room"
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "source_test": "P2P-002 reconnects when host changes",
+      "target_test": "P2P-002 reconnects when host changes",
+      "projection": "return-value",
+      "normalized_value": {
+        "firstHost": "example.com",
+        "firstUrl": "wss://example.com/parties/main/test-room",
+        "secondHost": "different.com",
+        "secondUrl": "wss://different.com/parties/main/test-room"
+      }
+    },
+    {
+      "observation_id": "P2P-003",
+      "source_test": "P2P-003 respects startClosed option",
+      "target_test": "P2P-003 respects startClosed option",
+      "projection": "state-transition",
+      "normalized_value": {
+        "readyState": 3,
+        "closed": 3
+      }
+    },
+    {
+      "observation_id": "P2P-004",
+      "source_test": "P2P-004 omits null and undefined query parameters",
+      "target_test": "P2P-004 omits null and undefined query parameters",
+      "projection": "return-value",
+      "normalized_value": {
+        "hasFoo": true,
+        "hasNull": false,
+        "hasUndefined": false
+      }
+    },
+    {
+      "observation_id": "P2P-006",
+      "source_test": "P2P-006 propagates fetch errors",
+      "target_test": "P2P-006 propagates fetch errors",
+      "projection": "exception",
+      "normalized_value": {
+        "message": "Network failure"
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "source_test": "P2P-012 works without optional parameters",
+      "target_test": "P2P-012 works without optional parameters",
+      "projection": "return-value",
+      "normalized_value": {
+        "url": "https://example.com/parties/main/my-room?"
+      }
+    }
+  ],
+  "observation_ids": [
+    "P2P-007",
+    "P2P-005",
+    "P2P-008",
+    "P2P-009",
+    "P2P-010",
+    "P2P-011",
+    "P2P-013",
+    "P2P-014",
+    "P2P-015",
+    "P2P-016",
+    "P2P-017",
+    "P2P-018",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-001",
+    "P2P-003",
+    "P2P-004",
+    "P2P-006",
+    "P2P-012",
+    "P2P-002"
+  ]
+}

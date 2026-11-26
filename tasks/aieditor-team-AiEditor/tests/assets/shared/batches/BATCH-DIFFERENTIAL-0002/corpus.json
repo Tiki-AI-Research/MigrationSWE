@@ -1,0 +1,177 @@
+{
+  "schema_version": "migration-shared-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "kind": "DIFFERENTIAL",
+  "family": "shared-case-corpus",
+  "probe": "shared/batches/BATCH-DIFFERENTIAL-0002/cases.mjs",
+  "side_entries": {
+    "source": "source/batches/BATCH-DIFFERENTIAL-0002/run.mjs",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0002/run.mjs"
+  },
+  "fixtures": [
+    "fixtures/batches/BATCH-DIFFERENTIAL-0002/baseline-digests.json"
+  ],
+  "cases": [
+    {
+      "observation_id": "DIFF-033",
+      "requirement_ids": ["R035"],
+      "surface": "non-pending proposal apply rejection",
+      "probe_case": "diff033",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "applied": {"ok": false, "message": "This proposal is no longer pending."},
+        "discarded": {"ok": false, "message": "This proposal is no longer pending."}
+      }
+    },
+    {
+      "observation_id": "DIFF-034",
+      "requirement_ids": ["R036"],
+      "surface": "stale documentVersion apply rejection",
+      "probe_case": "diff034",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"result": {"ok": false, "message": "The document changed. Ask AI to create a new proposal."}}
+    },
+    {
+      "observation_id": "DIFF-035",
+      "requirement_ids": ["R037"],
+      "surface": "valid and failing proposal apply results",
+      "probe_case": "diff035",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "valid": {"ok": true, "message": "Applied to the document."},
+        "error": {"ok": false, "message": "boom"},
+        "nonError": {"ok": false, "message": "Could not apply this proposal."}
+      }
+    },
+    {
+      "observation_id": "DIFF-036",
+      "requirement_ids": ["R038"],
+      "surface": "rebaseEditorToolProposal coordinate mapping",
+      "probe_case": "diff036",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "_selection_from": 4,
+        "_selection_to": 9,
+        "_insert_position": 9,
+        "_range_from": 4,
+        "_range_to": 9,
+        "edits": [{"from": 4, "to": 9}],
+        "documentVersion": 3
+      }
+    },
+    {
+      "observation_id": "DIFF-037",
+      "requirement_ids": ["R039"],
+      "surface": "custom service and existing service handling",
+      "probe_case": "diff037",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "stringResult": {"text": "ok"},
+        "objectResult": {"text": "x"},
+        "sameExisting": true
+      }
+    },
+    {
+      "observation_id": "DIFF-038",
+      "requirement_ids": ["R040"],
+      "surface": "provider-config factory registration before resolution",
+      "probe_case": "diff038",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"registeredProviderModel": "m", "requestModel": "m", "instance": "OpenAiService"}
+    },
+    {
+      "observation_id": "DIFF-039",
+      "requirement_ids": ["R041"],
+      "surface": "model precedence and blank-model validation",
+      "probe_case": "diff039",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "configModel": "config-model",
+        "providerModel": "provider-model",
+        "blankError": "OpenAiService requires a model"
+      }
+    },
+    {
+      "observation_id": "DIFF-040",
+      "requirement_ids": ["R042"],
+      "surface": "supplied client reuse and explicit baseURL override",
+      "probe_case": "diff040",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"clientReused": true, "baseURL": "https://override.test/v1"}
+    },
+    {
+      "observation_id": "DIFF-041",
+      "requirement_ids": ["R043"],
+      "surface": "registerAiProvider validation and frozen replacement",
+      "probe_case": "diff041",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "blankId": "AI provider id cannot be empty",
+        "blankName": "AI provider name cannot be empty",
+        "blankModel": "AI provider model cannot be empty",
+        "frozenModel": "m"
+      }
+    },
+    {
+      "observation_id": "DIFF-042",
+      "requirement_ids": ["R044"],
+      "surface": "provider registry snapshot and lookup",
+      "probe_case": "diff042",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"snapshotUnaffected": true, "deepseekModel": "deepseek-chat", "missing": null}
+    },
+    {
+      "observation_id": "DIFF-043",
+      "requirement_ids": ["R045"],
+      "surface": "abort signal propagation without partial success",
+      "probe_case": "diff043",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"midRequestReason": "stop", "alreadyAbortedReason": "stop", "partialSuccess": false}
+    },
+    {
+      "observation_id": "DIFF-044",
+      "requirement_ids": ["R050"],
+      "surface": "migration change-set scope",
+      "probe_case": "diff044",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"outOfScopeChanges": [], "allowedPaths": ["src/ai/OpenAiService.ts", "src/ai/index.ts", "src/ai/Providers.ts", "src/ai/types.ts", "src/ai/editor-tools.ts", "package.json", "package-lock.json"]}
+    },
+    {
+      "observation_id": "DIFF-045",
+      "requirement_ids": ["R051"],
+      "surface": "Node engine floor and runtime compatibility",
+      "probe_case": "diff045",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {"engine": ">=20.19.0", "minimumRuntime": "22.12.0"}
+    },
+    {
+      "observation_id": "DIFF-046",
+      "requirement_ids": ["R052"],
+      "surface": "package entry points and ESM/CJS publication",
+      "probe_case": "diff046",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "expected": {
+        "main": "./dist/index.cjs",
+        "module": "./dist/index.js",
+        "import": {"types": "./dist/index.d.ts", "default": "./dist/index.js"},
+        "require": {"types": "./dist/index.d.cts", "default": "./dist/index.cjs"},
+        "umd": false,
+        "browserGlobal": false
+      }
+    }
+  ]
+}

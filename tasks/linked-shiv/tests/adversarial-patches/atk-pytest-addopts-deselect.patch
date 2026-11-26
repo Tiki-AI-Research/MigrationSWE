@@ -1,0 +1,1519 @@
+diff --git a/pytest.ini b/pytest.ini
+new file mode 100644
+index 0000000..16e04ec
+--- /dev/null
++++ b/pytest.ini
+@@ -0,0 +1,2 @@
++[pytest]
++addopts = --ignore=test/test_dependency.py
+diff --git a/setup.cfg b/setup.cfg
+index 2542d75..f128268 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -47,7 +47,7 @@ package_dir =
+   =src
+ packages = find:
+ install_requires =
+-  click>=6.7,!=7.0
++  click==8.1.7
+   pip>=9.0.3
+   setuptools
+ python_requires = >=3.8
+diff --git a/src/shiv/bootstrap/__init__.py b/src/shiv/bootstrap/__init__.py
+index b6ad546..85198ff 100644
+--- a/src/shiv/bootstrap/__init__.py
++++ b/src/shiv/bootstrap/__init__.py
+@@ -1,17 +1,21 @@
+ import compileall
++import ctypes
++import errno
+ import hashlib
+ import os
+ import runpy
+-import shutil
+ import site
++import stat
+ import subprocess
+ import sys
++import tempfile
++import uuid
+ import zipfile
+ 
+ from contextlib import contextmanager, suppress
+-from functools import partial
+ from importlib import import_module
+ from pathlib import Path
++from typing import Optional
+ 
+ from .environment import Environment
+ from .filelock import FileLock
+@@ -107,9 +111,755 @@ def cache_path(archive, root_dir, build_id):
+     return root / f"{name}_{build_id}"
+ 
+ 
++def _long_path(p: Path) -> Path:
++    if os.name == "nt":
++        resolved = str(p.resolve())
++        resolved = os.path.normpath(resolved)
++        if resolved.startswith("\\\\?\\"):
++            return Path(resolved)
++        if resolved.startswith("\\\\"):
++            return Path("\\\\?\\UNC\\" + resolved[2:])
++        return Path("\\\\?\\" + resolved)
++    return p
++
++
++class ExtractionCleanupError(OSError):
++    """The result is complete, but state this call created could not be removed.
++
++    Reporting success while a temporary tree or backup of this same call remains
++    would present the operation as having no residue, which is what the next
++    invocation would then have to interpret.  The result itself is unaffected:
++    this error only ever describes state that this call created or moved.
++    """
++
++
++def _object_identity(path: Path):
++    """The object this directory entry currently names, or ``None`` if absent.
++
++    ``(st_dev, st_ino, is_dir)`` is stable across a rename, so the object this
++    call created can be recognized again after it was moved aside, and a
++    different directory placed at the same name has a different identity.  A
++    name is not ownership; the object behind it is what this call created.
++
++    Only a genuine "no such entry" becomes ``None``.  A permission or I/O error
++    is raised: the caller must be able to report that it could not verify the
++    state it created instead of assuming that state is gone.
++    """
++    try:
++        info = os.lstat(str(path))
++    except OSError as error:
++        if _is_missing(error):
++            return None
++        raise
++    return _identity_of(info)
++
++
++def _identity_of(info):
++    """One comparable identity from a ``stat`` result.
++
++    On Windows ``st_dev`` carries extra bits above the volume serial number that
++    ``GetFileInformationByHandle`` does not report, so both sides are reduced to
++    the volume serial the two APIs share.  Keeping a single representation is what
++    lets a path-derived identity be compared with a handle-derived one.
++    """
++    device = int(info.st_dev)
++    if os.name == "nt":
++        device &= 0xFFFFFFFF
++    return (device, int(info.st_ino), stat.S_ISDIR(info.st_mode))
++
++
++def _is_missing(error: OSError) -> bool:
++    """True only when the error says the entry does not exist.
++
++    A query that failed for any other reason -- permission denied, an I/O error,
++    an invalid descriptor -- says nothing about whether the object is still
++    there.  Treating those as "absent" would silently drop the residue this call
++    created and report a clean success.
++    """
++    if getattr(error, "winerror", None) in (2, 3):  # ERROR_FILE_NOT_FOUND / PATH_NOT_FOUND
++        return True
++    return error.errno in (errno.ENOENT, errno.ENOTDIR)
++
++
++def _fd_identity(fd):
++    try:
++        info = os.fstat(fd)
++    except OSError as error:
++        if _is_missing(error):
++            return None
++        raise
++    return _identity_of(info)
++
++
++def _entry_identity(parent_fd, name):
++    """The object one entry names, resolved relative to a directory descriptor."""
++    try:
++        info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
++    except OSError as error:
++        if _is_missing(error):
++            return None
++        raise
++    return _identity_of(info)
++
++
++def _require_identity(label, current, expected) -> bool:
++    """Refuse to continue when the entry no longer names this call's object.
++
++    ``False`` means the entry is gone, which is not a failure: nothing this call
++    created is left there.  A different object raises, because deleting it would
++    destroy state this call did not create.
++    """
++    if current is None:
++        return False
++    if current != expected:
++        raise ExtractionCleanupError(
++            f"{label} no longer names the state this extraction created; "
++            "it was replaced, so it is left in place"
++        )
++    return True
++
++
++def _require_entry(path: Path, identity, label: str) -> None:
++    """The entry must still be the object this call created.
++
++    Unlike :func:`_require_identity`, absence is a failure too: this guards a
++    publish or rollback that is about to *use* the entry, and a missing source
++    cannot produce the result the caller was promised.
++    """
++    current = _object_identity(_long_path(path))
++    if current is None:
++        raise ExtractionCleanupError(
++            f"{label} disappeared before it could be used; nothing from this call was published"
++        )
++    if current != identity:
++        raise ExtractionCleanupError(
++            f"{label} no longer names the state this extraction created; it was replaced, "
++            "so it is not used"
++        )
++
++
++def _move_object(source: Path, identity, destination: Path, label: str) -> None:
++    """Move one verified object, binding the operation to the object.
++
++    The pre-check refuses a name that already holds something else.  Windows can
++    then rename *through the handle*, so the move cannot be redirected at all;
++    elsewhere the post-check performed by the caller is the remaining guard.
++    """
++    _require_entry(source, identity, label)
++    if os.name == "nt":
++        _windows_move_by_handle(source, identity, destination, label)
++    else:
++        os.replace(str(_long_path(source)), str(_long_path(destination)))
++
++
++def _move_aside(path: Path, label: str) -> Path:
++    """Move an object this call must not keep out of the way, without deleting it.
++
++    Used only after a publish or rollback discovered that the entry it acted on
++    is not the object this call created.  The object is left in the same
++    directory under a fresh name so its owner can still find it; nothing is
++    removed.
++    """
++    long = _long_path(path)
++    for _ in range(16):
++        candidate = path.with_name(f".{path.name}.{uuid.uuid4().hex}.foreign")
++        try:
++            os.rename(str(long), str(_long_path(candidate)))
++        except FileExistsError:
++            continue
++        return candidate
++    raise ExtractionCleanupError(
++        f"{label} could not be moved aside; it was left where it is"
++    )
++
++
++def _adopt(source: Path, identity, destination: Path, label: str) -> None:
++    """Move this call's object to ``destination`` and verify what arrived.
++
++    A name checked a moment earlier can still be exchanged before the rename
++    runs, so the identity is checked both before and after the move.  On Windows
++    the move is performed through a handle to the verified object, which binds
++    the operation to the object instead of the name.  On POSIX there is no
++    rename-by-descriptor, so the post-move check is what keeps a foreign object
++    from being adopted silently: it is moved aside, never deleted, and the
++    failure is reported.
++    """
++    _move_object(source, identity, destination, label)
++    adopted = _object_identity(_long_path(destination))
++    if adopted == identity:
++        return
++    detail = ""
++    if adopted is not None:
++        moved = _move_aside(destination, label)
++        detail = f"; the object found there was moved to {moved.name} and left in place"
++    raise ExtractionCleanupError(
++        f"{label} was exchanged with an object this extraction did not create, "
++        f"so it was not adopted{detail}"
++    )
++
++
++def _displace(source: Path, identity, destination: Path, label: str) -> None:
++    """Move the previous result aside, and prove it is still the same object.
++
++    The verification happens after the move as well, so an exchange that landed
++    between the check and the rename cannot make this call treat somebody else's
++    tree as the previous result.  If it did happen, the object is moved aside
++    under a fresh name -- never deleted, never written over -- and the call
++    fails instead of adopting it later.
++    """
++    _move_object(source, identity, destination, label)
++    moved = _object_identity(_long_path(destination))
++    if moved == identity:
++        return
++    detail = ""
++    if moved is not None:
++        other = _move_aside(destination, label)
++        detail = f"; the object found there was moved to {other.name} and left in place"
++    raise ExtractionCleanupError(
++        f"{label} was exchanged with an object this extraction did not create, "
++        f"so it was not treated as the previous result{detail}"
++    )
++
++
++def _private_name(name: str) -> str:
++    return f".{name}.{uuid.uuid4().hex}.cleanup"
++
++
++def _rename_no_replace(parent_fd, source: str, destination: str) -> None:
++    """Rename one entry onto a free name, never replacing an existing entry.
++
++    Both names live in the directory ``parent_fd`` refers to.  ``os.rename``
++    would silently replace whatever occupies the destination, which would turn
++    a restore into a deletion of somebody else's object; this raises
++    ``FileExistsError`` instead and leaves both entries where they are.
++
++    Linux answers this atomically with ``renameat2(RENAME_NOREPLACE)``.  Where
++    that is unavailable the portable fallback links the entry under the
++    destination name first -- ``link`` fails with ``EEXIST`` rather than
++    replacing -- and only then drops the source name.  Directories cannot be
++    hard-linked, so for them the destination is checked before the rename; that
++    check is best effort and is the documented limit of this helper.
++    """
++    if sys.platform.startswith("linux"):
++        try:
++            renameat2 = ctypes.CDLL(None, use_errno=True).renameat2
++        except AttributeError:
++            renameat2 = None
++        if renameat2 is not None:
++            result = renameat2(
++                parent_fd, os.fsencode(source), parent_fd, os.fsencode(destination), 1
++            )
++            if result == 0:
++                return
++            error = ctypes.get_errno()
++            if error == errno.EEXIST:
++                raise FileExistsError(error, os.strerror(error), source, destination)
++            if error not in (errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP):
++                raise OSError(error, os.strerror(error), source, destination)
++
++    try:
++        os.link(
++            source, destination, src_dir_fd=parent_fd, dst_dir_fd=parent_fd,
++            follow_symlinks=False,
++        )
++    except FileExistsError:
++        raise
++    except OSError:
++        # A directory (EPERM) or a filesystem without hard links.  Check first,
++        # then rename; a writer that wins the check-to-rename window can still
++        # replace the destination, which is why this is the fallback.
++        if _entry_identity(parent_fd, destination) is not None:
++            raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), source, destination)
++        os.rename(source, destination, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
++    else:
++        os.unlink(source, dir_fd=parent_fd)
++
++
++# --------------------------------------------------------------------------
++# POSIX: every operation is relative to a directory descriptor, and each entry
++# is isolated under a fresh name before it is removed.
++# --------------------------------------------------------------------------
++
++def _unlink_verified(parent_fd, name: str, identity, *, directory: bool) -> None:
++    """Remove one verified entry without letting a swap redirect the removal.
++
++    The entry is moved, by one atomic rename inside the same directory, to a
++    name this call mints for the occasion, then opened.  The descriptor is what
++    the verification is based on: ``fstat`` reports the object that was opened,
++    and it keeps naming that object even if the entry is renamed or replaced.
++
++    POSIX has no conditional unlink: ``unlinkat`` cannot remove the object a
++    descriptor refers to, only the entry a name refers to.  The last step is
++    therefore still performed by name.  That leaves one window this code cannot
++    close for a writer that can modify the same directory -- the window the
++    manual's probe exercises.  What the descriptor does provide is detection:
++    the link count is read before the unlink, and an unchanged count afterwards
++    proves the entry that disappeared was not the verified object.  That is
++    reported instead of being allowed to look like a clean removal.  Absolute
++    protection here would need a conditional unlink primitive the platform does
++    not offer.
++    """
++    private = _private_name(name)
++    try:
++        os.rename(name, private, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
++    except FileNotFoundError:
++        return
++    except OSError as error:
++        raise ExtractionCleanupError(
++            f"{name} could not be isolated for removal: {error}"
++        ) from error
++
++    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
++    if directory:
++        flags |= os.O_DIRECTORY
++    try:
++        handle = os.open(private, flags, dir_fd=parent_fd)
++    except FileNotFoundError:
++        return
++    except OSError as error:
++        raise ExtractionCleanupError(
++            f"{private} could not be opened to verify it: {error}"
++        ) from error
++
++    try:
++        current = _fd_identity(handle)
++        if current is None:
++            return
++        if current != identity:
++            # The fresh name now holds something else; hand it back untouched.
++            with suppress(OSError):
++                _rename_no_replace(parent_fd, private, name)
++            raise ExtractionCleanupError(
++                f"{name} no longer names the state this extraction created; "
++                "it was replaced, so it is left in place"
++            )
++
++        try:
++            links_before = os.fstat(handle).st_nlink
++        except OSError:
++            links_before = None
++        try:
++            if directory:
++                os.rmdir(private, dir_fd=parent_fd)
++            else:
++                os.unlink(private, dir_fd=parent_fd)
++        except FileNotFoundError:
++            pass
++        except OSError as error:
++            # The entry could not be removed.  Hand it back to its original name
++            # when that name is still free, so the residue stays where its owner
++            # would look for it; otherwise it stays under the private name.  The
++            # name the residue actually has is what gets reported.
++            residue = private
++            if _entry_identity(parent_fd, name) is None:
++                with suppress(OSError):
++                    _rename_no_replace(parent_fd, private, name)
++                    residue = name
++            raise ExtractionCleanupError(
++                f"{residue} could not be removed: {error}"
++            ) from error
++
++        if links_before is not None:
++            try:
++                links_after = os.fstat(handle).st_nlink
++            except OSError:
++                links_after = None
++            if links_after == links_before:
++                # The entry removed was not the object this descriptor names.
++                raise ExtractionCleanupError(
++                    f"{name} was exchanged between verification and removal; the "
++                    "object that was there is not the one this extraction created, "
++                    "and this call cannot attribute what it removed"
++                )
++    finally:
++        os.close(handle)
++
++
++def _remove_tree_by_fd(fd) -> None:
++    """Delete the contents of the directory the descriptor names.
++
++    The descriptor pins the directory object, but not the entries inside it: the
++    same directory can be written by another process while this walk runs.  Each
++    child is therefore resolved to its object, opened without following links,
++    and compared through the descriptor with the object that was resolved a
++    moment earlier.  The removal itself goes through ``_unlink_verified``, which
++    moves the verified object to a fresh name first, so a swap of the child's
++    name cannot redirect the deletion or the recursion.
++    """
++    for entry in list(os.scandir(fd)):
++        name = entry.name
++        try:
++            before = os.stat(name, dir_fd=fd, follow_symlinks=False)
++        except FileNotFoundError:
++            continue
++        identity = _identity_of(before)
++        flags = getattr(os, "O_NOFOLLOW", 0)
++        if identity[2]:
++            child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | flags, dir_fd=fd)
++            try:
++                if not _require_identity(name, _fd_identity(child), identity):
++                    continue
++                _remove_tree_by_fd(child)
++            finally:
++                os.close(child)
++            _unlink_verified(fd, name, identity, directory=True)
++        else:
++            handle = os.open(name, os.O_RDONLY | flags, dir_fd=fd)
++            try:
++                if not _require_identity(name, _fd_identity(handle), identity):
++                    continue
++            finally:
++                os.close(handle)
++            _unlink_verified(fd, name, identity, directory=False)
++
++
++def _discard_by_fd(parent_fd, name: str, identity) -> None:
++    """Delete one directory through descriptors that pin each object."""
++    child = os.open(
++        name,
++        os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0),
++        dir_fd=parent_fd,
++    )
++    try:
++        if not _require_identity(name, _fd_identity(child), identity):
++            return
++        _remove_tree_by_fd(child)
++    finally:
++        os.close(child)
++    _unlink_verified(parent_fd, name, identity, directory=True)
++
++
++# --------------------------------------------------------------------------
++# Windows: directory entries cannot be opened as descriptors, but every object
++# can be opened as a handle.  Deletion is performed through the handle, and a
++# directory is opened without FILE_SHARE_DELETE so its name cannot be moved
++# while it is being emptied.
++# --------------------------------------------------------------------------
++
++_FILE_ATTRIBUTE_DIRECTORY = 0x00000010
++_FILE_ATTRIBUTE_NORMAL = 0x00000080
++_FILE_SHARE_READ = 0x00000001
++_FILE_SHARE_WRITE = 0x00000002
++_FILE_SHARE_DELETE = 0x00000004
++
++
++def _windows_handle(path: Path, *, share_delete: bool = False):
++    """Open a handle to one object, or ``None`` when it no longer exists.
++
++    Without ``share_delete`` no other process can rename or delete the object
++    while the handle is open, which is what keeps a directory's name bound to the
++    object being emptied.  ``FILE_FLAG_OPEN_REPARSE_POINT`` keeps a link itself as
++    the target of the handle instead of following it.
++    """
++    import ctypes
++    from ctypes import wintypes
++
++    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
++    create = kernel32.CreateFileW
++    create.restype = wintypes.HANDLE
++    create.argtypes = [
++        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
++        wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
++    ]
++    share = _FILE_SHARE_READ | _FILE_SHARE_WRITE
++    if share_delete:
++        share |= _FILE_SHARE_DELETE
++    handle = create(
++        str(_long_path(path)),
++        0x00010000 | 0x0080 | 0x0100 | 0x00100000,  # DELETE | READ/WRITE_ATTRIBUTES | SYNCHRONIZE
++        share,
++        None,
++        3,  # OPEN_EXISTING
++        0x02000000 | 0x00200000,  # BACKUP_SEMANTICS | OPEN_REPARSE_POINT
++        None,
++    )
++    invalid = handle == -1 or handle == wintypes.HANDLE(-1).value
++    if invalid:
++        error = ctypes.get_last_error()
++        if error in (2, 3):  # ERROR_FILE_NOT_FOUND / ERROR_PATH_NOT_FOUND
++            return None
++        raise OSError(error, f"cannot open {path}")
++    return kernel32, handle
++
++
++def _windows_identity(kernel32, handle):
++    """The object a handle names: volume serial, file index, and directory flag."""
++    import ctypes
++    from ctypes import wintypes
++
++    class Info(ctypes.Structure):
++        _fields_ = [
++            ("dwFileAttributes", wintypes.DWORD),
++            ("ftCreationTime", wintypes.FILETIME),
++            ("ftLastAccessTime", wintypes.FILETIME),
++            ("ftLastWriteTime", wintypes.FILETIME),
++            ("dwVolumeSerialNumber", wintypes.DWORD),
++            ("nFileSizeHigh", wintypes.DWORD),
++            ("nFileSizeLow", wintypes.DWORD),
++            ("nNumberOfLinks", wintypes.DWORD),
++            ("nFileIndexHigh", wintypes.DWORD),
++            ("nFileIndexLow", wintypes.DWORD),
++        ]
++
++    info = Info()
++    if not kernel32.GetFileInformationByHandle(handle, ctypes.byref(info)):
++        raise ctypes.WinError(ctypes.get_last_error())
++    index = (int(info.nFileIndexHigh) << 32) | int(info.nFileIndexLow)
++    is_dir = bool(info.dwFileAttributes & _FILE_ATTRIBUTE_DIRECTORY)
++    return (int(info.dwVolumeSerialNumber) & 0xFFFFFFFF, index, is_dir)
++
++
++def _windows_clear_readonly(kernel32, handle):
++    """Clear the read-only attribute through the handle, so deletion can proceed."""
++    import ctypes
++
++    class Basic(ctypes.Structure):
++        _fields_ = [
++            ("CreationTime", ctypes.c_longlong),
++            ("LastAccessTime", ctypes.c_longlong),
++            ("LastWriteTime", ctypes.c_longlong),
++            ("ChangeTime", ctypes.c_longlong),
++            ("FileAttributes", ctypes.c_uint32),
++        ]
++
++    basic = Basic()
++    basic.FileAttributes = _FILE_ATTRIBUTE_NORMAL
++    kernel32.SetFileInformationByHandle(handle, 0, ctypes.byref(basic), ctypes.sizeof(basic))
++
++
++def _windows_rename(kernel32, handle, destination: Path) -> None:
++    """Rename the object a handle names, by handle rather than by path.
++
++    ``SetFileInformationByHandle`` with ``FileRenameInfo`` renames exactly the
++    object the handle refers to.  An exchange of the source name therefore
++    cannot redirect the move: whatever someone else put there is not the object
++    being renamed.  The handle must have been opened with ``DELETE`` access.
++    """
++    import ctypes
++
++    class RenameInfo(ctypes.Structure):
++        _fields_ = [
++            ("ReplaceIfExists", ctypes.c_ubyte),
++            ("RootDirectory", ctypes.c_void_p),
++            ("FileNameLength", ctypes.c_uint32),
++            ("FileName", ctypes.c_wchar * 2),
++        ]
++
++    name = str(_long_path(destination))
++    length = len(name.encode("utf-16-le"))
++    buffer = ctypes.create_string_buffer(
++        ctypes.sizeof(RenameInfo) - 2 * ctypes.sizeof(ctypes.c_wchar) + length + 2
++    )
++    info = ctypes.cast(buffer, ctypes.POINTER(RenameInfo)).contents
++    info.ReplaceIfExists = 0
++    info.RootDirectory = None
++    info.FileNameLength = length
++    ctypes.memmove(
++        ctypes.addressof(buffer) + RenameInfo.FileName.offset,
++        name.encode("utf-16-le"),
++        length,
++    )
++    if not kernel32.SetFileInformationByHandle(
++            handle, 3, buffer, ctypes.sizeof(buffer)):  # FileRenameInfo
++        raise ctypes.WinError(ctypes.get_last_error())
++
++
++def _windows_move_by_handle(source: Path, identity, destination: Path, label: str) -> None:
++    """Rename one verified object on Windows, through its handle."""
++    opened = _windows_handle(source, share_delete=True)
++    if opened is None:
++        raise ExtractionCleanupError(
++            f"{label} disappeared before it could be used; nothing from this call was published"
++        )
++    kernel32, handle = opened
++    try:
++        if not _require_identity(label, _windows_identity(kernel32, handle), identity):
++            raise ExtractionCleanupError(
++                f"{label} disappeared before it could be used; nothing from this call was published"
++            )
++        _windows_rename(kernel32, handle, destination)
++    finally:
++        kernel32.CloseHandle(handle)
++
++
++def _windows_delete(kernel32, handle):
++    """Mark the object the handle names for deletion."""
++    import ctypes
++    from ctypes import wintypes
++
++    class Disposition(ctypes.Structure):
++        _fields_ = [("DeleteFile", ctypes.c_ubyte)]
++
++    disposition = Disposition(1)
++    if not kernel32.SetFileInformationByHandle(
++            handle, 4, ctypes.byref(disposition), ctypes.sizeof(disposition)):
++        raise ctypes.WinError(ctypes.get_last_error())
++
++
++def _delete_handle(kernel32, handle) -> None:
++    """Delete the object a verified handle names, retrying only for access denial.
++
++    A read-only attribute is the one condition this can fix, by clearing it
++    through the same handle.  Any other failure is reported: retrying it blindly
++    would both hide the cause and risk acting on an entry that changed.
++    """
++    try:
++        _windows_delete(kernel32, handle)
++    except PermissionError:
++        _windows_clear_readonly(kernel32, handle)
++        _windows_delete(kernel32, handle)
++
++
++def _remove_tree_by_handle(path: Path, identity) -> None:
++    """Delete one tree, acting only through handles to verified objects.
++
++    A directory is first opened *without* delete sharing, which keeps its name
++    bound to that object while it is emptied: no other process can rename it or
++    put something else in its place.  Windows also refuses to delete an object
++    while a handle without delete sharing is open on it, so the handle is closed
++    and the directory reopened with delete sharing; the reopened handle's identity
++    is compared with the original before anything is deleted.  Every child is
++    opened the same way, verified, and deleted through its own handle, so a name
++    exchanged before the open is refused and a name exchanged afterwards cannot
++    redirect the deletion.
++    """
++    opened = _windows_handle(path, share_delete=False)
++    if opened is None:
++        return
++    kernel32, handle = opened
++    try:
++        current = _windows_identity(kernel32, handle)
++        if not _require_identity(path.name, current, identity):
++            return
++        if current[2]:
++            for entry in list(os.scandir(str(path))):
++                child = Path(entry.path)
++                try:
++                    info = os.stat(str(child), follow_symlinks=False)
++                except OSError as error:
++                    if _is_missing(error):
++                        continue
++                    raise
++                child_identity = _identity_of(info)
++                if child_identity[2]:
++                    _remove_tree_by_handle(child, child_identity)
++                else:
++                    _delete_one_by_handle(child, child_identity)
++    finally:
++        kernel32.CloseHandle(handle)
++
++    # Reopen with delete sharing and verify again before deleting: the entry could
++    # have been exchanged while the children were being removed.
++    opened = _windows_handle(path, share_delete=True)
++    if opened is None:
++        return
++    kernel32, handle = opened
++    try:
++        if not _require_identity(path.name, _windows_identity(kernel32, handle), identity):
++            return
++        _delete_handle(kernel32, handle)
++    finally:
++        kernel32.CloseHandle(handle)
++
++
++def _delete_one_by_handle(path: Path, identity) -> None:
++    """Delete one non-directory object through a verified handle."""
++    opened = _windows_handle(path, share_delete=True)
++    if opened is None:
++        return
++    kernel32, handle = opened
++    try:
++        if not _require_identity(path.name, _windows_identity(kernel32, handle), identity):
++            return
++        _delete_handle(kernel32, handle)
++    finally:
++        kernel32.CloseHandle(handle)
++
++
++def _discard(path: Optional[Path], identity) -> None:
++    """Remove the exact object this call created, and nothing else.
++
++    A path can be swapped for an unrelated directory between the moment this call
++    created its state and the moment it cleans up -- the caller of this function
++    is not the only writer of that directory.  Deleting by name would then remove
++    somebody else's tree, so removal works on the object, never on the name:
++
++    * POSIX: the parent is opened as a descriptor, the child is resolved to its
++      identity and opened as a descriptor, every removal is relative to a
++      descriptor, and each entry is moved to a fresh name and verified again
++      before it is unlinked or removed;
++    * Windows: the object is opened as a handle without ``FILE_SHARE_DELETE``,
++      which pins its name for the duration, and it is then emptied and deleted
++      through handles only -- never with a name-based recursive delete.
++
++    A name that now holds a different object is therefore never deleted: the
++    foreign tree is left where it is and the residue is reported.
++
++    A failure is raised rather than swallowed for the same reason: silently
++    leaving a temporary tree or backup behind would report success (or the
++    original failure) while the directory still held state this call created.
++    """
++    if path is None:
++        return
++    long = _long_path(path)
++    current = _object_identity(long)
++    if not _require_identity(path.name, current, identity):
++        return
++
++    if os.name == "nt":
++        if current[2]:
++            _remove_tree_by_handle(long, identity)
++        else:
++            _delete_one_by_handle(long, identity)
++        return
++
++    parent_fd = os.open(str(long.parent), os.O_RDONLY | os.O_DIRECTORY)
++    try:
++        if not _require_identity(path.name, _entry_identity(parent_fd, long.name), identity):
++            return
++        if current[2]:
++            _discard_by_fd(parent_fd, long.name, identity)
++        else:
++            _unlink_verified(parent_fd, long.name, identity, directory=False)
++    finally:
++        os.close(parent_fd)
++
++
+ def extract_site_packages(archive, target_path, compile_pyc=False, compile_workers=0, force=False):
+     """Extract everything in site-packages to a specified path.
+ 
++    Only state that *this call* creates or moves is removed or adopted, and the
++    result is always built from the archive this call was handed.  A temporary
++    tree or backup left behind by an earlier process is neither of those things,
++    and no evidence an extraction can reach can establish otherwise: whatever an
++    extraction directory can hold, a process able to write that directory can
++    equally produce, and a process running as the same user can read every
++    per-user state directory the extractor can read -- so neither a file beside
++    the target nor a per-user key or record can separate the two.  Such leftovers
++    are therefore left exactly as they are: not deleted, not adopted, not
++    published, and never leaked into the result.
++
++    Replacement keeps the previous result safe without any such evidence.  The new
++    tree is built beside the target, the previous result is moved aside by this
++    same call, and it is put straight back if the new tree cannot take its place,
++    so a failure ends with the previous complete result readable and runnable and
++    the original error reaching the caller; a success consumes the copy this call
++    itself moved.  An interruption can leave that copy beside the target, where it
++    is simply one more piece of state this call cannot claim: the next invocation
++    then builds a complete result from the archive it was given and completes
++    normally without manual cleanup, without adopting the leftover and without
++    deleting it.  Since nothing durable is written to describe a transaction, no
++    such write can fail and leave an unrecoverable state behind either.
++
++    Cleaning up the state this call created is never silent.  A published result
++    stays published even if the superseded copy cannot be removed, but the call
++    then raises :class:`ExtractionCleanupError` instead of reporting a residue-free
++    success; a failure that already happened keeps its original exception, and a
++    failure to remove the temporary tree is attached to that exception as
++    ``cleanup_error`` and as a note rather than replacing it.  Cleanup only ever
++    touches paths this call created or moved, so neither outcome can reach a
++    sibling this call did not create.
++
+     :param ZipFile archive: The zipfile object we are bootstrapping from.
+     :param Path target_path: The path to extract our zip to.
+     :param bool compile_pyc: A boolean to dictate whether we pre-compile pyc.
+@@ -117,37 +867,134 @@ def extract_site_packages(archive, target_path, compile_pyc=False, compile_worke
+     :param bool force: A boolean to dictate whether or not we force extraction.
+     """
+     parent = target_path.parent
+-    target_path_tmp = Path(parent, target_path.name + ".tmp")
+     lock = Path(parent, f".{target_path.name}_lock")
+ 
+     # If this is the first time that a pyz is being extracted, we'll need to create the ~/.shiv dir
+     if not parent.exists():
+         parent.mkdir(parents=True, exist_ok=True)
+ 
+-    with FileLock(lock):
++    with FileLock(lock, timeout=300):
+ 
+         # we acquired a lock, it's possible that prior invocation was holding the lock and has
+         # completed bootstrapping, so let's check (again) if we need to do any work
+-        if not target_path.exists() or force:
+-
+-            # extract our site-packages
++        def is_complete(path):
++            return path.is_dir() and (path / "site-packages").is_dir()
++
++        if is_complete(target_path) and not force:
++            return
++
++        # The token is minted here and names only the state this call creates, so
++        # nothing below can reach a name from anywhere else.  The identity of
++        # that state is recorded alongside it: a name can be swapped for an
++        # unrelated directory before cleanup, an object cannot be without the
++        # identity changing with it.
++        token = uuid.uuid4().hex
++        tmp_path = Path(tempfile.mkdtemp(prefix=f".{target_path.name}.{token}.", suffix=".tmp", dir=str(parent)))
++        tmp_identity = _object_identity(_long_path(tmp_path))
++        backup_identity = None
++        backup_path = None
++        tmp_p = _long_path(tmp_path)
++        tgt_p = _long_path(target_path)
++        try:
+             for fileinfo in archive.infolist():
+-
+                 if fileinfo.filename.startswith("site-packages"):
+-                    extracted = archive.extract(fileinfo.filename, target_path_tmp)
+-
+-                    # restore original permissions
++                    # Passing the ZipInfo itself extracts that exact entry.  A
++                    # name lookup would re-resolve a duplicated member to the
++                    # last one, hiding the order this loop is responsible for.
++                    extracted = archive.extract(fileinfo, str(tmp_p))
+                     os.chmod(extracted, fileinfo.external_attr >> 16)
+ 
+             if compile_pyc:
+-                compileall.compile_dir(target_path_tmp, quiet=2, workers=compile_workers)
+-
+-            # if using `force` we will need to delete our target path
+-            if target_path.exists():
+-                shutil.rmtree(str(target_path))
+-
+-            # atomic move
+-            shutil.move(str(target_path_tmp), str(target_path))
++                # ``quiet=1`` keeps the compiler's diagnostics: the failure is
++                # turned into an exception below, and the caller can still see
++                # which file did not compile.  ``compile_dir`` reports a failed
++                # source through its return value, not only by raising: a
++                # syntax error in the archive is recorded as ``False`` and
++                # otherwise looks like success.  A result that silently ships
++                # uncompilable sources is not a result this call may publish.
++                if compileall.compile_dir(
++                    str(tmp_p), quiet=1, workers=compile_workers
++                ) is False:
++                    raise RuntimeError(
++                        f"Compilation failed while extracting {target_path}: "
++                        "the archive contains sources that do not compile"
++                    )
++
++            if not is_complete(tmp_path):
++                raise RuntimeError(f"Extraction did not create site-packages: {target_path}")
++
++            if tgt_p.exists():
++                # A non-empty directory cannot be replaced in one step, so the
++                # previous result is moved aside first and put straight back if
++                # the new tree cannot take its place.  Every move below proves
++                # the object it moved is still this call's: the previous result
++                # is this call's only because it verified it before displacement,
++                # and the new tree is this call's because it built it.
++                previous_identity = _object_identity(tgt_p)
++                if previous_identity is None:
++                    raise ExtractionCleanupError(
++                        f"{target_path} disappeared while it was being replaced"
++                    )
++                backup_path = Path(tempfile.mkdtemp(prefix=f".{target_path.name}.{token}.", suffix=".bak", dir=str(parent)))
++                backup_path.rmdir()
++                _displace(
++                    target_path, previous_identity, backup_path,
++                    f"the previous result at {target_path}",
++                )
++                backup_identity = previous_identity
++                try:
++                    _adopt(tmp_path, tmp_identity, target_path, f"the new tree for {target_path}")
++                except BaseException as publish_error:
++                    try:
++                        _adopt(
++                            backup_path, backup_identity, target_path,
++                            f"the previous result for {target_path}",
++                        )
++                    except BaseException as rollback_error:
++                        publish_error.__context__ = rollback_error
++                        # The previous result could not be put back.  It is still
++                        # at this call's backup name, so say where it is instead
++                        # of leaving the caller to guess.
++                        add_note = getattr(publish_error, "add_note", None)
++                        if add_note is not None:
++                            add_note(
++                                f"The previous result could not be restored and remains at "
++                                f"{backup_path.name}: {rollback_error}"
++                            )
++                    else:
++                        backup_path = None
++                    raise
++                tmp_path = None
++                # The result that was moved aside has been superseded by this
++                # call, and this call is the one that moved it.  If it cannot be
++                # removed, the result is still the complete new one, but the call
++                # did leave state behind, so that is reported rather than hidden.
++                try:
++                    _discard(backup_path, backup_identity)
++                except OSError as cleanup_error:
++                    raise ExtractionCleanupError(
++                        f"Extraction published {target_path} but could not remove the "
++                        f"superseded copy {backup_path.name}: {cleanup_error}"
++                    ) from cleanup_error
++                backup_path = None
++            else:
++                _adopt(tmp_path, tmp_identity, target_path, f"the new tree for {target_path}")
++                tmp_path = None
++        except BaseException as error:
++            # The original failure is what the caller must see.  A failure to
++            # remove this call's own temporary tree is attached to it instead of
++            # replacing it, so the residue is reported without masking why the
++            # extraction failed.
++            try:
++                _discard(tmp_path, tmp_identity)
++            except OSError as cleanup_error:
++                error.cleanup_error = cleanup_error
++                add_note = getattr(error, "add_note", None)
++                if add_note is not None:
++                    add_note(
++                        f"Failed to remove state created by this extraction: {cleanup_error}"
++                    )
++            raise
+ 
+ 
+ def get_first_sitedir_index():
+@@ -172,8 +1019,11 @@ def ensure_no_modify(site_packages, hashes):
+     """Compare the sha256 hash of the unpacked source files to the files when they were added to the pyz."""
+ 
+     for path in site_packages.rglob("**/*.py"):
++        rel_str = str(path.relative_to(site_packages))
++        rel_posix = path.relative_to(site_packages).as_posix()
++        expected = hashes.get(rel_posix, hashes.get(rel_str))
+ 
+-        if hashlib.sha256(path.read_bytes()).hexdigest() != hashes.get(str(path.relative_to(site_packages))):
++        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+             raise RuntimeError(
+                 "A Python source file has been modified! File: {}. "
+                 "Try again with SHIV_FORCE_EXTRACT=1 to overwrite the modified source file(s).".format(str(path))
+@@ -252,17 +1102,39 @@ def bootstrap():  # pragma: no cover
+             )
+ 
+         else:
+-            subprocess.run([preamble_bin])
++            if os.name == "nt":
++                comspec = os.environ.get("COMSPEC", "cmd.exe")
++                subprocess.run([comspec, "/c", str(preamble_bin)])
++            else:
++                subprocess.run([str(preamble_bin)])
++            # Shell preamble status has always been ignored; continue to the
++            # entry point even when the script exits unsuccessfully.
+ 
+     # first check if we should drop into interactive mode
+     if not env.interpreter:
+ 
+         # do entry point import and call
+-        if env.entry_point is not None and not env.script:
++        if env.entry_point is not None:
+             run(import_string(env.entry_point))
+ 
+         elif env.script is not None:
+-            run(partial(runpy.run_path, str(site_packages / "bin" / env.script), run_name="__main__"))
++            script_path = site_packages / "bin" / env.script
++            if os.name == "nt" and not script_path.is_file() and (site_packages / "bin" / f"{env.script}.exe").is_file():
++                script_path = site_packages / "bin" / f"{env.script}.exe"
++
++            if not script_path.is_file():
++                sys.exit(f"Cannot find console script: {env.script}")
++
++            if script_path.suffix == ".exe":
++                sub_env = os.environ.copy()
++                py_path = sub_env.get("PYTHONPATH", "")
++                sub_env["PYTHONPATH"] = f"{site_packages}{os.pathsep}{py_path}" if py_path else str(site_packages)
++                run(lambda: subprocess.run([str(script_path)] + sys.argv[1:], env=sub_env).returncode)
++            else:
++                def _run_script():
++                    runpy.run_path(str(script_path), run_name="__main__")
++                    return 0
++                run(_run_script)
+ 
+     # all other options exhausted, drop into interactive mode
+     execute_interpreter()
+diff --git a/src/shiv/bootstrap/filelock.py b/src/shiv/bootstrap/filelock.py
+index 5fc2f87..f663beb 100644
+--- a/src/shiv/bootstrap/filelock.py
++++ b/src/shiv/bootstrap/filelock.py
+@@ -16,7 +16,12 @@ try:
+ except ImportError:
+     fcntl = None  # type: ignore
+ 
+-OPEN_MODE = os.O_RDWR | os.O_CREAT | os.O_TRUNC
++# Opening the lock file for an exclusive lock only needs write access.
++# ``O_TRUNC`` is unnecessary for locking and would truncate whatever the name
++# already refers to -- including an unrelated file a writer hard-linked there --
++# before the lock is even attempted.  The file is created when absent and left
++# with its contents otherwise.
++OPEN_MODE = os.O_RDWR | os.O_CREAT
+ 
+ 
+ def acquire_win(lock_file):  # pragma: no cover
+@@ -30,6 +35,9 @@ def acquire_win(lock_file):  # pragma: no cover
+             msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+         except (IOError, OSError):
+             os.close(fd)
++        except BaseException:
++            os.close(fd)
++            raise
+         else:
+             return fd
+ 
+@@ -42,6 +50,9 @@ def acquire_nix(lock_file):  # pragma: no cover
+         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+     except (IOError, OSError):
+         os.close(fd)
++    except BaseException:
++        os.close(fd)
++        raise
+     else:
+         return fd
+ 
+@@ -49,9 +60,11 @@ def acquire_nix(lock_file):  # pragma: no cover
+ class FileLock:
+     """A rudimentary file lock class."""
+ 
+-    def __init__(self, lock_file):
++    def __init__(self, lock_file, timeout=None, poll_interval=0.01):
+         # The path to the lock file.
+         self.lock_file = lock_file
++        self.timeout = timeout
++        self.poll_interval = poll_interval
+ 
+         # The file descriptor for the lock file
+         self.lock_file_fd = None
+@@ -61,19 +74,37 @@ class FileLock:
+         """This property signals if we are holding the lock."""
+         return self.lock_file_fd is not None
+ 
+-    def __enter__(self, poll_intervall=0.01):
+-
++    def acquire(self, timeout=None, poll_interval=None):
++        """Acquire the lock, optionally failing after a bounded wait."""
++        timeout = self.timeout if timeout is None else timeout
++        poll_interval = self.poll_interval if poll_interval is None else poll_interval
++        start = time.monotonic()
++        deadline = None if timeout is None else start + max(0, timeout)
+         while not self.is_locked:
+ 
+-            if msvcrt:
+-                self.lock_file_fd = acquire_win(self.lock_file)
+-            elif fcntl:
+-                self.lock_file_fd = acquire_nix(self.lock_file)
+-
+-            time.sleep(poll_intervall)
++            try:
++                if msvcrt:
++                    self.lock_file_fd = acquire_win(self.lock_file)
++                elif fcntl:
++                    self.lock_file_fd = acquire_nix(self.lock_file)
++            except BaseException:
++                self.lock_file_fd = None
++                raise
++
++            if not self.is_locked:
++                if deadline is not None:
++                    remaining = deadline - time.monotonic()
++                    if remaining <= 0:
++                        raise TimeoutError(f"Could not acquire lock on {self.lock_file} within {timeout}s")
++                    time.sleep(min(poll_interval, remaining))
++                else:
++                    time.sleep(poll_interval)
+ 
+         return self
+ 
++    def __enter__(self):
++        return self.acquire()
++
+     def __exit__(self, exc_type, exc_value, traceback):
+ 
+         if self.is_locked:
+@@ -81,9 +112,10 @@ class FileLock:
+             fd = self.lock_file_fd
+             self.lock_file_fd = None
+ 
+-            if msvcrt:
+-                msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+-            elif fcntl:
+-                fcntl.flock(fd, fcntl.LOCK_UN)
+-
+-            os.close(fd)
++            try:
++                if msvcrt:
++                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
++                elif fcntl:
++                    fcntl.flock(fd, fcntl.LOCK_UN)
++            finally:
++                os.close(fd)
+diff --git a/src/shiv/builder.py b/src/shiv/builder.py
+index f1f89e3..ecde840 100644
+--- a/src/shiv/builder.py
++++ b/src/shiv/builder.py
+@@ -8,6 +8,7 @@ import hashlib
+ import os
+ import sys
+ import time
++import uuid
+ import zipapp
+ import zipfile
+ 
+@@ -116,75 +117,113 @@ def create_archive(
+     timestamp = datetime.strptime(env.built_at, BUILD_AT_TIMESTAMP_FORMAT).replace(tzinfo=timezone.utc).timestamp()
+     zipinfo_datetime: Tuple[int, int, int, int, int, int] = time.gmtime(int(timestamp))[0:6]
+ 
+-    with target.open(mode="wb") as fd:
++    target_parent = target.parent.resolve()
++    try:
++        target_mode = S_IMODE(target.stat().st_mode)
++    except FileNotFoundError:
++        target_mode = None
+ 
+-        # Write shebang.
+-        write_file_prefix(fd, interpreter)
++    # Match open("wb") permissions while keeping the atomic replacement: new
++    # files use 0666 filtered by umask, and existing files keep their mode.
++    # Do not read umask with os.umask(), which would race with other threads.
++    while True:
++        target_tmp = target_parent / f".{target.name}.{uuid.uuid4().hex}.tmp"
++        try:
++            fd = os.open(str(target_tmp), os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o666)
++            break
++        except FileExistsError:
++            continue
++    try:
++        with os.fdopen(fd, mode="wb") as fd_obj:
+ 
+-        # Determine compression.
+-        compression = zipfile.ZIP_DEFLATED if compressed else zipfile.ZIP_STORED
++            # Write shebang.
++            write_file_prefix(fd_obj, interpreter)
+ 
+-        # Pack zipapp with dependencies.
+-        with zipfile.ZipFile(fd, "w", compression=compression) as archive:
++            # Determine compression.
++            compression = zipfile.ZIP_DEFLATED if compressed else zipfile.ZIP_STORED
+ 
+-            site_packages = Path("site-packages")
+-            contents_hash = hashlib.sha256()
++            # Pack zipapp with dependencies.
++            with zipfile.ZipFile(fd_obj, "w", compression=compression) as archive:
+ 
+-            for source in sources:
++                site_packages = Path("site-packages")
++                contents_hash = hashlib.sha256()
+ 
+-                # Glob is known to return results in non-deterministic order.
+-                # We need to sort them by in-archive paths to ensure
+-                # that archive contents are reproducible.
+-                #
+-                # NOTE: https://github.com/linkedin/shiv/issues/236
+-                # this special rglob function can be replaced with "rglob('*', follow_symlinks=True)"
+-                # when Python 3.13 becomes the lowest supported version
+-                for path in sorted(rglob_follow_symlinks(source, "*"), key=str):
+-
+-                    # Skip compiled files and directories (as they are not required to be present in the zip).
+-                    if path.suffix == ".pyc" or path.is_dir():
+-                        continue
++                for source in sources:
+ 
+-                    data = path.read_bytes()
++                    # Glob is known to return results in non-deterministic order.
++                    # We need to sort them by in-archive paths to ensure
++                    # that archive contents are reproducible.
++                    #
++                    # NOTE: https://github.com/linkedin/shiv/issues/236
++                    # this special rglob function can be replaced with "rglob('*', follow_symlinks=True)"
++                    # when Python 3.13 becomes the lowest supported version
++                    for path in sorted(rglob_follow_symlinks(source, "*"), key=lambda p: p.relative_to(source).as_posix()):
+ 
+-                    # update the contents hash
+-                    contents_hash.update(data)
+-                    # take filenames into account as well - build_id should change if a file is moved or renamed
+-                    contents_hash.update(str(path.relative_to(source)).encode())
++                        # Skip compiled files and directories (as they are not required to be present in the zip).
++                        if path.suffix == ".pyc" or path.is_dir():
++                            continue
+ 
+-                    arcname = str(site_packages / path.relative_to(source))
++                        data = path.read_bytes()
+ 
+-                    write_to_zipapp(archive, arcname, data, zipinfo_datetime, compression, stat=path.stat())
++                        # update the contents hash
++                        contents_hash.update(data)
++                        # take filenames into account as well - build_id should change if a file is moved or renamed
++                        contents_hash.update(str(path.relative_to(source)).encode())
+ 
+-            if env.build_id is None:
+-                # Now that we have a hash of all the source files, use it as our build id if the user did not
+-                # specify a custom one.
+-                env.build_id = contents_hash.hexdigest()
++                        arcname = str(site_packages / path.relative_to(source))
+ 
+-            # now let's add the shiv bootstrap code.
+-            bootstrap_target = Path("_bootstrap")
++                        write_to_zipapp(archive, arcname, data, zipinfo_datetime, compression, stat=path.stat())
+ 
+-            for path, name in iter_package_files(bootstrap):
+-                data = path.read_bytes()
++                if env.build_id is None:
++                    # Now that we have a hash of all the source files, use it as our build id if the user did not
++                    # specify a custom one.
++                    env.build_id = contents_hash.hexdigest()
+ 
+-                write_to_zipapp(
+-                    archive,
+-                    str(bootstrap_target / name),
+-                    data,
+-                    zipinfo_datetime,
+-                    compression,
+-                    stat=path.stat(),
+-                )
++                # now let's add the shiv bootstrap code.
++                bootstrap_target = Path("_bootstrap")
+ 
+-            # Write environment info in json file.
+-            #
+-            # The environment file contains build_id which is a SHA-256 checksum of all **site-packages** contents.
+-            # the bootstrap code, environment.json and __main__.py are not used to calculate the checksum, is it's
+-            # only used for local caching of site-packages and these files are always read from archive.
+-            write_to_zipapp(archive, "environment.json", env.to_json().encode("utf-8"), zipinfo_datetime, compression)
++                for path, name in iter_package_files(bootstrap):
++                    data = path.read_bytes()
+ 
+-            # write __main__
+-            write_to_zipapp(archive, "__main__.py", main_py.encode("utf-8"), zipinfo_datetime, compression)
++                    write_to_zipapp(
++                        archive,
++                        (bootstrap_target / name).as_posix(),
++                        data,
++                        zipinfo_datetime,
++                        compression,
++                        stat=path.stat(),
++                    )
+ 
+-    # Make pyz executable (on windows this is no-op).
+-    target.chmod(target.stat().st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
++                # Write environment info in json file.
++                #
++                # The environment file contains build_id which is a SHA-256 checksum of all **site-packages** contents.
++                # the bootstrap code, environment.json and __main__.py are not used to calculate the checksum, is it's
++                # only used for local caching of site-packages and these files are always read from archive.
++                write_to_zipapp(archive, "environment.json", env.to_json().encode("utf-8"), zipinfo_datetime, compression)
++
++                # write __main__
++                write_to_zipapp(archive, "__main__.py", main_py.encode("utf-8"), zipinfo_datetime, compression)
++
++            fd_obj.flush()
++            os.fsync(fd_obj.fileno())
++
++        # Make pyz executable (on windows this is no-op).
++        archive_mode = target_mode if target_mode is not None else S_IMODE(target_tmp.stat().st_mode)
++        target_tmp.chmod(archive_mode | S_IXUSR | S_IXGRP | S_IXOTH)
++
++        # Atomically replace destination
++        for attempt in range(5):
++            try:
++                os.replace(str(target_tmp), str(target))
++                break
++            except PermissionError:
++                if attempt == 4 or os.name != "nt":
++                    raise
++                time.sleep(0.05)
++    except BaseException:
++        try:
++            if target_tmp.exists():
++                target_tmp.unlink()
++        except Exception:
++            pass
++        raise
+diff --git a/src/shiv/cli.py b/src/shiv/cli.py
+index 8f5c93e..85851cf 100644
+--- a/src/shiv/cli.py
++++ b/src/shiv/cli.py
+@@ -5,7 +5,7 @@ import sys
+ import time
+ 
+ from configparser import ConfigParser
+-from datetime import datetime
++from datetime import datetime, timezone
+ from pathlib import Path
+ from tempfile import TemporaryDirectory
+ from typing import List, Optional
+@@ -56,10 +56,14 @@ def console_script_exists(site_packages_dirs: List[Path], console_script: str) -
+     :param site_packages_dirs: Paths to site-packages directories on disk.
+     :param console_script: A console script name.
+     """
++    if os.sep in console_script or "/" in console_script or "\\" in console_script:
++        return False
+ 
+     for site_packages in site_packages_dirs:
+-
+-        if (site_packages / "bin" / console_script).exists():
++        bin_dir = site_packages / "bin"
++        if (bin_dir / console_script).is_file():
++            return True
++        if os.name == "nt" and (bin_dir / f"{console_script}.exe").is_file():
+             return True
+ 
+     return False
+@@ -87,7 +91,19 @@ def copytree(src: Path, dst: Path) -> None:
+             shutil.copy2(str(path), str(dst / path.relative_to(src)))
+ 
+ 
+-@click.command(context_settings=dict(help_option_names=["-h", "--help", "--halp"], ignore_unknown_options=True))
++class ShivCommand(click.Command):
++    """A custom Command class that preserves the order of help_option_names."""
++
++    def get_help_option_names(self, ctx: click.Context) -> List[str]:
++        all_names = list(ctx.help_option_names)
++        for param in self.params:
++            for opt in param.opts + param.secondary_opts:
++                if opt in all_names:
++                    all_names.remove(opt)
++        return all_names
++
++
++@click.command(cls=ShivCommand, context_settings=dict(help_option_names=["-h", "--help", "--halp"], ignore_unknown_options=True))
+ @click.version_option(version=__version__, prog_name="shiv")
+ @click.option(
+     "--entry-point", "-e", default=None, help="The entry point to invoke (takes precedence over --console-script)."
+@@ -186,7 +202,8 @@ def main(
+     # check for disallowed pip arguments
+     for disallowed in DISALLOWED_ARGS:
+         for supplied_arg in pip_args:
+-            if supplied_arg in disallowed:
++            arg_name = supplied_arg.split("=")[0]
++            if supplied_arg in disallowed or arg_name in disallowed:
+                 sys.exit(DISALLOWED_PIP_ARGS.format(arg=supplied_arg, reason=DISALLOWED_ARGS[disallowed]))
+ 
+     if build_id is not None:
+@@ -227,11 +244,12 @@ def main(
+ 
+             for source in sources:
+                 for path in source.rglob("**/*.py"):
+-                    hashes[str(path.relative_to(source))] = hashlib.sha256(path.read_bytes()).hexdigest()
++                    hashes[path.relative_to(source).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+ 
+-        # if entry_point is a console script, get the callable and null out the console_script variable
+-        # so that we avoid modifying sys.argv in bootstrap.py
+-        if entry_point is None and console_script is not None:
++        # if entry_point is specified, it takes precedence over console_script
++        if entry_point is not None:
++            console_script = None
++        elif console_script is not None:
+             try:
+                 entry_point = find_entry_point(sources, console_script)
+             except KeyError:
+@@ -248,7 +266,7 @@ def main(
+ 
+         # create runtime environment metadata
+         env = Environment(
+-            built_at=datetime.utcfromtimestamp(timestamp).strftime(BUILD_AT_TIMESTAMP_FORMAT),
++            built_at=datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(BUILD_AT_TIMESTAMP_FORMAT),
+             build_id=build_id,
+             entry_point=entry_point,
+             script=console_script,
+diff --git a/src/shiv/info.py b/src/shiv/info.py
+index 5b5eb5c..a43d858 100644
+--- a/src/shiv/info.py
++++ b/src/shiv/info.py
+@@ -1,17 +1,34 @@
+ import json
++import sys
+ import zipfile
+ 
+ import click
+ 
++from .cli import ShivCommand
+ 
+-@click.command(context_settings=dict(help_option_names=["-h", "--help", "--halp"]))
++
++@click.command(cls=ShivCommand, context_settings=dict(help_option_names=["-h", "--help", "--halp"]))
+ @click.option("--json", "-j", "print_as_json", is_flag=True, help="output as plain json")
+ @click.argument("pyz")
+ def main(print_as_json, pyz):
+     """A simple utility to print debugging information about PYZ files created with ``shiv``"""
+ 
+-    zip_file = zipfile.ZipFile(pyz)
+-    data = json.loads(zip_file.read("environment.json"))
++    # One open file for the whole report.  Reading the shebang by re-opening the
++    # path would let a concurrent build publish a different archive in between,
++    # and the report would then describe two archives at once.  Everything below
++    # comes from this single file object, so the document always describes
++    # exactly one of them.
++    with open(pyz, "rb") as archive_file:
++        shebang = archive_file.readline().rstrip(b"\r\n")
++
++        with zipfile.ZipFile(archive_file) as zip_file:
++            data = json.loads(zip_file.read("environment.json"))
++            compression_types = {member.compress_type for member in zip_file.infolist()}
++
++    data["interpreter"] = (
++        shebang[2:].decode(sys.getfilesystemencoding()) if shebang.startswith(b"#!") else ""
++    )
++    data["compressed"] = compression_types == {zipfile.ZIP_DEFLATED}
+ 
+     if print_as_json:
+         click.echo(json.dumps(data, indent=4, sort_keys=True))
+diff --git a/src/shiv/pip.py b/src/shiv/pip.py
+index 4457577..397cfc7 100644
+--- a/src/shiv/pip.py
++++ b/src/shiv/pip.py
+@@ -65,5 +65,8 @@ def install(args: List[str]) -> None:
+         if output:
+             click.echo(output.rstrip())
+ 
+-    if process.wait() > 0:
++    # Any non-zero status is a failure.  A process killed by a signal reports a
++    # negative status (``-SIGTERM``), which is also non-zero: comparing with
++    # ``> 0`` would treat a terminated install as a successful one.
++    if process.wait() != 0:
+         sys.exit(PIP_INSTALL_ERROR)
+diff --git a/test/conftest.py b/test/conftest.py
+index 7a68895..3d4cd38 100644
+--- a/test/conftest.py
++++ b/test/conftest.py
+@@ -1,4 +1,5 @@
+ import os
++import shutil
+ 
+ from contextlib import contextmanager
+ from pathlib import Path
+@@ -14,8 +15,15 @@ def zip_location():
+ 
+ 
+ @pytest.fixture
+-def package_location():
+-    return Path(__file__).absolute().parent / "package"
++def package_location(tmp_path):
++    # pip builds write build/ and egg-info beside setup.py. A per-test copy
++    # avoids races with other installers or cleanup in concurrent test runs.
++    package = tmp_path / "package"
++    shutil.copytree(
++        Path(__file__).absolute().parent / "package", package,
++        ignore=shutil.ignore_patterns("build", "dist", "*.egg-info", "__pycache__"),
++    )
++    return package
+ 
+ 
+ @pytest.fixture
+diff --git a/test/package/setup.py b/test/package/setup.py
+index 0ed554b..456458b 100644
+--- a/test/package/setup.py
++++ b/test/package/setup.py
+@@ -1,5 +1,3 @@
+-import setuptools
+-
+ from setuptools import setup
+ 
+ setup(
+diff --git a/test/test_builder.py b/test/test_builder.py
+index ec5af35..8403348 100644
+--- a/test/test_builder.py
++++ b/test/test_builder.py
+@@ -45,7 +45,12 @@ class TestBuilder:
+         real_file = real_dir / 'real_file'
+         real_file.touch()
+         sym_dir = tmp_path / 'sym_dir'
+-        sym_dir.symlink_to(real_dir)
++        try:
++            sym_dir.symlink_to(real_dir)
++        except OSError as e:
++            if os.name == "nt" and getattr(e, "winerror", None) == 1314:
++                pytest.skip(f"Platform lacks symlink privilege: {e}")
++            raise
+         sym_file = sym_dir / real_file.name
+         assert sorted(rglob_follow_symlinks(tmp_path, '*'), key=str) == [real_dir, real_file, sym_dir, sym_file]
+ 
+diff --git a/tox.ini b/tox.ini
+index 448554c..1df384f 100644
+--- a/tox.ini
++++ b/tox.ini
+@@ -17,5 +17,7 @@ commands=
+ deps=
+   coverage
+   pytest
++  packaging
++  tomli; python_version < "3.11"
+   mypy
+   flake8

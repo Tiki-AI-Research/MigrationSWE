@@ -1,0 +1,248 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "source_expectation": "FAIL",
+  "target_expectation": "PASS",
+  "cases": [
+    {
+      "observation_id": "F2P-069",
+      "requirement_ids": [
+        "R053"
+      ],
+      "surface": "pev2_core::should_show_prop",
+      "input": "should_show_prop(\"Filter\",\"(a = 1)\")=true; \"Filter\",\"\"=false; \"Node Type\",\"Seq Scan\"=false; \"Actual Rows\",0=false",
+      "expected": "js truthiness + not_misc_properties filtering",
+      "target_source_path": "crates/pev2-core/src/help.rs"
+    },
+    {
+      "observation_id": "F2P-070",
+      "requirement_ids": [
+        "R037"
+      ],
+      "surface": "package.json::dependency manifest",
+      "input": "Cargo workspace at repository root declaring crates/pev2-core",
+      "expected": "native Rust deps declared; no Node.js/TypeScript runtime dependency",
+      "target_source_path": "Cargo.toml"
+    },
+    {
+      "observation_id": "F2P-071",
+      "requirement_ids": [
+        "R035"
+      ],
+      "surface": "package.json::dependency manifest",
+      "input": "Cargo workspace at repository root declaring crates/pev2-core",
+      "expected": "native Rust parsing/metrics; no delegation to a TypeScript runtime",
+      "target_source_path": "Cargo.toml"
+    },
+    {
+      "observation_id": "F2P-056",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "src/services/plan-service.ts::createPlan maxBlocks and maxIo",
+      "input": "Seq Scan on foo (cost=0.00..1.00 rows=10 width=4) (actual time=0.1..0.2 rows=100 loops=1)",
+      "expected": "maxEstimateFactor=20.0 analyzed / 1.0 non-analyzed; maxIo=3.0; maxBlocks.Shared=13.0",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-064",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "src/services/plan-service.ts::PlanService.fromText / pev2_core::from_text",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": "Actual Loops=0, Actual Rows=0, Actual Total Time=0, Actual Startup Time=0",
+      "target_source_path": "crates/pev2-core/src/parse_text.rs"
+    },
+    {
+      "observation_id": "F2P-065",
+      "requirement_ids": [
+        "R041"
+      ],
+      "surface": "src/services/plan-service.ts::createPlan maximum metrics",
+      "input": "\\u2502  Seq Scan on t  \\u2502\\nQUERY PLAN\\n(1 row)\\n",
+      "expected": "cleanup_source removes frames, QUERY PLAN header and trailing row count",
+      "target_source_path": "crates/pev2-core/src/source.rs"
+    },
+    {
+      "observation_id": "F2P-066",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "src/services/plan-service.ts::fromText auxiliary information parsing",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": "never-executed numeric fields normalised to 0",
+      "target_source_path": "crates/pev2-core/src/parse_text.rs"
+    },
+    {
+      "observation_id": "F2P-067",
+      "requirement_ids": [
+        "R044"
+      ],
+      "surface": "src/interfaces.ts::node-type field extraction",
+      "input": "parse_node_type(\"Merge Left Join\"), (\"Nested Loop\"), (\"Hash Join\")",
+      "expected": "Merge Join/Left; Nested Loop bare; missing join type defaults to Inner",
+      "target_source_path": "crates/pev2-core/src/node_type.rs"
+    },
+    {
+      "observation_id": "F2P-068",
+      "requirement_ids": [
+        "R052"
+      ],
+      "surface": "src/services/help-service.ts::findNodeById, findNodeBySubplanName, shouldShowProp / find_node_by_id, find_node_by_subplan_name, should_show_prop",
+      "input": "split_balanced(\"a,(b,c),d\", \",\")",
+      "expected": "[\"a\",\"(b,c)\",\"d\"]",
+      "target_source_path": "crates/pev2-core/src/help.rs"
+    },
+    {
+      "observation_id": "F2P-072",
+      "requirement_ids": [
+        "R054"
+      ],
+      "surface": "src/interfaces.ts::runtime entry",
+      "input": "cargo build of crates/pev2-core",
+      "expected": "no build.rs, no node invocation, no FFI to a TypeScript runtime",
+      "target_source_path": "crates/pev2-core/src/lib.rs"
+    },
+    {
+      "observation_id": "F2P-049",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "src/services/plan-service.ts::createPlan nodeId assignment and ctes collection",
+      "input": "Update on a with root I/O Timings read=2 write=4 and child read=1 write=2",
+      "expected": "maxIo=3.0 (highest summed exclusive read+write time)",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-050",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "src/services/plan-service.ts::PlanService.fromSource / pev2_core::from_source",
+      "input": "Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=0.25 loops=1)",
+      "expected": "Actual Rows=0.25 and \"*Actual Rows Is Fractional\"=true",
+      "target_source_path": "crates/pev2-core/src/parse_text.rs"
+    },
+    {
+      "observation_id": "F2P-051",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "src/interfaces.ts::Node constructor / pev2_core::parse_node_type",
+      "input": "parse_node_type(\"HashAggregate\")",
+      "expected": "Node Type=Aggregate, Partial Mode=Simple, Strategy=Hashed, Planned Partitions=0",
+      "target_source_path": "crates/pev2-core/src/node_type.rs"
+    },
+    {
+      "observation_id": "F2P-052",
+      "requirement_ids": [
+        "R046"
+      ],
+      "surface": "src/services/plan-service.ts::fractional actual rows marker",
+      "input": "JSON {\"Plan\":{\"Node Type\":\"ModifyTable\",\"Operation\":\"Insert\",...}}",
+      "expected": "create_plan emits root Node Type=\"Insert\"",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-053",
+      "requirement_ids": [
+        "R042"
+      ],
+      "surface": "src/services/plan-service.ts::fromText error result",
+      "input": "from_text(\"not a plan\")",
+      "expected": "Result::Err(\"Unable to parse plan\")",
+      "target_source_path": "crates/pev2-core/src/parse_text.rs"
+    },
+    {
+      "observation_id": "F2P-054",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "src/services/plan-service.ts::never-executed node normalization",
+      "input": "node line with rows=0.25",
+      "expected": "Actual Rows=0.25 and \"*Actual Rows Is Fractional\"=true",
+      "target_source_path": "crates/pev2-core/src/parse_text.rs"
+    },
+    {
+      "observation_id": "F2P-055",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "src/services/plan-service.ts::ModifyTable to Operation conversion",
+      "input": "Update on a with root I/O Timings read=2 write=4 and child read=1 write=2",
+      "expected": "maxIo=3.0",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-057",
+      "requirement_ids": [
+        "R051"
+      ],
+      "surface": "src/services/plan-service.ts::never-executed node normalization",
+      "input": "get_plan_content({\"foo\": 1})",
+      "expected": "Result::Err(\"Invalid plan\")",
+      "target_source_path": "crates/pev2-core/src/source.rs"
+    },
+    {
+      "observation_id": "F2P-058",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "src/services/plan-service.ts::fromSource JSON/text routing",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": "never-executed numeric fields normalised to 0",
+      "target_source_path": "crates/pev2-core/src/source.rs"
+    },
+    {
+      "observation_id": "F2P-059",
+      "requirement_ids": [
+        "R046"
+      ],
+      "surface": "src/services/plan-service.ts::deliverable confined to /workspace/repo",
+      "input": "JSON {\"Plan\":{\"Node Type\":\"ModifyTable\",\"Operation\":\"Insert\",...}}",
+      "expected": "create_plan emits root Node Type=\"Insert\"",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-060",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "src/services/plan-service.ts::ModifyTable to Operation conversion",
+      "input": "Seq Scan on foo (cost=0.00..1.00 rows=10 width=4) analyzed and non-analyzed",
+      "expected": "maxEstimateFactor=20.0 / 1.0",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-061",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "src/services/plan-service.ts::getPlanContent missing Plan error",
+      "input": "from_json pgAdmin payload with doubled double quotes",
+      "expected": "Plan.Node Type=\"Seq Scan\"",
+      "target_source_path": "crates/pev2-core/src/source.rs"
+    },
+    {
+      "observation_id": "F2P-062",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "src/services/plan-service.ts::fromText error result",
+      "input": "JSON Aggregate with descendant Seq Scan carrying \"Output\"",
+      "expected": "create_plan isVerbose=true",
+      "target_source_path": "crates/pev2-core/src/metrics.rs"
+    },
+    {
+      "observation_id": "F2P-063",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "src/services/plan-service.ts::getPlanContent array handling",
+      "input": "from_json pgAdmin payload with doubled double quotes",
+      "expected": "Plan.Node Type=\"Seq Scan\"",
+      "target_source_path": "crates/pev2-core/src/source.rs"
+    }
+  ]
+}

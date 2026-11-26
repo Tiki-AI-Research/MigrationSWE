@@ -1,0 +1,58 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/panva-node-oidc-provider"
+description = "Migrate the oidc-provider HTTP request layer from Koa 3.2.1 to Fastify 5.12.0."
+
+[metadata]
+category = "Framework_migration"
+language = "javascript"
+repository_id = "e93f533a-60a1-4e4b-b03f-15e034b33966"
+task_id = "tp-bad6c2de8695a9cd50130cc70fcaaf53"
+repository_url = "https://github.com/panva/node-oidc-provider"
+base_commit_hash = "8a5917001cbee9d328f7854043d36ed8a03f360e"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 40
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:panva-node-oidc-provider-verifier-image-20261126"
+image_digest = "sha256:dcd1c302e8135e2a47cbf9b3025457c7ff067087d6c51e56eb876c694ebd9be3"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 8a5917001cbee9d328f7854043d36ed8a03f360e > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 14400
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:panva-node-oidc-provider-task-image-20261126"
+image_digest = "sha256:cf332878d8d4bd54cd8d2ecdd2adea785c7854bf1a1310f7ccbc35d37883c096"

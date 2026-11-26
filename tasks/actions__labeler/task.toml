@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/actions__labeler"
+description = "Migrate the labeler GitHub Action from TypeScript 6.0.3 to Go 1.24.0."
+
+[metadata]
+category = "Language_migration"
+language = "typescript"
+repository_id = "99903ff3-3e87-4923-9afe-5eb3c678000b"
+task_id = "tp-590a5f78940638e37c3f811f9a89ddb4"
+repository_url = "https://github.com/actions/labeler"
+base_commit_hash = "98ce1450c7908643084f7487327dfa4f4bf8a367"
+
+[metadata.tests]
+fail_to_pass_count = 31
+pass_to_pass_count = 38
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:actions__labeler-verifier-image-20261126"
+image_digest = "sha256:7669bcc21037363f3e60bec7e91e04e87c12f67d359308acfced0f7fb74fff21"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 98ce1450c7908643084f7487327dfa4f4bf8a367 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:actions__labeler-task-image-20261126"
+image_digest = "sha256:a9e83289d890c957b8410d016bed96920198e47a5308bb89fb61d46520d12e56"

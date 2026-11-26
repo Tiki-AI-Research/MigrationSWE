@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ASSET_ROOT=$(CDPATH= cd -- "$HERE/.." && pwd)
+REPORT=${1:-/tmp/migration-target-report.json}
+exec python3 "$ASSET_ROOT/shared/integration/run.py" \
+  --side target --report "$REPORT" --asset-root "$ASSET_ROOT"

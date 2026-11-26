@@ -1,0 +1,740 @@
+{
+  "schema_version": "migration-asset-corpus:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "migration": {
+    "category": "language",
+    "source": {
+      "name": "Rust",
+      "version": "2018"
+    },
+    "target": {
+      "name": "Go",
+      "version": "1.23.0"
+    }
+  },
+  "shared_corpus_required": true,
+  "semantics": "Each observation is a target-only postcondition. The identical predicate is evaluated in both environments: it FAILs on the Rust source tree /input/source (no Go module and no migrated packages) and PASSes on the Go reference target /input/target.",
+  "observations": [
+    {
+      "observation_id": "F2P-054",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R021"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "Go module dependency graph"
+      },
+      "atomic_claim": "With GOPROXY=off and an empty module cache, `go build ./...` succeeds and `go list -m all` lists only github.com/servo/rust-url, while idna.DomainToASCII(\"faß.de\") still returns \"xn--fa-hia.de\", so the IDNA and Punycode behavior is implemented with the Go standard library rather than a third-party module.",
+      "fingerprint": "sha256:9ea5fd26bb5bf82aab35fed224a3e13cb9eab00ca2100d424401aaac4d051fa6",
+      "projection_signature": "sha256:ccaabfd537b74e15e941c72d3bc16afa58d71a362dc7105e03c64ef3716952d0",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-052",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R110"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "percent_encoding/src/lib.rs::percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: percent_encoding/src/lib.rs; surface: percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error. Behavior: percentencoding.DecodeString(\"%00%9F%92%96\").DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\".. Required postcondition: d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\".. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:9d0b66c78d216653fc3882bd6598d25913850374291d47710425d6bcbce16c92",
+      "projection_signature": "sha256:d2af323d9cc5546c53a9334892d161b631d6b28e9e47deca17e5db7323a91529",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-064",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R105"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::formurlencoded.Parser.Next and url.URL.QueryPairs"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/lib.rs; surface: formurlencoded.Parser.Next and url.URL.QueryPairs. Behavior: formurlencoded.ParseString(\"foo=bar&baz\").Next() yields (\"foo\",\"bar\",true) then (\"baz\",\"\",true) then (\"\",\"\",false); ParseString(\"%23first=%25try%25\").Next() yields (\"#first\",\"%try%\",true); ParseString(\"a=1+2\").Next() yields (\"a\",\"1 2\",true).. Required postcondition: u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\".. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:c280f74e7f50840838e4e2bf10ddaf41489949f10ee884885fe3b8297867cc10",
+      "projection_signature": "sha256:cf8f02373698438626c6877c57c457844bb007a70abf30a44a38c95b689f1f83",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-065",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R111"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "idna/src/lib.rs::idna.DomainToASCII, DomainToASCIIStrict, DomainToUnicode, ErrInvalidDomain"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: idna/src/lib.rs; surface: idna.DomainToASCII, DomainToASCIIStrict, DomainToUnicode, ErrInvalidDomain. Behavior: idna.DomainToASCII(\"EXAMPLE.COM\")==(\"example.com\",nil), idna.DomainToASCII(\"faß.de\")==(\"xn--fa-hia.de\",nil), idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true, and idna.DomainToUnicode(\"xn--fa-hia.de\")==(\"faß.de\",nil).. Required postcondition: idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:c6a68e1d10732a2c4b9d21a2330e4b09f1c26fff5480e23b52332d6fa211723d",
+      "projection_signature": "sha256:d2f2f47d604a279320d510d3a03802cede89980c3566426cae2bca85e572624f",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-066",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R103"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/quirks.rs::url.URL.SetPath percent-encoding"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/quirks.rs; surface: url.URL.SetPath percent-encoding. Behavior: On u,_:=Parse(\"http://a/\"), u.SetPath(\"api/some comments\") gives Path()==\"/api/some%20comments\", and u.SetPath(\"api/some%20comments\") leaves Path()==\"/api/some%20comments\" (an existing %20 is not double-encoded).. Required postcondition: url.Parse(\"http://example.com/\").PortOrKnownDefault()==(80,true) and Port()==(0,false), url.Parse(\"https://x:8443/\").Port()==(8443,true), and after u,_:=url.Parse(\"http://example.com/\"); p:=uint16(80); u.SetPort(&p), u.Port()==(0,false) and u.AsStr()==\"http://example.com/\".. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:d86b39933881a4676f8084bea56a05a76c8ca1a81dcbf329087960781f6ef6bb",
+      "projection_signature": "sha256:2a5d3a01be5f3b9f0f3e7ea64a14dbc3876ba3f3f9ca59e8f72519c3000a4e8d",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-071",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R105"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::url.URL.QueryPairsMut (AppendPair, Clear, Finish) and fragment preservation"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/lib.rs; surface: url.URL.QueryPairsMut (AppendPair, Clear, Finish) and fragment preservation. Behavior: On u,_:=Parse(\"http://a/?x=1#frag\"), u.QueryPairsMut().AppendPair(\"y\",\"2\").Finish() gives AsStr()==\"http://a/?x=1&y=2#frag\"; and u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() gives AsStr()==\"http://a/?a=b#frag\", keeping an (empty) query rather than removing it.. Required postcondition: u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\".. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:f70fce3e6bca09424b105904638c0debe4e48cc81f14a1578b781bf21810e9c4",
+      "projection_signature": "sha256:073eae3bd6d457dd86ae794a536786e6dbbace3f70dd4e7269369c8aa817466e",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-068",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R002"
+      ],
+      "coverage": {
+        "input_class": "declared-entry",
+        "projection": "dependency-execution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "dependency-policy",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::runtime entry"
+      },
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: url/src/lib.rs; surface: runtime entry. Behavior: url package exposes the URL record, Parse, Join, AsStr, all accessors and the sentinel errors.. Required postcondition: With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:e698226257b03297dcef17d93fd9b55864724c1c2ce5b4cb7b2b107ec7637f4c",
+      "projection_signature": "sha256:8f91c93b207c38197cdd77f006600a0d75b675b191336c4b5ff83c6559afab82",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-055",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "dependency-execution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "dependency-policy",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/tests/unit.rs::url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)"
+      },
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: url/tests/unit.rs; surface: url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase). Behavior: For \"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\", Parse returns AsStr()==input, Scheme()==\"https\", Username()==\"\", Password()==(\"\",false), HostStr()==(\"github.com\",true), Host().Kind()==HostDomain, Port()==(0,false), Path()==\"/rust-lang/rust/issues\", PathSegments()==[\"rust-lang\",\"rust\",\"issues\"], Query()==(\"labels=E-easy&state=open\",true), Fragment()==(\"\",false), CannotBeABase()==false.. Required postcondition: The collected patch relative to baseline adds only go.mod and .go files under url/, idna/, percentencoding/, formurlencoded/, and internal/; `go test ./url` passes while url/tests/urltestdata.json is byte-identical, showing the change set is limited to the added Go module and its test assets.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:a102013b66d8ff1a15ab16fd4012094dd6e7b5e3a5d457e32b6299bad6f84901",
+      "projection_signature": "sha256:d6fcbd5f60e20085f2d60893fe6e1680be0e34f468d17e1ebcfa09d1989dabb3",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-056",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R025"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "dependency-execution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "dependency-policy",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/tests/unit.rs::url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)"
+      },
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: url/tests/unit.rs; surface: url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase). Behavior: For \"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\", Parse returns AsStr()==input, Scheme()==\"https\", Username()==\"\", Password()==(\"\",false), HostStr()==(\"github.com\",true), Host().Kind()==HostDomain, Port()==(0,false), Path()==\"/rust-lang/rust/issues\", PathSegments()==[\"rust-lang\",\"rust\",\"issues\"], Query()==(\"labels=E-easy&state=open\",true), Fragment()==(\"\",false), CannotBeABase()==false.. Required postcondition: The files url/tests/urltestdata.json, url/tests/setters_tests.json, idna/tests/IdnaTestV2.txt, idna/tests/punycode_tests.json, and idna/tests/bad_punycode_tests.json are byte-identical to baseline while the runtime test reads url/tests/urltestdata.json; mutating one expected value there makes `go test ./url` fail, so expected values are not hardcoded.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:a32980c6c465483811f7b9da31559eaba50dbaab194f93d05ed3477e3bf482a9",
+      "projection_signature": "sha256:d6fcbd5f60e20085f2d60893fe6e1680be0e34f468d17e1ebcfa09d1989dabb3",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-057",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R110"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "percent_encoding/src/lib.rs::percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: percent_encoding/src/lib.rs; surface: percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add. Behavior: percentencoding.PercentEncode([]byte(\"foo bar?\"), &percentencoding.NonAlphanumeric)==\"foo%20bar%3F\", percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric and t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\".. Required postcondition: d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\".. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:a6664590718aa39471289a91f01a511a1c624193bd534086207f77347921d1bd",
+      "projection_signature": "sha256:3c77c82bdd61b6e8969b234a0cd1ae4b2ed691f56fcf507ec3699c821004b914",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-059",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R109"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "percent_encoding/src/ascii_set.rs::percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: percent_encoding/src/ascii_set.rs; surface: percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add. Behavior: percentencoding.PercentEncode([]byte(\"foo bar?\"), &percentencoding.NonAlphanumeric)==\"foo%20bar%3F\", percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric and t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\".. Required postcondition: percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:ba101f82f7c0534145834826e89728d6c191bd4d9ea65b13e9b6d949cc5b35cd",
+      "projection_signature": "sha256:4490281bd43c49e02876b066b36ab1eb37297f5867db1142797a024de84567c5",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-060",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R102"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/lib.rs; surface: url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase). Behavior: For \"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\", Parse returns AsStr()==input, Scheme()==\"https\", Username()==\"\", Password()==(\"\",false), HostStr()==(\"github.com\",true), Host().Kind()==HostDomain, Port()==(0,false), Path()==\"/rust-lang/rust/issues\", PathSegments()==[\"rust-lang\",\"rust\",\"issues\"], Query()==(\"labels=E-easy&state=open\",true), Fragment()==(\"\",false), CannotBeABase()==false.. Required postcondition: url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:ba8dd503fe084fc5974fa2b69e3f91c2231735489274535d5bb7cc1e260451af",
+      "projection_signature": "sha256:d2ca0cefe355dfc4ab41e8573ae547fd9699cddb074068a8d2d5ba83fb1a68c2",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-061",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R109"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "percent_encoding/src/lib.rs::percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: percent_encoding/src/lib.rs; surface: percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error. Behavior: percentencoding.DecodeString(\"%00%9F%92%96\").DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\".. Required postcondition: percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:bc05e3d913611fd98d8ca2188347330225eb3ce5f34c33aeb228fae5ff75cbb8",
+      "projection_signature": "sha256:d2af323d9cc5546c53a9334892d161b631d6b28e9e47deca17e5db7323a91529",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-062",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R109"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "percent_encoding/src/ascii_set.rs::percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: percent_encoding/src/ascii_set.rs; surface: percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error. Behavior: percentencoding.DecodeString(\"%00%9F%92%96\").DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\".. Required postcondition: percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:bc5a2557b56516f1bb342b6edaf24c6b2c0710a81219196d4a68ecf1ba005004",
+      "projection_signature": "sha256:f2f2bcc07449dab7fd1da46cd137a26fca7f7f801fb76a97155490e30a047d4a",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-063",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R102"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/lib.rs; surface: Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded. Behavior: The module exposes url.Parse, the URL methods, Host/HostKind, Origin, the documented url error sentinels, idna.DomainToASCII/DomainToASCIIStrict/DomainToUnicode/ErrInvalidDomain, punycode.Encode/EncodeString/Decode/DecodeToString, percentencoding.ASCIIStringSet/PercentEncode/PercentEncodeByte/UTF8PercentEncode/Decode/PercentDecode/UTF8Error, and formurlencoded.Parse/ParseString/ByteSerialize/Serializer with the documented signatures, so existing callers compile unchanged.. Required postcondition: url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:bd2b24a6a33d27ea58e99bbb5b64f9028003204f5ead40f670c83d4d141b1fb8",
+      "projection_signature": "sha256:83f5fd13eda1dfaf72e8a85b08e96ef7339525d1f2ac3539d8f9030ee6f16ab8",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-067",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R002"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "dependency-execution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "dependency-policy",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)"
+      },
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: url/src/lib.rs; surface: url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase). Behavior: For \"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\", Parse returns AsStr()==input, Scheme()==\"https\", Username()==\"\", Password()==(\"\",false), HostStr()==(\"github.com\",true), Host().Kind()==HostDomain, Port()==(0,false), Path()==\"/rust-lang/rust/issues\", PathSegments()==[\"rust-lang\",\"rust\",\"issues\"], Query()==(\"labels=E-easy&state=open\",true), Fragment()==(\"\",false), CannotBeABase()==false.. Required postcondition: With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:d9c0f45553a10de975cad33dbf2203d4ce7ba612a9d055e72d671e85d87b3552",
+      "projection_signature": "sha256:22a4e8526f71c6376e93a1b9f7ca585812c3bfd2e710ced1218bbbebd8dd555c",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-069",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R101"
+      ],
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url/src/lib.rs::Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded"
+      },
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: url/src/lib.rs; surface: Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded. Behavior: The module exposes url.Parse, the URL methods, Host/HostKind, Origin, the documented url error sentinels, idna.DomainToASCII/DomainToASCIIStrict/DomainToUnicode/ErrInvalidDomain, punycode.Encode/EncodeString/Decode/DecodeToString, percentencoding.ASCIIStringSet/PercentEncode/PercentEncodeByte/UTF8PercentEncode/Decode/PercentDecode/UTF8Error, and formurlencoded.Parse/ParseString/ByteSerialize/Serializer with the documented signatures, so existing callers compile unchanged.. Required postcondition: url.Parse(\"data:text/plain,Hello?World#\") yields Fragment()==(\"\",true) (empty-but-present) while url.Parse(\"data:text/plain,Hello\") yields Fragment()==(\"\",false); a Rust Option<&str> mapping that collapses None and Some(\"\") to the same value fails this pair.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:ea0f0747d0666fd01f022b11bd384ad3d91ad9d2858b818681ec05d5028d347b",
+      "projection_signature": "sha256:83f5fd13eda1dfaf72e8a85b08e96ef7339525d1f2ac3539d8f9030ee6f16ab8",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-049",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R019"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "Go package import graph"
+      },
+      "atomic_claim": "With the Rust crate sources removed and cargo absent, `go test ./...` compiles and url.Parse(\"https://example.com/\") returns AsStr \"https://example.com/\"; `go list -deps github.com/servo/rust-url/url` reports only the Go standard library and github.com/servo/rust-url/... packages, so no Go source imports or calls the Rust crates.",
+      "fingerprint": "sha256:9500883fa6455031d8189f85a24d8c1ec69de447b3239b4c52085dd5ff09783c",
+      "projection_signature": "sha256:28557a0a4acbaeb3b428d0f962db0fd334ad4e10050b6fe52143a19abdc69758",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-050",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R104"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url.PathSegmentsMut encoding of % and / inside a segment"
+      },
+      "atomic_claim": "u,_:=url.Parse(\"http://a/b/c?q#frag\"); u.PathSegmentsMut().Pop().Push(\"2/100%.png\") yields Path()==\"/b/2%2F100%25.png\" with Query()==(\"q\",true) and Fragment()==(\"frag\",true); leaving / or % unencoded produces \"/b/2/100%.png\".",
+      "fingerprint": "sha256:9826aebf471a89abf8518f26b0e13aaa7050e65b4b994d8e28a91ea3b16a72dd",
+      "projection_signature": "sha256:fd20301410ed3ae58f9eca4f7be2e080c57578524f2eaca8b65ba100e1c75373",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-053",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R024"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "Existing Rust crate sources unmodified"
+      },
+      "atomic_claim": "`git diff --name-only` lists no path under url/src/, idna/src/, percent_encoding/src/, form_urlencoded/src/, or Cargo.toml, yet url.Parse(\"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\").Path()==\"/rust-lang/rust/issues\", so the Go outcome does not depend on editing the Rust crates.",
+      "fingerprint": "sha256:9d1a009ccdb6646eacf4e95555178df63f84823e85f3e854ddb8e9247df94c2a",
+      "projection_signature": "sha256:022f33c0e03301e57ac373cd56cba7366a606da66ff6aacb0717e622d695f537",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-058",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R112"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "Punycode RFC 3492 round-trip and boolean success flag"
+      },
+      "atomic_claim": "punycode.EncodeString(\"bücher\")==(\"bcher-kva\",true) and punycode.DecodeToString(\"bcher-kva\")==(\"bücher\",true), while punycode.Decode(\"<<>>\") returns (nil,false); a port that panics or reports ok==true for malformed input fails.",
+      "fingerprint": "sha256:acc056f784418c20e45b7d0288cb0c5809b4dc2fee8de3b85f0529ca69e6d9cf",
+      "projection_signature": "sha256:ac37b0ccb3b5bd6c49bbe2e76a48e7338d92c9665a3a3f490f6f48e607c3eb1b",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-070",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R102"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "url package sentinel errors comparable via errors.Is"
+      },
+      "atomic_claim": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is.",
+      "fingerprint": "sha256:ee4357ea1fb94881207cdb9e13e625484e941172168922be4afd2b175a72b488",
+      "projection_signature": "sha256:4b173228f07602b56f656b51c26bb25357dbb1b9e03164948736e42ae013f9a1",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-072",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R106"
+      ],
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "IPv6 host RFC 5952 lowercase maximal compression"
+      },
+      "atomic_claim": "url.ParseHost(\"[2001:0db8:0000:0000:0000:ff00:0042:8329]\").String()==\"[2001:db8::ff00:42:8329]\" and url.ParseHost(\"[:::1]\") returns an error with errors.Is(err, url.ErrInvalidIPv6Address)==true; uppercase or uncompressed output fails.",
+      "fingerprint": "sha256:fb6b61607c6801d49275223567dcdaca82aa6f9920b1dfa85583c70f751687a8",
+      "projection_signature": "sha256:2bc39046a7f4a76266689c4327e2a341a04cf5f035a733f6666027c9ce13a4b6",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-051",
+      "family": "target-runtime",
+      "contract_requirement_ids": [
+        "R111"
+      ],
+      "coverage": {
+        "input_class": "declared-entry",
+        "projection": "target-entry-identity",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.23.0",
+          "name": "Go",
+          "version": "1.23.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "Rust",
+          "language_version": "2018",
+          "name": "Rust",
+          "version": "2018"
+        },
+        "surface": "idna/src/uts46.rs::runtime entry"
+      },
+      "atomic_claim": "Start or instantiate this entry and inspect its actual target technology identity/version. Scope: idna/src/uts46.rs; surface: runtime entry. Behavior: idna package exposes DomainToASCII, DomainToASCIIStrict, DomainToUnicode, ErrInvalidDomain over UTS #46.. Required postcondition: idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "fingerprint": "sha256:9b7ce46deb707e2cc9e0f1b2dcb02081a70153d1648769055597f42716f37ffa",
+      "projection_signature": "sha256:9067c7051650135058d5ccb14e16545a95f422bf6fd81ed102bb1e31170d8590",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

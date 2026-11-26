@@ -1,0 +1,61 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/usewaypoint__email-builder-js"
+description = "Migrate email-builder Text Markdown rendering from marked 12 to markdown-it 14.1.0."
+
+[metadata]
+category = "Framework_migration"
+language = "typescript"
+repository_id = "59f32ed7-eec8-47ce-b847-4d144e09d843"
+task_id = "tp-83052b35a2086a6bed787c9b89d3462f"
+repository_url = "https://github.com/usewaypoint/email-builder-js"
+base_commit_hash = "ce3e610749fc80d7e999b20e28f6e775bfe09da7"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 26
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:usewaypoint__email-builder-js-verifier-image-20261126"
+image_digest = "sha256:86ecb88e664bf6a50db2aa70c5f5b265a7611e5cbcf147f27d8e188f74c10cba"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached ce3e610749fc80d7e999b20e28f6e775bfe09da7 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:usewaypoint__email-builder-js-task-image-20261126"
+image_digest = "sha256:130e9c095441d9d08a8a29743009a535cd8b0b481c2508cecc337a2ad103a6e6"

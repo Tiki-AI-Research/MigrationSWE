@@ -1,0 +1,18 @@
+#!/bin/sh
+# BATCH-INTEGRATION-0001 target-side runner.
+#
+# Usage: target/runner [REPORT]
+#
+# Merges the target-side executable projections of the observation batches
+# (P2P / F2P / DIFFERENTIAL / CONTRACT) into a `migration-observations:v6`
+# report. The asset root is derived from this script's location; the repository
+# under test is read from MIGRATION_REPO_ROOT / MIGRATION_REPO / REPO_ROOT /
+# REPO (falling back to /workspace/repo). All long-running commands are bounded
+# by explicit `timeout`s inside the shared driver.
+set -eu
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ASSET_ROOT=$(dirname -- "$HERE")
+REPORT="${1:-/logs/result.json}"
+
+exec python3 "${ASSET_ROOT}/shared/integration/runner.py" --side target "${REPORT}"

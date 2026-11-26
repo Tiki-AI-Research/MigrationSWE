@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/gre__react-native-view-shot"
+description = "Upgrade react-native-view-shot integration from React Native 0.84.1 to 0.85.0."
+
+[metadata]
+category = "Version_upgrade"
+language = "typescript"
+repository_id = "06afe787-767d-4244-85b6-cad27a5c40e0"
+task_id = "tp-0fc0bc16f358ea2e0f69d49919572fe3"
+repository_url = "https://github.com/gre/react-native-view-shot"
+base_commit_hash = "68880f87a26e56a36965290109e044b598dec141"
+
+[metadata.tests]
+fail_to_pass_count = 71
+pass_to_pass_count = 33
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:gre__react-native-view-shot-verifier-image-20261126"
+image_digest = "sha256:ed918483fa013c0232abc2d99af1e684d1fe8abbec620794795ec9d391568681"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 68880f87a26e56a36965290109e044b598dec141 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:gre__react-native-view-shot-task-image-20261126"
+image_digest = "sha256:60e3e3617991c9104cd94c2f3b6d4edaeef9f359d1ddf9fb15bdf07cde5929cc"

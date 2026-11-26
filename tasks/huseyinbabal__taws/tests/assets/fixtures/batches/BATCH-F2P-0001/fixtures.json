@@ -1,0 +1,183 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "role": "static input fixtures for BATCH-F2P-0001 F2P observation probes",
+  "schema_version": "migration-asset-fixtures:v2",
+  "consumes_dependency": "BATCH-SKELETON-0001",
+  "fixtures": [
+    {
+      "id": "BATCH-F2P-0001-FIX-001",
+      "for": [
+        "F2P-001",
+        "F2P-017"
+      ],
+      "kind": "expected-value",
+      "name": "expected_version_line",
+      "value": "taws 1.3.0-rc.8\n",
+      "source_evidence": {
+        "path": "Cargo.toml",
+        "line": 3
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-002",
+      "for": [
+        "F2P-014"
+      ],
+      "kind": "cli-input",
+      "name": "invalid_log_level",
+      "args": [
+        "--log-level",
+        "bogus"
+      ],
+      "expected_exit_code": 2,
+      "expected_allowed_values": [
+        "off",
+        "error",
+        "warn",
+        "info",
+        "debug",
+        "trace"
+      ],
+      "source_evidence": {
+        "path": "src/main.rs",
+        "line": 37
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-003",
+      "for": [
+        "F2P-005",
+        "F2P-022"
+      ],
+      "kind": "environment",
+      "name": "endpoint_env",
+      "AwsEndpointUrl": "http://localhost:4566",
+      "explicit_endpoint": "http://explicit.local:9999",
+      "source_evidence": {
+        "path": "src/aws/http.rs",
+        "line": 510
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-004",
+      "for": [
+        "F2P-002",
+        "F2P-007"
+      ],
+      "kind": "request-expectation",
+      "name": "ec2_query_request",
+      "service": "ec2",
+      "action": "DescribeInstances",
+      "params": [
+        [
+          "MaxResults",
+          "10"
+        ]
+      ],
+      "expected_method": "POST",
+      "expected_query_contains": [
+        "Action=DescribeInstances",
+        "Version=",
+        "MaxResults=10"
+      ],
+      "source_evidence": {
+        "path": "src/aws/http.rs",
+        "line": 510
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-005",
+      "for": [
+        "F2P-024"
+      ],
+      "kind": "request-expectation",
+      "name": "dynamodb_json_request",
+      "service": "dynamodb",
+      "action": "ListTables",
+      "expected_method": "POST",
+      "expected_headers": {
+        "X-Amz-Target": "DynamoDB_20120810.ListTables",
+        "Content-Type": "application/x-amz-json-1.0"
+      },
+      "source_evidence": {
+        "path": "src/aws/http.rs",
+        "line": 554
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-006",
+      "for": [
+        "F2P-001"
+      ],
+      "kind": "yaml-document",
+      "name": "valid_preferences",
+      "content": "profile: dev\nregion: eu-west-1\nlast_resource: ec2-instances\nrecently_used_regions:\n  - eu-west-1\n  - us-east-1\n",
+      "source_evidence": {
+        "path": "src/config.rs",
+        "line": 29
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-007",
+      "for": [
+        "F2P-001"
+      ],
+      "kind": "yaml-document",
+      "name": "invalid_preferences",
+      "content": ": [unterminated\n",
+      "expect_no_panic": true,
+      "source_evidence": {
+        "path": "src/config.rs",
+        "line": 46
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-008",
+      "for": [
+        "F2P-012"
+      ],
+      "kind": "aws-profile-config",
+      "name": "sso_and_console_profiles",
+      "config_ini": "[profile sso-prof]\nsso_session = my-sso\nsso_account_id = 111122223333\nsso_role_name = ReadOnly\nsso_region = us-east-1\n\n[profile console-prof]\nlogin_session = arn:aws:iam::111122223333:user/dev\n",
+      "expected_error_kinds": [
+        "ErrSSOLoginRequired",
+        "ErrConsoleLoginRequired"
+      ],
+      "source_evidence": {
+        "path": "src/aws/credentials.rs",
+        "line": 34
+      }
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-009",
+      "for": [
+        "F2P-015",
+        "F2P-018",
+        "F2P-019",
+        "F2P-023"
+      ],
+      "kind": "baseline",
+      "name": "catalog_baseline",
+      "base_commit": "d1cbf6e450eced9a7947cf810764ec79599c7793",
+      "catalog_glob": "src/resources/*.json",
+      "expected_unchanged": true
+    },
+    {
+      "id": "BATCH-F2P-0001-FIX-010",
+      "for": [
+        "F2P-021"
+      ],
+      "kind": "registry-expectation",
+      "name": "ec2_instances_resource",
+      "resource_key": "ec2-instances",
+      "expected_display_name": "EC2 Instances",
+      "expected_service": "ec2",
+      "expected_sdk_method": "describe_instances",
+      "expected_color_map": "state",
+      "source_evidence": {
+        "path": "src/resource/registry.rs",
+        "line": 15
+      }
+    }
+  ]
+}

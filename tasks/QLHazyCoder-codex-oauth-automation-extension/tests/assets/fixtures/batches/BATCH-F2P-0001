@@ -1,0 +1,108 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "scope": "fixtures",
+  "observations": [
+    "F2P-001",
+    "F2P-002",
+    "F2P-003",
+    "F2P-004",
+    "F2P-007",
+    "F2P-010",
+    "F2P-013",
+    "F2P-016",
+    "F2P-017",
+    "F2P-019",
+    "F2P-020",
+    "F2P-021",
+    "F2P-022",
+    "F2P-005",
+    "F2P-006",
+    "F2P-008",
+    "F2P-011",
+    "F2P-012",
+    "F2P-014",
+    "F2P-018",
+    "F2P-023",
+    "F2P-009",
+    "F2P-015",
+    "F2P-024"
+  ],
+  "entries": [
+    {
+      "id": "FIXTURE-001",
+      "observation_ids": [
+        "F2P-022",
+        "F2P-006"
+      ],
+      "payload": {
+        "records": [
+          {
+            "email": "a@b.com",
+            "password": "p",
+            "finalStatus": "success",
+            "retryCount": 2
+          }
+        ]
+      },
+      "expected": {
+        "summary": {
+          "total": 1,
+          "success": 1,
+          "failed": 0,
+          "retryTotal": 2
+        }
+      }
+    },
+    {
+      "id": "FIXTURE-002",
+      "observation_ids": [
+        "F2P-002",
+        "F2P-014"
+      ],
+      "payload": {
+        "email": "a@b.com",
+        "password": "p",
+        "status": "success",
+        "recordedAt": "2020-01-01T00:00:00Z",
+        "reason": "r"
+      },
+      "expected": {
+        "line": "2020-01-01T00:00:00Z\ta@b.com\tp\tsuccess\tr"
+      }
+    },
+    {
+      "id": "FIXTURE-003",
+      "observation_ids": [
+        "F2P-009",
+        "F2P-015",
+        "F2P-007"
+      ],
+      "env": {
+        "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT": "18000"
+      },
+      "expected": {
+        "bind": "127.0.0.1:18000"
+      }
+    },
+    {
+      "id": "FIXTURE-004",
+      "observation_ids": [
+        "F2P-010",
+        "F2P-017",
+        "F2P-024"
+      ],
+      "method": "POST",
+      "path": "/does-not-exist",
+      "expected": {
+        "status": 404,
+        "body": {
+          "ok": false,
+          "error": "Unsupported path: /does-not-exist"
+        },
+        "content_type": "application/json; charset=utf-8"
+      }
+    }
+  ]
+}

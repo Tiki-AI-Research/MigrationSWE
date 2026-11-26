@@ -1,0 +1,226 @@
+diff --git a/packages/hono-party/package.json b/packages/hono-party/package.json
+index 3027d3ab037f335c3f8c1df4defc221957360908..2ce4f926869fee24bde1b2a8e1ac28132117f681 100644
+--- a/packages/hono-party/package.json
++++ b/packages/hono-party/package.json
+@@ -31,12 +31,12 @@
+   "description": "Use PartyServer with Hono",
+   "peerDependencies": {
+     "@cloudflare/workers-types": "^4.20260424.1",
+-    "hono": "^4.6.17",
++    "elysia": "^1.3.0",
+     "partyserver": ">=0.2.0 <1.0.0"
+   },
+   "devDependencies": {
+     "@cloudflare/workers-types": "^4.20260426.1",
+-    "hono": "^4.12.15",
++    "elysia": "^1.3.0",
+     "partyserver": "^0.5.10"
+   }
+ }
+diff --git a/packages/hono-party/src/index.ts b/packages/hono-party/src/index.ts
+--- a/packages/hono-party/src/index.ts
++++ b/packages/hono-party/src/index.ts
+@@ -1,28 +1,34 @@
+-import { env } from "hono/adapter";
+-import { createMiddleware } from "hono/factory";
++import { env } from "cloudflare:workers";
+ import { routePartykitRequest } from "partyserver";
+ 
+-import type { Context, Env } from "hono";
++import type { AnyElysia, PreContext } from "elysia";
+ import type { Lobby, PartyServerOptions } from "partyserver";
+ 
++type Bindings = object;
++
++type DefaultBindings = Record<string, unknown>;
++
++type PartyServerContext<E extends { Bindings: Bindings }> = PreContext & {
++  env: E["Bindings"];
++};
++
+ /**
+- * Extended options for the Hono middleware that pass the Hono context
+- * to `onBeforeConnect` and `onBeforeRequest` as a third argument,
+- * giving access to `c.env`, `c.var`, `c.get()`, etc.
++ * Extended options for the PartyServer plugin that pass the Elysia
++ * request context and the current environment bindings to
++ * `onBeforeConnect` and `onBeforeRequest` as a third argument.
+  */
+-export type HonoPartyServerOptions<E extends Env> = Omit<
+-  PartyServerOptions,
+-  "onBeforeConnect" | "onBeforeRequest"
+-> & {
++export type HonoPartyServerOptions<
++  E extends { Bindings: Bindings } = { Bindings: DefaultBindings }
++> = Omit<PartyServerOptions, "onBeforeConnect" | "onBeforeRequest"> & {
+   onBeforeConnect?: (
+     req: Request,
+     lobby: Lobby,
+-    c: Context<E>
++    c: PartyServerContext<E>
+   ) => Response | Request | void | Promise<Response | Request | void>;
+   onBeforeRequest?: (
+     req: Request,
+     lobby: Lobby,
+-    c: Context<E>
++    c: PartyServerContext<E>
+   ) =>
+     | Response
+     | Request
+@@ -33,7 +39,9 @@
+ /**
+  * Configuration options for the PartyServer middleware
+  */
+-type PartyServerMiddlewareContext<E extends Env> = {
++type PartyServerMiddlewareContext<
++  E extends { Bindings: Bindings } = { Bindings: DefaultBindings }
++> = {
+   /** PartyServer-specific configuration options */
+   options?: HonoPartyServerOptions<E>;
+   /** Optional error handler for caught errors */
+@@ -41,50 +49,62 @@
+ };
+ 
+ /**
+- * Creates a middleware for handling PartyServer WebSocket and HTTP requests
+- * Processes both WebSocket upgrades and standard HTTP requests, delegating them to PartyServer
++ * Creates an Elysia plugin for handling PartyServer WebSocket and HTTP
++ * requests. Register it with `app.use` before your application routes.
+  */
+-export function partyserverMiddleware<E extends Env = Env>(
+-  ctx?: PartyServerMiddlewareContext<E>
+-) {
+-  return createMiddleware<E>(async (c, next) => {
+-    try {
+-      const options = wrapOptionsWithContext(ctx?.options, c);
+-      const response = isWebSocketUpgrade(c)
+-        ? await handleWebSocketUpgrade(c, options)
+-        : await handleHttpRequest(c, options);
++export function partyserverMiddleware<
++  E extends { Bindings: Bindings } = { Bindings: DefaultBindings }
++>(ctx?: PartyServerMiddlewareContext<E>) {
++  return <App extends AnyElysia>(app: App): App =>
++    app.onRequest(async (c) => {
++      try {
++        // Copy the early Elysia context before passing it to helpers so
++        // Elysia does not infer that every downstream route needs body parsing.
++        const context = { ...c } as PartyServerContext<E>;
++        const bindings = context.env ?? (env as unknown as E["Bindings"]);
++        const options = wrapOptionsWithContext(ctx?.options, context, bindings);
++        // Routing or hooks may consume the forwarded body before throwing.
++        // Keep the original request readable for onError fallthrough.
++        const request = c.request.clone();
++        const response = isWebSocketUpgrade(request)
++          ? await handleWebSocketUpgrade(request, bindings, options)
++          : await handleHttpRequest(request, bindings, options);
+ 
+-      return response === null ? await next() : response;
+-    } catch (error) {
+-      if (ctx?.onError) {
+-        ctx.onError(error as Error);
+-        return next();
++        return response ?? undefined;
++      } catch (error) {
++        if (ctx?.onError) {
++          ctx.onError(error as Error);
++          return undefined;
++        }
++        throw error;
+       }
+-      throw error;
+-    }
+-  });
++    });
+ }
+ 
+ /**
+- * Wraps the Hono-specific options into standard PartyServerOptions by
+- * closing over the Hono context so callbacks receive it as a third arg.
++ * Wraps the options into standard PartyServerOptions by closing over the
++ * Elysia context and environment bindings so callbacks receive them as a
++ * third argument.
+  */
+-function wrapOptionsWithContext<E extends Env>(
++function wrapOptionsWithContext<E extends { Bindings: Bindings }>(
+   options: HonoPartyServerOptions<E> | undefined,
+-  c: Context<E>
++  c: PreContext,
++  bindings: E["Bindings"]
+ ): PartyServerOptions | undefined {
+   if (!options) return undefined;
+ 
++  const hookContext: PartyServerContext<E> = { ...c, env: bindings };
+   const { onBeforeConnect, onBeforeRequest, ...rest } = options;
++
+   return {
+     ...rest,
+     ...(onBeforeConnect && {
+       onBeforeConnect: (req: Request, lobby: Lobby) =>
+-        onBeforeConnect(req, lobby, c)
++        onBeforeConnect(req, lobby, hookContext)
+     }),
+     ...(onBeforeRequest && {
+       onBeforeRequest: (req: Request, lobby: Lobby) =>
+-        onBeforeRequest(req, lobby, c)
++        onBeforeRequest(req, lobby, hookContext)
+     })
+   };
+ }
+@@ -93,31 +113,28 @@
+  * Checks if the incoming request is a WebSocket upgrade request
+  * Looks for the 'upgrade' header with a value of 'websocket' (case-insensitive)
+  */
+-function isWebSocketUpgrade(c: Context): boolean {
+-  return c.req.header("upgrade")?.toLowerCase() === "websocket";
+-}
+-
+-/**
+- * Creates a new Request object from the Hono context
+- * Preserves the original request's URL, method, headers, and body
+- */
+-function createRequestFromContext(c: Context) {
+-  return c.req.raw.clone();
++function isWebSocketUpgrade(request: Request): boolean {
++  return request.headers.get("upgrade")?.toLowerCase() === "websocket";
+ }
+ 
+ /**
+  * Handles WebSocket upgrade requests
+- * Returns a WebSocket upgrade response if successful, null otherwise
++ * Returns a 101 Response carrying the WebSocket handle when the route
++ * produced one, the route's Response when it short-circuited, or null.
+  */
+ async function handleWebSocketUpgrade(
+-  c: Context,
++  request: Request,
++  bindings: object,
+   options?: PartyServerOptions
+ ) {
+-  const req = createRequestFromContext(c);
+-  const response = await routePartykitRequest(req, env(c), options);
++  const response = await routePartykitRequest(request, bindings as Cloudflare.Env, options);
+ 
+-  if (!response?.webSocket) {
++  if (!response) {
+     return null;
++  }
++
++  if (!response.webSocket) {
++    return response;
+   }
+ 
+   return new Response(null, {
+@@ -130,7 +147,10 @@
+  * Handles standard HTTP requests
+  * Forwards the request to PartyServer and returns the response
+  */
+-async function handleHttpRequest(c: Context, options?: PartyServerOptions) {
+-  const req = createRequestFromContext(c);
+-  return routePartykitRequest(req, env(c), options);
++async function handleHttpRequest(
++  request: Request,
++  bindings: object,
++  options?: PartyServerOptions
++) {
++  return routePartykitRequest(request, bindings as Cloudflare.Env, options);
+ }

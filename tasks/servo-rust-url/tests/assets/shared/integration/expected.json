@@ -1,0 +1,499 @@
+{
+  "schema_version": "migration-asset-reference-projection:v1",
+  "batch_id": "BATCH-INTEGRATION-0001",
+  "note": "Frozen normalized source-side behaviour projections for P2P and DIFFERENTIAL observations, captured from the reference target via shared/integration/probe/probe.go. P2P/DIFFERENTIAL source and target values must be equal after normalization.",
+  "projections": {
+    "DIFF-001": {
+      "AsStr": "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+      "CannotBeABase": false,
+      "Fragment": {
+        "present": false,
+        "value": ""
+      },
+      "HostKind": 0,
+      "HostPresent": true,
+      "HostStr": {
+        "present": true,
+        "value": "github.com"
+      },
+      "Password": {
+        "present": false,
+        "value": ""
+      },
+      "Path": "/rust-lang/rust/issues",
+      "PathSegments": {
+        "ok": true,
+        "value": [
+          "rust-lang",
+          "rust",
+          "issues"
+        ]
+      },
+      "Port": {
+        "present": false,
+        "value": 0
+      },
+      "Query": {
+        "present": true,
+        "value": "labels=E-easy&state=open"
+      },
+      "Scheme": "https",
+      "Username": ""
+    },
+    "DIFF-002": {
+      "AsStr": "data:text/plain,Hello?World#",
+      "CannotBeABase": true,
+      "Fragment": {
+        "present": true,
+        "value": ""
+      },
+      "HasHost": false,
+      "Path": "text/plain,Hello",
+      "PathSegments": {
+        "ok": false
+      },
+      "Query": {
+        "present": true,
+        "value": "World"
+      },
+      "Scheme": "data"
+    },
+    "DIFF-003": {
+      "ErrorsIsErrInvalidIPv6Address": true,
+      "ErrorsIsErrInvalidPort": false,
+      "NilURL": true,
+      "ParseError": true
+    },
+    "DIFF-004": {
+      "BaseError": "<nil>",
+      "ErrorsIsErrRelativeURLWithoutBase": true,
+      "Join": {
+        "AsStr": "http://servo.github.io/rust-url/main.css",
+        "input": "../main.css"
+      },
+      "JoinError": "<nil>",
+      "ParseError": true
+    },
+    "DIFF-005": {
+      "HostKind": 2,
+      "Invalid": {
+        "ErrorsIsErrInvalidIPv6Address": true,
+        "input": "[:::1]"
+      },
+      "String": "[2001:db8::ff00:42:8329]"
+    },
+    "DIFF-006": {
+      "SetPortDefaultElision": {
+        "AsStr": "http://example.com/",
+        "Port": {
+          "present": false,
+          "value": 0
+        },
+        "input": "http://example.com/",
+        "setPort": 80
+      },
+      "ftp://x/": {
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 21
+        }
+      },
+      "http://example.com/": {
+        "Port": {
+          "present": false,
+          "value": 0
+        },
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 80
+        }
+      },
+      "https://x/": {
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 443
+        }
+      },
+      "https://x:8443/": {
+        "Port": {
+          "present": true,
+          "value": 8443
+        }
+      }
+    },
+    "DIFF-007": {
+      "SetPath(\"api/some comments\")": "/api/some%20comments",
+      "SetPath(\"api/some%20comments\")": "/api/some%20comments"
+    },
+    "DIFF-008": {
+      "Fragment": {
+        "present": true,
+        "value": "frag"
+      },
+      "Path": "/b/2%2F100%25.png",
+      "Query": {
+        "present": true,
+        "value": "q"
+      }
+    },
+    "DIFF-009": {
+      "AppendPair(y,2)": "http://a/?x=1&y=2#frag",
+      "Clear().AppendPair(a,b)": "http://a/?a=b#frag"
+    },
+    "DIFF-010": {
+      "%23first=%25try%25": [
+        [
+          "#first",
+          "%try%",
+          true
+        ]
+      ],
+      "a=1+2": [
+        [
+          "a",
+          "1 2",
+          true
+        ]
+      ],
+      "foo=bar&baz": [
+        [
+          "foo",
+          "bar",
+          true
+        ],
+        [
+          "baz",
+          "",
+          true
+        ],
+        [
+          "",
+          "",
+          false
+        ]
+      ]
+    },
+    "DIFF-011": {
+      "AddValueSemantics": {
+        "base": "a",
+        "withAdd": "%61"
+      },
+      "PercentEncode(foo bar?, NonAlphanumeric)": "foo%20bar%3F",
+      "PercentEncodeByte(0x3F)": "%3F"
+    },
+    "DIFF-012": {
+      "DecodeUTF8IsUTF8Error": true,
+      "DecodeUTF8Lossy": "\u0000���",
+      "ErrorLen": {
+        "present": true,
+        "value": 1
+      },
+      "ValidUpTo": 1
+    },
+    "DIFF-013": {
+      "DomainToASCII(EXAMPLE.COM)": {
+        "ok": true,
+        "value": "example.com"
+      },
+      "DomainToASCII(faß.de)": {
+        "ok": true,
+        "value": "xn--fa-hia.de"
+      },
+      "DomainToASCII(foo_bar.example)": {
+        "ok": true,
+        "value": "foo_bar.example"
+      },
+      "DomainToASCIIStrict(foo_bar.example)": {
+        "ErrorsIsErrInvalidDomain": true
+      },
+      "DomainToUnicode(xn--fa-hia.de)": {
+        "ok": true,
+        "value": "faß.de"
+      }
+    },
+    "DIFF-014": {
+      "Decode(<<>>)": {
+        "ok": false,
+        "value": null
+      },
+      "DecodeToString(bcher-kva)": {
+        "ok": true,
+        "value": "bücher"
+      },
+      "EncodeString(bücher)": {
+        "ok": true,
+        "value": "bcher-kva"
+      }
+    },
+    "DIFF-015": {
+      "blob:https://example.com/uuid": {
+        "ASCIISerialization": "https://example.com",
+        "IsTuple": true
+      },
+      "file:///etc": {
+        "ASCIISerialization": "null",
+        "IsTuple": false
+      },
+      "https://example.com:443/": {
+        "ASCIISerialization": "https://example.com",
+        "IsTuple": true
+      }
+    },
+    "DIFF-016": {
+      "compile_unchanged": true,
+      "packages": [
+        "github.com/servo/rust-url/url",
+        "github.com/servo/rust-url/idna",
+        "github.com/servo/rust-url/idna/punycode",
+        "github.com/servo/rust-url/percentencoding",
+        "github.com/servo/rust-url/formurlencoded"
+      ]
+    },
+    "P2P-001": {
+      "blob:https://example.com/uuid": {
+        "ASCIISerialization": "https://example.com",
+        "IsTuple": true
+      },
+      "file:///etc": {
+        "ASCIISerialization": "null",
+        "IsTuple": false
+      },
+      "https://example.com:443/": {
+        "ASCIISerialization": "https://example.com",
+        "IsTuple": true
+      }
+    },
+    "P2P-002": {
+      "%23first=%25try%25": [
+        [
+          "#first",
+          "%try%",
+          true
+        ]
+      ],
+      "a=1+2": [
+        [
+          "a",
+          "1 2",
+          true
+        ]
+      ],
+      "foo=bar&baz": [
+        [
+          "foo",
+          "bar",
+          true
+        ],
+        [
+          "baz",
+          "",
+          true
+        ],
+        [
+          "",
+          "",
+          false
+        ]
+      ]
+    },
+    "P2P-003": {
+      "DomainToASCII(EXAMPLE.COM)": {
+        "ok": true,
+        "value": "example.com"
+      },
+      "DomainToASCII(faß.de)": {
+        "ok": true,
+        "value": "xn--fa-hia.de"
+      },
+      "DomainToASCII(foo_bar.example)": {
+        "ok": true,
+        "value": "foo_bar.example"
+      },
+      "DomainToASCIIStrict(foo_bar.example)": {
+        "ErrorsIsErrInvalidDomain": true
+      },
+      "DomainToUnicode(xn--fa-hia.de)": {
+        "ok": true,
+        "value": "faß.de"
+      }
+    },
+    "P2P-004": {
+      "DecodeUTF8IsUTF8Error": true,
+      "DecodeUTF8Lossy": "\u0000���",
+      "ErrorLen": {
+        "present": true,
+        "value": 1
+      },
+      "ValidUpTo": 1
+    },
+    "P2P-005": {
+      "Fragment": {
+        "present": true,
+        "value": "frag"
+      },
+      "Path": "/b/2%2F100%25.png",
+      "Query": {
+        "present": true,
+        "value": "q"
+      }
+    },
+    "P2P-006": {
+      "HostKind": 2,
+      "Invalid": {
+        "ErrorsIsErrInvalidIPv6Address": true,
+        "input": "[:::1]"
+      },
+      "String": "[2001:db8::ff00:42:8329]"
+    },
+    "P2P-007": {
+      "AppendPair(y,2)": "http://a/?x=1&y=2#frag",
+      "Clear().AppendPair(a,b)": "http://a/?a=b#frag"
+    },
+    "P2P-008": {
+      "AddValueSemantics": {
+        "base": "a",
+        "withAdd": "%61"
+      },
+      "PercentEncode(foo bar?, NonAlphanumeric)": "foo%20bar%3F",
+      "PercentEncodeByte(0x3F)": "%3F"
+    },
+    "P2P-009": {
+      "compile_unchanged": true,
+      "packages": [
+        "github.com/servo/rust-url/url",
+        "github.com/servo/rust-url/idna",
+        "github.com/servo/rust-url/idna/punycode",
+        "github.com/servo/rust-url/percentencoding",
+        "github.com/servo/rust-url/formurlencoded"
+      ]
+    },
+    "P2P-010": {
+      "ErrorsIsErrInvalidIPv6Address": true,
+      "ErrorsIsErrInvalidPort": false,
+      "NilURL": true,
+      "ParseError": true
+    },
+    "P2P-011": {
+      "AsStr": "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+      "CannotBeABase": false,
+      "Fragment": {
+        "present": false,
+        "value": ""
+      },
+      "HostKind": 0,
+      "HostPresent": true,
+      "HostStr": {
+        "present": true,
+        "value": "github.com"
+      },
+      "Password": {
+        "present": false,
+        "value": ""
+      },
+      "Path": "/rust-lang/rust/issues",
+      "PathSegments": {
+        "ok": true,
+        "value": [
+          "rust-lang",
+          "rust",
+          "issues"
+        ]
+      },
+      "Port": {
+        "present": false,
+        "value": 0
+      },
+      "Query": {
+        "present": true,
+        "value": "labels=E-easy&state=open"
+      },
+      "Scheme": "https",
+      "Username": ""
+    },
+    "P2P-012": {
+      "AsStr": "data:text/plain,Hello?World#",
+      "CannotBeABase": true,
+      "Fragment": {
+        "present": true,
+        "value": ""
+      },
+      "HasHost": false,
+      "Path": "text/plain,Hello",
+      "PathSegments": {
+        "ok": false
+      },
+      "Query": {
+        "present": true,
+        "value": "World"
+      },
+      "Scheme": "data"
+    },
+    "P2P-013": {
+      "SetPath(\"api/some comments\")": "/api/some%20comments",
+      "SetPath(\"api/some%20comments\")": "/api/some%20comments"
+    },
+    "P2P-014": {
+      "Decode(<<>>)": {
+        "ok": false,
+        "value": null
+      },
+      "DecodeToString(bcher-kva)": {
+        "ok": true,
+        "value": "bücher"
+      },
+      "EncodeString(bücher)": {
+        "ok": true,
+        "value": "bcher-kva"
+      }
+    },
+    "P2P-015": {
+      "BaseError": "<nil>",
+      "ErrorsIsErrRelativeURLWithoutBase": true,
+      "Join": {
+        "AsStr": "http://servo.github.io/rust-url/main.css",
+        "input": "../main.css"
+      },
+      "JoinError": "<nil>",
+      "ParseError": true
+    },
+    "P2P-016": {
+      "SetPortDefaultElision": {
+        "AsStr": "http://example.com/",
+        "Port": {
+          "present": false,
+          "value": 0
+        },
+        "input": "http://example.com/",
+        "setPort": 80
+      },
+      "ftp://x/": {
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 21
+        }
+      },
+      "http://example.com/": {
+        "Port": {
+          "present": false,
+          "value": 0
+        },
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 80
+        }
+      },
+      "https://x/": {
+        "PortOrKnownDefault": {
+          "present": true,
+          "value": 443
+        }
+      },
+      "https://x:8443/": {
+        "Port": {
+          "present": true,
+          "value": 8443
+        }
+      }
+    }
+  }
+}

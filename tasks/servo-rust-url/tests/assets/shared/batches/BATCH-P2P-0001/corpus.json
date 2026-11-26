@@ -1,0 +1,356 @@
+{
+  "schema_version": "migration-asset-corpus:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "side_pair": {
+    "source": "Rust",
+    "target": "Go"
+  },
+  "relation": "equal_after_normalization",
+  "normalization": "canonical-json; P2P status wrapper used because the Rust and Go public surfaces have no shared concrete serialization",
+  "entries": [
+    {
+      "observation_id": "P2P-001",
+      "requirement_ids": [
+        "R017"
+      ],
+      "surface": "url.URL.Origin, Origin.ASCIISerialization, IsTuple",
+      "source_path": "url/src/origin.rs",
+      "source_test": "url/tests/unit.rs::test_origin_opaque",
+      "target_test": "url::TestOrigin",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "true|https://example.com",
+        "false|null",
+        "true|https://example.com"
+      ]
+    },
+    {
+      "observation_id": "P2P-002",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "formurlencoded.Parser.Next and url.URL.QueryPairs",
+      "source_path": "form_urlencoded/src/lib.rs",
+      "source_test": "url/tests/unit.rs::test_form_urlencoded",
+      "target_test": "url::TestQueryPairs + formurlencoded::TestParse",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "foo=bar|true",
+        "baz=|true",
+        "=|false",
+        "#first=%try%|true",
+        "a=1 2|true"
+      ]
+    },
+    {
+      "observation_id": "P2P-003",
+      "requirement_ids": [
+        "R015"
+      ],
+      "surface": "idna.DomainToASCII, DomainToASCIIStrict, DomainToUnicode, ErrInvalidDomain",
+      "source_path": "idna/src/lib.rs",
+      "source_test": "idna/tests/unit.rs::test_examples",
+      "target_test": "idna::TestDomainToASCII",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "example.com",
+        "true",
+        "xn--fa-hia.de",
+        "true",
+        "true",
+        "faß.de",
+        "true"
+      ]
+    },
+    {
+      "observation_id": "P2P-004",
+      "requirement_ids": [
+        "R014"
+      ],
+      "surface": "percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error",
+      "source_path": "percent_encoding/src/lib.rs",
+      "source_test": "percent_encoding/src/lib.rs::tests",
+      "target_test": "percentencoding::TestDecodeUTF8Error",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "true",
+        "1",
+        "1",
+        "true",
+        "\"\\x00���\""
+      ]
+    },
+    {
+      "observation_id": "P2P-005",
+      "requirement_ids": [
+        "R010"
+      ],
+      "surface": "url.URL.PathSegmentsMut (Clear, Pop, Push, Extend)",
+      "source_path": "url/src/path_segments.rs",
+      "source_test": "url/tests/unit.rs::append_empty_segment_then_mutate",
+      "target_test": "url::TestPathSegmentsMut",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "/b/2%2F100%25.png",
+        "q",
+        "true",
+        "frag",
+        "true"
+      ]
+    },
+    {
+      "observation_id": "P2P-006",
+      "requirement_ids": [
+        "R007"
+      ],
+      "surface": "url.ParseHost IPv6 serialization and errors",
+      "source_path": "url/src/host.rs",
+      "source_test": "url/tests/unit.rs::host_serialization",
+      "target_test": "url::TestParseHostIPv6",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "2",
+        "[2001:db8::ff00:42:8329]",
+        "true"
+      ]
+    },
+    {
+      "observation_id": "P2P-007",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "url.URL.QueryPairsMut (AppendPair, Clear, Finish) and fragment preservation",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/unit.rs::extend_query_pairs_then_mutate",
+      "target_test": "url::TestQueryPairsMut",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "http://a/?x=1&y=2#frag",
+        "http://a/?a=b#frag"
+      ]
+    },
+    {
+      "observation_id": "P2P-008",
+      "requirement_ids": [
+        "R013"
+      ],
+      "surface": "percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add",
+      "source_path": "percent_encoding/src/ascii_set.rs",
+      "source_test": "percent_encoding/src/ascii_set.rs::tests",
+      "target_test": "percentencoding::TestEncode",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "foo%20bar%3F",
+        "%3F",
+        "a",
+        "%61"
+      ]
+    },
+    {
+      "observation_id": "P2P-009",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/unit.rs",
+      "target_test": "url::TestSentinelsDistinct",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "url.Parse invalid-IPv6 error identity",
+      "source_path": "url/src/parser.rs",
+      "source_test": "url/tests/wpt.rs::collect_tests",
+      "target_test": "url::TestInvalidIPv6",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "true",
+        "true",
+        "false"
+      ]
+    },
+    {
+      "observation_id": "P2P-011",
+      "requirement_ids": [
+        "R003"
+      ],
+      "surface": "url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/wpt.rs::collect_tests",
+      "target_test": "url::TestParseIssueList",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+        "https",
+        "",
+        "",
+        "false",
+        "github.com",
+        "true",
+        "0",
+        "true",
+        "/rust-lang/rust/issues",
+        "[rust-lang rust issues]",
+        "true",
+        "labels=E-easy&state=open",
+        "true",
+        "",
+        "false",
+        "false",
+        "false"
+      ]
+    },
+    {
+      "observation_id": "P2P-012",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "url.Parse and URL accessors for cannot-be-a-base schemes",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/wpt.rs::collect_tests",
+      "target_test": "url::TestParseDataURL",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "true",
+        "data",
+        "text/plain,Hello",
+        "false",
+        "false",
+        "World",
+        "true",
+        "",
+        "true",
+        "data:text/plain,Hello?World#"
+      ]
+    },
+    {
+      "observation_id": "P2P-013",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "url.URL.SetPath percent-encoding",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/unit.rs::test_serialization",
+      "target_test": "url::TestSetPath",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "/api/some%20comments",
+        "/api/some%20comments"
+      ]
+    },
+    {
+      "observation_id": "P2P-014",
+      "requirement_ids": [
+        "R016"
+      ],
+      "surface": "idna/punycode.Encode, EncodeString, Decode, DecodeToString",
+      "source_path": "idna/src/punycode.rs",
+      "source_test": "idna/tests/punycode.rs::collect_tests",
+      "target_test": "idna::TestPunycodeVectors",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "bcher-kva",
+        "true",
+        "bücher",
+        "true",
+        "[]",
+        "false"
+      ]
+    },
+    {
+      "observation_id": "P2P-015",
+      "requirement_ids": [
+        "R006"
+      ],
+      "surface": "url.Parse relative-reference error and URL.Join resolution",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/unit.rs::test_relative",
+      "target_test": "url::TestJoin + url::TestRelativeWithoutBase",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "true",
+        "http://servo.github.io/rust-url/main.css"
+      ]
+    },
+    {
+      "observation_id": "P2P-016",
+      "requirement_ids": [
+        "R008"
+      ],
+      "surface": "url.URL.Port, PortOrKnownDefault, SetPort, and AsStr",
+      "source_path": "url/src/lib.rs",
+      "source_test": "url/tests/unit.rs::test_serialization",
+      "target_test": "url::TestPorts",
+      "projection_kind": "status-wrapper",
+      "normalized_projection": {
+        "result": "PASS"
+      },
+      "target_concrete_projection": [
+        "80",
+        "true",
+        "443",
+        "true",
+        "21",
+        "true",
+        "8443",
+        "true",
+        "0",
+        "false",
+        "http://example.com/"
+      ]
+    }
+  ]
+}

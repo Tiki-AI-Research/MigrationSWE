@@ -1,0 +1,733 @@
+{
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "captured_from": "reference target (/input/target) Go 1.23.0 implementation",
+  "cases": {
+    "CASE-001": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "https://api.github.com/repos/ncipollo/release-action/tarball/v1.2.3",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": "https://api.github.com/repos/ncipollo/release-action/zipball/v1.2.3"
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "hello world",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 114,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-002": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v9.9.9",
+        "id": "43",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/43/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v9.9.9",
+            "prerelease": false,
+            "tag_name": "v9.9.9"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-003": {
+      "error": "No tag found in ref or input!",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": []
+    },
+    "CASE-004": {
+      "error": "Input required and not supplied: token",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": []
+    },
+    "CASE-005": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{\"app.bin\":\"https://uploads.example/app.bin\"}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/42/assets",
+          "query": "page=1&per_page=100"
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        }
+      ]
+    },
+    "CASE-006": {
+      "error": "Artifact pattern :nope/*.bin did not match any files",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": []
+    },
+    "CASE-007": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-008": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "7",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        },
+        {
+          "body": {
+            "body": "new body",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 111,
+          "content_type": "application/json",
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/7",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-009": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "9",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/9/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/9",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-010": {
+      "error": "Error 500: Server Error",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-011": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {},
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-012": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        },
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-013": {
+      "error": "Tried to update \"v1.2.3\" which is neither a draft or prerelease. (updateOnlyUnreleased is on)",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-014": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 21,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases/generate-notes",
+          "query": ""
+        },
+        {
+          "body": {
+            "body": "B\nN",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 107,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-015": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 80,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-016": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {},
+      "requests": [
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-017": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "5",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/5/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": true,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 102,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "body": {
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 93,
+          "content_type": "application/json",
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/5",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-018": {
+      "error": "Error 404: Not Found Errors: - Release does not exist. Make sure your github token has access to the repo and has permission to author releases",
+      "exit_code": 1,
+      "outputs": {},
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-019": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{\"app.bin\":\"https://new.example/app.bin\"}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/42/assets",
+          "query": "page=1&per_page=100"
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "DELETE",
+          "path": "/repos/ncipollo/release-action/releases/assets/11",
+          "query": ""
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        }
+      ]
+    },
+    "CASE-020": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/42/assets",
+          "query": "page=1&per_page=100"
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "DELETE",
+          "path": "/repos/ncipollo/release-action/releases/assets/11",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "DELETE",
+          "path": "/repos/ncipollo/release-action/releases/assets/12",
+          "query": ""
+        }
+      ]
+    },
+    "CASE-021": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/42/assets",
+          "query": "page=1&per_page=100"
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=app.bin",
+          "upload": true
+        }
+      ]
+    },
+    "CASE-022": {
+      "error": "",
+      "exit_code": 0,
+      "outputs": {
+        "assets": "{\"a.txt\":\"https://uploads.example/a.txt\"}",
+        "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+        "id": "42",
+        "tarball_url": "",
+        "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+        "zipball_url": ""
+      },
+      "requests": [
+        {
+          "body": {
+            "body": "",
+            "draft": false,
+            "make_latest": "legacy",
+            "name": "v1.2.3",
+            "prerelease": false,
+            "tag_name": "v1.2.3"
+          },
+          "content_length": 103,
+          "content_type": "application/json",
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases",
+          "query": ""
+        },
+        {
+          "content_length": 0,
+          "content_type": "",
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/42/assets",
+          "query": "page=1&per_page=100"
+        },
+        {
+          "content_length": 3,
+          "content_type": "raw",
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "query": "name=a.txt",
+          "upload": true
+        }
+      ]
+    },
+    "CASE-S1": {
+      "check": "action_schema_invariant",
+      "kind": "static",
+      "value": {
+        "branding": {
+          "color": "'gray-dark'",
+          "icon": "'tag'"
+        },
+        "inputs": [
+          "allowUpdates",
+          "artifactErrorsFailBuild",
+          "artifact",
+          "artifacts",
+          "artifactContentType",
+          "body",
+          "bodyFile",
+          "commit",
+          "discussionCategory",
+          "draft",
+          "generateReleaseNotes",
+          "generateReleaseNotesPreviousTag",
+          "immutableCreate",
+          "makeLatest",
+          "name",
+          "omitBody",
+          "omitBodyDuringUpdate",
+          "omitDraftDuringUpdate",
+          "omitName",
+          "omitNameDuringUpdate",
+          "omitPrereleaseDuringUpdate",
+          "owner",
+          "prerelease",
+          "removeArtifacts",
+          "replacesArtifacts",
+          "repo",
+          "skipIfReleaseExists",
+          "tag",
+          "token",
+          "updateOnlyUnreleased"
+        ],
+        "invariant_sha256": "sha256:0536a372788f426f2ae091d43b6e240b02f1d45ad16fa8296a12951990228635",
+        "outputs": [
+          "id",
+          "html_url",
+          "upload_url",
+          "tarball_url",
+          "zipball_url",
+          "assets"
+        ]
+      }
+    },
+    "CASE-S2": {
+      "check": "test_suite_integrity",
+      "kind": "static",
+      "value": {
+        "suite": "go",
+        "test_files": 1,
+        "weakens_assertions": false
+      }
+    }
+  },
+  "note": "Source probe must reproduce these normalized observations exactly; equality uses compare.py.",
+  "schema_version": "differential-expected:v1"
+}

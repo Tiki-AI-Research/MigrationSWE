@@ -1,0 +1,1187 @@
+diff --git a/tests/assets/fixtures/batches/BATCH-F2P-0001/expected-dependency-resolution.json b/tests/assets/fixtures/batches/BATCH-F2P-0001/expected-dependency-resolution.json
+new file mode 100644
+index 0000000..561f192
+--- /dev/null
++++ b/tests/assets/fixtures/batches/BATCH-F2P-0001/expected-dependency-resolution.json
+@@ -0,0 +1,17 @@
++{
++  "package": "devalue",
++  "target_version": "6.0.0",
++  "forbidden_version": "4.3.3",
++  "manifest": "package.json",
++  "lockfile": "pnpm-lock.yaml",
++  "forbidden_dependencies": [
++    "uvu"
++  ],
++  "expected_dev_dependencies": {
++    "dts-buddy": "^0.8.3",
++    "prettier": "^3.2.4",
++    "typescript": "^6.0.3",
++    "vite": "8.3.0",
++    "vitest": "5.0.1"
++  }
++}
+diff --git a/tests/assets/fixtures/batches/BATCH-P2P-0002/malformed-payloads.json b/tests/assets/fixtures/batches/BATCH-P2P-0002/malformed-payloads.json
+new file mode 100644
+index 0000000..1fe0b72
+--- /dev/null
++++ b/tests/assets/fixtures/batches/BATCH-P2P-0002/malformed-payloads.json
+@@ -0,0 +1,18 @@
++{
++  "batch_id": "BATCH-P2P-0002",
++  "kind": "malformed-payload-fixtures",
++  "parse": [
++    { "name": "not-json", "payload": "definitely not json" },
++    { "name": "empty-object", "payload": "{}" },
++    { "name": "out-of-range-view-index", "payload": "[[\"Uint8Array\",99]]" },
++    { "name": "unknown-type", "payload": "[[\"NotAType\",0]]" }
++  ],
++  "unflatten": [
++    { "name": "empty-array", "value": [] },
++    { "name": "sparse-invalid-length", "value": [[-7, 1.5]] },
++    { "name": "sparse-index-out-of-range", "value": [[-7, 3, 5, 0]] },
++    { "name": "boxed-non-bigint", "value": [["Object", 5]] },
++    { "name": "null-proto-pollution", "value": [["null", "__proto__", 1]] },
++    { "name": "object-payload-proto", "value": [{ "__proto__": 1 }] }
++  ]
++}
+diff --git a/tests/assets/fixtures/integration/dependency-batches.json b/tests/assets/fixtures/integration/dependency-batches.json
+new file mode 100644
+index 0000000..1aff15e
+--- /dev/null
++++ b/tests/assets/fixtures/integration/dependency-batches.json
+@@ -0,0 +1,75 @@
++{
++  "batch_id": "BATCH-INTEGRATION-0001",
++  "kind": "integration-dependency-registry",
++  "batches": [
++    {
++      "batch_id": "BATCH-SKELETON-0001",
++      "kind": "SKELETON",
++      "shared": [],
++      "runners": [],
++      "fixtures": [],
++      "files": [
++        "shared/skeleton/README.md",
++        "source/skeleton/README.md",
++        "target/skeleton/README.md",
++        "fixtures/skeleton/README.md"
++      ]
++    },
++    {
++      "batch_id": "BATCH-P2P-0001",
++      "kind": "P2P",
++      "shared": ["shared/batches/BATCH-P2P-0001/harness.mjs"],
++      "runners": [
++        "source/batches/BATCH-P2P-0001/run.mjs",
++        "target/batches/BATCH-P2P-0001/run.mjs"
++      ],
++      "fixtures": ["fixtures/batches/BATCH-P2P-0001/matrix.mjs"]
++    },
++    {
++      "batch_id": "BATCH-P2P-0002",
++      "kind": "P2P",
++      "shared": ["shared/batches/BATCH-P2P-0002/observations.js"],
++      "runners": [
++        "source/batches/BATCH-P2P-0002/run.js",
++        "target/batches/BATCH-P2P-0002/run.js"
++      ],
++      "fixtures": ["fixtures/batches/BATCH-P2P-0002/malformed-payloads.json"]
++    },
++    {
++      "batch_id": "BATCH-P2P-0003",
++      "kind": "P2P",
++      "shared": [],
++      "runners": [
++        "source/batches/BATCH-P2P-0003/public-api.test.js",
++        "target/batches/BATCH-P2P-0003/public-api.test.js"
++      ],
++      "fixtures": []
++    },
++    {
++      "batch_id": "BATCH-F2P-0001",
++      "kind": "F2P",
++      "shared": ["shared/batches/BATCH-F2P-0001/dependency-resolution.js"],
++      "runners": [
++        "source/batches/BATCH-F2P-0001/dependency-resolution.test.js",
++        "target/batches/BATCH-F2P-0001/dependency-resolution.test.js"
++      ],
++      "fixtures": ["fixtures/batches/BATCH-F2P-0001/expected-dependency-resolution.json"]
++    },
++    {
++      "batch_id": "BATCH-F2P-0002",
++      "kind": "F2P",
++      "shared": [
++        "shared/batches/BATCH-F2P-0002/run.mjs",
++        "shared/batches/BATCH-F2P-0002/type-surface/tsconfig.json",
++        "shared/batches/BATCH-F2P-0002/type-surface/g1.ts",
++        "shared/batches/BATCH-F2P-0002/type-surface/g2.ts",
++        "shared/batches/BATCH-F2P-0002/type-surface/g3.ts",
++        "shared/batches/BATCH-F2P-0002/type-surface/g4.ts",
++        "shared/batches/BATCH-F2P-0002/type-surface/g5.ts",
++        "shared/batches/BATCH-F2P-0002/type-surface/g6.ts"
++      ],
++      "runners": [],
++      "fixtures": []
++    }
++  ]
++}
+diff --git a/tests/assets/fixtures/skeleton/README.md b/tests/assets/fixtures/skeleton/README.md
+new file mode 100644
+index 0000000..8df7bf5
+--- /dev/null
++++ b/tests/assets/fixtures/skeleton/README.md
+@@ -0,0 +1,5 @@
++# Fixture skeleton
++
++The integration registry lists this directory in BATCH-SKELETON-0001.
++Batch input data lives in ../batches/ and the dependency registry lives in
++../integration/dependency-batches.json; this directory adds no fixture inputs.
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0001/dependency-resolution.js b/tests/assets/shared/batches/BATCH-F2P-0001/dependency-resolution.js
+new file mode 100644
+index 0000000..8d07b7a
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0001/dependency-resolution.js
+@@ -0,0 +1,104 @@
++import { existsSync, readFileSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++
++export const PACKAGE_NAME = 'devalue';
++export const TARGET_VERSION = '6.0.0';
++export const OLD_VERSION = '4.3.3';
++export const OLD_TEST_RUNNER = 'uvu';
++
++export function locate_asset_root(start) {
++	let dir = start;
++	for (;;) {
++		if (existsSync(join(dir, 'shared', 'batches', 'BATCH-F2P-0001', 'dependency-resolution.js'))) {
++			return dir;
++		}
++
++		const parent = dirname(dir);
++
++		if (parent === dir) {
++			throw new Error(`could not locate BATCH-F2P-0001 asset root from ${start}`);
++		}
++
++		dir = parent;
++	}
++}
++
++export function locate_repo_root(start) {
++	let dir = start;
++	for (;;) {
++		const manifest_path = join(dir, 'package.json');
++
++		if (existsSync(manifest_path)) {
++			try {
++				const manifest = JSON.parse(readFileSync(manifest_path, 'utf8'));
++
++				if (manifest && manifest.name === PACKAGE_NAME) {
++					return dir;
++				}
++			} catch {
++				// keep walking up while a manifest is malformed
++			}
++		}
++
++		const parent = dirname(dir);
++
++		if (parent === dir) {
++			throw new Error(`could not locate ${PACKAGE_NAME} package root from ${start}`);
++		}
++
++		dir = parent;
++	}
++}
++
++export function read_fixture(asset_root) {
++	const path = join(
++		asset_root,
++		'fixtures',
++		'batches',
++		'BATCH-F2P-0001',
++		'expected-dependency-resolution.json'
++	);
++
++	return JSON.parse(readFileSync(path, 'utf8'));
++}
++
++export function declared_devalue_specifiers(manifest) {
++	const fields = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
++	const found = [];
++
++	for (const field of fields) {
++		const deps = manifest[field];
++
++		if (deps && typeof deps === 'object' && Object.hasOwn(deps, PACKAGE_NAME)) {
++			found.push({ field, specifier: String(deps[PACKAGE_NAME]) });
++		}
++	}
++
++	return found;
++}
++
++export function lockfile_devalue_versions(lockfile) {
++	const versions = [];
++	const pattern = /(?:^|\n)\s*devalue@([^\s:(]+)[:(]/g;
++	let match;
++
++	while ((match = pattern.exec(lockfile)) !== null) {
++		versions.push(match[1]);
++	}
++
++	return versions;
++}
++
++export function resolve_dependency_state(root) {
++	const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
++	const lockfile_path = join(root, 'pnpm-lock.yaml');
++	const lockfile = existsSync(lockfile_path) ? readFileSync(lockfile_path, 'utf8') : '';
++
++	return {
++		name: manifest.name,
++		version: manifest.version,
++		declared_devalue: declared_devalue_specifiers(manifest),
++		lockfile_devalue: lockfile_devalue_versions(lockfile),
++		lockfile_mentions_old_version: /devalue@4\.3\.3(?![0-9])/.test(lockfile)
++	};
++}
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/run.mjs b/tests/assets/shared/batches/BATCH-F2P-0002/run.mjs
+new file mode 100644
+index 0000000..07fb3a7
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/run.mjs
+@@ -0,0 +1,191 @@
++/**
++ * Public type-surface gates.
++ *
++ * The migrated package must ship TypeScript declarations for the 6.0.0 public
++ * API, reachable through its own package entry when a consumer imports
++ * `devalue`.  Each fixture is compiled by the evaluator-owned TypeScript
++ * against a throw-away consumer package that resolves `devalue` to the
++ * candidate root, so a fixture can only type-check when the candidate's
++ * declared entry actually exports the required names with the required shape.
++ *
++ * A missing or unusable TypeScript toolchain, a timeout or an unparsable
++ * declaration surface is an ordinary gate failure.  It must never be reported
++ * as an infrastructure error, because the type surface is candidate evidence.
++ */
++import { spawnSync } from 'node:child_process';
++import {
++	existsSync,
++	mkdirSync,
++	mkdtempSync,
++	readFileSync,
++	rmSync,
++	symlinkSync,
++	writeFileSync
++} from 'node:fs';
++import { tmpdir } from 'node:os';
++import { dirname, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'type-surface');
++
++export const TYPE_GATES = Object.freeze({
++	'F2P-030': 'g1.ts',
++	'F2P-031': 'g2.ts',
++	'F2P-032': 'g3.ts',
++	'F2P-033': 'g4.ts',
++	'F2P-034': 'g5.ts',
++	'F2P-035': 'g6.ts'
++});
++
++const FIXTURE_FILES = Object.values(TYPE_GATES);
++const EVALUATOR_NODE_MODULES = '/opt/migration/dependencies/node_modules';
++const TYPESCRIPT_TIMEOUT_MS = 120000;
++
++function unavailable(reason) {
++	return Object.fromEntries(
++		FIXTURE_FILES.map((file) => [
++			file,
++			{
++				ok: false,
++				checks: {
++					fixture: file,
++					typescript: false,
++					reason
++				}
++			}
++		])
++	);
++}
++
++function locateTypeScript(repoRoot) {
++	const directories = [
++		process.env.MIGRATION_EVALUATOR_NODE_MODULES,
++		EVALUATOR_NODE_MODULES,
++		join(repoRoot, 'node_modules')
++	];
++	for (const directory of directories) {
++		if (!directory) continue;
++		const candidate = join(directory, 'typescript', 'bin', 'tsc');
++		if (existsSync(candidate)) return candidate;
++	}
++	return null;
++}
++
++function evaluate(repoRoot) {
++	const typescript = locateTypeScript(repoRoot);
++	if (!typescript) return unavailable('typescript-unavailable');
++	if (!existsSync(join(repoRoot, 'package.json'))) {
++		return unavailable('package-entry-unavailable');
++	}
++
++	let directory;
++	try {
++		directory = mkdtempSync(join(tmpdir(), 'devalue-type-surface-'));
++	} catch {
++		return unavailable('temporary-directory-unavailable');
++	}
++
++	try {
++		for (const file of [...FIXTURE_FILES, 'tsconfig.json']) {
++			writeFileSync(
++				join(directory, file),
++				readFileSync(join(FIXTURES, file), 'utf8'),
++				'utf8'
++			);
++		}
++		mkdirSync(join(directory, 'node_modules'), { recursive: true });
++		symlinkSync(repoRoot, join(directory, 'node_modules', 'devalue'), 'dir');
++
++		const completed = spawnSync(
++			process.execPath,
++			[typescript, '-p', join(directory, 'tsconfig.json')],
++			{
++				cwd: directory,
++				encoding: 'utf8',
++				errors: 'replace',
++				timeout: TYPESCRIPT_TIMEOUT_MS,
++				maxBuffer: 16 * 1024 * 1024,
++				env: {
++					...process.env,
++					NODE_OPTIONS: '',
++					NO_COLOR: '1',
++					FORCE_COLOR: '0'
++				}
++			}
++		);
++		if (completed.error || completed.signal) {
++			return unavailable('typescript-execution-failed');
++		}
++
++		const output = `${completed.stdout ?? ''}\n${completed.stderr ?? ''}`;
++		const diagnostics = new Map(FIXTURE_FILES.map((file) => [file, 0]));
++		let external = 0;
++		for (const line of output.split(/\r?\n/)) {
++			const located = /^(.+?)\((\d+),(\d+)\):\s+(?:error|warning)\s+TS\d+:/.exec(
++				line
++			);
++			if (located) {
++				const file = located[1].replace(/\\/g, '/').split('/').pop();
++				if (diagnostics.has(file)) {
++					diagnostics.set(file, diagnostics.get(file) + 1);
++				} else {
++					external += 1;
++				}
++				continue;
++			}
++			// A diagnostic without a source location means the consumer project
++			// itself could not be compiled (bad config, unreadable declaration
++			// entry, missing package).  That invalidates every fixture.
++			if (/^\s*(?:error|warning)\s+TS\d+:/.test(line)) {
++				external += 1;
++			}
++		}
++
++		const failed = completed.status !== 0;
++		return Object.fromEntries(
++			FIXTURE_FILES.map((file) => [
++				file,
++				{
++					ok: !failed || (external === 0 && diagnostics.get(file) === 0),
++					checks: {
++						fixture: file,
++						typescript: true,
++						exit_code: completed.status,
++						diagnostics: diagnostics.get(file),
++						external_diagnostics: external
++					}
++				}
++			])
++		);
++	} catch {
++		return unavailable('type-surface-evaluation-failed');
++	} finally {
++		rmSync(directory, { recursive: true, force: true });
++	}
++}
++
++let cache = null;
++
++/**
++ * Return the verdict for one type-surface gate.  All fixtures share one
++ * compiler run; the result is cached for the lifetime of the harness process.
++ */
++export function typeSurfaceGate(repoRoot, identifier) {
++	const root = String(repoRoot ?? '');
++	if (!cache || cache.root !== root) {
++		cache = { root, results: evaluate(root) };
++	}
++	const file = TYPE_GATES[identifier];
++	const result = file ? cache.results[file] : null;
++	if (!result) {
++		return {
++			ok: false,
++			outcomes: {
++				fixture: file ?? null,
++				typescript: false,
++				reason: 'unknown-type-surface-gate'
++			}
++		};
++	}
++	return { ok: result.ok, outcomes: result.checks };
++}
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g1.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g1.ts
+new file mode 100644
+index 0000000..23c916f
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g1.ts
+@@ -0,0 +1,7 @@
++import type { JavaScriptFragment } from 'devalue';
++
++declare const fragment: JavaScriptFragment;
++
++export type UsesFragment = JavaScriptFragment;
++
++void fragment;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g2.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g2.ts
+new file mode 100644
+index 0000000..68443e7
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g2.ts
+@@ -0,0 +1,9 @@
++import type { JavaScriptFragment, JavaScriptTag } from 'devalue';
++
++declare const js: JavaScriptTag;
++
++const template: JavaScriptFragment = js`a${1}b${'c'}d${true}e${null}f${undefined}g${10n}h${Symbol('s')}`;
++const nonEmpty: [JavaScriptFragment] extends [never] ? never : true = true;
++
++void template;
++void nonEmpty;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g3.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g3.ts
+new file mode 100644
+index 0000000..78a71b0
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g3.ts
+@@ -0,0 +1,8 @@
++import type { JavaScriptTag, UnevalReplacer } from 'devalue';
++
++const replacer: UnevalReplacer = (value, js: JavaScriptTag) => {
++	if (typeof value === 'number') return js`${value}`;
++	return undefined;
++};
++
++void replacer;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g4.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g4.ts
+new file mode 100644
+index 0000000..3480e17
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g4.ts
+@@ -0,0 +1,11 @@
++import type { UnevalReplacer } from 'devalue';
++
++const undef: UnevalReplacer = () => undefined;
++const nul: UnevalReplacer = () => null;
++const falsy: UnevalReplacer = () => false;
++const nothing: UnevalReplacer = () => {};
++
++void undef;
++void nul;
++void falsy;
++void nothing;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g5.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g5.ts
+new file mode 100644
+index 0000000..bbd7626
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g5.ts
+@@ -0,0 +1,18 @@
++import type { UnevalReplacer } from 'devalue';
++
++// @ts-expect-error a 5.x string result is no longer an accepted replacer result
++const text: UnevalReplacer = () => 'string';
++// @ts-expect-error a plain object is not a fragment
++const object: UnevalReplacer = () => ({});
++// @ts-expect-error a number is not a fragment
++const number: UnevalReplacer = () => 1;
++// @ts-expect-error true is not one of the accepted falsy fallbacks
++const boolean: UnevalReplacer = () => true;
++// @ts-expect-error a returned function is not a fragment
++const callable: UnevalReplacer = () => () => 1;
++
++void text;
++void object;
++void number;
++void boolean;
++void callable;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g6.ts b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g6.ts
+new file mode 100644
+index 0000000..52494ed
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/g6.ts
+@@ -0,0 +1,12 @@
++import type { JavaScriptFragment, JavaScriptTag } from 'devalue';
++
++declare const js: JavaScriptTag;
++declare const fragment: JavaScriptFragment;
++
++// @ts-expect-error the tag is callable only as a tagged template
++js('not a template');
++// @ts-expect-error a fragment is opaque and cannot be forged from an object literal
++const forged: JavaScriptFragment = { __fragment: true };
++
++void fragment;
++void forged;
+diff --git a/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/tsconfig.json b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/tsconfig.json
+new file mode 100644
+index 0000000..74f19bb
+--- /dev/null
++++ b/tests/assets/shared/batches/BATCH-F2P-0002/type-surface/tsconfig.json
+@@ -0,0 +1,12 @@
++{
++	"compilerOptions": {
++		"strict": true,
++		"target": "es2022",
++		"module": "nodenext",
++		"moduleResolution": "nodenext",
++		"noEmit": true,
++		"skipLibCheck": true,
++		"types": []
++	},
++	"include": ["g1.ts", "g2.ts", "g3.ts", "g4.ts", "g5.ts", "g6.ts"]
++}
+diff --git a/tests/assets/shared/integration/registry.mjs b/tests/assets/shared/integration/registry.mjs
+new file mode 100644
+index 0000000..152ea89
+--- /dev/null
++++ b/tests/assets/shared/integration/registry.mjs
+@@ -0,0 +1,57 @@
++import { existsSync, readFileSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const here = dirname(fileURLToPath(import.meta.url));
++
++export const ASSET_ROOT = join(here, '..', '..');
++
++export function registry_path(root = ASSET_ROOT) {
++	return join(root, 'fixtures', 'integration', 'dependency-batches.json');
++}
++
++export function read_registry(root = ASSET_ROOT) {
++	return JSON.parse(readFileSync(registry_path(root), 'utf8'));
++}
++
++export function declared_files(entry) {
++	return [
++		...(entry.runners ?? []),
++		...(entry.shared ?? []),
++		...(entry.fixtures ?? []),
++		...(entry.files ?? [])
++	];
++}
++
++export function batch_ids(registry = read_registry()) {
++	return registry.batches.map((entry) => entry.batch_id);
++}
++
++export function runners_for(entry, side) {
++	const prefix = `${side}/`;
++	return (entry.runners ?? []).filter((file) => file.startsWith(prefix));
++}
++
++export function required_files(registry = read_registry()) {
++	const files = new Set();
++
++	for (const entry of registry.batches) {
++		for (const file of declared_files(entry)) files.add(file);
++	}
++
++	return [...files];
++}
++
++export function missing_files(root, registry = read_registry()) {
++	const missing = [];
++
++	for (const entry of registry.batches) {
++		for (const file of declared_files(entry)) {
++			if (!existsSync(join(root, file))) {
++				missing.push({ batch_id: entry.batch_id, file });
++			}
++		}
++	}
++
++	return missing;
++}
+diff --git a/tests/assets/shared/integration/run-side.mjs b/tests/assets/shared/integration/run-side.mjs
+new file mode 100644
+index 0000000..e10b5dd
+--- /dev/null
++++ b/tests/assets/shared/integration/run-side.mjs
+@@ -0,0 +1,20 @@
++import { batch_ids, missing_files, read_registry, runners_for } from './registry.mjs';
++import { import_shared } from './shared-imports.mjs';
++
++export async function run_side(root, side) {
++	const registry = read_registry(root);
++
++	const results = {
++		batch_id: 'BATCH-INTEGRATION-0001',
++		side,
++		batches: batch_ids(registry),
++		runners: registry.batches.flatMap((entry) => runners_for(entry, side)),
++		missing: missing_files(root, registry),
++		shared_imports: await import_shared(root)
++	};
++
++	results.ok =
++		results.missing.length === 0 && results.shared_imports.every((entry) => entry.status === 'ok');
++
++	return results;
++}
+diff --git a/tests/assets/shared/integration/shared-imports.mjs b/tests/assets/shared/integration/shared-imports.mjs
+new file mode 100644
+index 0000000..e0b87cc
+--- /dev/null
++++ b/tests/assets/shared/integration/shared-imports.mjs
+@@ -0,0 +1,51 @@
++import { existsSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++import { fileURLToPath, pathToFileURL } from 'node:url';
++
++const here = dirname(fileURLToPath(import.meta.url));
++
++export const ASSET_ROOT = join(here, '..', '..');
++
++export const SHARED_MODULES = [
++	{ path: 'shared/batches/BATCH-P2P-0001/harness.mjs', exports: ['run'] },
++	{
++		path: 'shared/batches/BATCH-P2P-0002/observations.js',
++		exports: ['createObservations', 'isDevalueError']
++	},
++	{
++		path: 'shared/batches/BATCH-F2P-0001/dependency-resolution.js',
++		exports: ['resolve_dependency_state', 'locate_repo_root']
++	}
++];
++
++export async function import_shared(root = ASSET_ROOT, modules = SHARED_MODULES) {
++	const results = [];
++
++	for (const entry of modules) {
++		const full = join(root, entry.path);
++
++		if (!existsSync(full)) {
++			results.push({ path: entry.path, status: 'missing', missing_exports: entry.exports });
++			continue;
++		}
++
++		try {
++			const loaded = await import(pathToFileURL(full).href);
++			const missing_exports = entry.exports.filter((name) => !(name in loaded));
++
++			results.push({
++				path: entry.path,
++				status: missing_exports.length === 0 ? 'ok' : 'missing-exports',
++				missing_exports
++			});
++		} catch (error) {
++			results.push({
++				path: entry.path,
++				status: 'error',
++				error: String((error && error.message) || error)
++			});
++		}
++	}
++
++	return results;
++}
+diff --git a/tests/assets/shared/skeleton/README.md b/tests/assets/shared/skeleton/README.md
+new file mode 100644
+index 0000000..9f20336
+--- /dev/null
++++ b/tests/assets/shared/skeleton/README.md
+@@ -0,0 +1,5 @@
++# Shared test skeleton
++
++The integration registry lists this directory in BATCH-SKELETON-0001.
++Executable helpers shared by source and target runners live in ../batches/
++and ../integration/; this directory contains no executable test cases.
+diff --git a/tests/assets/source/batches/BATCH-F2P-0001/dependency-resolution.test.js b/tests/assets/source/batches/BATCH-F2P-0001/dependency-resolution.test.js
+new file mode 100644
+index 0000000..5da6022
+--- /dev/null
++++ b/tests/assets/source/batches/BATCH-F2P-0001/dependency-resolution.test.js
+@@ -0,0 +1,68 @@
++import { existsSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++import { fileURLToPath, pathToFileURL } from 'node:url';
++import { describe, expect, it } from 'vitest';
++
++const here = dirname(fileURLToPath(import.meta.url));
++
++async function load_helper() {
++	let dir = here;
++
++	for (;;) {
++		const candidate = join(dir, 'shared', 'batches', 'BATCH-F2P-0001', 'dependency-resolution.js');
++
++		if (existsSync(candidate)) {
++			return import(pathToFileURL(candidate).href);
++		}
++
++		const parent = dirname(dir);
++
++		if (parent === dir) {
++			throw new Error(`could not locate shared/batches/BATCH-F2P-0001/dependency-resolution.js from ${here}`);
++		}
++
++		dir = parent;
++	}
++}
++
++const helper = await load_helper();
++const asset_root = helper.locate_asset_root(here);
++const expected = helper.read_fixture(asset_root);
++
++function repo_root() {
++	const starts = [process.env.DEVALUE_REPO_ROOT, process.env.REPO_ROOT, process.cwd(), here].filter(Boolean);
++
++	for (const start of starts) {
++		try {
++			return helper.locate_repo_root(start);
++		} catch {
++			// try the next candidate start directory
++		}
++	}
++
++	throw new Error('could not locate the devalue package root; set DEVALVE_REPO_ROOT');
++}
++
++describe('R012: devalue 4.3.3 -> 6.0.0 dependency migration (source revision)', () => {
++	it('package.json targets devalue 6.0.0', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		expect(state.name).toBe(expected.package);
++		expect(state.version).toBe(expected.target_version);
++	});
++
++	it('package.json declares no devalue 4.3.3 dependency specifier', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		for (const entry of state.declared_devalue) {
++			expect(entry.specifier).not.toContain(expected.forbidden_version);
++		}
++	});
++
++	it('pnpm-lock.yaml resolves no devalue 4.3.3 entry', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		expect(state.lockfile_mentions_old_version).toBe(false);
++		expect(state.lockfile_devalue).not.toContain(expected.forbidden_version);
++	});
++});
+diff --git a/tests/assets/source/batches/BATCH-P2P-0001/run.mjs b/tests/assets/source/batches/BATCH-P2P-0001/run.mjs
+new file mode 100644
+index 0000000..8639c51
+--- /dev/null
++++ b/tests/assets/source/batches/BATCH-P2P-0001/run.mjs
+@@ -0,0 +1,10 @@
++import { run } from '../../../shared/batches/BATCH-P2P-0001/harness.mjs';
++
++const entry = process.env.DEVALUE_ENTRY ?? 'devalue';
++const devalue = await import(entry);
++const results = await run(devalue, {
++	side: 'source',
++	repoRoot: process.env.DEVALUE_ROOT ?? process.cwd()
++});
++
++process.stdout.write(JSON.stringify(results) + '\n');
+diff --git a/tests/assets/source/batches/BATCH-P2P-0002/run.js b/tests/assets/source/batches/BATCH-P2P-0002/run.js
+new file mode 100644
+index 0000000..6933cef
+--- /dev/null
++++ b/tests/assets/source/batches/BATCH-P2P-0002/run.js
+@@ -0,0 +1,27 @@
++// Executes the BATCH-P2P-0002 behavioural checks against whatever package the
++// workspace root exposes. Run from this directory's workspace with `node`.
++
++import * as devalue from '../../../index.js';
++import { createObservations } from '../../../shared/batches/BATCH-P2P-0002/observations.js';
++
++const checks = createObservations(devalue);
++const results = [];
++
++for (const [observation_id, run] of Object.entries(checks)) {
++	try {
++		await run();
++		results.push({ observation_id, status: 'PASS' });
++	} catch (error) {
++		results.push({
++			observation_id,
++			status: 'FAIL',
++			error: error && error.stack ? error.stack : String(error)
++		});
++	}
++}
++
++process.stdout.write(`${JSON.stringify({ batch_id: 'BATCH-P2P-0002', results }, null, 2)}\n`);
++
++if (results.some((result) => result.status !== 'PASS')) {
++	process.exitCode = 1;
++}
+diff --git a/tests/assets/source/batches/BATCH-P2P-0003/public-api.test.js b/tests/assets/source/batches/BATCH-P2P-0003/public-api.test.js
+new file mode 100644
+index 0000000..dc7a6b0
+--- /dev/null
++++ b/tests/assets/source/batches/BATCH-P2P-0003/public-api.test.js
+@@ -0,0 +1,58 @@
++import { test } from 'uvu';
++import * as assert from 'uvu/assert';
++import { parse, stringify, stringifyAsync } from '../../../index.js';
++
++test('P2P-049 Map and Set round-trip with equivalent type, size and entries', () => {
++	const map = new Map([
++		['alpha', 1],
++		['beta', { nested: true }]
++	]);
++	const set = new Set([1, 'two', { three: 3 }]);
++
++	const revivedMap = parse(stringify(map));
++	const revivedSet = parse(stringify(set));
++
++	assert.ok(revivedMap instanceof Map);
++	assert.ok(revivedSet instanceof Set);
++	assert.is(revivedMap.size, map.size);
++	assert.is(revivedSet.size, set.size);
++	assert.equal([...revivedMap.entries()], [...map.entries()]);
++	assert.equal([...revivedSet.values()], [...set.values()]);
++});
++
++test('P2P-050 cyclic and repeated references preserve instance identity', () => {
++	const shared = { id: 'shared' };
++	const root = { first: shared, second: shared };
++	root.self = root;
++
++	const revived = parse(stringify(root));
++
++	assert.is(revived.self, revived);
++	assert.is(revived.first, revived.second);
++});
++
++test('P2P-051 synchronous and asynchronous payloads are mutually consumable', async () => {
++	const value = {
++		label: 'payload',
++		count: 2,
++		entries: new Map([['key', 'value']])
++	};
++
++	const syncPayload = stringify(value);
++	const asyncPayload = await stringifyAsync(value);
++
++	const fromSync = parse(syncPayload);
++	const fromAsync = parse(asyncPayload);
++
++	assert.is(fromSync.label, 'payload');
++	assert.is(fromSync.count, 2);
++	assert.ok(fromSync.entries instanceof Map);
++	assert.is(fromSync.entries.get('key'), 'value');
++
++	assert.is(fromAsync.label, 'payload');
++	assert.is(fromAsync.count, 2);
++	assert.ok(fromAsync.entries instanceof Map);
++	assert.is(fromAsync.entries.get('key'), 'value');
++});
++
++test.run();
+diff --git a/tests/assets/source/integration/run.mjs b/tests/assets/source/integration/run.mjs
+new file mode 100644
+index 0000000..40f1e6d
+--- /dev/null
++++ b/tests/assets/source/integration/run.mjs
+@@ -0,0 +1,14 @@
++import { dirname, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { run_side } from '../../shared/integration/run-side.mjs';
++
++const here = dirname(fileURLToPath(import.meta.url));
++const root = join(here, '..', '..');
++
++const results = await run_side(root, 'source');
++
++process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
++
++if (!results.ok) {
++	process.exitCode = 1;
++}
+diff --git a/tests/assets/source/run.sh b/tests/assets/source/run.sh
+new file mode 100644
+index 0000000..1049c8d
+--- /dev/null
++++ b/tests/assets/source/run.sh
+@@ -0,0 +1,6 @@
++#!/bin/sh
++set -eu
++cd "${MIGRATION_REPO_ROOT:-/workspace/repo}"
++export MIGRATION_REPO_ROOT="$(pwd)"
++export MIGRATION_SIDE=source
++exec node /assets/harness.mjs "${1:-/logs/result.json}"
+diff --git a/tests/assets/source/skeleton/README.md b/tests/assets/source/skeleton/README.md
+new file mode 100644
+index 0000000..e0aa1c1
+--- /dev/null
++++ b/tests/assets/source/skeleton/README.md
+@@ -0,0 +1,5 @@
++# Source runner skeleton
++
++The integration registry lists this directory in BATCH-SKELETON-0001.
++Source-side runners live in ../batches/ and ../integration/ and are invoked
++through ../run.sh; this directory contains no additional runners.
+diff --git a/tests/assets/target/batches/BATCH-F2P-0001/dependency-resolution.test.js b/tests/assets/target/batches/BATCH-F2P-0001/dependency-resolution.test.js
+new file mode 100644
+index 0000000..fe70bff
+--- /dev/null
++++ b/tests/assets/target/batches/BATCH-F2P-0001/dependency-resolution.test.js
+@@ -0,0 +1,68 @@
++import { existsSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++import { fileURLToPath, pathToFileURL } from 'node:url';
++import { describe, expect, it } from 'vitest';
++
++const here = dirname(fileURLToPath(import.meta.url));
++
++async function load_helper() {
++	let dir = here;
++
++	for (;;) {
++		const candidate = join(dir, 'shared', 'batches', 'BATCH-F2P-0001', 'dependency-resolution.js');
++
++		if (existsSync(candidate)) {
++			return import(pathToFileURL(candidate).href);
++		}
++
++		const parent = dirname(dir);
++
++		if (parent === dir) {
++			throw new Error(`could not locate shared/batches/BATCH-F2P-0001/dependency-resolution.js from ${here}`);
++		}
++
++		dir = parent;
++	}
++}
++
++const helper = await load_helper();
++const asset_root = helper.locate_asset_root(here);
++const expected = helper.read_fixture(asset_root);
++
++function repo_root() {
++	const starts = [process.env.DEVALUE_REPO_ROOT, process.env.REPO_ROOT, process.cwd(), here].filter(Boolean);
++
++	for (const start of starts) {
++		try {
++			return helper.locate_repo_root(start);
++		} catch {
++			// try the next candidate start directory
++		}
++	}
++
++	throw new Error('could not locate the devalue package root; set DEVALVE_REPO_ROOT');
++}
++
++describe('R012: devalue 4.3.3 -> 6.0.0 dependency migration (target revision)', () => {
++	it('package.json targets devalue 6.0.0', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		expect(state.name).toBe(expected.package);
++		expect(state.version).toBe(expected.target_version);
++	});
++
++	it('package.json declares no devalue 4.3.3 dependency specifier', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		for (const entry of state.declared_devalue) {
++			expect(entry.specifier).not.toContain(expected.forbidden_version);
++		}
++	});
++
++	it('pnpm-lock.yaml resolves no devalue 4.3.3 entry', () => {
++		const state = helper.resolve_dependency_state(repo_root());
++
++		expect(state.lockfile_mentions_old_version).toBe(false);
++		expect(state.lockfile_devalue).not.toContain(expected.forbidden_version);
++	});
++});
+diff --git a/tests/assets/target/batches/BATCH-P2P-0001/run.mjs b/tests/assets/target/batches/BATCH-P2P-0001/run.mjs
+new file mode 100644
+index 0000000..18e9081
+--- /dev/null
++++ b/tests/assets/target/batches/BATCH-P2P-0001/run.mjs
+@@ -0,0 +1,10 @@
++import { run } from '../../../shared/batches/BATCH-P2P-0001/harness.mjs';
++
++const entry = process.env.DEVALUE_ENTRY ?? 'devalue';
++const devalue = await import(entry);
++const results = await run(devalue, {
++	side: 'target',
++	repoRoot: process.env.DEVALUE_ROOT ?? process.cwd()
++});
++
++process.stdout.write(JSON.stringify(results) + '\n');
+diff --git a/tests/assets/target/batches/BATCH-P2P-0002/run.js b/tests/assets/target/batches/BATCH-P2P-0002/run.js
+new file mode 100644
+index 0000000..6933cef
+--- /dev/null
++++ b/tests/assets/target/batches/BATCH-P2P-0002/run.js
+@@ -0,0 +1,27 @@
++// Executes the BATCH-P2P-0002 behavioural checks against whatever package the
++// workspace root exposes. Run from this directory's workspace with `node`.
++
++import * as devalue from '../../../index.js';
++import { createObservations } from '../../../shared/batches/BATCH-P2P-0002/observations.js';
++
++const checks = createObservations(devalue);
++const results = [];
++
++for (const [observation_id, run] of Object.entries(checks)) {
++	try {
++		await run();
++		results.push({ observation_id, status: 'PASS' });
++	} catch (error) {
++		results.push({
++			observation_id,
++			status: 'FAIL',
++			error: error && error.stack ? error.stack : String(error)
++		});
++	}
++}
++
++process.stdout.write(`${JSON.stringify({ batch_id: 'BATCH-P2P-0002', results }, null, 2)}\n`);
++
++if (results.some((result) => result.status !== 'PASS')) {
++	process.exitCode = 1;
++}
+diff --git a/tests/assets/target/batches/BATCH-P2P-0003/public-api.test.js b/tests/assets/target/batches/BATCH-P2P-0003/public-api.test.js
+new file mode 100644
+index 0000000..dc7a6b0
+--- /dev/null
++++ b/tests/assets/target/batches/BATCH-P2P-0003/public-api.test.js
+@@ -0,0 +1,58 @@
++import { test } from 'uvu';
++import * as assert from 'uvu/assert';
++import { parse, stringify, stringifyAsync } from '../../../index.js';
++
++test('P2P-049 Map and Set round-trip with equivalent type, size and entries', () => {
++	const map = new Map([
++		['alpha', 1],
++		['beta', { nested: true }]
++	]);
++	const set = new Set([1, 'two', { three: 3 }]);
++
++	const revivedMap = parse(stringify(map));
++	const revivedSet = parse(stringify(set));
++
++	assert.ok(revivedMap instanceof Map);
++	assert.ok(revivedSet instanceof Set);
++	assert.is(revivedMap.size, map.size);
++	assert.is(revivedSet.size, set.size);
++	assert.equal([...revivedMap.entries()], [...map.entries()]);
++	assert.equal([...revivedSet.values()], [...set.values()]);
++});
++
++test('P2P-050 cyclic and repeated references preserve instance identity', () => {
++	const shared = { id: 'shared' };
++	const root = { first: shared, second: shared };
++	root.self = root;
++
++	const revived = parse(stringify(root));
++
++	assert.is(revived.self, revived);
++	assert.is(revived.first, revived.second);
++});
++
++test('P2P-051 synchronous and asynchronous payloads are mutually consumable', async () => {
++	const value = {
++		label: 'payload',
++		count: 2,
++		entries: new Map([['key', 'value']])
++	};
++
++	const syncPayload = stringify(value);
++	const asyncPayload = await stringifyAsync(value);
++
++	const fromSync = parse(syncPayload);
++	const fromAsync = parse(asyncPayload);
++
++	assert.is(fromSync.label, 'payload');
++	assert.is(fromSync.count, 2);
++	assert.ok(fromSync.entries instanceof Map);
++	assert.is(fromSync.entries.get('key'), 'value');
++
++	assert.is(fromAsync.label, 'payload');
++	assert.is(fromAsync.count, 2);
++	assert.ok(fromAsync.entries instanceof Map);
++	assert.is(fromAsync.entries.get('key'), 'value');
++});
++
++test.run();
+diff --git a/tests/assets/target/integration/run.mjs b/tests/assets/target/integration/run.mjs
+new file mode 100644
+index 0000000..efa769e
+--- /dev/null
++++ b/tests/assets/target/integration/run.mjs
+@@ -0,0 +1,14 @@
++import { dirname, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { run_side } from '../../shared/integration/run-side.mjs';
++
++const here = dirname(fileURLToPath(import.meta.url));
++const root = join(here, '..', '..');
++
++const results = await run_side(root, 'target');
++
++process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
++
++if (!results.ok) {
++	process.exitCode = 1;
++}
+diff --git a/tests/assets/target/run.sh b/tests/assets/target/run.sh
+new file mode 100644
+index 0000000..d2021ac
+--- /dev/null
++++ b/tests/assets/target/run.sh
+@@ -0,0 +1,11 @@
++#!/bin/sh
++set -eu
++cd "${MIGRATION_REPO_ROOT:-/workspace/repo}"
++export MIGRATION_REPO_ROOT="$(pwd)"
++export MIGRATION_SIDE=target
++node --version
++pnpm --version
++pnpm run build
++pnpm test
++pnpm run test:types
++exec node /assets/harness.mjs "${1:-/logs/result.json}"
+diff --git a/tests/assets/target/skeleton/README.md b/tests/assets/target/skeleton/README.md
+new file mode 100644
+index 0000000..ea1b451
+--- /dev/null
++++ b/tests/assets/target/skeleton/README.md
+@@ -0,0 +1,5 @@
++# Target runner skeleton
++
++The integration registry lists this directory in BATCH-SKELETON-0001.
++Target-side runners live in ../batches/ and ../integration/ and are invoked
++through ../run.sh; this directory contains no additional runners.

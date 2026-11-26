@@ -1,0 +1,235 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "migration": {
+    "category": "backend_framework",
+    "source": "Fastify 5.12.3",
+    "target": "Express 5.1.0"
+  },
+  "family": "shared-case-corpus",
+  "projection": "normalized-result",
+  "normalization": {
+    "compare": "status, normalized content type, selected headers, body digest",
+    "ignore": ["Date", "ETag", "Content-Length", "Connection", "Keep-Alive"],
+    "body_digest": "sha256"
+  },
+  "default_config": {
+    "host": "0.0.0.0",
+    "pathname": "/",
+    "production": false,
+    "disguiseFiles": true,
+    "usingSEO": false,
+    "port": 8080
+  },
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "requirement_ids": ["R002"],
+      "family": "shared-case-corpus",
+      "input": {
+        "http": {"method": "GET", "path": "/"},
+        "upgrade": {"method": "GET", "path": "/wisp/", "headers": {"Upgrade": "websocket", "Connection": "Upgrade"}}
+      },
+      "expect": {
+        "http": "answered on the page port",
+        "upgrade": "handed to mrrowisp on the same listening port",
+        "invariant": "no second server or port introduced"
+      }
+    },
+    {
+      "id": "DIFF-002",
+      "requirement_ids": ["R003"],
+      "family": "shared-case-corpus",
+      "input": {
+        "hash_files": [
+          "views/sw.js",
+          "views/sw-blacklist.js",
+          "views/uv",
+          "views/scram",
+          "src/templates.mjs",
+          "src/source-rewrites.mjs",
+          "run-command.mjs",
+          "config.json",
+          "ecosystem.config.js"
+        ]
+      },
+      "expect": {"all": "byte-identical and semantically unchanged"}
+    },
+    {
+      "id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"host": "0.0.0.0", "production": false, "port": 8080}},
+      "expect": {"bind": "0.0.0.0:8080", "request": "http://0.0.0.0:8080/ connects", "derivation": "serverUrl from src/routes.mjs"}
+    },
+    {
+      "id": "DIFF-004",
+      "requirement_ids": ["R005"],
+      "family": "shared-case-corpus",
+      "input": {"requests": [{"method": "GET", "path": "/documentation"}, {"method": "GET", "path": "/robots.txt"}]},
+      "expect": {
+        "body": ["views/dist/documentation.html", "views/dist/robots.txt"],
+        "content_type": ["text/html", "text/plain"],
+        "fallback": "unmapped extension falls back to the configured default type"
+      }
+    },
+    {
+      "id": "DIFF-005",
+      "requirement_ids": ["R006"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true}, "requests": [{"method": "GET", "path": "/documentation"}, {"method": "GET", "path": "/"}, {"method": "GET", "path": "/not-a-real-page"}]},
+      "expect": {
+        "page": "loader page body",
+        "default": "content type image/vnd.microsoft.icon",
+        "error": "content type image/vnd.microsoft.icon"
+      }
+    },
+    {
+      "id": "DIFF-006",
+      "requirement_ids": ["R007"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true, "pathname": "/"}, "requests": [{"method": "GET", "path": "/not-a-real-page"}]},
+      "expect": {"status": 404, "body": "pre-rendered views/error.html content", "content_type": "image/vnd.microsoft.icon"}
+    },
+    {
+      "id": "DIFF-007",
+      "requirement_ids": ["R008"],
+      "family": "shared-case-corpus",
+      "input": {"requests": [{"method": "GET", "path": "/github/wisp"}, {"method": "GET", "path": "/github/does-not-exist"}]},
+      "expect": {"known": "redirect to externalPages.github.wisp", "unknown": 404}
+    },
+    {
+      "id": "DIFF-008",
+      "requirement_ids": ["R009"],
+      "family": "shared-case-corpus",
+      "input": {"requests": [{"method": "GET", "path": "/assets/js/card.js"}, {"method": "GET", "path": "/uv/uv.sw.js"}, {"method": "GET", "path": "/scram/"}, {"method": "GET", "path": "/epoxy/"}, {"method": "GET", "path": "/libcurl/"}, {"method": "GET", "path": "/baremux/"}]},
+      "expect": {"each": "serves the corresponding file from views/dist at the prefixed path"}
+    },
+    {
+      "id": "DIFF-009",
+      "requirement_ids": ["R010"],
+      "family": "shared-case-corpus",
+      "input": {"requests": [{"method": "GET", "path": "/service.js"}, {"method": "GET", "path": "/service-blacklist.js"}]},
+      "expect": {"content_type": "application/javascript", "header": {"Service-Worker-Allowed": "/"}}
+    },
+    {
+      "id": "DIFF-010",
+      "requirement_ids": ["R011"],
+      "family": "shared-case-corpus",
+      "input": {"upgrade": {"method": "GET", "path": "/wisp/", "headers": {"Upgrade": "websocket"}}},
+      "expect": {"routed_to": "wisp.route", "handshake": "completes"}
+    },
+    {
+      "id": "DIFF-011",
+      "requirement_ids": ["R012"],
+      "family": "shared-case-corpus",
+      "input": {"precondition": "create src/.shutdown", "request": {"method": "GET", "path": "/test-shutdown"}},
+      "expect": {"effects": ["wisp stops", "HTTP server closes", "src/.shutdown deleted", "process exits cleanly"]}
+    },
+    {
+      "id": "DIFF-012",
+      "requirement_ids": ["R013"],
+      "family": "shared-case-corpus",
+      "input": {"request": {"method": "GET", "path": "/"}},
+      "expect": {"present": ["X-Content-Type-Options: nosniff"], "absent": ["Content-Security-Policy", "X-Powered-By"]}
+    },
+    {
+      "id": "DIFF-013",
+      "requirement_ids": ["R014"],
+      "family": "shared-case-corpus",
+      "input": {"requests": [{"method": "GET", "path": "//documentation//"}, {"method": "GET", "path": "/documentation/"}]},
+      "expect": {"each": "same page as GET /documentation, not 404"}
+    },
+    {
+      "id": "DIFF-014",
+      "requirement_ids": ["R015"],
+      "family": "shared-case-corpus",
+      "input": {"request": {"method": "GET", "path": "/favicon.ico"}},
+      "expect": {"body": "empty"}
+    },
+    {
+      "id": "DIFF-015",
+      "requirement_ids": ["R016"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true}, "request": {"method": "GET", "path": "/documentation"}},
+      "expect": {"body": "loader page", "content_type": "text/html", "never": "the real documentation page"}
+    },
+    {
+      "id": "DIFF-016",
+      "requirement_ids": ["R017"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true}, "requests": [{"method": "GET", "path": "/robots.txt"}, {"method": "GET", "path": "/assets/js/card.js"}, {"method": "GET", "path": "/login"}, {"method": "GET", "path": "/github"}]},
+      "expect": {"each": "bypasses the loader and returns real content or redirect"}
+    },
+    {
+      "id": "DIFF-017",
+      "requirement_ids": ["R018"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true}, "request": {"method": "GET", "path": "/documentation.ico"}},
+      "expect": {"body": "documentation page", "content_type": "image/vnd.microsoft.icon", "header": {"Access-Control-Allow-Origin": "null"}}
+    },
+    {
+      "id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "family": "shared-case-corpus",
+      "input": {"request": {"method": "GET", "path": "/documentation", "headers": {"sec-fetch-dest": "document", "Cookie": "HistoryHide=true"}}},
+      "expect": {"status": 404}
+    },
+    {
+      "id": "DIFF-019",
+      "requirement_ids": ["R020"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"disguiseFiles": true}, "requests": [{"method": "GET", "path": "/github.ico"}, {"method": "GET", "path": "/github/unknown.ico"}]},
+      "expect": {"body": "disguised 404 page", "not": "generic 404 type"}
+    },
+    {
+      "id": "DIFF-020",
+      "requirement_ids": ["R021"],
+      "family": "shared-case-corpus",
+      "input": {"config": {"pathname": "/proxy"}, "requests": [{"method": "GET", "path": "/proxy/"}, {"method": "GET", "path": "/unrelated"}]},
+      "expect": {"prefixed": "serves pages.index", "root": "no catch-all 404 handler installed"}
+    },
+    {
+      "id": "DIFF-021",
+      "requirement_ids": ["R022"],
+      "family": "shared-case-corpus",
+      "input": {"requests": "every public route"},
+      "expect": {"all": "capabilities and response contracts preserved with equivalent results"}
+    },
+    {
+      "id": "DIFF-022",
+      "requirement_ids": ["R025"],
+      "family": "shared-case-corpus",
+      "input": {"diff": "working tree vs base revision"},
+      "expect": {
+        "changed": ["src/server.mjs", "package.json", "pnpm-lock.yaml"],
+        "unchanged": ["src/routes.mjs", "src/templates.mjs", "src/source-rewrites.mjs", "run-command.mjs", "config.json", "ecosystem.config.js"]
+      }
+    },
+    {
+      "id": "DIFF-023",
+      "requirement_ids": ["R026"],
+      "family": "shared-case-corpus",
+      "input": {"imports": "src/server.mjs"},
+      "expect": {
+        "from_routes": ["config", "serverUrl", "pages", "externalPages", "flatAltPaths", "getAltPrefix"],
+        "from_templates": ["tryReadFile", "preloaded404"],
+        "sensitivity": "changing a key in routes.mjs changes served behavior"
+      }
+    },
+    {
+      "id": "DIFF-024",
+      "requirement_ids": ["R028"],
+      "family": "shared-case-corpus",
+      "input": {"files": ["views/sw.js", "views/sw-blacklist.js", "views/uv", "views/scram", "src/templates.mjs", "src/source-rewrites.mjs", "config.json", "ecosystem.config.js"]},
+      "expect": {"all": "present and byte-identical to the base revision"}
+    },
+    {
+      "id": "DIFF-025",
+      "requirement_ids": ["R029"],
+      "family": "shared-case-corpus",
+      "input": {"review": "migration diff and public validation commands"},
+      "expect": {"policy": "no checks/assertions/comparisons removed or weakened; no evaluation input hardcoded"}
+    }
+  ]
+}

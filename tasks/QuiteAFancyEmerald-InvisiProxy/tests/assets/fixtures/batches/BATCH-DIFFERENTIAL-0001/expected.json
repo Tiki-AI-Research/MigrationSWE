@@ -1,0 +1,66 @@
+{
+  "schema_version": "migration-fixtures:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "config_under_test": {
+    "host": "127.0.0.1",
+    "pathname": "/",
+    "production": false,
+    "disguiseFiles": true,
+    "usingSEO": false
+  },
+  "provenance": {
+    "target_probe": {
+      "executed_on": "built copy of /input/target (identical sources; only views/dist build artifacts added)",
+      "build_command": "node run-command.mjs build",
+      "executor": "node backend.js"
+    },
+    "source_probe": {
+      "executed_on": "/input/source (static inspection; source runtime image is not materialized in the authoring container)"
+    }
+  },
+  "fixtures": [
+    {"case_id": "DIFF-001", "name": "shared_http_and_wisp_port", "expected": {"http_status": 200, "upgrade_handled": true, "distinct_listen_ports": 1}},
+    {"case_id": "DIFF-002", "name": "out_of_scope_assets_hash", "expected": {"views/sw.js": "unchanged", "views/sw-blacklist.js": "unchanged", "views/uv": "unchanged", "views/scram": "unchanged", "src/templates.mjs": "unchanged", "src/source-rewrites.mjs": "unchanged", "run-command.mjs": "unchanged", "config.json": "unchanged", "ecosystem.config.js": "unchanged"}},
+    {"case_id": "DIFF-003", "name": "listen_host_port", "expected": {"host": "0.0.0.0", "port": 8080, "connect": true}},
+    {"case_id": "DIFF-004", "name": "page_route_content_type", "expected": {"/documentation": {"content_type": "text/html"}, "/robots.txt": {"content_type": "text/plain"}}},
+    {"case_id": "DIFF-005", "name": "disguised_page_and_default_type", "expected": {"/documentation": {"body": "loader"}, "/": {"content_type": "image/vnd.microsoft.icon"}, "/not-a-real-page": {"content_type": "image/vnd.microsoft.icon"}}},
+    {"case_id": "DIFF-006", "name": "catch_all_404", "expected": {"/not-a-real-page": {"status": 404, "content_type": "image/vnd.microsoft.icon"}}},
+    {"case_id": "DIFF-007", "name": "github_redirect", "expected": {"/github/wisp": {"status": 302}, "/github/does-not-exist": {"status": 404}}},
+    {"case_id": "DIFF-008", "name": "static_prefix_mounts", "expected": {"/assets/js/card.js": {"status": 200}, "/uv/uv.sw.js": {"status": 200}, "/scram/": {"status": 200}, "/epoxy/": {"status": 200}, "/libcurl/": {"status": 200}, "/baremux/": {"status": 200}}},
+    {"case_id": "DIFF-009", "name": "service_worker_headers", "expected": {"/service.js": {"content_type": "application/javascript", "Service-Worker-Allowed": "/"}, "/service-blacklist.js": {"content_type": "application/javascript", "Service-Worker-Allowed": "/"}}},
+    {"case_id": "DIFF-010", "name": "wisp_upgrade", "expected": {"upgrade_status": 101, "routed_to": "wisp.route"}},
+    {"case_id": "DIFF-011", "name": "test_shutdown", "expected": {"wisp_stopped": true, "http_closed": true, "shutdown_file_deleted": true}},
+    {"case_id": "DIFF-012", "name": "security_headers", "expected": {"X-Content-Type-Options": "nosniff", "Content-Security-Policy": null, "X-Powered-By": null}},
+    {"case_id": "DIFF-013", "name": "path_normalization", "expected": {"//documentation//": "equal_to(/documentation)", "/documentation/": "equal_to(/documentation)"}},
+    {"case_id": "DIFF-014", "name": "favicon_empty", "expected": {"/favicon.ico": {"status": 200, "body_length": 0}}},
+    {"case_id": "DIFF-015", "name": "disguised_non_ico_loader", "expected": {"/documentation": {"body": "loader", "content_type": "text/html"}}},
+    {"case_id": "DIFF-016", "name": "disguise_exemptions", "expected": {"/robots.txt": "real", "/assets/js/card.js": "real", "/login": "real", "/github": "redirect"}},
+    {"case_id": "DIFF-017", "name": "ico_suffix_stripping", "expected": {"/documentation.ico": {"content_type": "image/vnd.microsoft.icon", "Access-Control-Allow-Origin": "null"}}},
+    {"case_id": "DIFF-018", "name": "history_hide", "expected": {"/documentation": {"status": 404}}},
+    {"case_id": "DIFF-019", "name": "disguised_github_miss", "expected": {"/github.ico": {"body": "disguised404"}}},
+    {"case_id": "DIFF-020", "name": "prefixed_deployment", "expected": {"/proxy/": {"body": "pages.index"}, "root_catch_all": false}},
+    {"case_id": "DIFF-021", "name": "overall_public_contract", "expected": {"equivalent": true}},
+    {"case_id": "DIFF-022", "name": "change_scope", "expected": {"changed": ["src/server.mjs", "package.json", "pnpm-lock.yaml"], "unchanged": ["src/routes.mjs", "src/templates.mjs", "src/source-rewrites.mjs", "run-command.mjs", "config.json", "ecosystem.config.js"]}},
+    {"case_id": "DIFF-023", "name": "module_dependencies", "expected": {"server_imports_routes": true, "server_imports_templates": true}},
+    {"case_id": "DIFF-024", "name": "client_assets_byte_identical", "expected": {"all_present": true, "all_byte_identical": true}},
+    {"case_id": "DIFF-025", "name": "integrity", "expected": {"checks_removed": 0, "comparisons_weakened": 0, "hardcoded_inputs": 0}}
+  ],
+  "observed_reference_target": {
+    "/": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "/documentation": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "/robots.txt": {"status": 404, "content_type": "image/vnd.microsoft.icon"},
+    "/favicon.ico": {"status": 200, "content_length": 0},
+    "/login": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "//documentation//": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "/documentation/": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "/not-a-real-page": {"status": 200, "content_type": "text/html; charset=utf-8"},
+    "/github/router": {"status": 302, "location": "https://github.com/MercuryWorkshop/wisp-protocol"},
+    "/github/does-not-exist": {"status": 404, "content_type": "image/vnd.microsoft.icon"},
+    "/service.js": {"status": 200, "content_type": "application/javascript; charset=utf-8", "Service-Worker-Allowed": "/"},
+    "/service-blacklist.js": {"status": 200, "content_type": "application/javascript; charset=utf-8", "Service-Worker-Allowed": "/"},
+    "/documentation.ico": {"status": 200, "content_type": "image/vnd.microsoft.icon", "Access-Control-Allow-Origin": "null"},
+    "/assets/js/card.js": {"status": 200, "content_type": "text/javascript; charset=utf-8"},
+    "HistoryHide:/documentation": {"status": 404, "content_type": "text/html; charset=utf-8"}
+  }
+}

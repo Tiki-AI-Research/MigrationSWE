@@ -1,0 +1,4471 @@
+diff --git a/mcp-server/.gitignore b/mcp-server/.gitignore
+index b947077..1d407fb 100644
+--- a/mcp-server/.gitignore
++++ b/mcp-server/.gitignore
+@@ -1,2 +1,6 @@
+-node_modules/
++__pycache__/
++*.py[cod]
++.venv/
++*.egg-info/
++build/
+ dist/
+diff --git a/mcp-server/omg_mcp/__init__.py b/mcp-server/omg_mcp/__init__.py
+new file mode 100644
+index 0000000..b941a35
+--- /dev/null
++++ b/mcp-server/omg_mcp/__init__.py
+@@ -0,0 +1,15 @@
++"""OMG MCP server package.
++
++A Python reimplementation of the ``omg-mcp-server`` Model Context Protocol
++server (``omg-workflow`` version ``1.0.0``) that runs over stdio.
++"""
++
++from .server import INPUT_SCHEMAS, TOOL_DESCRIPTIONS, TOOL_ORDER, create_server, register_all
++
++__all__ = [
++    "create_server",
++    "register_all",
++    "INPUT_SCHEMAS",
++    "TOOL_DESCRIPTIONS",
++    "TOOL_ORDER",
++]
+diff --git a/mcp-server/omg_mcp/__main__.py b/mcp-server/omg_mcp/__main__.py
+new file mode 100644
+index 0000000..b71f116
+--- /dev/null
++++ b/mcp-server/omg_mcp/__main__.py
+@@ -0,0 +1,32 @@
++"""Process entrypoint for the OMG MCP stdio server."""
++
++from __future__ import annotations
++
++import sys
++
++import anyio
++from mcp.server.stdio import stdio_server
++
++from .server import create_server
++
++
++async def main() -> None:
++    server = create_server()
++    async with stdio_server() as (read_stream, write_stream):
++        await server.run(
++            read_stream,
++            write_stream,
++            server.create_initialization_options(),
++        )
++
++
++def run() -> None:
++    try:
++        anyio.run(main)
++    except Exception as error:  # noqa: BLE001 - mirror TS startup failure
++        print(f"OMG MCP Server failed to start: {error}", file=sys.stderr)
++        sys.exit(1)
++
++
++if __name__ == "__main__":
++    run()
+diff --git a/mcp-server/omg_mcp/memory_tools.py b/mcp-server/omg_mcp/memory_tools.py
+new file mode 100644
+index 0000000..59b3101
+--- /dev/null
++++ b/mcp-server/omg_mcp/memory_tools.py
+@@ -0,0 +1,141 @@
++"""Memory tool handlers. Python port of the former TypeScript ``memory-tools.ts``."""
++
++from __future__ import annotations
++
++import os
++
++from .utils import (
++    ensure_dir,
++    error_response,
++    get_workspace_root,
++    json_dumps_compact,
++    json_dumps_indent,
++    make_text_result,
++    now_iso,
++    safe_json_parse,
++    safe_read_file,
++    safe_write_file,
++)
++
++MAX_ENTRIES = 500
++MAX_VALUE_LENGTH = 10_000
++
++
++def get_memory_path() -> str:
++    return os.path.join(get_workspace_root(), ".omc", "project-memory.json")
++
++
++def read_memory() -> dict:
++    mem_path = get_memory_path()
++    data = safe_read_file(mem_path)
++    if not data:
++        return {"entries": []}
++    result = safe_json_parse(data)
++    if not result.ok:
++        return {"entries": []}
++    return result.data
++
++
++def write_memory(store: dict) -> None:
++    mem_path = get_memory_path()
++    ensure_dir(os.path.dirname(mem_path))
++    safe_write_file(mem_path, json_dumps_indent(store))
++
++
++def omg_read_memory(args: dict):
++    category = args.get("category")
++    key = args.get("key")
++
++    store = read_memory()
++    entries = list(store.get("entries") or [])
++
++    if category:
++        entries = [e for e in entries if e.get("category") == category]
++    if key:
++        entries = [e for e in entries if e.get("key") == key]
++
++    return make_text_result(
++        json_dumps_compact(
++            {
++                "total": len(entries),
++                "entries": [
++                    {
++                        "key": e.get("key"),
++                        "value": e.get("value"),
++                        "category": e.get("category"),
++                        "updated_at": e.get("updated_at"),
++                    }
++                    for e in entries
++                ],
++            }
++        )
++    )
++
++
++def omg_write_memory(args: dict):
++    key = args.get("key")
++    value = args.get("value")
++    category = args.get("category", "project")
++
++    if isinstance(value, str) and len(value) > MAX_VALUE_LENGTH:
++        return error_response(
++            f"Value exceeds maximum length of {MAX_VALUE_LENGTH} characters"
++        )
++
++    store = read_memory()
++    entries = list(store.get("entries") or [])
++    existing = next((i for i, e in enumerate(entries) if e.get("key") == key), -1)
++    now = now_iso()
++
++    if existing < 0 and len(entries) >= MAX_ENTRIES:
++        return error_response(f"Memory store full (max {MAX_ENTRIES} entries)")
++
++    if existing >= 0:
++        entries[existing]["value"] = value
++        entries[existing]["category"] = category
++        entries[existing]["updated_at"] = now
++        action = "updated"
++    else:
++        entries.append(
++            {
++                "key": key,
++                "value": value,
++                "category": category,
++                "created_at": now,
++                "updated_at": now,
++            }
++        )
++        action = "created"
++
++    store["entries"] = entries
++    write_memory(store)
++
++    return make_text_result(
++        json_dumps_compact({"success": True, "key": key, "action": action})
++    )
++
++
++def omg_delete_memory(args: dict):
++    key = args.get("key")
++    store = read_memory()
++    entries = list(store.get("entries") or [])
++    before = len(entries)
++    filtered = [e for e in entries if e.get("key") != key]
++    deleted = before - len(filtered) > 0
++    if deleted:
++        store["entries"] = filtered
++        write_memory(store)
++
++    return make_text_result(
++        json_dumps_compact({"success": True, "deleted": deleted, "key": key})
++    )
++
++
++def register_memory_tools(registry: dict) -> None:
++    registry.update(
++        {
++            "omg_read_memory": omg_read_memory,
++            "omg_write_memory": omg_write_memory,
++            "omg_delete_memory": omg_delete_memory,
++        }
++    )
+diff --git a/mcp-server/omg_mcp/model_router.py b/mcp-server/omg_mcp/model_router.py
+new file mode 100644
+index 0000000..f0269b8
+--- /dev/null
++++ b/mcp-server/omg_mcp/model_router.py
+@@ -0,0 +1,130 @@
++"""Model recommendation router. Python port of the former ``model-router.ts``."""
++
++from __future__ import annotations
++
++from .utils import json_dumps_compact, make_text_result
++
++COMPLEXITY_THRESHOLDS = {
++    "high": {
++        "file_count": 10,
++        "description_length": 500,
++        "keywords": [
++            "architect",
++            "design",
++            "refactor",
++            "migrate",
++            "security",
++            "performance",
++            "optimize",
++            "complex",
++            "critical",
++            "system",
++        ],
++    },
++    "medium": {
++        "file_count": 5,
++        "description_length": 200,
++        "keywords": [
++            "implement",
++            "add",
++            "update",
++            "feature",
++            "component",
++            "module",
++            "service",
++            "test",
++            "debug",
++        ],
++    },
++}
++
++
++def assess_complexity(task: str, file_count=None) -> dict:
++    score = 0
++    factors: list = []
++    task_lower = task.lower()
++
++    for kw in COMPLEXITY_THRESHOLDS["high"]["keywords"]:
++        if kw in task_lower:
++            score += 3
++            factors.append(f'high-complexity keyword: "{kw}"')
++
++    for kw in COMPLEXITY_THRESHOLDS["medium"]["keywords"]:
++        if kw in task_lower:
++            score += 1
++            factors.append(f'medium-complexity keyword: "{kw}"')
++
++    if file_count is not None:
++        if file_count >= COMPLEXITY_THRESHOLDS["high"]["file_count"]:
++            score += 5
++            factors.append(f"high file count: {file_count}")
++        elif file_count >= COMPLEXITY_THRESHOLDS["medium"]["file_count"]:
++            score += 2
++            factors.append(f"moderate file count: {file_count}")
++
++    if len(task) >= COMPLEXITY_THRESHOLDS["high"]["description_length"]:
++        score += 2
++        factors.append("long task description")
++
++    tier = "high" if score >= 8 else "medium" if score >= 3 else "low"
++    return {"tier": tier, "score": score, "factors": factors}
++
++
++def recommend(tier: str) -> dict:
++    if tier == "high":
++        return {
++            "recommended_model": "claude-sonnet-4.6",
++            "tier": "HIGH",
++            "reason": "Complex task requiring deep reasoning and architecture decisions",
++            "alternatives": ["gpt-4.1"],
++        }
++    if tier == "medium":
++        return {
++            "recommended_model": "gpt-4.1",
++            "tier": "MEDIUM",
++            "reason": "Standard implementation task with moderate complexity",
++            "alternatives": ["claude-sonnet-4.6"],
++        }
++    return {
++        "recommended_model": "gpt-4.1-mini",
++        "tier": "LOW",
++        "reason": "Simple task suitable for fast, lightweight model",
++        "alternatives": ["gpt-4.1"],
++    }
++
++
++def omg_select_model(args: dict):
++    task = args.get("task")
++    file_count = args.get("file_count")
++    agent_type = args.get("agent_type")
++
++    complexity = assess_complexity(task, file_count)
++
++    high_tier_agents = ["architect", "critic", "analyst", "planner"]
++    low_tier_agents = ["writer", "git-master", "code-simplifier", "explore"]
++
++    if agent_type and agent_type in high_tier_agents:
++        recommendation = recommend("high")
++        recommendation["reason"] = (
++            f'Agent type "{agent_type}" requires high-tier model for quality reasoning'
++        )
++    elif agent_type and agent_type in low_tier_agents:
++        recommendation = recommend("low")
++        recommendation["reason"] = (
++            f'Agent type "{agent_type}" works well with lightweight model'
++        )
++    else:
++        recommendation = recommend(complexity["tier"])
++
++    result = dict(recommendation)
++    result["complexity"] = {
++        "tier": complexity["tier"],
++        "score": complexity["score"],
++        "factors": complexity["factors"],
++    }
++
++    return make_text_result(json_dumps_compact(result))
++
++
++def register_model_router(registry: dict) -> None:
++    registry.update({"omg_select_model": omg_select_model})
+diff --git a/mcp-server/omg_mcp/prd_tools.py b/mcp-server/omg_mcp/prd_tools.py
+new file mode 100644
+index 0000000..15f99d4
+--- /dev/null
++++ b/mcp-server/omg_mcp/prd_tools.py
+@@ -0,0 +1,219 @@
++"""PRD tool handlers. Python port of the former TypeScript ``prd-tools.ts``."""
++
++from __future__ import annotations
++
++import os
++from typing import Optional
++
++from .utils import (
++    ensure_dir,
++    generate_id,
++    get_workspace_root,
++    json_dumps_compact,
++    json_dumps_indent,
++    make_text_result,
++    now_iso,
++    safe_json_parse,
++    safe_read_file,
++    safe_write_file,
++)
++
++
++def get_prd_path() -> str:
++    return os.path.join(get_workspace_root(), ".omc", "prd.json")
++
++
++def read_prd() -> Optional[dict]:
++    prd_path = get_prd_path()
++    data = safe_read_file(prd_path)
++    if not data:
++        return None
++    result = safe_json_parse(data)
++    if not result.ok:
++        return None
++    return result.data
++
++
++def write_prd(prd: dict) -> None:
++    prd_path = get_prd_path()
++    ensure_dir(os.path.dirname(prd_path))
++    prd["updated_at"] = now_iso()
++    safe_write_file(prd_path, json_dumps_indent(prd))
++
++
++def omg_read_prd(args: dict):
++    prd = read_prd()
++    if not prd:
++        return make_text_result(
++            json_dumps_compact(
++                {
++                    "exists": False,
++                    "message": "No PRD found. Create one with ralph or omg-autopilot.",
++                }
++            )
++        )
++
++    stories = prd.get("stories") or []
++    summary = {
++        "title": prd.get("title"),
++        "total_stories": len(stories),
++        "passing": sum(1 for s in stories if s.get("passes")),
++        "failing": sum(1 for s in stories if not s.get("passes")),
++        "stories": [
++            {
++                "id": s.get("id"),
++                "title": s.get("title"),
++                "passes": s.get("passes"),
++                "priority": s.get("priority"),
++                "criteria_count": len(s.get("acceptance_criteria") or []),
++            }
++            for s in stories
++        ],
++    }
++
++    return make_text_result(json_dumps_indent(summary))
++
++
++def omg_create_prd(args: dict):
++    title = args.get("title")
++    description = args.get("description")
++    if description is None:
++        description = ""
++    input_stories = args.get("stories")
++    if input_stories is None:
++        input_stories = []
++
++    stories = []
++    for story in input_stories:
++        stories.append(
++            {
++                "id": story.get("id") or f"story-{generate_id()}",
++                "title": story.get("title"),
++                "description": story.get("description")
++                if story.get("description") is not None
++                else "",
++                "acceptance_criteria": story.get("acceptance_criteria")
++                if story.get("acceptance_criteria") is not None
++                else [],
++                "passes": False,
++                "priority": story.get("priority")
++                if story.get("priority") is not None
++                else 0,
++            }
++        )
++
++    prd = {
++        "title": title,
++        "description": description,
++        "stories": stories,
++        "created_at": now_iso(),
++        "updated_at": now_iso(),
++    }
++
++    write_prd(prd)
++
++    return make_text_result(
++        json_dumps_compact(
++            {
++                "success": True,
++                "title": prd["title"],
++                "stories_created": len(prd["stories"]),
++            }
++        )
++    )
++
++
++def omg_update_story(args: dict):
++    story_id = args.get("story_id")
++    passes = args.get("passes")
++    evidence = args.get("evidence")
++
++    prd = read_prd()
++    if not prd:
++        return make_text_result(
++            json_dumps_compact({"success": False, "error": "No PRD found"})
++        )
++
++    stories = prd.get("stories") or []
++    story = next((s for s in stories if s.get("id") == story_id), None)
++    if story is None:
++        return make_text_result(
++            json_dumps_compact(
++                {"success": False, "error": f"Story {story_id} not found"}
++            )
++        )
++
++    story["passes"] = passes
++    if evidence:
++        story["verification_evidence"] = evidence
++    write_prd(prd)
++
++    return make_text_result(
++        json_dumps_compact(
++            {
++                "success": True,
++                "story_id": story_id,
++                "passes": passes,
++                "total_passing": sum(1 for s in stories if s.get("passes")),
++                "total_stories": len(stories),
++            }
++        )
++    )
++
++
++def omg_verify_story(args: dict):
++    prd = read_prd()
++    if not prd:
++        return make_text_result(
++            json_dumps_compact({"exists": False, "message": "No PRD found"})
++        )
++
++    stories = prd.get("stories") or []
++    pending = [s for s in stories if not s.get("passes")]
++    pending.sort(key=_priority_key, reverse=True)
++
++    if not pending:
++        return make_text_result(
++            json_dumps_compact(
++                {
++                    "all_passing": True,
++                    "message": "All stories pass. PRD is complete.",
++                    "total_stories": len(stories),
++                }
++            )
++        )
++
++    nxt = pending[0]
++    return make_text_result(
++        json_dumps_compact(
++            {
++                "story": {
++                    "id": nxt.get("id"),
++                    "title": nxt.get("title"),
++                    "description": nxt.get("description"),
++                    "acceptance_criteria": nxt.get("acceptance_criteria"),
++                    "priority": nxt.get("priority"),
++                },
++                "remaining": len(pending),
++                "total": len(stories),
++            }
++        )
++    )
++
++
++def _priority_key(story: dict):
++    priority = story.get("priority")
++    if isinstance(priority, (int, float)) and not isinstance(priority, bool):
++        return priority
++    return 0
++
++
++def register_prd_tools(registry: dict) -> None:
++    registry.update(
++        {
++            "omg_read_prd": omg_read_prd,
++            "omg_create_prd": omg_create_prd,
++            "omg_update_story": omg_update_story,
++            "omg_verify_story": omg_verify_story,
++        }
++    )
+diff --git a/mcp-server/omg_mcp/server.py b/mcp-server/omg_mcp/server.py
+new file mode 100644
+index 0000000..99d51a3
+--- /dev/null
++++ b/mcp-server/omg_mcp/server.py
+@@ -0,0 +1,279 @@
++"""MCP server construction and tool registration.
++
++Python port of the former TypeScript ``index.ts`` (minus the process
++entrypoint). Builds a low-level ``mcp.server.Server`` named ``omg-workflow``
++version ``1.0.0`` and registers all 15 tools with explicit JSON Schema that
++matches the schemas generated by the original TypeScript server.
++"""
++
++from __future__ import annotations
++
++from mcp import types
++from mcp.server import Server
++
++from . import (
++    memory_tools,
++    model_router,
++    prd_tools,
++    state_tools,
++    workflow_tools,
++)
++from .utils import error_response, json_dumps_compact
++
++_SCHEMA_URI = "http://json-schema.org/draft-07/schema#"
++
++INPUT_SCHEMAS: dict = {
++    "omg_read_state": {
++        "type": "object",
++        "properties": {
++            "mode": {
++                "type": "string",
++                "description": "The mode to read state for (e.g., omg-autopilot, ralph, team)",
++            }
++        },
++        "required": ["mode"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_write_state": {
++        "type": "object",
++        "properties": {
++            "mode": {"type": "string", "description": "The mode to write state for"},
++            "state": {
++                "type": "string",
++                "description": "JSON string of state to write/merge",
++            },
++        },
++        "required": ["mode", "state"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_clear_state": {
++        "type": "object",
++        "properties": {
++            "mode": {
++                "description": "Mode to clear. Omit to clear all modes.",
++                "type": "string",
++            }
++        },
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_list_active": {"type": "object", "properties": {}, "$schema": _SCHEMA_URI},
++    "omg_read_prd": {"type": "object", "properties": {}, "$schema": _SCHEMA_URI},
++    "omg_create_prd": {
++        "type": "object",
++        "properties": {
++            "title": {"type": "string", "description": "PRD title"},
++            "description": {"description": "PRD description", "type": "string"},
++            "stories": {
++                "description": "User stories for the PRD",
++                "type": "array",
++                "items": {
++                    "type": "object",
++                    "properties": {
++                        "id": {
++                            "description": "Story ID (auto-generated if omitted)",
++                            "type": "string",
++                        },
++                        "title": {"type": "string", "description": "Story title"},
++                        "description": {
++                            "description": "Story description",
++                            "type": "string",
++                        },
++                        "acceptance_criteria": {
++                            "description": "List of acceptance criteria",
++                            "type": "array",
++                            "items": {"type": "string"},
++                        },
++                        "priority": {
++                            "description": "Priority (0 = default)",
++                            "type": "number",
++                        },
++                    },
++                    "required": ["title"],
++                },
++            },
++        },
++        "required": ["title"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_update_story": {
++        "type": "object",
++        "properties": {
++            "story_id": {"type": "string", "description": "The story ID to update"},
++            "passes": {
++                "type": "boolean",
++                "description": "Whether the story passes its acceptance criteria",
++            },
++            "evidence": {
++                "description": "Verification evidence (test output, etc.)",
++                "type": "string",
++            },
++        },
++        "required": ["story_id", "passes"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_verify_story": {"type": "object", "properties": {}, "$schema": _SCHEMA_URI},
++    "omg_next_phase": {
++        "type": "object",
++        "properties": {
++            "current_phase": {
++                "type": "number",
++                "description": "Current phase number (0-5)",
++            },
++            "skip_reason": {
++                "description": "Reason for skipping to a non-sequential phase",
++                "type": "string",
++            },
++        },
++        "required": ["current_phase"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_check_completion": {
++        "type": "object",
++        "properties": {
++            "mode": {
++                "description": "Mode to check (omg-autopilot, ralph, team). Defaults to checking all active modes.",
++                "type": "string",
++            }
++        },
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_get_phase_info": {
++        "type": "object",
++        "properties": {
++            "phase": {
++                "description": "Specific phase number (0-5). Omit for all phases.",
++                "type": "number",
++            }
++        },
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_read_memory": {
++        "type": "object",
++        "properties": {
++            "category": {
++                "description": "Filter by category (e.g., project, user, feedback, reference)",
++                "type": "string",
++            },
++            "key": {"description": "Filter by specific key", "type": "string"},
++        },
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_write_memory": {
++        "type": "object",
++        "properties": {
++            "key": {"type": "string", "description": "Unique key for this memory entry"},
++            "value": {"type": "string", "description": "The memory content"},
++            "category": {
++                "default": "project",
++                "description": "Category: project, user, feedback, reference",
++                "type": "string",
++            },
++        },
++        "required": ["key", "value"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_delete_memory": {
++        "type": "object",
++        "properties": {
++            "key": {"type": "string", "description": "Key of the memory entry to delete"}
++        },
++        "required": ["key"],
++        "$schema": _SCHEMA_URI,
++    },
++    "omg_select_model": {
++        "type": "object",
++        "properties": {
++            "task": {"type": "string", "description": "Description of the task to route"},
++            "file_count": {
++                "description": "Number of files involved in the task",
++                "type": "number",
++            },
++            "agent_type": {
++                "description": "The agent type that will execute (e.g., architect, executor)",
++                "type": "string",
++            },
++        },
++        "required": ["task"],
++        "$schema": _SCHEMA_URI,
++    },
++}
++
++TOOL_DESCRIPTIONS: dict = {
++    "omg_read_state": "Read the current state for a given OMG mode (omg-autopilot, ralph, ultrawork, ultraqa, team, self-improve)",
++    "omg_write_state": "Write or update state for a given OMG mode. Merges with existing state.",
++    "omg_clear_state": "Clear state for a given OMG mode or all modes",
++    "omg_list_active": "List all currently active OMG modes",
++    "omg_read_prd": "Read the current PRD (Product Requirements Document) with all stories and their status",
++    "omg_create_prd": "Create a new PRD with title, description, and stories",
++    "omg_update_story": "Update a story's status (passes: true/false) and optionally add verification evidence",
++    "omg_verify_story": "Get the next unverified story and its acceptance criteria for verification",
++    "omg_next_phase": "Advance the omg-autopilot workflow to the next phase. Returns the new phase details.",
++    "omg_check_completion": "Check if the current workflow has incomplete tasks. Returns whether the agent should continue or can stop.",
++    "omg_get_phase_info": "Get information about omg-autopilot phases",
++    "omg_read_memory": "Read project memory entries. Optionally filter by category or key.",
++    "omg_write_memory": "Write or update a project memory entry",
++    "omg_delete_memory": "Delete a project memory entry by key",
++    "omg_select_model": "Recommend the best model for a task based on complexity analysis. Maps OMC model tiers (HIGH/MEDIUM/LOW) to available VS Code Copilot models.",
++}
++
++TOOL_ORDER = [
++    "omg_read_state",
++    "omg_write_state",
++    "omg_clear_state",
++    "omg_list_active",
++    "omg_read_prd",
++    "omg_create_prd",
++    "omg_update_story",
++    "omg_verify_story",
++    "omg_next_phase",
++    "omg_check_completion",
++    "omg_get_phase_info",
++    "omg_read_memory",
++    "omg_write_memory",
++    "omg_delete_memory",
++    "omg_select_model",
++]
++
++
++def _build_tools() -> list:
++    tools = []
++    for name in TOOL_ORDER:
++        tools.append(
++            types.Tool(
++                name=name,
++                description=TOOL_DESCRIPTIONS[name],
++                inputSchema=INPUT_SCHEMAS[name],
++                execution=types.ToolExecution(taskSupport="forbidden"),
++            )
++        )
++    return tools
++
++
++def register_all(registry: dict) -> None:
++    state_tools.register_state_tools(registry)
++    prd_tools.register_prd_tools(registry)
++    workflow_tools.register_workflow_tools(registry)
++    memory_tools.register_memory_tools(registry)
++    model_router.register_model_router(registry)
++
++
++def create_server() -> Server:
++    server = Server("omg-workflow", version="1.0.0")
++
++    registry: dict = {}
++    register_all(registry)
++
++    tools = _build_tools()
++
++    @server.list_tools()
++    async def _list_tools() -> list:
++        return tools
++
++    @server.call_tool(validate_input=False)
++    async def _call_tool(name: str, arguments: dict):
++        handler = registry.get(name)
++        if handler is None:
++            return error_response(f"Unknown tool: {name}")
++        return handler(arguments or {})
++
++    return server
+diff --git a/mcp-server/omg_mcp/state_tools.py b/mcp-server/omg_mcp/state_tools.py
+new file mode 100644
+index 0000000..90c48d6
+--- /dev/null
++++ b/mcp-server/omg_mcp/state_tools.py
+@@ -0,0 +1,150 @@
++"""State tool handlers. Python port of the former TypeScript ``state-tools.ts``."""
++
++from __future__ import annotations
++
++import os
++
++from .utils import (
++    ensure_dir,
++    error_response,
++    get_workspace_root,
++    json_dumps_compact,
++    json_dumps_indent,
++    js_or,
++    js_string,
++    make_text_result,
++    now_iso,
++    safe_json_parse,
++    safe_read_file,
++    safe_write_file,
++    validate_mode,
++)
++
++
++def get_state_dir() -> str:
++    return os.path.join(get_workspace_root(), ".omc", "state")
++
++
++def get_state_path(mode: str) -> str:
++    validate_mode(mode)
++    return os.path.join(get_state_dir(), f"{mode}-state.json")
++
++
++def omg_read_state(args: dict):
++    mode = args.get("mode")
++    try:
++        state_path = get_state_path(mode)
++        data = safe_read_file(state_path)
++        if not data:
++            return make_text_result(
++                json_dumps_compact(
++                    {"active": False, "mode": mode, "message": "No state found"}
++                )
++            )
++        return make_text_result(data)
++    except Exception as err:  # noqa: BLE001 - mirror TS catch-all
++        return error_response(str(err))
++
++
++def omg_write_state(args: dict):
++    mode = args.get("mode")
++    state = args.get("state")
++    try:
++        state_dir = get_state_dir()
++        ensure_dir(state_dir)
++        state_path = get_state_path(mode)
++
++        existing: dict = {}
++        existing_data = safe_read_file(state_path)
++        if existing_data:
++            existing_parsed = safe_json_parse(existing_data)
++            if existing_parsed.ok:
++                existing = existing_parsed.data
++            # Corrupted or polluted state - overwrite
++
++        parsed = safe_json_parse(state)
++        if not parsed.ok:
++            return error_response(parsed.error)
++
++        new_state = dict(existing)
++        new_state.update(parsed.data)
++        new_state["updated_at"] = now_iso()
++        safe_write_file(state_path, json_dumps_indent(new_state))
++
++        return make_text_result(
++            json_dumps_compact({"success": True, "mode": mode, "state": new_state})
++        )
++    except Exception as err:  # noqa: BLE001 - mirror TS catch-all
++        return error_response(str(err))
++
++
++def omg_clear_state(args: dict):
++    mode = args.get("mode")
++    try:
++        state_dir = get_state_dir()
++        if not os.path.exists(state_dir):
++            return make_text_result(
++                json_dumps_compact({"success": True, "message": "No state directory"})
++            )
++
++        if mode:
++            state_path = get_state_path(mode)
++            if os.path.exists(state_path):
++                os.remove(state_path)
++            return make_text_result(
++                json_dumps_compact({"success": True, "cleared": mode})
++            )
++
++        files = [f for f in os.listdir(state_dir) if f.endswith("-state.json")]
++        for file in files:
++            os.remove(os.path.join(state_dir, file))
++        return make_text_result(
++            json_dumps_compact(
++                {"success": True, "cleared": "all", "files": len(files)}
++            )
++        )
++    except Exception as err:  # noqa: BLE001 - mirror TS catch-all
++        return error_response(str(err))
++
++
++def omg_list_active(args: dict):
++    state_dir = get_state_dir()
++    if not os.path.exists(state_dir):
++        return make_text_result(json_dumps_compact({"active_modes": []}))
++
++    files = [f for f in os.listdir(state_dir) if f.endswith("-state.json")]
++    active_modes: list = []
++
++    for file in files:
++        try:
++            raw = safe_read_file(os.path.join(state_dir, file))
++            if not raw:
++                continue
++            parsed = safe_json_parse(raw)
++            if not parsed.ok:
++                continue
++            data = parsed.data
++            if data.get("active"):
++                entry = {"mode": file[: -len("-state.json")]}
++                phase_raw = js_or(js_or(data.get("current_phase"), data.get("phase")), "")
++                phase = js_string(phase_raw)
++                if phase:
++                    entry["phase"] = phase
++                if isinstance(data.get("updated_at"), str):
++                    entry["updated_at"] = data["updated_at"]
++                active_modes.append(entry)
++        except Exception:  # noqa: BLE001 - skip corrupted files
++            continue
++
++    return make_text_result(json_dumps_compact({"active_modes": active_modes}))
++
++
++def register_state_tools(registry: dict) -> None:
++    registry.update(
++        {
++            "omg_read_state": omg_read_state,
++            "omg_write_state": omg_write_state,
++            "omg_clear_state": omg_clear_state,
++            "omg_list_active": omg_list_active,
++        }
++    )
+diff --git a/mcp-server/omg_mcp/utils.py b/mcp-server/omg_mcp/utils.py
+new file mode 100644
+index 0000000..85173cf
+--- /dev/null
++++ b/mcp-server/omg_mcp/utils.py
+@@ -0,0 +1,140 @@
++"""Shared safety, path, JSON, and result helpers.
++
++Python port of the former TypeScript ``utils.ts`` module. Behavior, messages,
++and JSON serialization are preserved for parity with the original server.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import re
++import stat as stat_module
++import uuid
++from datetime import datetime, timezone
++from typing import Any, NamedTuple, Optional
++
++from mcp import types
++
++MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MiB
++
++_MODE_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
++
++_UNSAFE_KEYS = ("__proto__", "constructor", "prototype")
++
++
++class JsonParseResult(NamedTuple):
++    ok: bool
++    data: Optional[dict] = None
++    error: Optional[str] = None
++
++
++def get_workspace_root() -> str:
++    return os.path.abspath(os.environ.get("WORKSPACE_ROOT") or os.getcwd())
++
++
++def ensure_dir(directory: str) -> None:
++    os.makedirs(directory, exist_ok=True)
++
++
++def validate_mode(mode: Any) -> None:
++    if not isinstance(mode, str) or _MODE_RE.fullmatch(mode) is None:
++        raise ValueError(
++            f'Invalid mode name: "{mode}". Only alphanumeric, hyphens, and underscores allowed.'
++        )
++
++
++def safe_read_file(file_path: str) -> Optional[str]:
++    try:
++        st = os.lstat(file_path)
++        if stat_module.S_ISLNK(st.st_mode):
++            return None
++        if st.st_size > MAX_FILE_SIZE:
++            return None
++        with open(file_path, "r", encoding="utf-8", errors="replace") as handle:
++            return handle.read()
++    except Exception:
++        return None
++
++
++def safe_write_file(file_path: str, data: str) -> None:
++    try:
++        st = os.lstat(file_path)
++        if stat_module.S_ISLNK(st.st_mode):
++            raise RuntimeError("Refusing to write to symlink")
++    except FileNotFoundError:
++        pass
++    with open(file_path, "w", encoding="utf-8") as handle:
++        handle.write(data)
++
++
++def safe_json_parse(input_str: str) -> JsonParseResult:
++    try:
++        parsed = json.loads(input_str)
++    except Exception:
++        return JsonParseResult(False, error="Invalid JSON")
++    if not isinstance(parsed, dict):
++        return JsonParseResult(False, error="Expected a JSON object")
++    clean: dict = {}
++    for key, value in parsed.items():
++        if key in _UNSAFE_KEYS:
++            continue
++        clean[key] = value
++    return JsonParseResult(True, data=clean, error=None)
++
++
++def generate_id() -> str:
++    return str(uuid.uuid4())[:8]
++
++
++def now_iso() -> str:
++    dt = datetime.now(timezone.utc)
++    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
++
++
++def js_truthy(value: Any) -> bool:
++    if value is None or value is False:
++        return False
++    if isinstance(value, (int, float)) and not isinstance(value, bool):
++        return value != 0
++    if isinstance(value, str):
++        return len(value) > 0
++    return True
++
++
++def js_or(a: Any, b: Any) -> Any:
++    return a if js_truthy(a) else b
++
++
++def js_string(value: Any) -> str:
++    if value is None:
++        return "null"
++    if value is True:
++        return "true"
++    if value is False:
++        return "false"
++    if isinstance(value, str):
++        return value
++    if isinstance(value, float) and value.is_integer():
++        return str(int(value))
++    if isinstance(value, (int, float)):
++        return str(value)
++    if isinstance(value, list):
++        return ",".join(js_string(v) for v in value)
++    return str(value)
++
++
++def json_dumps_compact(value: Any) -> str:
++    return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
++
++
++def json_dumps_indent(value: Any) -> str:
++    return json.dumps(value, indent=2, ensure_ascii=False)
++
++
++def make_text_result(text: str) -> types.CallToolResult:
++    return types.CallToolResult(content=[types.TextContent(type="text", text=text)])
++
++
++def error_response(message: str) -> types.CallToolResult:
++    return make_text_result(json_dumps_compact({"success": False, "error": message}))
+diff --git a/mcp-server/omg_mcp/workflow_tools.py b/mcp-server/omg_mcp/workflow_tools.py
+new file mode 100644
+index 0000000..4722703
+--- /dev/null
++++ b/mcp-server/omg_mcp/workflow_tools.py
+@@ -0,0 +1,201 @@
++"""Workflow tool handlers. Python port of the former TypeScript ``workflow-tools.ts``."""
++
++from __future__ import annotations
++
++import os
++
++from .state_tools import get_state_dir, get_state_path
++from .utils import (
++    error_response,
++    js_or,
++    json_dumps_compact,
++    json_dumps_indent,
++    make_text_result,
++    now_iso,
++    safe_json_parse,
++    safe_read_file,
++    safe_write_file,
++)
++
++AUTOPILOT_PHASES = [
++    {"phase": 0, "name": "expansion", "description": "Requirements analysis and spec generation"},
++    {"phase": 1, "name": "planning", "description": "Implementation plan creation"},
++    {"phase": 2, "name": "execution", "description": "Code implementation"},
++    {"phase": 3, "name": "qa", "description": "Build, lint, and test verification"},
++    {"phase": 4, "name": "validation", "description": "Code review and security review"},
++    {"phase": 5, "name": "cleanup", "description": "State cleanup and completion"},
++]
++
++
++def _is_number(value) -> bool:
++    return isinstance(value, (int, float)) and not isinstance(value, bool)
++
++
++def _as_phase_index(value):
++    if not _is_number(value):
++        return None
++    if isinstance(value, float):
++        if not value.is_integer():
++            return None
++        return int(value)
++    return value
++
++
++def omg_next_phase(args: dict):
++    current_phase = args.get("current_phase")
++    skip_reason = args.get("skip_reason")
++
++    state_path = get_state_path("omg-autopilot")
++    raw = safe_read_file(state_path)
++    if not raw:
++        return error_response("No omg-autopilot state found. Start with /omg-autopilot.")
++
++    parsed = safe_json_parse(raw)
++    if not parsed.ok:
++        return error_response("Autopilot state file is corrupted. Clear and restart.")
++    state = dict(parsed.data)
++
++    persisted_phase = state.get("current_phase") if _is_number(state.get("current_phase")) else 0
++    if current_phase != persisted_phase:
++        return error_response(
++            f"Phase mismatch: persisted state is at phase {persisted_phase}, caller claimed {current_phase}"
++        )
++
++    next_phase = persisted_phase + 1
++
++    if next_phase > 5:
++        state["active"] = False
++        state["completed"] = True
++        state["completed_at"] = now_iso()
++        state["current_phase"] = 5
++        safe_write_file(state_path, json_dumps_indent(state))
++
++        return make_text_result(
++            json_dumps_compact(
++                {
++                    "success": True,
++                    "completed": True,
++                    "message": "OMG Autopilot workflow complete.",
++                }
++            )
++        )
++
++    info = AUTOPILOT_PHASES[next_phase]
++    state["current_phase"] = next_phase
++    state["phase_name"] = info["name"]
++    state["phase_started_at"] = now_iso()
++    state["updated_at"] = now_iso()
++    if skip_reason:
++        state["skip_reason"] = skip_reason
++
++    safe_write_file(state_path, json_dumps_indent(state))
++
++    return make_text_result(
++        json_dumps_compact(
++            {
++                "success": True,
++                "phase": next_phase,
++                "name": info["name"],
++                "description": info["description"],
++            }
++        )
++    )
++
++
++def omg_check_completion(args: dict):
++    mode = args.get("mode")
++    state_dir = get_state_dir()
++    if not os.path.exists(state_dir):
++        return make_text_result(
++            json_dumps_compact(
++                {"allow_stop": True, "remaining": [], "message": "No active state"}
++            )
++        )
++
++    remaining: list = []
++
++    def check_mode(m: str) -> None:
++        try:
++            state_path = get_state_path(m)
++            raw = safe_read_file(state_path)
++            if not raw:
++                return
++            parsed = safe_json_parse(raw)
++            if not parsed.ok:
++                return
++            data = parsed.data
++            if not data.get("active"):
++                return
++
++            if m == "omg-autopilot":
++                phase = data.get("current_phase") if _is_number(data.get("current_phase")) else 0
++                if phase < 5:
++                    name = AUTOPILOT_PHASES[phase]["name"] if 0 <= phase < len(AUTOPILOT_PHASES) else None
++                    remaining.append(f"omg-autopilot: phase {phase}/5 ({name})")
++            elif m == "ralph":
++                remaining.append("ralph: persistence loop active")
++            elif m == "team":
++                remaining.append(f"team: {_js_str(js_or(data.get('current_phase'), 'active'))}")
++            elif m == "ultraqa":
++                remaining.append(f"ultraqa: cycle {_js_str(js_or(data.get('current_cycle'), '?'))}/5")
++            else:
++                remaining.append(f"{m}: active")
++        except Exception:  # noqa: BLE001 - skip corrupted
++            return
++
++    if mode:
++        check_mode(mode)
++    else:
++        files = [f for f in os.listdir(state_dir) if f.endswith("-state.json")]
++        for file in files:
++            check_mode(file[: -len("-state.json")])
++
++    if not remaining:
++        message = "All tasks complete. Safe to stop."
++    else:
++        message = f"{len(remaining)} active workflow(s). Continue working."
++
++    return make_text_result(
++        json_dumps_compact(
++            {"allow_stop": not remaining, "remaining": remaining, "message": message}
++        )
++    )
++
++
++def _js_str(value) -> str:
++    if value is None:
++        return "null"
++    if value is True:
++        return "true"
++    if value is False:
++        return "false"
++    if isinstance(value, str):
++        return value
++    if isinstance(value, float) and value.is_integer():
++        return str(int(value))
++    return str(value)
++
++
++def omg_get_phase_info(args: dict):
++    phase = args.get("phase")
++
++    if phase is not None:
++        index = _as_phase_index(phase)
++        info = AUTOPILOT_PHASES[index] if index is not None and 0 <= index < len(AUTOPILOT_PHASES) else None
++        if info is None:
++            return make_text_result(
++                json_dumps_compact({"error": f"Invalid phase: {phase}. Valid: 0-5."})
++            )
++        return make_text_result(json_dumps_compact(info))
++
++    return make_text_result(json_dumps_compact({"phases": AUTOPILOT_PHASES}))
++
++
++def register_workflow_tools(registry: dict) -> None:
++    registry.update(
++        {
++            "omg_next_phase": omg_next_phase,
++            "omg_check_completion": omg_check_completion,
++            "omg_get_phase_info": omg_get_phase_info,
++        }
++    )
+diff --git a/mcp-server/package-lock.json b/mcp-server/package-lock.json
+deleted file mode 100644
+index d59809e..0000000
+--- a/mcp-server/package-lock.json
++++ /dev/null
+@@ -1,1204 +0,0 @@
+-{
+-  "name": "omg-mcp-server",
+-  "version": "1.0.0",
+-  "lockfileVersion": 3,
+-  "requires": true,
+-  "packages": {
+-    "": {
+-      "name": "omg-mcp-server",
+-      "version": "1.0.0",
+-      "dependencies": {
+-        "@modelcontextprotocol/sdk": "^1.30.0"
+-      },
+-      "devDependencies": {
+-        "@types/node": "^22.0.0",
+-        "typescript": "^5.7.0"
+-      }
+-    },
+-    "node_modules/@hono/node-server": {
+-      "version": "2.1.1",
+-      "resolved": "https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.1.tgz",
+-      "integrity": "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=20"
+-      },
+-      "peerDependencies": {
+-        "hono": "^4"
+-      }
+-    },
+-    "node_modules/@modelcontextprotocol/sdk": {
+-      "version": "1.30.0",
+-      "resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz",
+-      "integrity": "sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "@hono/node-server": "^1.19.9 || ^2.0.5",
+-        "ajv": "^8.17.1",
+-        "ajv-formats": "^3.0.1",
+-        "content-type": "^1.0.5",
+-        "cors": "^2.8.5",
+-        "cross-spawn": "^7.0.5",
+-        "eventsource": "^3.0.2",
+-        "eventsource-parser": "^3.0.0",
+-        "express": "^5.2.1",
+-        "express-rate-limit": "^8.2.1",
+-        "hono": "^4.11.4",
+-        "jose": "^6.1.3",
+-        "json-schema-typed": "^8.0.2",
+-        "pkce-challenge": "^5.0.0",
+-        "raw-body": "^3.0.0",
+-        "zod": "^3.25 || ^4.0",
+-        "zod-to-json-schema": "^3.25.1"
+-      },
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "peerDependencies": {
+-        "@cfworker/json-schema": "^4.1.1",
+-        "zod": "^3.25 || ^4.0"
+-      },
+-      "peerDependenciesMeta": {
+-        "@cfworker/json-schema": {
+-          "optional": true
+-        },
+-        "zod": {
+-          "optional": false
+-        }
+-      }
+-    },
+-    "node_modules/@types/node": {
+-      "version": "22.19.17",
+-      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.19.17.tgz",
+-      "integrity": "sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "undici-types": "~6.21.0"
+-      }
+-    },
+-    "node_modules/accepts": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz",
+-      "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "mime-types": "^3.0.0",
+-        "negotiator": "^1.0.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/ajv": {
+-      "version": "8.18.0",
+-      "resolved": "https://registry.npmjs.org/ajv/-/ajv-8.18.0.tgz",
+-      "integrity": "sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "fast-deep-equal": "^3.1.3",
+-        "fast-uri": "^3.0.1",
+-        "json-schema-traverse": "^1.0.0",
+-        "require-from-string": "^2.0.2"
+-      },
+-      "funding": {
+-        "type": "github",
+-        "url": "https://github.com/sponsors/epoberezkin"
+-      }
+-    },
+-    "node_modules/ajv-formats": {
+-      "version": "3.0.1",
+-      "resolved": "https://registry.npmjs.org/ajv-formats/-/ajv-formats-3.0.1.tgz",
+-      "integrity": "sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "ajv": "^8.0.0"
+-      },
+-      "peerDependencies": {
+-        "ajv": "^8.0.0"
+-      },
+-      "peerDependenciesMeta": {
+-        "ajv": {
+-          "optional": true
+-        }
+-      }
+-    },
+-    "node_modules/body-parser": {
+-      "version": "2.3.0",
+-      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz",
+-      "integrity": "sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "bytes": "^3.1.2",
+-        "content-type": "^2.0.0",
+-        "debug": "^4.4.3",
+-        "http-errors": "^2.0.1",
+-        "iconv-lite": "^0.7.2",
+-        "on-finished": "^2.4.1",
+-        "qs": "^6.15.2",
+-        "raw-body": "^3.0.2",
+-        "type-is": "^2.1.0"
+-      },
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/body-parser/node_modules/content-type": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.0.0.tgz",
+-      "integrity": "sha512-j/O/d7GcZCyNl7/hwZAb606rzqkyvaDctLmckbxLzHvFBzTJHuGEdodATcP3yIRoDrLHkIATJuvzbFlp/ki2cQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/bytes": {
+-      "version": "3.1.2",
+-      "resolved": "https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz",
+-      "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/call-bind-apply-helpers": {
+-      "version": "1.0.2",
+-      "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
+-      "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "es-errors": "^1.3.0",
+-        "function-bind": "^1.1.2"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/call-bound": {
+-      "version": "1.0.4",
+-      "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
+-      "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "call-bind-apply-helpers": "^1.0.2",
+-        "get-intrinsic": "^1.3.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/content-disposition": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.0.1.tgz",
+-      "integrity": "sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/content-type": {
+-      "version": "1.0.5",
+-      "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+-      "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/cookie": {
+-      "version": "0.7.2",
+-      "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz",
+-      "integrity": "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/cookie-signature": {
+-      "version": "1.2.2",
+-      "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.2.tgz",
+-      "integrity": "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=6.6.0"
+-      }
+-    },
+-    "node_modules/cors": {
+-      "version": "2.8.6",
+-      "resolved": "https://registry.npmjs.org/cors/-/cors-2.8.6.tgz",
+-      "integrity": "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "object-assign": "^4",
+-        "vary": "^1"
+-      },
+-      "engines": {
+-        "node": ">= 0.10"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/cross-spawn": {
+-      "version": "7.0.6",
+-      "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+-      "integrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "path-key": "^3.1.0",
+-        "shebang-command": "^2.0.0",
+-        "which": "^2.0.1"
+-      },
+-      "engines": {
+-        "node": ">= 8"
+-      }
+-    },
+-    "node_modules/debug": {
+-      "version": "4.4.3",
+-      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+-      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "ms": "^2.1.3"
+-      },
+-      "engines": {
+-        "node": ">=6.0"
+-      },
+-      "peerDependenciesMeta": {
+-        "supports-color": {
+-          "optional": true
+-        }
+-      }
+-    },
+-    "node_modules/depd": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/depd/-/depd-2.0.0.tgz",
+-      "integrity": "sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/dunder-proto": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+-      "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "call-bind-apply-helpers": "^1.0.1",
+-        "es-errors": "^1.3.0",
+-        "gopd": "^1.2.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/ee-first": {
+-      "version": "1.1.1",
+-      "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+-      "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
+-      "license": "MIT"
+-    },
+-    "node_modules/encodeurl": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
+-      "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/es-define-property": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
+-      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/es-errors": {
+-      "version": "1.3.0",
+-      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
+-      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/es-object-atoms": {
+-      "version": "1.1.2",
+-      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.2.tgz",
+-      "integrity": "sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "es-errors": "^1.3.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/escape-html": {
+-      "version": "1.0.3",
+-      "resolved": "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz",
+-      "integrity": "sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==",
+-      "license": "MIT"
+-    },
+-    "node_modules/etag": {
+-      "version": "1.8.1",
+-      "resolved": "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz",
+-      "integrity": "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/eventsource": {
+-      "version": "3.0.7",
+-      "resolved": "https://registry.npmjs.org/eventsource/-/eventsource-3.0.7.tgz",
+-      "integrity": "sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "eventsource-parser": "^3.0.1"
+-      },
+-      "engines": {
+-        "node": ">=18.0.0"
+-      }
+-    },
+-    "node_modules/eventsource-parser": {
+-      "version": "3.0.6",
+-      "resolved": "https://registry.npmjs.org/eventsource-parser/-/eventsource-parser-3.0.6.tgz",
+-      "integrity": "sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=18.0.0"
+-      }
+-    },
+-    "node_modules/express": {
+-      "version": "5.2.1",
+-      "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
+-      "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "accepts": "^2.0.0",
+-        "body-parser": "^2.2.1",
+-        "content-disposition": "^1.0.0",
+-        "content-type": "^1.0.5",
+-        "cookie": "^0.7.1",
+-        "cookie-signature": "^1.2.1",
+-        "debug": "^4.4.0",
+-        "depd": "^2.0.0",
+-        "encodeurl": "^2.0.0",
+-        "escape-html": "^1.0.3",
+-        "etag": "^1.8.1",
+-        "finalhandler": "^2.1.0",
+-        "fresh": "^2.0.0",
+-        "http-errors": "^2.0.0",
+-        "merge-descriptors": "^2.0.0",
+-        "mime-types": "^3.0.0",
+-        "on-finished": "^2.4.1",
+-        "once": "^1.4.0",
+-        "parseurl": "^1.3.3",
+-        "proxy-addr": "^2.0.7",
+-        "qs": "^6.14.0",
+-        "range-parser": "^1.2.1",
+-        "router": "^2.2.0",
+-        "send": "^1.1.0",
+-        "serve-static": "^2.2.0",
+-        "statuses": "^2.0.1",
+-        "type-is": "^2.0.1",
+-        "vary": "^1.1.2"
+-      },
+-      "engines": {
+-        "node": ">= 18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/express-rate-limit": {
+-      "version": "8.5.1",
+-      "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.5.1.tgz",
+-      "integrity": "sha512-5O6KYmyJEpuPJV5hNTXKbAHWRqrzyu+OI3vUnSd2kXFubIVpG7ezpgxQy76Zo5GQZtrQBg86hF+CM/NX+cioiQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "ip-address": "^10.2.0"
+-      },
+-      "engines": {
+-        "node": ">= 16"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/express-rate-limit"
+-      },
+-      "peerDependencies": {
+-        "express": ">= 4.11"
+-      }
+-    },
+-    "node_modules/fast-deep-equal": {
+-      "version": "3.1.3",
+-      "resolved": "https://registry.npmjs.org/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz",
+-      "integrity": "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==",
+-      "license": "MIT"
+-    },
+-    "node_modules/fast-uri": {
+-      "version": "3.1.7",
+-      "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.7.tgz",
+-      "integrity": "sha512-dOvZVzjdZdz7phd9v6jCbwxrBW3fK6n8Rc0CtdmM4bumzMnxywBYhuph6J819RRw/ku+rLbelwfMunktuzVVHg==",
+-      "funding": [
+-        {
+-          "type": "github",
+-          "url": "https://github.com/sponsors/fastify"
+-        },
+-        {
+-          "type": "opencollective",
+-          "url": "https://opencollective.com/fastify"
+-        }
+-      ],
+-      "license": "BSD-3-Clause"
+-    },
+-    "node_modules/finalhandler": {
+-      "version": "2.1.1",
+-      "resolved": "https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz",
+-      "integrity": "sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "debug": "^4.4.0",
+-        "encodeurl": "^2.0.0",
+-        "escape-html": "^1.0.3",
+-        "on-finished": "^2.4.1",
+-        "parseurl": "^1.3.3",
+-        "statuses": "^2.0.1"
+-      },
+-      "engines": {
+-        "node": ">= 18.0.0"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/forwarded": {
+-      "version": "0.2.0",
+-      "resolved": "https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz",
+-      "integrity": "sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/fresh": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz",
+-      "integrity": "sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/function-bind": {
+-      "version": "1.1.2",
+-      "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
+-      "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
+-      "license": "MIT",
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/get-intrinsic": {
+-      "version": "1.3.0",
+-      "resolved": "https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz",
+-      "integrity": "sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "call-bind-apply-helpers": "^1.0.2",
+-        "es-define-property": "^1.0.1",
+-        "es-errors": "^1.3.0",
+-        "es-object-atoms": "^1.1.1",
+-        "function-bind": "^1.1.2",
+-        "get-proto": "^1.0.1",
+-        "gopd": "^1.2.0",
+-        "has-symbols": "^1.1.0",
+-        "hasown": "^2.0.2",
+-        "math-intrinsics": "^1.1.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/get-proto": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz",
+-      "integrity": "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "dunder-proto": "^1.0.1",
+-        "es-object-atoms": "^1.0.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/gopd": {
+-      "version": "1.2.0",
+-      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
+-      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/has-symbols": {
+-      "version": "1.1.0",
+-      "resolved": "https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz",
+-      "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/hasown": {
+-      "version": "2.0.4",
+-      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
+-      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "function-bind": "^1.1.2"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/hono": {
+-      "version": "4.13.2",
+-      "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.2.tgz",
+-      "integrity": "sha512-JydRilDRkYBQMt9qR9U92mXxmbGqsqSn/IKOrh4e7/gEbn+0zSr8igTu0obwJoNGN4sez28DIql7FBHWydoJpA==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=16.9.0"
+-      }
+-    },
+-    "node_modules/http-errors": {
+-      "version": "2.0.1",
+-      "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz",
+-      "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "depd": "~2.0.0",
+-        "inherits": "~2.0.4",
+-        "setprototypeof": "~1.2.0",
+-        "statuses": "~2.0.2",
+-        "toidentifier": "~1.0.1"
+-      },
+-      "engines": {
+-        "node": ">= 0.8"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/iconv-lite": {
+-      "version": "0.7.2",
+-      "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.2.tgz",
+-      "integrity": "sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "safer-buffer": ">= 2.1.2 < 3.0.0"
+-      },
+-      "engines": {
+-        "node": ">=0.10.0"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/inherits": {
+-      "version": "2.0.4",
+-      "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+-      "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+-      "license": "ISC"
+-    },
+-    "node_modules/ip-address": {
+-      "version": "10.4.0",
+-      "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.4.0.tgz",
+-      "integrity": "sha512-oSK96Grm3aP6OrS263xVxbNDGVL7rzBtYdpGqlDG8iQdoenDoTs/nkki+DflYbAEE8Xl6o5YxhxlrKvI3nqKXQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 12"
+-      }
+-    },
+-    "node_modules/ipaddr.js": {
+-      "version": "1.9.1",
+-      "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz",
+-      "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.10"
+-      }
+-    },
+-    "node_modules/is-promise": {
+-      "version": "4.0.0",
+-      "resolved": "https://registry.npmjs.org/is-promise/-/is-promise-4.0.0.tgz",
+-      "integrity": "sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==",
+-      "license": "MIT"
+-    },
+-    "node_modules/isexe": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz",
+-      "integrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==",
+-      "license": "ISC"
+-    },
+-    "node_modules/jose": {
+-      "version": "6.2.2",
+-      "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.2.tgz",
+-      "integrity": "sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==",
+-      "license": "MIT",
+-      "funding": {
+-        "url": "https://github.com/sponsors/panva"
+-      }
+-    },
+-    "node_modules/json-schema-traverse": {
+-      "version": "1.0.0",
+-      "resolved": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz",
+-      "integrity": "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==",
+-      "license": "MIT"
+-    },
+-    "node_modules/json-schema-typed": {
+-      "version": "8.0.2",
+-      "resolved": "https://registry.npmjs.org/json-schema-typed/-/json-schema-typed-8.0.2.tgz",
+-      "integrity": "sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==",
+-      "license": "BSD-2-Clause"
+-    },
+-    "node_modules/math-intrinsics": {
+-      "version": "1.1.0",
+-      "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
+-      "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      }
+-    },
+-    "node_modules/media-typer": {
+-      "version": "1.1.0",
+-      "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-1.1.0.tgz",
+-      "integrity": "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/merge-descriptors": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+-      "integrity": "sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/sindresorhus"
+-      }
+-    },
+-    "node_modules/mime-db": {
+-      "version": "1.54.0",
+-      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz",
+-      "integrity": "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/mime-types": {
+-      "version": "3.0.2",
+-      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz",
+-      "integrity": "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "mime-db": "^1.54.0"
+-      },
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/ms": {
+-      "version": "2.1.3",
+-      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+-      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+-      "license": "MIT"
+-    },
+-    "node_modules/negotiator": {
+-      "version": "1.0.0",
+-      "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz",
+-      "integrity": "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/object-assign": {
+-      "version": "4.1.1",
+-      "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
+-      "integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=0.10.0"
+-      }
+-    },
+-    "node_modules/object-inspect": {
+-      "version": "1.13.4",
+-      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
+-      "integrity": "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/on-finished": {
+-      "version": "2.4.1",
+-      "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
+-      "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "ee-first": "1.1.1"
+-      },
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/once": {
+-      "version": "1.4.0",
+-      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+-      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
+-      "license": "ISC",
+-      "dependencies": {
+-        "wrappy": "1"
+-      }
+-    },
+-    "node_modules/parseurl": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+-      "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/path-key": {
+-      "version": "3.1.1",
+-      "resolved": "https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz",
+-      "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=8"
+-      }
+-    },
+-    "node_modules/path-to-regexp": {
+-      "version": "8.4.2",
+-      "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-8.4.2.tgz",
+-      "integrity": "sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==",
+-      "license": "MIT",
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/pkce-challenge": {
+-      "version": "5.0.1",
+-      "resolved": "https://registry.npmjs.org/pkce-challenge/-/pkce-challenge-5.0.1.tgz",
+-      "integrity": "sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=16.20.0"
+-      }
+-    },
+-    "node_modules/proxy-addr": {
+-      "version": "2.0.7",
+-      "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.7.tgz",
+-      "integrity": "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "forwarded": "0.2.0",
+-        "ipaddr.js": "1.9.1"
+-      },
+-      "engines": {
+-        "node": ">= 0.10"
+-      }
+-    },
+-    "node_modules/qs": {
+-      "version": "6.16.0",
+-      "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.0.tgz",
+-      "integrity": "sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==",
+-      "license": "BSD-3-Clause",
+-      "dependencies": {
+-        "es-define-property": "^1.0.1",
+-        "side-channel": "^1.1.1"
+-      },
+-      "engines": {
+-        "node": ">=0.6"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/range-parser": {
+-      "version": "1.2.1",
+-      "resolved": "https://registry.npmjs.org/range-parser/-/range-parser-1.2.1.tgz",
+-      "integrity": "sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.6"
+-      }
+-    },
+-    "node_modules/raw-body": {
+-      "version": "3.0.2",
+-      "resolved": "https://registry.npmjs.org/raw-body/-/raw-body-3.0.2.tgz",
+-      "integrity": "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "bytes": "~3.1.2",
+-        "http-errors": "~2.0.1",
+-        "iconv-lite": "~0.7.0",
+-        "unpipe": "~1.0.0"
+-      },
+-      "engines": {
+-        "node": ">= 0.10"
+-      }
+-    },
+-    "node_modules/require-from-string": {
+-      "version": "2.0.2",
+-      "resolved": "https://registry.npmjs.org/require-from-string/-/require-from-string-2.0.2.tgz",
+-      "integrity": "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=0.10.0"
+-      }
+-    },
+-    "node_modules/router": {
+-      "version": "2.2.0",
+-      "resolved": "https://registry.npmjs.org/router/-/router-2.2.0.tgz",
+-      "integrity": "sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "debug": "^4.4.0",
+-        "depd": "^2.0.0",
+-        "is-promise": "^4.0.0",
+-        "parseurl": "^1.3.3",
+-        "path-to-regexp": "^8.0.0"
+-      },
+-      "engines": {
+-        "node": ">= 18"
+-      }
+-    },
+-    "node_modules/safer-buffer": {
+-      "version": "2.1.2",
+-      "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+-      "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+-      "license": "MIT"
+-    },
+-    "node_modules/send": {
+-      "version": "1.2.1",
+-      "resolved": "https://registry.npmjs.org/send/-/send-1.2.1.tgz",
+-      "integrity": "sha512-1gnZf7DFcoIcajTjTwjwuDjzuz4PPcY2StKPlsGAQ1+YH20IRVrBaXSWmdjowTJ6u8Rc01PoYOGHXfP1mYcZNQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "debug": "^4.4.3",
+-        "encodeurl": "^2.0.0",
+-        "escape-html": "^1.0.3",
+-        "etag": "^1.8.1",
+-        "fresh": "^2.0.0",
+-        "http-errors": "^2.0.1",
+-        "mime-types": "^3.0.2",
+-        "ms": "^2.1.3",
+-        "on-finished": "^2.4.1",
+-        "range-parser": "^1.2.1",
+-        "statuses": "^2.0.2"
+-      },
+-      "engines": {
+-        "node": ">= 18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/serve-static": {
+-      "version": "2.2.1",
+-      "resolved": "https://registry.npmjs.org/serve-static/-/serve-static-2.2.1.tgz",
+-      "integrity": "sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "encodeurl": "^2.0.0",
+-        "escape-html": "^1.0.3",
+-        "parseurl": "^1.3.3",
+-        "send": "^1.2.0"
+-      },
+-      "engines": {
+-        "node": ">= 18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/setprototypeof": {
+-      "version": "1.2.0",
+-      "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+-      "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==",
+-      "license": "ISC"
+-    },
+-    "node_modules/shebang-command": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz",
+-      "integrity": "sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "shebang-regex": "^3.0.0"
+-      },
+-      "engines": {
+-        "node": ">=8"
+-      }
+-    },
+-    "node_modules/shebang-regex": {
+-      "version": "3.0.0",
+-      "resolved": "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz",
+-      "integrity": "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=8"
+-      }
+-    },
+-    "node_modules/side-channel": {
+-      "version": "1.1.1",
+-      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.1.1.tgz",
+-      "integrity": "sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "es-errors": "^1.3.0",
+-        "object-inspect": "^1.13.4",
+-        "side-channel-list": "^1.0.1",
+-        "side-channel-map": "^1.0.1",
+-        "side-channel-weakmap": "^1.0.2"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/side-channel-list": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz",
+-      "integrity": "sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "es-errors": "^1.3.0",
+-        "object-inspect": "^1.13.4"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/side-channel-map": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz",
+-      "integrity": "sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "call-bound": "^1.0.2",
+-        "es-errors": "^1.3.0",
+-        "get-intrinsic": "^1.2.5",
+-        "object-inspect": "^1.13.3"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/side-channel-weakmap": {
+-      "version": "1.0.2",
+-      "resolved": "https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz",
+-      "integrity": "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "call-bound": "^1.0.2",
+-        "es-errors": "^1.3.0",
+-        "get-intrinsic": "^1.2.5",
+-        "object-inspect": "^1.13.3",
+-        "side-channel-map": "^1.0.1"
+-      },
+-      "engines": {
+-        "node": ">= 0.4"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/ljharb"
+-      }
+-    },
+-    "node_modules/statuses": {
+-      "version": "2.0.2",
+-      "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+-      "integrity": "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/toidentifier": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz",
+-      "integrity": "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=0.6"
+-      }
+-    },
+-    "node_modules/type-is": {
+-      "version": "2.1.0",
+-      "resolved": "https://registry.npmjs.org/type-is/-/type-is-2.1.0.tgz",
+-      "integrity": "sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "content-type": "^2.0.0",
+-        "media-typer": "^1.1.0",
+-        "mime-types": "^3.0.0"
+-      },
+-      "engines": {
+-        "node": ">= 18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/type-is/node_modules/content-type": {
+-      "version": "2.0.0",
+-      "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.0.0.tgz",
+-      "integrity": "sha512-j/O/d7GcZCyNl7/hwZAb606rzqkyvaDctLmckbxLzHvFBzTJHuGEdodATcP3yIRoDrLHkIATJuvzbFlp/ki2cQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=18"
+-      },
+-      "funding": {
+-        "type": "opencollective",
+-        "url": "https://opencollective.com/express"
+-      }
+-    },
+-    "node_modules/typescript": {
+-      "version": "5.9.3",
+-      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+-      "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+-      "dev": true,
+-      "license": "Apache-2.0",
+-      "bin": {
+-        "tsc": "bin/tsc",
+-        "tsserver": "bin/tsserver"
+-      },
+-      "engines": {
+-        "node": ">=14.17"
+-      }
+-    },
+-    "node_modules/undici-types": {
+-      "version": "6.21.0",
+-      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
+-      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
+-      "dev": true,
+-      "license": "MIT"
+-    },
+-    "node_modules/unpipe": {
+-      "version": "1.0.0",
+-      "resolved": "https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz",
+-      "integrity": "sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/vary": {
+-      "version": "1.1.2",
+-      "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+-      "integrity": "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">= 0.8"
+-      }
+-    },
+-    "node_modules/which": {
+-      "version": "2.0.2",
+-      "resolved": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+-      "integrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
+-      "license": "ISC",
+-      "dependencies": {
+-        "isexe": "^2.0.0"
+-      },
+-      "bin": {
+-        "node-which": "bin/node-which"
+-      },
+-      "engines": {
+-        "node": ">= 8"
+-      }
+-    },
+-    "node_modules/wrappy": {
+-      "version": "1.0.2",
+-      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+-      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
+-      "license": "ISC"
+-    },
+-    "node_modules/zod": {
+-      "version": "4.3.6",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.3.6.tgz",
+-      "integrity": "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==",
+-      "license": "MIT",
+-      "funding": {
+-        "url": "https://github.com/sponsors/colinhacks"
+-      }
+-    },
+-    "node_modules/zod-to-json-schema": {
+-      "version": "3.25.2",
+-      "resolved": "https://registry.npmjs.org/zod-to-json-schema/-/zod-to-json-schema-3.25.2.tgz",
+-      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==",
+-      "license": "ISC",
+-      "peerDependencies": {
+-        "zod": "^3.25.28 || ^4"
+-      }
+-    }
+-  }
+-}
+diff --git a/mcp-server/package.json b/mcp-server/package.json
+deleted file mode 100644
+index 0f46476..0000000
+--- a/mcp-server/package.json
++++ /dev/null
+@@ -1,20 +0,0 @@
+-{
+-  "name": "omg-mcp-server",
+-  "version": "1.0.0",
+-  "description": "OMG (oh-my-githubcopilot) MCP server for workflow state, PRD, and memory management",
+-  "type": "module",
+-  "main": "dist/index.js",
+-  "scripts": {
+-    "build": "tsc",
+-    "dev": "tsc --watch",
+-    "start": "node dist/index.js",
+-    "test": "node --test test/run-tests.mjs"
+-  },
+-  "dependencies": {
+-    "@modelcontextprotocol/sdk": "^1.30.0"
+-  },
+-  "devDependencies": {
+-    "@types/node": "^22.0.0",
+-    "typescript": "^5.7.0"
+-  }
+-}
+diff --git a/mcp-server/pyproject.toml b/mcp-server/pyproject.toml
+new file mode 100644
+index 0000000..da7004d
+--- /dev/null
++++ b/mcp-server/pyproject.toml
+@@ -0,0 +1,18 @@
++[build-system]
++requires = ["setuptools>=68"]
++build-backend = "setuptools.build_meta"
++
++[project]
++name = "omg-mcp-server"
++version = "1.0.0"
++description = "OMG (oh-my-githubcopilot) MCP server for workflow state, PRD, and memory management"
++requires-python = ">=3.13"
++dependencies = [
++    "mcp==1.30.0",
++]
++
++[project.scripts]
++omg-mcp-server = "omg_mcp.__main__:run"
++
++[tool.setuptools]
++packages = ["omg_mcp"]
+diff --git a/mcp-server/requirements.txt b/mcp-server/requirements.txt
+new file mode 100644
+index 0000000..c2bd62f
+--- /dev/null
++++ b/mcp-server/requirements.txt
+@@ -0,0 +1 @@
++mcp==1.30.0
+diff --git a/mcp-server/src/index.ts b/mcp-server/src/index.ts
+deleted file mode 100644
+index c9dcbb7..0000000
+--- a/mcp-server/src/index.ts
++++ /dev/null
+@@ -1,32 +0,0 @@
+-#!/usr/bin/env node
+-
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+-import { registerStateTools } from "./state-tools.js";
+-import { registerPrdTools } from "./prd-tools.js";
+-import { registerWorkflowTools } from "./workflow-tools.js";
+-import { registerMemoryTools } from "./memory-tools.js";
+-import { registerModelRouter } from "./model-router.js";
+-
+-const server = new McpServer({
+-  name: "omg-workflow",
+-  version: "1.0.0",
+-});
+-
+-// Register all tool groups
+-registerStateTools(server);
+-registerPrdTools(server);
+-registerWorkflowTools(server);
+-registerMemoryTools(server);
+-registerModelRouter(server);
+-
+-// Start server
+-async function main() {
+-  const transport = new StdioServerTransport();
+-  await server.connect(transport);
+-}
+-
+-main().catch((error) => {
+-  console.error("OMG MCP Server failed to start:", error);
+-  process.exit(1);
+-});
+diff --git a/mcp-server/src/memory-tools.ts b/mcp-server/src/memory-tools.ts
+deleted file mode 100644
+index 0191c16..0000000
+--- a/mcp-server/src/memory-tools.ts
++++ /dev/null
+@@ -1,162 +0,0 @@
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { z } from "zod";
+-import * as path from "node:path";
+-import { getWorkspaceRoot, ensureDir, safeReadFile, safeWriteFile, safeJsonParse, errorResponse } from "./utils.js";
+-
+-const MAX_ENTRIES = 500;
+-const MAX_VALUE_LENGTH = 10_000;
+-
+-function getMemoryPath(): string {
+-  return path.join(getWorkspaceRoot(), ".omc", "project-memory.json");
+-}
+-
+-interface MemoryEntry {
+-  key: string;
+-  value: string;
+-  category: string;
+-  created_at: string;
+-  updated_at: string;
+-}
+-
+-interface MemoryStore {
+-  entries: MemoryEntry[];
+-}
+-
+-function readMemory(): MemoryStore {
+-  const memPath = getMemoryPath();
+-  const data = safeReadFile(memPath);
+-  if (!data) return { entries: [] };
+-  const result = safeJsonParse(data);
+-  if (!result.ok) return { entries: [] };
+-  return result.data as unknown as MemoryStore;
+-}
+-
+-function writeMemory(store: MemoryStore): void {
+-  const memPath = getMemoryPath();
+-  ensureDir(path.dirname(memPath));
+-  safeWriteFile(memPath, JSON.stringify(store, null, 2));
+-}
+-
+-export function registerMemoryTools(server: McpServer): void {
+-  server.tool(
+-    "omg_read_memory",
+-    "Read project memory entries. Optionally filter by category or key.",
+-    {
+-      category: z.string().optional().describe("Filter by category (e.g., project, user, feedback, reference)"),
+-      key: z.string().optional().describe("Filter by specific key"),
+-    },
+-    async ({ category, key }) => {
+-      const store = readMemory();
+-      let entries = store.entries;
+-
+-      if (category) {
+-        entries = entries.filter((e) => e.category === category);
+-      }
+-      if (key) {
+-        entries = entries.filter((e) => e.key === key);
+-      }
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              total: entries.length,
+-              entries: entries.map((e) => ({
+-                key: e.key,
+-                value: e.value,
+-                category: e.category,
+-                updated_at: e.updated_at,
+-              })),
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_write_memory",
+-    "Write or update a project memory entry",
+-    {
+-      key: z.string().describe("Unique key for this memory entry"),
+-      value: z.string().describe("The memory content"),
+-      category: z
+-        .string()
+-        .default("project")
+-        .describe("Category: project, user, feedback, reference"),
+-    },
+-    async ({ key, value, category }) => {
+-      if (value.length > MAX_VALUE_LENGTH) {
+-        return errorResponse(`Value exceeds maximum length of ${MAX_VALUE_LENGTH} characters`);
+-      }
+-
+-      const store = readMemory();
+-      const existing = store.entries.findIndex((e) => e.key === key);
+-      const now = new Date().toISOString();
+-
+-      if (existing < 0 && store.entries.length >= MAX_ENTRIES) {
+-        return errorResponse(`Memory store full (max ${MAX_ENTRIES} entries)`);
+-      }
+-
+-      if (existing >= 0) {
+-        store.entries[existing].value = value;
+-        store.entries[existing].category = category;
+-        store.entries[existing].updated_at = now;
+-      } else {
+-        store.entries.push({
+-          key,
+-          value,
+-          category,
+-          created_at: now,
+-          updated_at: now,
+-        });
+-      }
+-
+-      writeMemory(store);
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              success: true,
+-              key,
+-              action: existing >= 0 ? "updated" : "created",
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_delete_memory",
+-    "Delete a project memory entry by key",
+-    {
+-      key: z.string().describe("Key of the memory entry to delete"),
+-    },
+-    async ({ key }) => {
+-      const store = readMemory();
+-      const before = store.entries.length;
+-      store.entries = store.entries.filter((e) => e.key !== key);
+-      const deleted = before - store.entries.length > 0;
+-      if (deleted) {
+-        writeMemory(store);
+-      }
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              success: true,
+-              deleted,
+-              key,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-}
+diff --git a/mcp-server/src/model-router.ts b/mcp-server/src/model-router.ts
+deleted file mode 100644
+index 4617c12..0000000
+--- a/mcp-server/src/model-router.ts
++++ /dev/null
+@@ -1,152 +0,0 @@
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { z } from "zod";
+-
+-interface ModelRecommendation {
+-  recommended_model: string;
+-  tier: string;
+-  reason: string;
+-  alternatives: string[];
+-}
+-
+-const COMPLEXITY_THRESHOLDS = {
+-  high: {
+-    file_count: 10,
+-    description_length: 500,
+-    keywords: [
+-      "architect", "design", "refactor", "migrate", "security",
+-      "performance", "optimize", "complex", "critical", "system",
+-    ],
+-  },
+-  medium: {
+-    file_count: 5,
+-    description_length: 200,
+-    keywords: [
+-      "implement", "add", "update", "feature", "component",
+-      "module", "service", "test", "debug",
+-    ],
+-  },
+-};
+-
+-function assessComplexity(
+-  task: string,
+-  file_count?: number
+-): { tier: "high" | "medium" | "low"; score: number; factors: string[] } {
+-  let score = 0;
+-  const factors: string[] = [];
+-  const taskLower = task.toLowerCase();
+-
+-  // Check high-complexity keywords
+-  for (const kw of COMPLEXITY_THRESHOLDS.high.keywords) {
+-    if (taskLower.includes(kw)) {
+-      score += 3;
+-      factors.push(`high-complexity keyword: "${kw}"`);
+-    }
+-  }
+-
+-  // Check medium-complexity keywords
+-  for (const kw of COMPLEXITY_THRESHOLDS.medium.keywords) {
+-    if (taskLower.includes(kw)) {
+-      score += 1;
+-      factors.push(`medium-complexity keyword: "${kw}"`);
+-    }
+-  }
+-
+-  // File count factor
+-  if (file_count !== undefined) {
+-    if (file_count >= COMPLEXITY_THRESHOLDS.high.file_count) {
+-      score += 5;
+-      factors.push(`high file count: ${file_count}`);
+-    } else if (file_count >= COMPLEXITY_THRESHOLDS.medium.file_count) {
+-      score += 2;
+-      factors.push(`moderate file count: ${file_count}`);
+-    }
+-  }
+-
+-  // Description length factor
+-  if (task.length >= COMPLEXITY_THRESHOLDS.high.description_length) {
+-    score += 2;
+-    factors.push("long task description");
+-  }
+-
+-  const tier = score >= 8 ? "high" : score >= 3 ? "medium" : "low";
+-  return { tier, score, factors };
+-}
+-
+-function recommend(tier: "high" | "medium" | "low"): ModelRecommendation {
+-  switch (tier) {
+-    case "high":
+-      return {
+-        recommended_model: "claude-sonnet-4.6",
+-        tier: "HIGH",
+-        reason: "Complex task requiring deep reasoning and architecture decisions",
+-        alternatives: ["gpt-4.1"],
+-      };
+-    case "medium":
+-      return {
+-        recommended_model: "gpt-4.1",
+-        tier: "MEDIUM",
+-        reason: "Standard implementation task with moderate complexity",
+-        alternatives: ["claude-sonnet-4.6"],
+-      };
+-    case "low":
+-      return {
+-        recommended_model: "gpt-4.1-mini",
+-        tier: "LOW",
+-        reason: "Simple task suitable for fast, lightweight model",
+-        alternatives: ["gpt-4.1"],
+-      };
+-  }
+-}
+-
+-export function registerModelRouter(server: McpServer): void {
+-  server.tool(
+-    "omg_select_model",
+-    "Recommend the best model for a task based on complexity analysis. Maps OMC model tiers (HIGH/MEDIUM/LOW) to available VS Code Copilot models.",
+-    {
+-      task: z.string().describe("Description of the task to route"),
+-      file_count: z
+-        .number()
+-        .optional()
+-        .describe("Number of files involved in the task"),
+-      agent_type: z
+-        .string()
+-        .optional()
+-        .describe("The agent type that will execute (e.g., architect, executor)"),
+-    },
+-    async ({ task, file_count, agent_type }) => {
+-      const complexity = assessComplexity(task, file_count);
+-
+-      // Agent type overrides: some agents always need high-tier models
+-      const highTierAgents = ["architect", "critic", "analyst", "planner"];
+-      const lowTierAgents = ["writer", "git-master", "code-simplifier", "explore"];
+-
+-      let recommendation: ModelRecommendation;
+-
+-      if (agent_type && highTierAgents.includes(agent_type)) {
+-        recommendation = recommend("high");
+-        recommendation.reason = `Agent type "${agent_type}" requires high-tier model for quality reasoning`;
+-      } else if (agent_type && lowTierAgents.includes(agent_type)) {
+-        recommendation = recommend("low");
+-        recommendation.reason = `Agent type "${agent_type}" works well with lightweight model`;
+-      } else {
+-        recommendation = recommend(complexity.tier);
+-      }
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              ...recommendation,
+-              complexity: {
+-                tier: complexity.tier,
+-                score: complexity.score,
+-                factors: complexity.factors,
+-              },
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-}
+diff --git a/mcp-server/src/prd-tools.ts b/mcp-server/src/prd-tools.ts
+deleted file mode 100644
+index a3bbacb..0000000
+--- a/mcp-server/src/prd-tools.ts
++++ /dev/null
+@@ -1,236 +0,0 @@
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { z } from "zod";
+-import * as path from "node:path";
+-import { getWorkspaceRoot, ensureDir, safeReadFile, safeWriteFile, safeJsonParse, generateId, errorResponse } from "./utils.js";
+-
+-function getPrdPath(): string {
+-  return path.join(getWorkspaceRoot(), ".omc", "prd.json");
+-}
+-
+-interface Story {
+-  id: string;
+-  title: string;
+-  description: string;
+-  acceptance_criteria: string[];
+-  passes: boolean;
+-  verification_evidence?: string;
+-  priority: number;
+-}
+-
+-interface Prd {
+-  title: string;
+-  description: string;
+-  stories: Story[];
+-  created_at: string;
+-  updated_at: string;
+-}
+-
+-function readPrd(): Prd | null {
+-  const prdPath = getPrdPath();
+-  const data = safeReadFile(prdPath);
+-  if (!data) return null;
+-  const result = safeJsonParse(data);
+-  if (!result.ok) return null;
+-  return result.data as unknown as Prd;
+-}
+-
+-function writePrd(prd: Prd): void {
+-  const prdPath = getPrdPath();
+-  ensureDir(path.dirname(prdPath));
+-  prd.updated_at = new Date().toISOString();
+-  safeWriteFile(prdPath, JSON.stringify(prd, null, 2));
+-}
+-
+-export function registerPrdTools(server: McpServer): void {
+-  server.tool(
+-    "omg_read_prd",
+-    "Read the current PRD (Product Requirements Document) with all stories and their status",
+-    {},
+-    async () => {
+-      const prd = readPrd();
+-      if (!prd) {
+-        return {
+-          content: [
+-            {
+-              type: "text" as const,
+-              text: JSON.stringify({ exists: false, message: "No PRD found. Create one with ralph or omg-autopilot." }),
+-            },
+-          ],
+-        };
+-      }
+-
+-      const summary = {
+-        title: prd.title,
+-        total_stories: prd.stories.length,
+-        passing: prd.stories.filter((s) => s.passes).length,
+-        failing: prd.stories.filter((s) => !s.passes).length,
+-        stories: prd.stories.map((s) => ({
+-          id: s.id,
+-          title: s.title,
+-          passes: s.passes,
+-          priority: s.priority,
+-          criteria_count: s.acceptance_criteria.length,
+-        })),
+-      };
+-
+-      return {
+-        content: [{ type: "text" as const, text: JSON.stringify(summary, null, 2) }],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_create_prd",
+-    "Create a new PRD with title, description, and stories",
+-    {
+-      title: z.string().describe("PRD title"),
+-      description: z.string().optional().describe("PRD description"),
+-      stories: z
+-        .array(
+-          z.object({
+-            id: z.string().optional().describe("Story ID (auto-generated if omitted)"),
+-            title: z.string().describe("Story title"),
+-            description: z.string().optional().describe("Story description"),
+-            acceptance_criteria: z.array(z.string()).optional().describe("List of acceptance criteria"),
+-            priority: z.number().optional().describe("Priority (0 = default)"),
+-          })
+-        )
+-        .optional()
+-        .describe("User stories for the PRD"),
+-    },
+-    async ({ title, description, stories: inputStories }) => {
+-      const stories = inputStories ?? [];
+-      const prd: Prd = {
+-        title,
+-        description: description ?? "",
+-        stories: stories.map((s) => ({
+-          id: s.id || `story-${generateId()}`,
+-          title: s.title,
+-          description: s.description ?? "",
+-          acceptance_criteria: s.acceptance_criteria ?? [],
+-          passes: false,
+-          priority: s.priority ?? 0,
+-        })),
+-        created_at: new Date().toISOString(),
+-        updated_at: new Date().toISOString(),
+-      };
+-
+-      writePrd(prd);
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              success: true,
+-              title: prd.title,
+-              stories_created: prd.stories.length,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_update_story",
+-    "Update a story's status (passes: true/false) and optionally add verification evidence",
+-    {
+-      story_id: z.string().describe("The story ID to update"),
+-      passes: z.boolean().describe("Whether the story passes its acceptance criteria"),
+-      evidence: z.string().optional().describe("Verification evidence (test output, etc.)"),
+-    },
+-    async ({ story_id, passes, evidence }) => {
+-      const prd = readPrd();
+-      if (!prd) {
+-        return {
+-          content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "No PRD found" }) }],
+-        };
+-      }
+-
+-      const story = prd.stories.find((s) => s.id === story_id);
+-      if (!story) {
+-        return {
+-          content: [
+-            { type: "text" as const, text: JSON.stringify({ success: false, error: `Story ${story_id} not found` }) },
+-          ],
+-        };
+-      }
+-
+-      story.passes = passes;
+-      if (evidence) {
+-        story.verification_evidence = evidence;
+-      }
+-      writePrd(prd);
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              success: true,
+-              story_id,
+-              passes,
+-              total_passing: prd.stories.filter((s) => s.passes).length,
+-              total_stories: prd.stories.length,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_verify_story",
+-    "Get the next unverified story and its acceptance criteria for verification",
+-    {},
+-    async () => {
+-      const prd = readPrd();
+-      if (!prd) {
+-        return {
+-          content: [{ type: "text" as const, text: JSON.stringify({ exists: false, message: "No PRD found" }) }],
+-        };
+-      }
+-
+-      // Find highest-priority story that hasn't passed yet
+-      const pending = prd.stories
+-        .filter((s) => !s.passes)
+-        .sort((a, b) => b.priority - a.priority);
+-
+-      if (pending.length === 0) {
+-        return {
+-          content: [
+-            {
+-              type: "text" as const,
+-              text: JSON.stringify({
+-                all_passing: true,
+-                message: "All stories pass. PRD is complete.",
+-                total_stories: prd.stories.length,
+-              }),
+-            },
+-          ],
+-        };
+-      }
+-
+-      const next = pending[0];
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              story: {
+-                id: next.id,
+-                title: next.title,
+-                description: next.description,
+-                acceptance_criteria: next.acceptance_criteria,
+-                priority: next.priority,
+-              },
+-              remaining: pending.length,
+-              total: prd.stories.length,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-}
+diff --git a/mcp-server/src/state-tools.ts b/mcp-server/src/state-tools.ts
+deleted file mode 100644
+index 5e9e9d1..0000000
+--- a/mcp-server/src/state-tools.ts
++++ /dev/null
+@@ -1,174 +0,0 @@
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { z } from "zod";
+-import * as fs from "node:fs";
+-import * as path from "node:path";
+-import { getWorkspaceRoot, ensureDir, validateMode, safeReadFile, safeWriteFile, safeJsonParse, errorResponse } from "./utils.js";
+-
+-export function getStateDir(): string {
+-  return path.join(getWorkspaceRoot(), ".omc", "state");
+-}
+-
+-export function getStatePath(mode: string): string {
+-  validateMode(mode);
+-  return path.join(getStateDir(), `${mode}-state.json`);
+-}
+-
+-export function registerStateTools(server: McpServer): void {
+-  server.tool(
+-    "omg_read_state",
+-    "Read the current state for a given OMG mode (omg-autopilot, ralph, ultrawork, ultraqa, team, self-improve)",
+-    {
+-      mode: z.string().describe("The mode to read state for (e.g., omg-autopilot, ralph, team)"),
+-    },
+-    async ({ mode }) => {
+-      try {
+-        const statePath = getStatePath(mode);
+-        const data = safeReadFile(statePath);
+-        if (!data) {
+-          return {
+-            content: [
+-              {
+-                type: "text" as const,
+-                text: JSON.stringify({ active: false, mode, message: "No state found" }),
+-              },
+-            ],
+-          };
+-        }
+-        return {
+-          content: [{ type: "text" as const, text: data }],
+-        };
+-      } catch (err) {
+-        return errorResponse((err as Error).message);
+-      }
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_write_state",
+-    "Write or update state for a given OMG mode. Merges with existing state.",
+-    {
+-      mode: z.string().describe("The mode to write state for"),
+-      state: z.string().describe("JSON string of state to write/merge"),
+-    },
+-    async ({ mode, state }) => {
+-      try {
+-        const stateDir = getStateDir();
+-        ensureDir(stateDir);
+-        const statePath = getStatePath(mode);
+-
+-        let existing: Record<string, unknown> = {};
+-        const existingData = safeReadFile(statePath);
+-        if (existingData) {
+-          const existingParsed = safeJsonParse(existingData);
+-          if (existingParsed.ok) {
+-            existing = existingParsed.data;
+-          }
+-          // Corrupted or polluted state — overwrite
+-        }
+-
+-        const parsed = safeJsonParse(state);
+-        if (!parsed.ok) {
+-          return errorResponse(parsed.error);
+-        }
+-
+-        const newState = { ...existing, ...parsed.data, updated_at: new Date().toISOString() };
+-        safeWriteFile(statePath, JSON.stringify(newState, null, 2));
+-
+-        return {
+-          content: [
+-            {
+-              type: "text" as const,
+-              text: JSON.stringify({ success: true, mode, state: newState }),
+-            },
+-          ],
+-        };
+-      } catch (err) {
+-        return errorResponse((err as Error).message);
+-      }
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_clear_state",
+-    "Clear state for a given OMG mode or all modes",
+-    {
+-      mode: z
+-        .string()
+-        .optional()
+-        .describe("Mode to clear. Omit to clear all modes."),
+-    },
+-    async ({ mode }) => {
+-      try {
+-        const stateDir = getStateDir();
+-        if (!fs.existsSync(stateDir)) {
+-          return {
+-            content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: "No state directory" }) }],
+-          };
+-        }
+-
+-        if (mode) {
+-          const statePath = getStatePath(mode);
+-          if (fs.existsSync(statePath)) {
+-            fs.unlinkSync(statePath);
+-          }
+-          return {
+-            content: [{ type: "text" as const, text: JSON.stringify({ success: true, cleared: mode }) }],
+-          };
+-        }
+-
+-        // Clear all state files
+-        const files = fs.readdirSync(stateDir).filter((f) => f.endsWith("-state.json"));
+-        for (const file of files) {
+-          fs.unlinkSync(path.join(stateDir, file));
+-        }
+-        return {
+-          content: [
+-            { type: "text" as const, text: JSON.stringify({ success: true, cleared: "all", files: files.length }) },
+-          ],
+-        };
+-      } catch (err) {
+-        return errorResponse((err as Error).message);
+-      }
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_list_active",
+-    "List all currently active OMG modes",
+-    {},
+-    async () => {
+-      const stateDir = getStateDir();
+-      if (!fs.existsSync(stateDir)) {
+-        return {
+-          content: [{ type: "text" as const, text: JSON.stringify({ active_modes: [] }) }],
+-        };
+-      }
+-
+-      const files = fs.readdirSync(stateDir).filter((f) => f.endsWith("-state.json"));
+-      const activeModes: Array<{ mode: string; phase?: string; updated_at?: string }> = [];
+-
+-      for (const file of files) {
+-        try {
+-          const raw = safeReadFile(path.join(stateDir, file));
+-          if (!raw) continue;
+-          const parsed = safeJsonParse(raw);
+-          if (!parsed.ok) continue;
+-          const data = parsed.data;
+-          if (data.active) {
+-            activeModes.push({
+-              mode: file.replace("-state.json", ""),
+-              phase: String(data.current_phase || data.phase || "") || undefined,
+-              updated_at: typeof data.updated_at === "string" ? data.updated_at : undefined,
+-            });
+-          }
+-        } catch {
+-          // Skip corrupted files
+-        }
+-      }
+-
+-      return {
+-        content: [{ type: "text" as const, text: JSON.stringify({ active_modes: activeModes }) }],
+-      };
+-    }
+-  );
+-}
+diff --git a/mcp-server/src/utils.ts b/mcp-server/src/utils.ts
+deleted file mode 100644
+index d095626..0000000
+--- a/mcp-server/src/utils.ts
++++ /dev/null
+@@ -1,73 +0,0 @@
+-import * as fs from "node:fs";
+-import * as path from "node:path";
+-import { randomUUID } from "node:crypto";
+-
+-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+-
+-export function getWorkspaceRoot(): string {
+-  return path.resolve(process.env.WORKSPACE_ROOT || process.cwd());
+-}
+-
+-export function ensureDir(dir: string): void {
+-  if (!fs.existsSync(dir)) {
+-    fs.mkdirSync(dir, { recursive: true });
+-  }
+-}
+-
+-export function validateMode(mode: string): void {
+-  if (!/^[a-zA-Z0-9_-]+$/.test(mode)) {
+-    throw new Error(`Invalid mode name: "${mode}". Only alphanumeric, hyphens, and underscores allowed.`);
+-  }
+-}
+-
+-export function safeReadFile(filePath: string): string | null {
+-  try {
+-    const stat = fs.lstatSync(filePath);
+-    if (stat.isSymbolicLink()) return null;
+-    if (stat.size > MAX_FILE_SIZE) return null;
+-    return fs.readFileSync(filePath, "utf-8");
+-  } catch {
+-    return null;
+-  }
+-}
+-
+-export function safeWriteFile(filePath: string, data: string): void {
+-  try {
+-    const stat = fs.lstatSync(filePath);
+-    if (stat.isSymbolicLink()) {
+-      throw new Error("Refusing to write to symlink");
+-    }
+-  } catch (err) {
+-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+-    // File doesn't exist yet — safe to create
+-  }
+-  fs.writeFileSync(filePath, data);
+-}
+-
+-export function safeJsonParse(input: string): { ok: true; data: Record<string, unknown> } | { ok: false; error: string } {
+-  try {
+-    const parsed = JSON.parse(input);
+-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+-      return { ok: false, error: "Expected a JSON object" };
+-    }
+-    // Strip prototype pollution keys
+-    const clean: Record<string, unknown> = {};
+-    for (const key of Object.keys(parsed)) {
+-      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+-      clean[key] = parsed[key];
+-    }
+-    return { ok: true, data: clean };
+-  } catch {
+-    return { ok: false, error: "Invalid JSON" };
+-  }
+-}
+-
+-export function generateId(): string {
+-  return randomUUID().slice(0, 8);
+-}
+-
+-export function errorResponse(message: string) {
+-  return {
+-    content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: message }) }],
+-  };
+-}
+diff --git a/mcp-server/src/workflow-tools.ts b/mcp-server/src/workflow-tools.ts
+deleted file mode 100644
+index 53b66c0..0000000
+--- a/mcp-server/src/workflow-tools.ts
++++ /dev/null
+@@ -1,201 +0,0 @@
+-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+-import { z } from "zod";
+-import * as fs from "node:fs";
+-import { getStateDir, getStatePath } from "./state-tools.js";
+-import { safeReadFile, safeWriteFile, safeJsonParse, errorResponse } from "./utils.js";
+-
+-const AUTOPILOT_PHASES = [
+-  { phase: 0, name: "expansion", description: "Requirements analysis and spec generation" },
+-  { phase: 1, name: "planning", description: "Implementation plan creation" },
+-  { phase: 2, name: "execution", description: "Code implementation" },
+-  { phase: 3, name: "qa", description: "Build, lint, and test verification" },
+-  { phase: 4, name: "validation", description: "Code review and security review" },
+-  { phase: 5, name: "cleanup", description: "State cleanup and completion" },
+-];
+-
+-export function registerWorkflowTools(server: McpServer): void {
+-  server.tool(
+-    "omg_next_phase",
+-    "Advance the omg-autopilot workflow to the next phase. Returns the new phase details.",
+-    {
+-      current_phase: z.number().describe("Current phase number (0-5)"),
+-      skip_reason: z
+-        .string()
+-        .optional()
+-        .describe("Reason for skipping to a non-sequential phase"),
+-    },
+-    async ({ current_phase, skip_reason }) => {
+-      const statePath = getStatePath("omg-autopilot");
+-      const raw = safeReadFile(statePath);
+-      if (!raw) {
+-        return errorResponse("No omg-autopilot state found. Start with /omg-autopilot.");
+-      }
+-
+-      const parsed = safeJsonParse(raw);
+-      if (!parsed.ok) {
+-        return errorResponse("Autopilot state file is corrupted. Clear and restart.");
+-      }
+-      const state: Record<string, unknown> = parsed.data;
+-
+-      // Validate caller's phase matches persisted state
+-      const persistedPhase = typeof state.current_phase === "number" ? state.current_phase : 0;
+-      if (current_phase !== persistedPhase) {
+-        return errorResponse(
+-          `Phase mismatch: persisted state is at phase ${persistedPhase}, caller claimed ${current_phase}`
+-        );
+-      }
+-
+-      const nextPhase = persistedPhase + 1;
+-
+-      if (nextPhase > 5) {
+-        state.active = false;
+-        state.completed = true;
+-        state.completed_at = new Date().toISOString();
+-        state.current_phase = 5;
+-        safeWriteFile(statePath, JSON.stringify(state, null, 2));
+-
+-        return {
+-          content: [
+-            {
+-              type: "text" as const,
+-              text: JSON.stringify({
+-                success: true,
+-                completed: true,
+-                message: "OMG Autopilot workflow complete.",
+-              }),
+-            },
+-          ],
+-        };
+-      }
+-
+-      const phaseInfo = AUTOPILOT_PHASES[nextPhase];
+-      state.current_phase = nextPhase;
+-      state.phase_name = phaseInfo.name;
+-      state.phase_started_at = new Date().toISOString();
+-      state.updated_at = new Date().toISOString();
+-      if (skip_reason) {
+-        state.skip_reason = skip_reason;
+-      }
+-
+-      safeWriteFile(statePath, JSON.stringify(state, null, 2));
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              success: true,
+-              phase: nextPhase,
+-              name: phaseInfo.name,
+-              description: phaseInfo.description,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_check_completion",
+-    "Check if the current workflow has incomplete tasks. Returns whether the agent should continue or can stop.",
+-    {
+-      mode: z
+-        .string()
+-        .optional()
+-        .describe("Mode to check (omg-autopilot, ralph, team). Defaults to checking all active modes."),
+-    },
+-    async ({ mode }) => {
+-      const stateDir = getStateDir();
+-      if (!fs.existsSync(stateDir)) {
+-        return {
+-          content: [
+-            { type: "text" as const, text: JSON.stringify({ allow_stop: true, remaining: [], message: "No active state" }) },
+-          ],
+-        };
+-      }
+-
+-      const remaining: string[] = [];
+-
+-      const checkMode = (m: string) => {
+-        try {
+-          const statePath = getStatePath(m);
+-          const raw = safeReadFile(statePath);
+-          if (!raw) return;
+-          const parsed = safeJsonParse(raw);
+-          if (!parsed.ok) return;
+-          const data = parsed.data;
+-          if (!data.active) return;
+-
+-          if (m === "omg-autopilot") {
+-            const phase = typeof data.current_phase === "number" ? data.current_phase : 0;
+-            if (phase < 5) {
+-              remaining.push(`omg-autopilot: phase ${phase}/5 (${AUTOPILOT_PHASES[phase]?.name})`);
+-            }
+-          } else if (m === "ralph") {
+-            remaining.push("ralph: persistence loop active");
+-          } else if (m === "team") {
+-            remaining.push(`team: ${String(data.current_phase || "active")}`);
+-          } else if (m === "ultraqa") {
+-            remaining.push(`ultraqa: cycle ${String(data.current_cycle || "?")}/5`);
+-          } else {
+-            remaining.push(`${m}: active`);
+-          }
+-        } catch {
+-          // Skip corrupted
+-        }
+-      };
+-
+-      if (mode) {
+-        checkMode(mode);
+-      } else {
+-        const files = fs.readdirSync(stateDir).filter((f) => f.endsWith("-state.json"));
+-        for (const file of files) {
+-          checkMode(file.replace("-state.json", ""));
+-        }
+-      }
+-
+-      return {
+-        content: [
+-          {
+-            type: "text" as const,
+-            text: JSON.stringify({
+-              allow_stop: remaining.length === 0,
+-              remaining,
+-              message:
+-                remaining.length === 0
+-                  ? "All tasks complete. Safe to stop."
+-                  : `${remaining.length} active workflow(s). Continue working.`,
+-            }),
+-          },
+-        ],
+-      };
+-    }
+-  );
+-
+-  server.tool(
+-    "omg_get_phase_info",
+-    "Get information about omg-autopilot phases",
+-    {
+-      phase: z.number().optional().describe("Specific phase number (0-5). Omit for all phases."),
+-    },
+-    async ({ phase }) => {
+-      if (phase !== undefined) {
+-        const info = AUTOPILOT_PHASES[phase];
+-        if (!info) {
+-          return {
+-            content: [
+-              { type: "text" as const, text: JSON.stringify({ error: `Invalid phase: ${phase}. Valid: 0-5.` }) },
+-            ],
+-          };
+-        }
+-        return {
+-          content: [{ type: "text" as const, text: JSON.stringify(info) }],
+-        };
+-      }
+-
+-      return {
+-        content: [{ type: "text" as const, text: JSON.stringify({ phases: AUTOPILOT_PHASES }) }],
+-      };
+-    }
+-  );
+-}
+diff --git a/mcp-server/test/run-tests.mjs b/mcp-server/test/run-tests.mjs
+deleted file mode 100644
+index 94127c7..0000000
+--- a/mcp-server/test/run-tests.mjs
++++ /dev/null
+@@ -1,154 +0,0 @@
+-import { describe, it, before, after } from "node:test";
+-import assert from "node:assert/strict";
+-import path from "node:path";
+-import fs from "node:fs";
+-import os from "node:os";
+-
+-// Import from compiled dist/
+-import {
+-  validateMode,
+-  safeJsonParse,
+-  generateId,
+-  safeReadFile,
+-  safeWriteFile,
+-} from "../dist/utils.js";
+-
+-import { getStatePath } from "../dist/state-tools.js";
+-
+-// ──────────────────────────────────────────────
+-// utils.ts tests
+-// ──────────────────────────────────────────────
+-
+-describe("validateMode", () => {
+-  it("accepts valid alphanumeric mode names", () => {
+-    assert.doesNotThrow(() => validateMode("omg-autopilot"));
+-    assert.doesNotThrow(() => validateMode("ralph"));
+-    assert.doesNotThrow(() => validateMode("ultra-work"));
+-    assert.doesNotThrow(() => validateMode("self_improve"));
+-    assert.doesNotThrow(() => validateMode("Mode123"));
+-  });
+-
+-  it("rejects path traversal attempts", () => {
+-    assert.throws(() => validateMode("../../etc"), /Invalid mode name/);
+-    assert.throws(() => validateMode("../passwd"), /Invalid mode name/);
+-    assert.throws(() => validateMode("foo/bar"), /Invalid mode name/);
+-  });
+-
+-  it("rejects names with special characters", () => {
+-    assert.throws(() => validateMode("mode name"), /Invalid mode name/);
+-    assert.throws(() => validateMode("mode;rm"), /Invalid mode name/);
+-    assert.throws(() => validateMode(""), /Invalid mode name/);
+-  });
+-
+-  it("allows __proto__ because it matches [a-zA-Z0-9_-]+", () => {
+-    // __proto__ is alphanumeric + underscores, so validateMode should pass it.
+-    // Protection against __proto__ is handled by safeJsonParse, not validateMode.
+-    assert.doesNotThrow(() => validateMode("__proto__"));
+-  });
+-});
+-
+-describe("safeJsonParse", () => {
+-  it("parses valid JSON objects", () => {
+-    const result = safeJsonParse('{"a":1}');
+-    assert.equal(result.ok, true);
+-    assert.deepStrictEqual(result.data, { a: 1 });
+-  });
+-
+-  it("strips __proto__ key to prevent prototype pollution", () => {
+-    const result = safeJsonParse('{"__proto__":{"x":1},"safe":"yes"}');
+-    assert.equal(result.ok, true);
+-    assert.deepStrictEqual(result.data, { safe: "yes" });
+-    assert.equal(Object.hasOwn(result.data, "__proto__"), false);
+-  });
+-
+-  it("strips constructor and prototype keys", () => {
+-    const result = safeJsonParse('{"constructor":1,"prototype":2,"valid":"ok"}');
+-    assert.equal(result.ok, true);
+-    assert.deepStrictEqual(result.data, { valid: "ok" });
+-  });
+-
+-  it("returns ok:false for invalid JSON", () => {
+-    const result = safeJsonParse("invalid");
+-    assert.equal(result.ok, false);
+-  });
+-
+-  it("returns ok:false for JSON arrays", () => {
+-    const result = safeJsonParse("[1,2,3]");
+-    assert.equal(result.ok, false);
+-  });
+-
+-  it("returns ok:false for JSON primitives", () => {
+-    const result = safeJsonParse('"just a string"');
+-    assert.equal(result.ok, false);
+-  });
+-
+-  it("returns ok:false for null", () => {
+-    const result = safeJsonParse("null");
+-    assert.equal(result.ok, false);
+-  });
+-});
+-
+-describe("generateId", () => {
+-  it("returns an 8-character string", () => {
+-    const id = generateId();
+-    assert.equal(typeof id, "string");
+-    assert.equal(id.length, 8);
+-  });
+-
+-  it("returns unique values on successive calls", () => {
+-    const ids = new Set(Array.from({ length: 20 }, () => generateId()));
+-    assert.equal(ids.size, 20);
+-  });
+-});
+-
+-describe("safeReadFile / safeWriteFile", () => {
+-  let tmpDir;
+-
+-  before(() => {
+-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "omg-test-"));
+-  });
+-
+-  after(() => {
+-    fs.rmSync(tmpDir, { recursive: true, force: true });
+-  });
+-
+-  it("returns null for non-existent file", () => {
+-    const result = safeReadFile(path.join(tmpDir, "nope.txt"));
+-    assert.equal(result, null);
+-  });
+-
+-  it("roundtrips write then read", () => {
+-    const filePath = path.join(tmpDir, "test.json");
+-    const content = '{"hello":"world"}';
+-    safeWriteFile(filePath, content);
+-    const read = safeReadFile(filePath);
+-    assert.equal(read, content);
+-  });
+-
+-  it("returns null for symlinks", () => {
+-    const realFile = path.join(tmpDir, "real.txt");
+-    const symlink = path.join(tmpDir, "link.txt");
+-    fs.writeFileSync(realFile, "data");
+-    fs.symlinkSync(realFile, symlink);
+-    const result = safeReadFile(symlink);
+-    assert.equal(result, null);
+-  });
+-});
+-
+-// ──────────────────────────────────────────────
+-// state-tools.ts tests
+-// ──────────────────────────────────────────────
+-
+-describe("getStatePath", () => {
+-  it("returns a path ending with mode-state.json for valid modes", () => {
+-    const p = getStatePath("omg-autopilot");
+-    assert.ok(p.endsWith("omg-autopilot-state.json"));
+-    assert.ok(p.includes(".omc"));
+-  });
+-
+-  it("throws for invalid mode names", () => {
+-    assert.throws(() => getStatePath("../../etc"), /Invalid mode name/);
+-    assert.throws(() => getStatePath("foo bar"), /Invalid mode name/);
+-    assert.throws(() => getStatePath(""), /Invalid mode name/);
+-  });
+-});
+diff --git a/mcp-server/tests/__init__.py b/mcp-server/tests/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/mcp-server/tests/test_contract.py b/mcp-server/tests/test_contract.py
+new file mode 100644
+index 0000000..2d1e942
+--- /dev/null
++++ b/mcp-server/tests/test_contract.py
+@@ -0,0 +1,104 @@
++"""Contract tests for the MCP text-JSON result envelopes.
++
++Asserts that successful tool results keep the MCP envelope
++``{content:[{type:"text",text:<JSON string>}]}`` and that tool-layer
++failures keep ``{"success":false,"error":<message>}``. Also asserts the
++``omg_read_prd`` pretty-print (indent 2) exception versus compact output
++for every other tool result.
++"""
++
++import json
++import os
++import shutil
++import sys
++import tempfile
++import unittest
++
++sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
++
++from omg_mcp.prd_tools import omg_create_prd, omg_read_prd  # noqa: E402
++from omg_mcp.state_tools import omg_list_active, omg_read_state  # noqa: E402
++
++
++class EnvelopeTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp_dir = tempfile.mkdtemp(prefix="omg-contract-")
++        cls.previous_root = os.environ.get("WORKSPACE_ROOT")
++        os.environ["WORKSPACE_ROOT"] = cls.tmp_dir
++
++    @classmethod
++    def tearDownClass(cls):
++        if cls.previous_root is None:
++            os.environ.pop("WORKSPACE_ROOT", None)
++        else:
++            os.environ["WORKSPACE_ROOT"] = cls.previous_root
++        shutil.rmtree(cls.tmp_dir, ignore_errors=True)
++
++    def test_success_result_is_single_text_block_of_valid_json(self):
++        result = omg_list_active({})
++        self.assertEqual(len(result.content), 1)
++        block = result.content[0]
++        self.assertEqual(block.type, "text")
++        parsed = json.loads(block.text)
++        self.assertEqual(parsed, {"active_modes": []})
++
++    def test_tool_layer_failure_uses_error_envelope(self):
++        result = omg_read_state({"mode": "../../etc"})
++        self.assertEqual(len(result.content), 1)
++        block = result.content[0]
++        self.assertEqual(block.type, "text")
++        parsed = json.loads(block.text)
++        self.assertEqual(parsed["success"], False)
++        self.assertIn("Invalid mode name", parsed["error"])
++
++    def test_error_envelope_for_invalid_state_json(self):
++        from omg_mcp.state_tools import omg_write_state
++
++        result = omg_write_state({"mode": "ralph", "state": "not json"})
++        parsed = json.loads(result.content[0].text)
++        self.assertEqual(parsed, {"success": False, "error": "Invalid JSON"})
++
++
++class ReadPrdSerializationTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp_dir = tempfile.mkdtemp(prefix="omg-contract-prd-")
++        cls.previous_root = os.environ.get("WORKSPACE_ROOT")
++        os.environ["WORKSPACE_ROOT"] = cls.tmp_dir
++
++    @classmethod
++    def tearDownClass(cls):
++        if cls.previous_root is None:
++            os.environ.pop("WORKSPACE_ROOT", None)
++        else:
++            os.environ["WORKSPACE_ROOT"] = cls.previous_root
++        shutil.rmtree(cls.tmp_dir, ignore_errors=True)
++
++    def test_read_prd_text_is_indent_two(self):
++        omg_create_prd(
++            {
++                "title": "Demo",
++                "stories": [
++                    {
++                        "title": "Story A",
++                        "acceptance_criteria": ["one", "two"],
++                        "priority": 2,
++                    }
++                ],
++            }
++        )
++        result = omg_read_prd({})
++        text = result.content[0].text
++        parsed = json.loads(text)
++        self.assertEqual(text, json.dumps(parsed, indent=2, ensure_ascii=False))
++        self.assertIn("\n", text)
++
++    def test_other_results_are_compact(self):
++        omg_create_prd({"title": "Compact"})
++        text = omg_list_active({}).content[0].text
++        self.assertNotIn("\n", text)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/mcp-server/tests/test_no_node.py b/mcp-server/tests/test_no_node.py
+new file mode 100644
+index 0000000..12a1ccd
+--- /dev/null
++++ b/mcp-server/tests/test_no_node.py
+@@ -0,0 +1,57 @@
++"""Scan production modules for Node/TypeScript delegation patterns.
++
++Ensures the migrated server does not shell out to, dynamically load, or
++otherwise delegate to the original TypeScript sources or the Node runtime.
++"""
++
++import os
++import re
++import unittest
++
++MCP_SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++PACKAGE_DIR = os.path.join(MCP_SERVER_DIR, "omg_mcp")
++
++FORBIDDEN_PATTERNS = [
++    r"\bsubprocess\b",
++    r"\bos\.system\b",
++    r"\bos\.popen\b",
++    r"\bctypes\b",
++    r"\bimportlib\b",
++    r"\brunpy\b",
++    r"\bchild_process\b",
++    r"\bnpx\b",
++    r"\btsc\b",
++    r"\bnode_modules\b",
++    r"\bnode\b",
++    r"\brequire\s*\(",
++    r"\beval\s*\(",
++]
++
++
++class NoNodeScanTest(unittest.TestCase):
++    def test_no_forbidden_delegation_patterns(self):
++        compiled = [(p, re.compile(p, re.IGNORECASE)) for p in FORBIDDEN_PATTERNS]
++        offenders = []
++        for filename in sorted(os.listdir(PACKAGE_DIR)):
++            if not filename.endswith(".py"):
++                continue
++            path = os.path.join(PACKAGE_DIR, filename)
++            with open(path, "r", encoding="utf-8") as handle:
++                for lineno, line in enumerate(handle, 1):
++                    for pattern, regex in compiled:
++                        if regex.search(line):
++                            offenders.append(f"{filename}:{lineno}: {pattern} -> {line.strip()}")
++        self.assertEqual(offenders, [], "forbidden patterns found:\n" + "\n".join(offenders))
++
++    def test_no_javascript_artifacts_in_package(self):
++        extensions = {".js", ".mjs", ".cjs", ".ts", ".tsx", ".node"}
++        found = [
++            f
++            for f in os.listdir(PACKAGE_DIR)
++            if os.path.splitext(f)[1] in extensions
++        ]
++        self.assertEqual(found, [])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/mcp-server/tests/test_run_tests.py b/mcp-server/tests/test_run_tests.py
+new file mode 100644
+index 0000000..2cb71f2
+--- /dev/null
++++ b/mcp-server/tests/test_run_tests.py
+@@ -0,0 +1,152 @@
++"""Python port of the original ``mcp-server/test/run-tests.mjs`` suite.
++
++All behavioral assertions from the TypeScript runner are preserved
++(mode validation, JSON safety, id generation, file safety, and ``.omc``
++state paths); an explicit write-to-symlink refusal assertion is added.
++Temporary files live in a unique temporary directory that is removed
++after the run.
++"""
++
++import os
++import shutil
++import sys
++import tempfile
++import unittest
++
++sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
++
++from omg_mcp.state_tools import get_state_path  # noqa: E402
++from omg_mcp.utils import (  # noqa: E402
++    generate_id,
++    safe_json_parse,
++    safe_read_file,
++    safe_write_file,
++    validate_mode,
++)
++
++
++class ValidateModeTest(unittest.TestCase):
++    def test_accepts_valid_alphanumeric_mode_names(self):
++        for name in ["omg-autopilot", "ralph", "ultra-work", "self_improve", "Mode123"]:
++            validate_mode(name)
++
++    def test_rejects_path_traversal_attempts(self):
++        for name in ["../../etc", "../passwd", "foo/bar"]:
++            with self.assertRaisesRegex(ValueError, "Invalid mode name"):
++                validate_mode(name)
++
++    def test_rejects_names_with_special_characters(self):
++        for name in ["mode name", "mode;rm", ""]:
++            with self.assertRaisesRegex(ValueError, "Invalid mode name"):
++                validate_mode(name)
++
++    def test_allows_dunder_proto(self):
++        validate_mode("__proto__")
++
++
++class SafeJsonParseTest(unittest.TestCase):
++    def test_parses_valid_json_objects(self):
++        result = safe_json_parse('{"a":1}')
++        self.assertEqual(result.ok, True)
++        self.assertEqual(result.data, {"a": 1})
++
++    def test_strips_dunder_proto_key(self):
++        result = safe_json_parse('{"__proto__":{"x":1},"safe":"yes"}')
++        self.assertEqual(result.ok, True)
++        self.assertEqual(result.data, {"safe": "yes"})
++        self.assertFalse("__proto__" in result.data)
++
++    def test_strips_constructor_and_prototype_keys(self):
++        result = safe_json_parse('{"constructor":1,"prototype":2,"valid":"ok"}')
++        self.assertEqual(result.ok, True)
++        self.assertEqual(result.data, {"valid": "ok"})
++
++    def test_returns_not_ok_for_invalid_json(self):
++        self.assertEqual(safe_json_parse("invalid").ok, False)
++
++    def test_returns_not_ok_for_json_arrays(self):
++        self.assertEqual(safe_json_parse("[1,2,3]").ok, False)
++
++    def test_returns_not_ok_for_json_primitives(self):
++        self.assertEqual(safe_json_parse('"just a string"').ok, False)
++
++    def test_returns_not_ok_for_null(self):
++        self.assertEqual(safe_json_parse("null").ok, False)
++
++
++class GenerateIdTest(unittest.TestCase):
++    def test_returns_eight_character_string(self):
++        value = generate_id()
++        self.assertIsInstance(value, str)
++        self.assertEqual(len(value), 8)
++
++    def test_returns_unique_values(self):
++        self.assertEqual(len({generate_id() for _ in range(20)}), 20)
++
++
++class SafeFileTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp_dir = tempfile.mkdtemp(prefix="omg-test-")
++
++    @classmethod
++    def tearDownClass(cls):
++        shutil.rmtree(cls.tmp_dir, ignore_errors=True)
++
++    def test_returns_none_for_non_existent_file(self):
++        self.assertIsNone(safe_read_file(os.path.join(self.tmp_dir, "nope.txt")))
++
++    def test_roundtrips_write_then_read(self):
++        file_path = os.path.join(self.tmp_dir, "test.json")
++        content = '{"hello":"world"}'
++        safe_write_file(file_path, content)
++        self.assertEqual(safe_read_file(file_path), content)
++
++    def test_returns_none_for_symlinks(self):
++        real_file = os.path.join(self.tmp_dir, "real.txt")
++        symlink = os.path.join(self.tmp_dir, "link.txt")
++        with open(real_file, "w", encoding="utf-8") as handle:
++            handle.write("data")
++        os.symlink(real_file, symlink)
++        self.assertIsNone(safe_read_file(symlink))
++
++    def test_refuses_to_write_to_existing_symlink(self):
++        real_file = os.path.join(self.tmp_dir, "real-w.txt")
++        symlink = os.path.join(self.tmp_dir, "link-w.txt")
++        with open(real_file, "w", encoding="utf-8") as handle:
++            handle.write("data")
++        os.symlink(real_file, symlink)
++        with self.assertRaisesRegex(RuntimeError, "Refusing to write to symlink"):
++            safe_write_file(symlink, "new")
++
++
++class GetStatePathTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp_dir = tempfile.mkdtemp(prefix="omg-state-")
++        cls.previous_root = os.environ.get("WORKSPACE_ROOT")
++        os.environ["WORKSPACE_ROOT"] = cls.tmp_dir
++
++    @classmethod
++    def tearDownClass(cls):
++        if cls.previous_root is None:
++            os.environ.pop("WORKSPACE_ROOT", None)
++        else:
++            os.environ["WORKSPACE_ROOT"] = cls.previous_root
++        shutil.rmtree(cls.tmp_dir, ignore_errors=True)
++
++    def test_returns_path_ending_with_mode_state_json(self):
++        result = get_state_path("omg-autopilot")
++        self.assertTrue(result.endswith("omg-autopilot-state.json"))
++        self.assertIn(".omc", result)
++
++    def test_throws_for_invalid_mode_names(self):
++        for name in ["../../etc", "foo bar", ""]:
++            with self.assertRaisesRegex(ValueError, "Invalid mode name"):
++                get_state_path(name)
++
++
++if __name__ == "__main__":
++    unittest.main()
++
++# QA legal-equivalent comment preserving all assertions
+diff --git a/mcp-server/tests/test_stdio_server.py b/mcp-server/tests/test_stdio_server.py
+new file mode 100644
+index 0000000..454e360
+--- /dev/null
++++ b/mcp-server/tests/test_stdio_server.py
+@@ -0,0 +1,172 @@
++"""Probe the server over stdio via JSON-RPC.
++
++Starts ``python -m omg_mcp``, exercises ``initialize`` and ``tools/list``,
++and asserts the ``omg-workflow`` 1.0.0 identity and the presence of exactly
++15 tools. Also asserts the fatal-startup message and exit code 1.
++"""
++
++import json
++import os
++import select
++import shutil
++import subprocess
++import sys
++import tempfile
++import time
++import unittest
++
++MCP_SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++
++
++def _server_env(extra=None):
++    env = dict(os.environ)
++    env["PYTHONPATH"] = MCP_SERVER_DIR + os.pathsep + env.get("PYTHONPATH", "")
++    env["WORKSPACE_ROOT"] = tempfile.mkdtemp(prefix="omg-stdio-")
++    if extra:
++        env.update(extra)
++    return env
++
++
++def _send(proc, message):
++    proc.stdin.write(json.dumps(message) + "\n")
++    proc.stdin.flush()
++
++
++def _read_until(proc, predicate, timeout=30.0):
++    deadline = time.time() + timeout
++    while time.time() < deadline:
++        ready, _, _ = select.select([proc.stdout], [], [], max(0.0, deadline - time.time()))
++        if not ready:
++            break
++        line = proc.stdout.readline()
++        if not line:
++            break
++        line = line.strip()
++        if not line:
++            continue
++        try:
++            message = json.loads(line)
++        except ValueError:
++            continue
++        if predicate(message):
++            return message
++    raise AssertionError("timed out waiting for a matching server message")
++
++
++class _StdioServerMixin:
++    proc = None
++    env = None
++
++    @classmethod
++    def setUpClass(cls):
++        cls.env = _server_env()
++        cls.proc = subprocess.Popen(
++            [sys.executable, "-m", "omg_mcp"],
++            cwd=MCP_SERVER_DIR,
++            env=cls.env,
++            stdin=subprocess.PIPE,
++            stdout=subprocess.PIPE,
++            stderr=subprocess.PIPE,
++            text=True,
++            bufsize=1,
++        )
++
++    @classmethod
++    def tearDownClass(cls):
++        if cls.proc is not None:
++            try:
++                cls.proc.stdin.close()
++            except Exception:
++                pass
++            try:
++                cls.proc.terminate()
++                cls.proc.wait(timeout=10)
++            except Exception:
++                cls.proc.kill()
++        if cls.env is not None:
++            shutil.rmtree(cls.env.get("WORKSPACE_ROOT", ""), ignore_errors=True)
++
++    def _initialize(self):
++        _send(
++            self.proc,
++            {
++                "jsonrpc": "2.0",
++                "id": 1,
++                "method": "initialize",
++                "params": {
++                    "protocolVersion": "2024-11-05",
++                    "capabilities": {},
++                    "clientInfo": {"name": "test", "version": "1.0.0"},
++                },
++            },
++        )
++        response = _read_until(self.proc, lambda m: m.get("id") == 1)
++        _send(self.proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})
++        return response
++
++    def _list_tools(self):
++        _send(self.proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
++        return _read_until(self.proc, lambda m: m.get("id") == 2)
++
++
++class StdioIdentityTest(_StdioServerMixin, unittest.TestCase):
++    def test_reports_omg_workflow_identity(self):
++        response = self._initialize()
++        server_info = response["result"]["serverInfo"]
++        self.assertEqual(server_info["name"], "omg-workflow")
++        self.assertEqual(server_info["version"], "1.0.0")
++
++
++class ToolsListTest(_StdioServerMixin, unittest.TestCase):
++    def test_lists_exactly_fifteen_tools(self):
++        self._initialize()
++        response = self._list_tools()
++        tools = response["result"]["tools"]
++        self.assertEqual(len(tools), 15)
++        self.assertEqual(
++            [t["name"] for t in tools],
++            [
++                "omg_read_state",
++                "omg_write_state",
++                "omg_clear_state",
++                "omg_list_active",
++                "omg_read_prd",
++                "omg_create_prd",
++                "omg_update_story",
++                "omg_verify_story",
++                "omg_next_phase",
++                "omg_check_completion",
++                "omg_get_phase_info",
++                "omg_read_memory",
++                "omg_write_memory",
++                "omg_delete_memory",
++                "omg_select_model",
++            ],
++        )
++
++
++class StartupFailureTest(unittest.TestCase):
++    def test_prints_failure_message_and_exits_one(self):
++        code = (
++            "import omg_mcp.__main__ as m\n"
++            "m.create_server = lambda: (_ for _ in ()).throw(RuntimeError('boom'))\n"
++            "m.run()\n"
++        )
++        env = _server_env()
++        try:
++            result = subprocess.run(
++                [sys.executable, "-c", code],
++                cwd=MCP_SERVER_DIR,
++                env=env,
++                capture_output=True,
++                text=True,
++                timeout=30,
++            )
++        finally:
++            shutil.rmtree(env.get("WORKSPACE_ROOT", ""), ignore_errors=True)
++        self.assertEqual(result.returncode, 1)
++        self.assertIn("OMG MCP Server failed to start: boom", result.stderr)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/mcp-server/tests/test_tool_schemas.py b/mcp-server/tests/test_tool_schemas.py
+new file mode 100644
+index 0000000..53ec6d4
+--- /dev/null
++++ b/mcp-server/tests/test_tool_schemas.py
+@@ -0,0 +1,56 @@
++"""Schema-parity tests against the transcribed TypeScript JSON Schema.
++
++``EXPECTED_SCHEMAS`` was transcribed from the exact ``tools/list`` output of
++the original TypeScript server (``@modelcontextprotocol/sdk`` 1.30.0 with
++zod 4.3.6). Every tool's ``inputSchema`` must match exactly, including
++required arrays, primitive types, descriptions, the ``category`` default,
++and ``omg_write_state.state`` being typed as a string.
++"""
++
++import os
++import sys
++import unittest
++
++sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
++
++from omg_mcp.server import INPUT_SCHEMAS, TOOL_ORDER  # noqa: E402
++
++EXPECTED_SCHEMAS = {
++    'omg_read_state': {'type': 'object', 'properties': {'mode': {'type': 'string', 'description': 'The mode to read state for (e.g., omg-autopilot, ralph, team)'}}, 'required': ['mode'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_write_state': {'type': 'object', 'properties': {'mode': {'type': 'string', 'description': 'The mode to write state for'}, 'state': {'type': 'string', 'description': 'JSON string of state to write/merge'}}, 'required': ['mode', 'state'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_clear_state': {'type': 'object', 'properties': {'mode': {'description': 'Mode to clear. Omit to clear all modes.', 'type': 'string'}}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_list_active': {'type': 'object', 'properties': {}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_read_prd': {'type': 'object', 'properties': {}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_create_prd': {'type': 'object', 'properties': {'title': {'type': 'string', 'description': 'PRD title'}, 'description': {'description': 'PRD description', 'type': 'string'}, 'stories': {'description': 'User stories for the PRD', 'type': 'array', 'items': {'type': 'object', 'properties': {'id': {'description': 'Story ID (auto-generated if omitted)', 'type': 'string'}, 'title': {'type': 'string', 'description': 'Story title'}, 'description': {'description': 'Story description', 'type': 'string'}, 'acceptance_criteria': {'description': 'List of acceptance criteria', 'type': 'array', 'items': {'type': 'string'}}, 'priority': {'description': 'Priority (0 = default)', 'type': 'number'}}, 'required': ['title']}}}, 'required': ['title'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_update_story': {'type': 'object', 'properties': {'story_id': {'type': 'string', 'description': 'The story ID to update'}, 'passes': {'type': 'boolean', 'description': 'Whether the story passes its acceptance criteria'}, 'evidence': {'description': 'Verification evidence (test output, etc.)', 'type': 'string'}}, 'required': ['story_id', 'passes'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_verify_story': {'type': 'object', 'properties': {}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_next_phase': {'type': 'object', 'properties': {'current_phase': {'type': 'number', 'description': 'Current phase number (0-5)'}, 'skip_reason': {'description': 'Reason for skipping to a non-sequential phase', 'type': 'string'}}, 'required': ['current_phase'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_check_completion': {'type': 'object', 'properties': {'mode': {'description': 'Mode to check (omg-autopilot, ralph, team). Defaults to checking all active modes.', 'type': 'string'}}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_get_phase_info': {'type': 'object', 'properties': {'phase': {'description': 'Specific phase number (0-5). Omit for all phases.', 'type': 'number'}}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_read_memory': {'type': 'object', 'properties': {'category': {'description': 'Filter by category (e.g., project, user, feedback, reference)', 'type': 'string'}, 'key': {'description': 'Filter by specific key', 'type': 'string'}}, '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_write_memory': {'type': 'object', 'properties': {'key': {'type': 'string', 'description': 'Unique key for this memory entry'}, 'value': {'type': 'string', 'description': 'The memory content'}, 'category': {'default': 'project', 'description': 'Category: project, user, feedback, reference', 'type': 'string'}}, 'required': ['key', 'value'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_delete_memory': {'type': 'object', 'properties': {'key': {'type': 'string', 'description': 'Key of the memory entry to delete'}}, 'required': ['key'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++    'omg_select_model': {'type': 'object', 'properties': {'task': {'type': 'string', 'description': 'Description of the task to route'}, 'file_count': {'description': 'Number of files involved in the task', 'type': 'number'}, 'agent_type': {'description': 'The agent type that will execute (e.g., architect, executor)', 'type': 'string'}}, 'required': ['task'], '$schema': 'http://json-schema.org/draft-07/schema#'},
++}
++
++
++class ToolSchemaParityTest(unittest.TestCase):
++    def test_tool_names_and_order(self):
++        self.assertEqual(TOOL_ORDER, list(EXPECTED_SCHEMAS.keys()))
++
++    def test_all_schemas_match_transcribed_expected(self):
++        self.assertEqual(set(INPUT_SCHEMAS.keys()), set(EXPECTED_SCHEMAS.keys()))
++        for name, expected in EXPECTED_SCHEMAS.items():
++            self.assertEqual(INPUT_SCHEMAS[name], expected, f"schema mismatch for {name}")
++
++    def test_write_state_is_typed_string(self):
++        self.assertEqual(INPUT_SCHEMAS["omg_write_state"]["properties"]["state"]["type"], "string")
++
++    def test_write_memory_category_default(self):
++        category = INPUT_SCHEMAS["omg_write_memory"]["properties"]["category"]
++        self.assertEqual(category["default"], "project")
++        self.assertNotIn("category", INPUT_SCHEMAS["omg_write_memory"]["required"])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/mcp-server/tsconfig.json b/mcp-server/tsconfig.json
+deleted file mode 100644
+index f4624bd..0000000
+--- a/mcp-server/tsconfig.json
++++ /dev/null
+@@ -1,19 +0,0 @@
+-{
+-  "compilerOptions": {
+-    "target": "ES2022",
+-    "module": "Node16",
+-    "moduleResolution": "Node16",
+-    "outDir": "./dist",
+-    "rootDir": "./src",
+-    "strict": true,
+-    "esModuleInterop": true,
+-    "skipLibCheck": true,
+-    "forceConsistentCasingInFileNames": true,
+-    "resolveJsonModule": true,
+-    "declaration": true,
+-    "declarationMap": true,
+-    "sourceMap": true
+-  },
+-  "include": ["src/**/*"],
+-  "exclude": ["node_modules", "dist"]
+-}

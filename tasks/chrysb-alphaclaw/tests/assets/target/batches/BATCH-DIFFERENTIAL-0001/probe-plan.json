@@ -1,0 +1,117 @@
+{
+  "schema_version": "migration-differential-probe-plan:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "side": "target",
+  "authoring_only": true,
+  "repo_root": "/input/target",
+  "runtime": "hono",
+  "native_test_command": [
+    "npm",
+    "test",
+    "--",
+    "tests/server"
+  ],
+  "authoring_test_command": [
+    "vitest",
+    "run",
+    "tests/server",
+    "--reporter=dot"
+  ],
+  "shared_cases": "../../../shared/batches/BATCH-DIFFERENTIAL-0001/cases.json",
+  "shared_runner": "../../../shared/batches/BATCH-DIFFERENTIAL-0001/run-differential.js",
+  "observation_coverage": {
+    "DIFF-001": [
+      "tests/server/routes-auth.test.js",
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-002": [
+      "tests/server/routes-auth.test.js"
+    ],
+    "DIFF-003": [
+      "tests/server/routes-auth.test.js",
+      "tests/server/login-throttle.test.js"
+    ],
+    "DIFF-004": [
+      "tests/server/routes-auth.test.js"
+    ],
+    "DIFF-005": [
+      "tests/server/routes-auth.test.js"
+    ],
+    "DIFF-006": [
+      "tests/server/routes-auth.test.js"
+    ],
+    "DIFF-007": [
+      "tests/server/routes-auth.test.js",
+      "tests/server/oauth-callback-middleware.test.js"
+    ],
+    "DIFF-008": [
+      "tests/server/webhook-middleware.test.js",
+      "tests/server/gmail-push.test.js",
+      "tests/server/oauth-callback-middleware.test.js"
+    ],
+    "DIFF-009": [
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-010": [
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-011": [
+      "tests/server/routes-proxy.test.js",
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-012": [],
+    "DIFF-013": [],
+    "DIFF-014": [],
+    "DIFF-015": [],
+    "DIFF-016": [
+      "tests/server/operation-events.test.js"
+    ],
+    "DIFF-017": [
+      "tests/server/routes-proxy.test.js",
+      "tests/server/chat-ws.test.js"
+    ],
+    "DIFF-018": [],
+    "DIFF-019": [],
+    "DIFF-020": [
+      "tests/server/routes-auth.test.js",
+      "tests/server/login-throttle.test.js"
+    ],
+    "DIFF-021": [
+      "tests/server/routes-auth.test.js",
+      "tests/server/login-throttle.test.js"
+    ],
+    "DIFF-022": [
+      "tests/server/routes-proxy.test.js",
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-023": [
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-024": [
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-025": [
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-026": [
+      "tests/server/gmail-push.test.js"
+    ],
+    "DIFF-027": [
+      "tests/server/webhook-middleware.test.js"
+    ],
+    "DIFF-028": [
+      "tests/server/oauth-callback-middleware.test.js"
+    ],
+    "DIFF-029": [
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-030": [
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-031": [
+      "tests/server/routes-proxy.test.js"
+    ],
+    "DIFF-032": []
+  },
+  "custom_cases_cover_all_observations": true
+}

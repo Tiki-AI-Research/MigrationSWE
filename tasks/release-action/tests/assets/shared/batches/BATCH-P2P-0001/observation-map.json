@@ -1,0 +1,137 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "schema_version": "p2p-observation-map:v1",
+  "migration": {
+    "source": "TypeScript 6.0.3",
+    "target": "Go 1.23.0"
+  },
+  "normalization": {
+    "policy": "Each side emits exactly one line per observation of the form {\"observation_id\":\"<id>\",\"result\":\"PASS|FAIL\"}. PASS is emitted only when the mapped repository test really executes and succeeds; a missing/vacuous test counts as FAIL.",
+    "value": {
+      "result": "PASS"
+    },
+    "relation": "equal_after_normalization"
+  },
+  "observations": [
+    {
+      "id": "P2P-001",
+      "source": {"file": "__tests__/Action.test.ts", "test": "Action"},
+      "target": {"go_tests": ["TestAction"]}
+    },
+    {
+      "id": "P2P-002",
+      "source": {"file": "__tests__/ArtifactUploader.test.ts", "test": "ArtifactUploader"},
+      "target": {"go_tests": ["TestArtifactUploader"]}
+    },
+    {
+      "id": "P2P-003",
+      "source": {"file": "__tests__/Artifact.test.ts", "test": "generates name from path"},
+      "target": {"go_tests": ["TestArtifact"]}
+    },
+    {
+      "id": "P2P-004",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "makeLatest"},
+      "target": {"go_tests": ["TestInputsMakeLatest"]}
+    },
+    {
+      "id": "P2P-005",
+      "source": {"file": "__tests__/ReleaseValidator.test.ts", "test": "updateOnlyUnreleased is enabled"},
+      "target": {"go_tests": ["TestReleaseValidator"]}
+    },
+    {
+      "id": "P2P-006",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "artifacts"},
+      "target": {"go_tests": ["TestInputsArtifacts"]}
+    },
+    {
+      "id": "P2P-007",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "returns input tag"},
+      "target": {"go_tests": ["TestInputsTag"]}
+    },
+    {
+      "id": "P2P-008",
+      "source": {"file": "__tests__/Action.test.ts", "test": "Action"},
+      "target": {"go_tests": ["TestAction", "TestGithubError"]}
+    },
+    {
+      "id": "P2P-009",
+      "source": {"file": "__tests__/GithubError.test.ts", "test": "has error with code"},
+      "target": {"go_tests": ["TestGithubError"]}
+    },
+    {
+      "id": "P2P-010",
+      "source": {"file": "__tests__/ArtifactGlobber.test.ts", "test": "warns when no glob results are produced and empty results shouldn't throw"},
+      "target": {"go_tests": ["TestArtifactGlobber"]}
+    },
+    {
+      "id": "P2P-011",
+      "source": {"file": "__tests__/GithubError.test.ts", "test": "ErrorMessage"},
+      "target": {"go_tests": ["TestGithubError", "TestGithubErrorDetail"]}
+    },
+    {
+      "id": "P2P-012",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "tag"},
+      "target": {"go_tests": ["TestInputsTag"]}
+    },
+    {
+      "id": "P2P-013",
+      "source": {"file": "__tests__/Outputs.test.ts", "test": "Outputs"},
+      "target": {"go_tests": ["TestOutputs"]}
+    },
+    {
+      "id": "P2P-014",
+      "source": {"file": "__tests__/ArtifactUploader.test.ts", "test": "excludes failed uploads from returned URLs"},
+      "target": {"go_tests": ["TestArtifactUploader", "TestOutputs"]}
+    },
+    {
+      "id": "P2P-015",
+      "source": {"file": "__tests__/Artifact.test.ts", "test": "reads artifact"},
+      "target": {"go_tests": ["TestArtifact"]}
+    },
+    {
+      "id": "P2P-016",
+      "source": {"file": "action.yml", "test": "outputs schema"},
+      "target": {"static_checks": ["action_yml_outputs"]}
+    },
+    {
+      "id": "P2P-017",
+      "source": {"file": "__tests__/ArtifactUploader.test.ts", "test": "replaces all artifacts"},
+      "target": {"go_tests": ["TestArtifactUploader", "TestArtifactDestroyer"]}
+    },
+    {
+      "id": "P2P-018",
+      "source": {"file": "__tests__/ActionSkipper.test.ts", "test": "shouldSkip"},
+      "target": {"go_tests": ["TestActionSkipper"]}
+    },
+    {
+      "id": "P2P-019",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "returns true when explicitly set"},
+      "target": {"go_tests": ["TestInputsBooleans"]}
+    },
+    {
+      "id": "P2P-020",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "createdReleaseName"},
+      "target": {"go_tests": ["TestInputsCreatedReleaseName", "TestInputsCreatedReleaseBody"]}
+    },
+    {
+      "id": "P2P-021",
+      "source": {"file": "__tests__/Inputs.test.ts", "test": "Inputs"},
+      "target": {"go_tests": ["TestInputsBooleans"]}
+    },
+    {
+      "id": "P2P-022",
+      "source": {"file": "action.yml", "test": "definitions and REST mapping"},
+      "target": {"static_checks": ["action_yml_inputs", "action_yml_outputs", "rest_operations"]}
+    },
+    {
+      "id": "P2P-023",
+      "source": {"file": "__tests__/Action.test.ts", "test": "Action"},
+      "target": {"go_tests": ["TestAction"]}
+    },
+    {
+      "id": "P2P-024",
+      "source": {"file": "action.yml", "test": "public interface"},
+      "target": {"static_checks": ["action_yml_inputs", "action_yml_outputs", "action_yml_runs_docker", "action_yml_no_node"]}
+    }
+  ]
+}

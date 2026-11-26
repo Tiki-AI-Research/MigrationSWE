@@ -1,0 +1,86 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "note": "Fixed configuration inputs shared by the source and target probes. Both sides evaluate the same semantic predicate over these inputs.",
+  "hass_localize_stub": "localize(key, ...args) => `${key}(${args.join('|')})`",
+  "fixtures": [
+    {
+      "id": "bound-entity-card",
+      "description": "A satisfying bound entity card configuration.",
+      "value": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" }
+    },
+    {
+      "id": "bound-entity-card-wrong-type",
+      "description": "Same bound card with entity replaced by a number.",
+      "value": { "type": "custom:mushroom-entity-card", "entity": 42 }
+    },
+    {
+      "id": "bound-entity-card-extra-key",
+      "description": "Interacting configuration with one unexpected key.",
+      "value": { "type": "custom:mushroom-entity-card", "bogus": 1 }
+    },
+    {
+      "id": "bound-entity-card-horizontal",
+      "description": "Satisfying card with known layout value.",
+      "value": {
+        "type": "custom:mushroom-entity-card",
+        "entity": "light.kitchen",
+        "layout": "horizontal"
+      }
+    },
+    {
+      "id": "lovelace-card-missing-type",
+      "description": "Empty lovelace card configuration missing the required type key.",
+      "value": {}
+    },
+    {
+      "id": "entity-wrong-type",
+      "description": "Shared entity configuration with a numeric entity.",
+      "value": { "entity": 42 }
+    },
+    {
+      "id": "entity-extra-key",
+      "description": "Shared entity configuration with an unexpected key.",
+      "value": { "entity": "light.kitchen", "bogus": 1 }
+    },
+    {
+      "id": "entity-name-number",
+      "description": "A number that fails every union alternative of entityNameStruct.",
+      "value": 7
+    },
+    {
+      "id": "appearance-valid-info",
+      "description": "Appearance configuration with a valid primary_info enum value.",
+      "value": { "primary_info": "name" }
+    },
+    {
+      "id": "appearance-invalid-info",
+      "description": "Appearance configuration with an unknown primary_info enum value.",
+      "value": { "primary_info": "bogus" }
+    },
+    {
+      "id": "appearance-wrong-type-info",
+      "description": "Appearance configuration whose primary_info has the wrong type.",
+      "value": { "primary_info": 123 }
+    },
+    {
+      "id": "action-url-missing-path",
+      "description": "Action configuration dispatched to the url branch without url_path.",
+      "value": { "action": "url" }
+    },
+    {
+      "id": "action-none",
+      "description": "Action configuration for the none branch.",
+      "value": { "action": "none" }
+    },
+    {
+      "id": "layout-horizontal",
+      "description": "Accepted layout literal.",
+      "value": "horizontal"
+    },
+    {
+      "id": "layout-diagonal",
+      "description": "Rejected layout literal.",
+      "value": "diagonal"
+    }
+  ]
+}

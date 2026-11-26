@@ -1,0 +1,12 @@
+# The separate verifier runs in a capability-poor container by default.  The
+# candidate sandbox (tests/verifier/sandbox.py) requires these capabilities to
+# create private network/PID namespaces; without them the verifier fails closed
+# as an infrastructure error rather than executing candidate code with network
+# access.
+services:
+  main:
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - apparmor=unconfined

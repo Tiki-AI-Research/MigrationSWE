@@ -1,0 +1,70 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "description": "Deterministic Git fixtures used by the pass-to-pass probes. Existing repository-native tests construct these shapes with fixed identities and dates; the specification is kept here so both language sides use the same commit graph, refs, and stash placement.",
+  "identities": {
+    "author_name": "Author Name",
+    "author_email": "author@example.com",
+    "committer_name": "Committer Name",
+    "committer_email": "committer@example.com"
+  },
+  "fixtures": [
+    {
+      "name": "linear_with_merge_tag_branch_stash",
+      "commits": [
+        {"subject": "001", "date": "2024-01-01T01:02:03+00:00"},
+        {"subject": "002", "date": "2024-01-02T01:02:03+00:00"},
+        {"subject": "011", "date": "2024-02-01T01:02:03+00:00", "branch": "feature"},
+        {"subject": "021", "date": "2024-02-02T01:02:03+00:00", "branch": "topic"},
+        {"subject": "merge", "date": "2024-02-03T01:02:03+00:00", "merge": ["feature", "topic"]}
+      ],
+      "refs": {
+        "annotated_tag": {"name": "v1", "target_subject": "001"},
+        "lightweight_tag": {"name": "light", "target_subject": "002"},
+        "branch": {"name": "feature", "target_subject": "011"},
+        "remote_branch": {"name": "origin/topic", "target_subject": "021"}
+      },
+      "stash": {"date": "2024-02-04T01:02:03+00:00", "first_parent_subject": "merge"},
+      "observations": [
+        "P2P-001",
+        "P2P-004",
+        "P2P-007",
+        "P2P-011",
+        "P2P-012",
+        "P2P-015",
+        "P2P-020",
+        "P2P-021",
+        "P2P-023",
+        "P2P-030"
+      ]
+    },
+    {
+      "name": "detour_overlap",
+      "commits": [
+        {"subject": "base", "date": "2024-03-01T01:02:03+00:00"},
+        {"subject": "left", "date": "2024-03-02T01:02:03+00:00", "branch": "left"},
+        {"subject": "right", "date": "2024-03-03T01:02:03+00:00", "branch": "right"},
+        {"subject": "overlap", "date": "2024-03-04T01:02:03+00:00", "merge": ["left", "right"]}
+      ],
+      "observations": ["P2P-001", "P2P-014", "P2P-016", "P2P-025"]
+    },
+    {
+      "name": "mailmap_config",
+      "mailmap": [
+        "Committer Name <committer@example.com> Canonical Name <canonical@example.com>",
+        "Author Name <author@example.com> Canonical Author <canonical-author@example.com>"
+      ],
+      "config": {"core.option.order": ["chrono", "topo"], "core.git.mailmap": [true, false]},
+      "observations": ["P2P-006", "P2P-010", "P2P-026"]
+    },
+    {
+      "name": "truncated_parent",
+      "max_count": 2,
+      "commits": [
+        {"subject": "003", "date": "2024-04-03T01:02:03+00:00", "parents": ["002"]},
+        {"subject": "002", "date": "2024-04-02T01:02:03+00:00", "parents": ["001"]},
+        {"subject": "001", "date": "2024-04-01T01:02:03+00:00", "parents": []}
+      ],
+      "observations": ["P2P-014", "P2P-023"]
+    }
+  ]
+}

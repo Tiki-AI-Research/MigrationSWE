@@ -1,0 +1,460 @@
+{
+  "schema_version": "migration-differential-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "kind": "DIFFERENTIAL",
+  "source_version": "9.39.5",
+  "target_version": "10.5.0",
+  "relation": "equal_after_normalization",
+  "harness": "shared/batches/BATCH-DIFFERENTIAL-0001/harness.js",
+  "runners": {
+    "source": "source/batches/BATCH-DIFFERENTIAL-0001/run-differential.js",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0001/run-differential.js"
+  },
+  "normalization": {
+    "configs": "legacy eslintrc config objects are flattened to plugins.jest + languageOptions.globals before loading",
+    "diagnostics": "ruleId, messageId, severity, line, column, message, fix text and suggestion text are retained; parser-internal fields are dropped",
+    "files": "repository probe normalizes to the allowed change-set and reports disallowed paths separately"
+  },
+  "observations": [
+    {
+      "id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R003"
+      ],
+      "atomic_claim": "`require('eslint-plugin-jest')` returns an object whose `meta.name` is `eslint-plugin-jest`, `meta.version` is a non-empty semver string, `configs` has six entries, `environments.globals` contains `describe`, `it`, and `expect`, and `rules` contains 71 rule modules.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "CommonJS plugin export"
+      },
+      "source_facts": [
+        "- `require('eslint-plugin-jest')` MUST still return a plugin object with `meta.name`, `meta.version`, `configs`, `environments.globals`, and `rules`."
+      ]
+    },
+    {
+      "id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R004"
+      ],
+      "atomic_claim": "`Object.keys(require('eslint-plugin-jest').configs)` equals exactly `['all', 'recommended', 'style', 'flat/all', 'flat/recommended', 'flat/style']` in that order.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configs map keys"
+      },
+      "source_facts": [
+        "- `configs` MUST continue to expose these six names: `all`, `recommended`, `style`, `flat/all`, `flat/recommended`, and `flat/style`."
+      ]
+    },
+    {
+      "id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R007"
+      ],
+      "atomic_claim": "For each of the six names, `Object.keys(plugin.configs[name].rules)` and the rule severities equal the source tables: `all` contains all 71 rules at `error`, `recommended` contains the 19 fixed recommended rules with their source severities, and `style` contains `jest/prefer-to-be`, `jest/prefer-to-contain`, and `jest/prefer-to-have-length` at `error`.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "same-named configuration rule tables"
+      },
+      "source_facts": [
+        "- Each same-named configuration MUST keep the rule set it has in the source version."
+      ]
+    },
+    {
+      "id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R008"
+      ],
+      "atomic_claim": "`plugin.configs.all.rules` and `plugin.configs['flat/all'].rules` contain no entry whose corresponding rule module has a truthy `meta.deprecated`; in this source inventory that means all 71 non-deprecated rules are present and no deprecated rule is added.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "deprecated-rule omission in all"
+      },
+      "source_facts": [
+        "- `all` MUST continue to omit deprecated rules."
+      ]
+    },
+    {
+      "id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R009"
+      ],
+      "atomic_claim": "`plugin.configs.recommended.rules` deep-equals the source 19-key recommended table and `plugin.configs.style.rules` deep-equals the source three-key style table, including `warn` for `jest/expect-expect`, `jest/no-commented-out-tests`, and `jest/no-disabled-tests`.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "recommended and style fixed rule tables"
+      },
+      "source_facts": [
+        "- `recommended` and `style` MUST keep the source version's fixed rule tables."
+      ]
+    },
+    {
+      "id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R010"
+      ],
+      "atomic_claim": "`plugin.configs.recommended.rules` deep-equals `plugin.configs['flat/recommended'].rules`, and linting `test.only('focused', () => { expect(true).toBe(true); });` with either config under ESLint 10.5.0 returns identical message arrays including the same ruleId, severity, line, and column.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "recommended versus flat/recommended diagnostics"
+      },
+      "source_facts": [
+        "- `plugin.configs.recommended` and `plugin.configs['flat/recommended']` MUST enable the same rules and produce the same diagnostics."
+      ]
+    },
+    {
+      "id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R011"
+      ],
+      "atomic_claim": "With settings `{ jest: { version: 27, globalAliases: { describe: ['context'] }, globalPackage: 'bun:test' } }`, `context('x', () => {})` is still recognized as a describe call, `require('bun:test')` is still recognized as a Jest globals import, and `no-deprecated-functions` still maps `jest.genMockFromModule` to `jest.createMockFromModule` under version 27.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "settings.jest parsing surface"
+      },
+      "source_facts": [
+        "- `settings.jest.version`, `settings.jest.globalAliases`, and `settings.jest.globalPackage` MUST keep their user-facing keys and semantics."
+      ]
+    },
+    {
+      "id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R012"
+      ],
+      "atomic_claim": "A TypeScript consumer can write `import plugin = require('eslint-plugin-jest'); const n: keyof typeof plugin.configs = 'flat/style'; plugin.rules['no-focused-tests'];` and typecheck; `index.d.ts` still declares `meta`, `environments.globals`, the six config keys, and the rule index signature.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "TypeScript declaration entry point"
+      },
+      "source_facts": [
+        "- `index.d.ts` MUST keep exporting the plugin object, rule table, and six configurations."
+      ]
+    },
+    {
+      "id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R014"
+      ],
+      "atomic_claim": "For `test('x', () => {});` linted with `prefer-importing-jest-globals`, `languageOptions.sourceType: 'module'` reports messageId `preferImportingJestGlobal` with data `jestFunctions: 'test'` and fixes to `import { test } from '@jest/globals';`, while `sourceType: 'script'` fixes to `const { test } = require('@jest/globals');`, with the source message text unchanged.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "prefer-importing-jest-globals rule"
+      },
+      "source_facts": [
+        "- `prefer-importing-jest-globals` MUST keep its message, import/require choice, and automatic fix results."
+      ]
+    },
+    {
+      "id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R017"
+      ],
+      "atomic_claim": "`Object.keys(plugin.configs.all.rules)` deep-equals `Object.keys(plugin.configs['flat/all'].rules)` and equals exactly the 71 `jest/`-prefixed rule names whose modules have no truthy `meta.deprecated`, with no extra or missing keys.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "all and flat/all exact rule set"
+      },
+      "source_facts": [
+        "- `all` and `flat/all` MUST contain exactly the non-deprecated rules."
+      ]
+    },
+    {
+      "id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R019"
+      ],
+      "atomic_claim": "Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'script'` produces a `const { test } = require('@jest/globals');` fix and no import declaration.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "script sourceType fix selection"
+      },
+      "source_facts": [
+        "- It MUST produce a `require` fix when `languageOptions.sourceType` is `script`."
+      ]
+    },
+    {
+      "id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R020"
+      ],
+      "atomic_claim": "For `'use strict'; import { expect } from '@jest/globals'; test('x', () => { expect(1).toBe(1); });` with module sourceType, the autofix inserts `import { expect, test } from '@jest/globals';` after the `'use strict'` directive; for the analogous require input it produces `const { expect, test } = require('@jest/globals');`, matching the source fix output.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "import/require merging and use-strict fix output"
+      },
+      "source_facts": [
+        "- Existing merging of `@jest/globals` imports or requires and `'use strict'` handling MUST keep the same fix output."
+      ]
+    },
+    {
+      "id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R021"
+      ],
+      "atomic_claim": "For `jest.genMockFromModule('x')` with `settings.jest.version` set to 25 there is no report; with version 26 the rule reports messageId `deprecatedFunction` and fixes to `jest.createMockFromModule('x')`; with no setting and detected Jest 30 the same report and fix occur as in the source.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "no-deprecated-functions version mapping and fixes"
+      },
+      "source_facts": [
+        "- `settings.jest.version` and automatic detection MUST still control `no-deprecated-functions` deprecation mapping and fixes."
+      ]
+    },
+    {
+      "id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R022"
+      ],
+      "atomic_claim": "In a fixture where the plugin resolves under `backend/node_modules` and `backend/node_modules/jest/package.json` reports 24 while `frontend/node_modules/jest/package.json` reports 15, running detection from `backend` returns 24 and from `frontend` returns 15; a second call in the same process returns the cached value without re-resolving, and with no Jest installed it throws the unchanged `Unable to detect Jest version` error.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "Jest version auto-detection and cache"
+      },
+      "source_facts": [
+        "- Automatic detection MUST still start from the nearest `node_modules` to the linted file and cache the result."
+      ]
+    },
+    {
+      "id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R023"
+      ],
+      "atomic_claim": "`plugin.rules['no-error-equal'].meta.docs.requiresTypeChecking`, `plugin.rules['no-unnecessary-assertion'].meta.docs.requiresTypeChecking`, and `plugin.rules['valid-expect-with-promise'].meta.docs.requiresTypeChecking` are exactly `true`, and rules that are not type-aware do not set that flag.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "type-aware rule metadata"
+      },
+      "source_facts": [
+        "- Type-aware rules MUST still declare `meta.docs.requiresTypeChecking` where applicable."
+      ]
+    },
+    {
+      "id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R024"
+      ],
+      "atomic_claim": "Linting `expect(1).toBeNull();` under `src/rules/__tests__/fixtures/unstrict/tsconfig.json` with `no-unnecessary-assertion` reports messageId `noStrictNullCheck` at line 1 column 0; under the strict fixture the same input does not report `noStrictNullCheck`.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "no-unnecessary-assertion strictNullChecks reporting"
+      },
+      "source_facts": [
+        "- `no-unnecessary-assertion` MUST still report `noStrictNullCheck` when `strictNullChecks` is disabled."
+      ]
+    },
+    {
+      "id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R025"
+      ],
+      "atomic_claim": "For a representative invalid case per rule, such as `test.only('x', () => {})` for `no-focused-tests`, ESLint 10.5.0 produces the same ruleId, messageId, message text, line, column, fixer output, and suggestion output as the source rule; every rule schema and option name is unchanged.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "all rule IDs, semantics, messages, schemas, fixes, and suggestions"
+      },
+      "source_facts": [
+        "1. The migration MUST NOT change any rule ID, rule semantics, `messageId`, schema, fixer output, or suggestion output."
+      ]
+    },
+    {
+      "id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R026"
+      ],
+      "atomic_claim": "`plugin.rules` has exactly the same 71 keys as the source version, and `plugin.configs.all`, `plugin.configs.recommended`, and `plugin.configs.style` have byte-identical rule-key sets and severities to the source version with no rule added or removed.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "Jest rule inventory and shared rule sets"
+      },
+      "source_facts": [
+        "2. The migration MUST NOT add or remove Jest rules or change the `recommended`, `style`, or `all` rule sets."
+      ]
+    },
+    {
+      "id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R027"
+      ],
+      "atomic_claim": "Given `settings.jest.version` as number 27 and as string `27.4.0`, `no-deprecated-functions` maps the same deprecations; `globalAliases` still resolves `context` to `describe`, `globalPackage` still resolves `bun:test` imports, and auto-detection still caches the major version exactly as the source.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "settings parsing and Jest auto-detection"
+      },
+      "source_facts": [
+        "3. The migration MUST NOT change `settings.jest.version`, `globalAliases`, or `globalPackage` parsing or Jest auto-detection behavior."
+      ]
+    },
+    {
+      "id": "DIFF-020",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R032"
+      ],
+      "atomic_claim": "`git diff --name-only` against the provided starting commit lists only `package.json`, `yarn.lock`, `eslint.config.js`, `index.d.ts`, `types.d.ts`, `src/index.ts`, `src/rules/prefer-importing-jest-globals.ts`, `src/rules/__tests__/prefer-importing-jest-globals.test.ts`, `src/rules/__tests__/test-utils.ts`, `src/__tests__/rules.test.ts`, `src/__tests__/__snapshots__/rules.test.ts.snap`, `README.md`, and `.github/workflows/nodejs.yml`; no other rule implementation, `docs/rules/` page, or unlisted test is modified.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "repository change set and protected files"
+      },
+      "source_facts": [
+        "8. Changes MUST be limited to `package.json`, `yarn.lock`, `eslint.config.js`, `index.d.ts`, `types.d.ts`, `src/index.ts`, `src/rules/prefer-importing-jest-globals.ts`, `src/rules/__tests__/prefer-importing-jest-globals.test.ts`, `src/rules/__tests__/test-utils.ts`, `src/__tests__/rules.test.ts`, `src/__tests__/__snapshots__/rules.test.ts.snap`, `README.md`, and `.github/workflows/nodejs.yml`."
+      ]
+    },
+    {
+      "id": "DIFF-021",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R033"
+      ],
+      "atomic_claim": "`src/__tests__/rules.test.ts` still checks six config names, each config has `plugins.jest`, `languageOptions.globals`, and `rules`, no config has `env`, and recommended diagnostics deep-equal flat/recommended diagnostics; no in-scope test replaces assertions with `it.skip`, `describe.skip`, or hardcoded evaluation inputs.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "in-scope behavioral test assertions"
+      },
+      "source_facts": [
+        "10. You MAY adapt the in-scope tests, snapshots, and test utilities to flat-config-only behavior. You MUST NOT remove behavioral assertions, weaken comparisons, skip checks, or hardcode evaluation inputs."
+      ]
+    },
+    {
+      "id": "DIFF-022",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "requirement_ids": [
+        "R036"
+      ],
+      "atomic_claim": "Running `yarn test`, `yarn typecheck`, `yarn lint`, and `yarn prettier:check` in `/workspace/repo` after installing the migrated dependencies each exits 0; these commands exercise the visible test, type, lint, and formatting surfaces with ESLint 10.5.0 installed.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "public validation commands"
+      },
+      "source_facts": [
+        "All four public commands MUST pass after the migration. These checks cover the visible test, type, lint, and formatting expectations, but they do not by themselves prove every requirement in this instruction."
+      ]
+    }
+  ]
+}

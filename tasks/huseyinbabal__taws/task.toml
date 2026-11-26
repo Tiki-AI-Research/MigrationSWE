@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/huseyinbabal__taws"
+description = "Migrate taws non-interactive CLI and AWS operations from Rust to Go 1.23.0."
+
+[metadata]
+category = "Language_migration"
+language = "rust"
+repository_id = "6fde9991-287c-45a3-aef2-f6ca6c07be0c"
+task_id = "tp-ffc208a5288357ce7b28258f216b546d"
+repository_url = "https://github.com/huseyinbabal/taws"
+base_commit_hash = "d1cbf6e450eced9a7947cf810764ec79599c7793"
+
+[metadata.tests]
+fail_to_pass_count = 31
+pass_to_pass_count = 21
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:huseyinbabal__taws-verifier-image-20261126"
+image_digest = "sha256:762f3778cd939a516cb40910e8269d380895b76416f0991e6cdf17e88d3082ce"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached d1cbf6e450eced9a7947cf810764ec79599c7793 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:huseyinbabal__taws-task-image-20261126"
+image_digest = "sha256:90b05784681691020d10cfa5f96d617d75ba66b6874caef6f87cdf1d0b180a7a"

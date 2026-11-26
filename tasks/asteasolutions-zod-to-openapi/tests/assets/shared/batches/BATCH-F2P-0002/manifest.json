@@ -1,0 +1,416 @@
+{
+  "schema_version": "migration-asset-manifest:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "owned_paths": [
+    "shared/batches/BATCH-F2P-0002",
+    "source/batches/BATCH-F2P-0002",
+    "target/batches/BATCH-F2P-0002",
+    "fixtures/batches/BATCH-F2P-0002",
+    "fragments/BATCH-F2P-0002.json"
+  ],
+  "shared_assets": [
+    "shared/batches/BATCH-F2P-0002/cases.cjs",
+    "shared/batches/BATCH-F2P-0002/manifest.json"
+  ],
+  "source_probe": "source/batches/BATCH-F2P-0002/probe.cjs",
+  "target_probe": "target/batches/BATCH-F2P-0002/probe.cjs",
+  "fixtures": [
+    "fixtures/batches/BATCH-F2P-0002/documents.json"
+  ],
+  "target_technology": {
+    "language_name": "TypeScript",
+    "language_version": "5.5.4",
+    "name": "Zod",
+    "version": "4.1.0"
+  },
+  "source_technology": {
+    "language_name": "TypeScript",
+    "language_version": "5.5.4",
+    "name": "Zod",
+    "version": "4.0.5"
+  },
+  "observations": [
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": [
+        "R004"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "src/openapi-generator.ts::generated document structure, field order, and serialization",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "fixture-serialization"
+      }
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": [
+        "R043"
+      ],
+      "family": "target-runtime",
+      "projection": "target-condition",
+      "scenario": "target-postcondition",
+      "surface": "TypeScript type surface of .safeExtend on an augmented ZodObject",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "safe-extend-type"
+      }
+    },
+    {
+      "observation_id": "F2P-032",
+      "requirement_ids": [
+        "R002"
+      ],
+      "family": "target-runtime",
+      "projection": "dependency-declaration",
+      "scenario": "dependency-policy",
+      "surface": "package-lock.json::dependency manifest",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "dependency-lock-and-metadata"
+      }
+    },
+    {
+      "observation_id": "F2P-033",
+      "requirement_ids": [
+        "R044"
+      ],
+      "family": "target-runtime",
+      "projection": "target-condition",
+      "scenario": "target-postcondition",
+      "surface": "components generated from .meta({ id }) without an .openapi() call",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "meta-id-component"
+      }
+    },
+    {
+      "observation_id": "F2P-048",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "projection": "dependency-declaration",
+      "scenario": "dependency-policy",
+      "surface": "package-lock.json::dependency manifest",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "dependency-devpin-and-safe-extend-runtime"
+      }
+    },
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:supports mutual recursion between schemas using getters",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "supports mutual recursion between schemas using getters"
+      }
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/modifiers/pipe.spec.ts::recursive lazy schema generation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/modifiers/pipe.spec.ts",
+        "test": null,
+        "extra": "recursive-lazy"
+      }
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:supports recursive schemas with unions using getters",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "supports recursive schemas with unions using getters"
+      }
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/modifiers/meta.spec.ts::spec/modifiers/meta.spec.ts#test:should preserve metadata through the meta modifier",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/modifiers/meta.spec.ts",
+        "test": "should preserve metadata through the meta modifier"
+      }
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": [
+        "R043"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "src/zod-extensions.ts::metadata merge and precedence between .meta() and .openapi()",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "metadata-precedence-and-safe-extend"
+      }
+    },
+    {
+      "observation_id": "F2P-034",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:handles simple recursive schema using getters",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "handles simple recursive schema using getters"
+      }
+    },
+    {
+      "observation_id": "F2P-035",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/modifiers/pipe.spec.ts::spec/modifiers/pipe.spec.ts#test:pipe",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/modifiers/pipe.spec.ts",
+        "test": "can generate schema for pipes"
+      }
+    },
+    {
+      "observation_id": "F2P-036",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/modifiers/meta.spec.ts::discriminated union schema and discriminator mapping output",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/modifiers/meta.spec.ts",
+        "test": null
+      }
+    },
+    {
+      "observation_id": "F2P-037",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/setup-tests.ts::recursive lazy schema generation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": null,
+        "extra": "recursive-lazy"
+      }
+    },
+    {
+      "observation_id": "F2P-038",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:supports recursive schemas in unions with getters",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "supports recursive schemas in unions with getters"
+      }
+    },
+    {
+      "observation_id": "F2P-039",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/discriminated-union.spec.ts::metadata and schema inheritance through modifiers",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/discriminated-union.spec.ts",
+        "test": null,
+        "extra": "modifier-inheritance"
+      }
+    },
+    {
+      "observation_id": "F2P-040",
+      "requirement_ids": [
+        "R004"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "src/openapi-generator.ts::components.schemas and components.parameters ordering",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "component-ordering-and-metadata"
+      }
+    },
+    {
+      "observation_id": "F2P-041",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:supports recursive schemas in nested arrays and objects using getters",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "supports recursive schemas in nested arrays and objects using getters"
+      }
+    },
+    {
+      "observation_id": "F2P-042",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/type-definitions/zod-extensions.test-d.ts::recursive lazy schema generation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/type-definitions/zod-extensions.test-d.ts",
+        "test": null,
+        "extra": "recursive-lazy"
+      }
+    },
+    {
+      "observation_id": "F2P-043",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "edge-case",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/discriminated-union.spec.ts::spec/types/discriminated-union.spec.ts#test:creates a discriminator mapping when a registered object uses a zodEnum as the discriminator",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/discriminated-union.spec.ts",
+        "test": "creates a discriminator mapping when a registered object uses a zodEnum as the discriminator"
+      }
+    },
+    {
+      "observation_id": "F2P-044",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/modifiers/pipe.spec.ts::metadata merge and precedence between .meta() and .openapi()",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/modifiers/pipe.spec.ts",
+        "test": null,
+        "extra": "metadata-precedence"
+      }
+    },
+    {
+      "observation_id": "F2P-045",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "edge-case",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/discriminated-union.spec.ts::spec/types/discriminated-union.spec.ts#test:supports nested discriminated unions",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/discriminated-union.spec.ts",
+        "test": "supports nested discriminated unions"
+      }
+    },
+    {
+      "observation_id": "F2P-046",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "spec/types/recursive-schemas.spec.ts::spec/types/recursive-schemas.spec.ts#test:basic recursive functionality",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "file": "spec/types/recursive-schemas.spec.ts",
+        "test": "basic recursive functionality"
+      }
+    },
+    {
+      "observation_id": "F2P-047",
+      "requirement_ids": [
+        "R046"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "surface": "src/openapi-generator.ts::OpenApiGeneratorV32 constructor and document/components methods",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "probe": {
+        "kind": "v31-plain-schema-and-v32-webhooks"
+      }
+    }
+  ]
+}

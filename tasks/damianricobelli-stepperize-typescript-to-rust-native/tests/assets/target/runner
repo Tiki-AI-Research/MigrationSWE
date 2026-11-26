@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Target-side integration entry point (alias of ``run_tests.py``).
+
+The runner registry invokes the target harness as ``python3 <assets>/run_tests.py
+<report>``. This alias is kept so the target side exposes the same
+``target/runner`` entry name used by the other migration batches.
+"""
+
+import os
+import sys
+
+sys.dont_write_bytecode = True
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ASSETS = os.path.normpath(os.path.join(HERE, ".."))
+SHARED = os.path.join(ASSETS, "shared", "integration")
+if SHARED not in sys.path:
+    sys.path.insert(0, SHARED)
+
+import integration  # noqa: E402
+
+
+if __name__ == "__main__":
+    sys.exit(integration.main(sys.argv[1:], "target"))

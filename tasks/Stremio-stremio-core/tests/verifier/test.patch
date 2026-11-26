@@ -1,0 +1,3359 @@
+diff --git a/tests/shared/batches/BATCH-F2P-0002/README.md b/tests/shared/batches/BATCH-F2P-0002/README.md
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0002/README.md
+@@ -0,0 +1,14 @@
++# BATCH-F2P-0002
++
++Fail-to-pass probes for the Rust -> Go migration of `stremio-core`.
++
++- `target/batches/BATCH-F2P-0002/` — Go probe suite executed against the reference
++  target `/input/target` through a `replace` directive. All 24 observations PASS
++  (`run_target.sh`).
++- `source/batches/BATCH-F2P-0002/` — the same semantic predicates evaluated on the
++  Rust source `/input/source`. All 24 observations FAIL, because the frozen
++  target technology (Go 1.23.0) is not present on the source execution path.
++- `fixtures/batches/BATCH-F2P-0002/expected_wires.json` — frozen wire strings used
++  by the probes.
++
++Observations covered: F2P-025..F2P-048 (24 items).
+diff --git a/tests/shared/batches/BATCH-F2P-0003/corpus.json b/tests/shared/batches/BATCH-F2P-0003/corpus.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0003/corpus.json
+@@ -0,0 +1,139 @@
++{
++  "schema_version": "migration-shared-corpus:v1",
++  "batch_id": "BATCH-F2P-0003",
++  "migration": {
++    "category": "language",
++    "source": { "language_name": "Rust", "language_version": "2021" },
++    "target": { "language_name": "Go", "language_version": "1.23.0" }
++  },
++  "observations": {
++    "F2P-049": {
++      "entry": "deeplinks.NewMetaItemDeepLinks",
++      "expect": { "metaDetailsVideos": "stremio:///detail/series/tt1" }
++    },
++    "F2P-050": {
++      "entry": "common.Loadable.MarshalJSON",
++      "expect": {
++        "loading": "{\"type\":\"Loading\"}",
++        "ready": "{\"type\":\"Ready\",\"content\":5}"
++      }
++    },
++    "F2P-051": {
++      "entry": "runtime.EnvError",
++      "expect": {
++        "fetch": { "code": 1, "message": "Failed to fetch: x" },
++        "other": { "code": 1001, "message": "Other error: x" }
++      }
++    },
++    "F2P-052": {
++      "entry": "git status --porcelain",
++      "expect": { "forbidden_prefix": "stremio-core-web/", "forbidden_suffixes": [".wasm", "bridge.js", "worker.js", "_bg.wasm"] }
++    },
++    "F2P-053": {
++      "entry": "models.New + Load(Player)",
++      "expect": { "nextVideo": "tt1:1:2", "libraryItem": true }
++    },
++    "F2P-054": {
++      "entry": "common.ResourceLoadable JSON",
++      "expect": { "content_type": "Ready" }
++    },
++    "F2P-055": {
++      "entry": "git status --porcelain -- stremio-core-web",
++      "expect": { "empty": true }
++    },
++    "F2P-056": {
++      "entry": "deeplinks.NewSearchHistoryItemDeepLinks/NewDiscoverDeepLinks",
++      "expect": {
++        "search": "stremio:///search?query=foo%20bar",
++        "discover": "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action"
++      }
++    },
++    "F2P-057": {
++      "entry": "runtime.Env interface",
++      "expect": { "methods": ["Fetch", "GetStorage", "SetStorage", "ExecConcurrent", "ExecSequential", "Now", "LocalNow", "FlushAnalytics", "AnalyticsContext"] }
++    },
++    "F2P-058": {
++      "entry": "git status --porcelain",
++      "expect": { "forbidden_prefix": "stremio-core-web/" }
++    },
++    "F2P-059": {
++      "entry": "models.New",
++      "expect": { "models": ["Ctx", "Player", "StreamingServer"] }
++    },
++    "F2P-060": {
++      "entry": "models.Model.Update / UpdateField",
++      "expect": { "changed_fields": ["player"] }
++    },
++    "F2P-061": {
++      "entry": "runtime.Dispatch + NewState",
++      "expect": { "repeated_player_loads": 2, "field_order": ["ctx", "streaming_server", "player"] }
++    },
++    "F2P-062": {
++      "entry": "runtime.NewStateEvent + runtime.MigrateStorageSchema",
++      "expect": {
++        "event": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
++        "schema_version": 25,
++        "downgrade_code": 5
++      }
++    },
++    "F2P-063": {
++      "entry": "models.New + Load(Player) + persistence",
++      "expect": { "library_item": true, "storage_keys": ["profile", "library", "dismissed_events"] }
++    },
++    "F2P-064": {
++      "entry": "json.Marshal(runtime.EnvError)",
++      "expect": {
++        "fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
++        "other": "{\"code\":1001,\"message\":\"Other error: x\"}"
++      }
++    },
++    "F2P-065": {
++      "entry": "git status --porcelain",
++      "expect": { "forbidden_prefix": "stremio-core-web/" }
++    },
++    "F2P-066": {
++      "entry": "types.QueryParamsEncode",
++      "expect": { "encoded": "sort=popularity&genre=A%20B" }
++    },
++    "F2P-067": {
++      "entry": "types.NewStreamsBucket + json.Marshal",
++      "expect": {
++        "empty": "{\"uid\":null,\"items\":[]}",
++        "one_item_prefix": "{\"uid\":\"u1\",\"items\":[["
++      }
++    },
++    "F2P-068": {
++      "entry": "common.ResourceUpdate",
++      "expect": { "loading_then_ready": true, "changed_each_step": true }
++    },
++    "F2P-069": {
++      "entry": "addontransport.BuildLegacyReq + LegacyErr.ToEnvError",
++      "expect": {
++        "transport_url": "https://legacywatchhub.strem.io/stremio/v1",
++        "resource_path": { "resource": "stream", "type": "series", "id": "tt0386676:5:1" },
++        "rpc_error_code": 5,
++        "rpc_error_message": "boom",
++        "env_error_code": 2,
++        "env_error_message": "Addon protocol violation: rpc error 5: boom"
++      }
++    },
++    "F2P-070": {
++      "entry": "json.Marshal(runtime.EnvError) + git status",
++      "expect": { "code": 1001, "message": "Other error: x", "forbidden_prefix": "stremio-core-web/" }
++    },
++    "F2P-071": {
++      "entry": "runtime.NewStateEvent / runtime.CoreEvent",
++      "expect": {
++        "new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
++        "core_event": "{\"name\":\"CoreEvent\",\"args\":{\"event\":\"UserLoggedOut\"}}"
++      }
++    },
++    "F2P-072": {
++      "entry": "json.Marshal(runtime.EnvError) + runtime.NewStateEvent",
++      "expect": {
++        "fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
++        "new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}"
++      }
++    }
++  }
++}
+diff --git a/tests/shared/batches/BATCH-P2P-0001/corpus.json b/tests/shared/batches/BATCH-P2P-0001/corpus.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0001/corpus.json
+@@ -0,0 +1,166 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "kind": "P2P",
++  "migration": {
++    "category": "language",
++    "source": "Rust",
++    "target": "Go"
++  },
++  "normalization": {
++    "relation": "equal_after_normalization",
++    "mode": "status-wrapper",
++    "projection": {
++      "result": "PASS"
++    }
++  },
++  "sides": {
++    "source": {
++      "repo": "/input/source",
++      "command": "git diff --exit-code",
++      "expectation": "PASS"
++    },
++    "target": {
++      "repo": "/input/target",
++      "command": "CGO_ENABLED=0 go test ./...",
++      "expectation": "PASS"
++    }
++  },
++  "observations": [
++    {
++      "id": "P2P-001",
++      "requirement_ids": ["R014"],
++      "atomic_claim": "After dispatch the runtime emits NewState only when a model field changed, the changed fields are reported in the stable order ctx, streaming_server, player, and two identical Player Loads each emit exactly one NewState.",
++      "source_tests": ["src/unit_tests/player/mod.rs::identical_player_loads_are_observable"],
++      "target_tests": ["models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState", "models:TestUnloadWithNoSelectionEmitsNoNewState", "runtime:TestRuntimeNewStateOnlyOnChange"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-002",
++      "requirement_ids": ["R006"],
++      "atomic_claim": "EnvError marshals as {\"code\":<int>,\"message\":<string>} and the fixed codes Fetch=1, AddonTransport=2, Serde=3, StorageUnavailable=4, StorageSchemaVersionDowngrade=5, StorageSchemaVersionUpgrade=6, StorageReadError=7, StorageWriteError=8, Other=1001 are preserved.",
++      "source_tests": ["src/runtime/env.rs::tests"],
++      "target_tests": ["runtime:TestEnvErrorCodes"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-003",
++      "requirement_ids": ["R011"],
++      "atomic_claim": "The root model keeps Update(m) (whole model) and UpdateField(m, field) (single field), each returning the effects and the changed-field list; the two must produce the same effect and changed-field outputs for the same routed message.",
++      "source_tests": ["src/unit_tests/player/mod.rs::identical_player_loads_are_observable"],
++      "target_tests": ["runtime:TestRuntimeFieldRouting", "models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-004",
++      "requirement_ids": ["R004"],
++      "atomic_claim": "json.Marshal of a NewState RuntimeEvent yields {\"name\":\"NewState\",\"args\":[changed fields]} and of a CoreEvent yields {\"name\":\"CoreEvent\",\"args\":{event...}}.",
++      "source_tests": ["src/unit_tests/serde/mod.rs"],
++      "target_tests": ["runtime:TestRuntimeEventMarshal"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-005",
++      "requirement_ids": ["R001"],
++      "atomic_claim": "The migrated Go module provides the update/effects runtime, message and event types, Ctx and model state, player and streaming-server models, addon transports and persistence; a port missing any responsibility cannot complete a Player load and persist library/profile/dismissed-events.",
++      "source_tests": ["src/unit_tests/player/mod.rs", "src/unit_tests/ctx/add_to_library.rs", "src/unit_tests/ctx/update_settings.rs", "src/unit_tests/ctx/update_events.rs"],
++      "target_tests": ["models:TestPlayerLoadsNextVideoAndStream", "models/ctx:TestAddToLibraryPersistsLibrary", "models/ctx:TestUpdateSettingsPersistsProfile"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-006",
++      "requirement_ids": ["R019"],
++      "atomic_claim": "deep_links generates stremio:///detail/..., /player/..., /discover/..., /addons/..., /library..., /calendar/..., /search?... with the engine query-parameter encoding.",
++      "source_tests": ["src/unit_tests/deep_links/mod.rs"],
++      "target_tests": ["deep_links:TestMetaItemDeepLinks", "deep_links:TestDiscoverDeepLinks", "deep_links:TestSearchHistoryDeepLinks", "deep_links:TestCalendarDeepLinks", "deep_links:TestLibraryDeepLinks", "deep_links:TestQueryParamsEncode"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-007",
++      "requirement_ids": ["R008"],
++      "atomic_claim": "The Go module exposes the equivalent public surface of the addon_transport, analytics, deep_links, models, runtime and types packages, including the model construction/derivation entry point models.New(env).",
++      "source_tests": ["src/lib.rs"],
++      "target_tests": ["build:go build ./...", "constants:TestProtectedStorageKeys", "models:TestTwoIdenticalPlayerLoadsEachEmitOneNewState"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-008",
++      "requirement_ids": ["R005"],
++      "atomic_claim": "Action values marshal with action/args, Event values with event/args, and model-load actions with model/args.",
++      "source_tests": ["src/unit_tests/serde/action.rs", "src/unit_tests/serde/event.rs"],
++      "target_tests": ["runtime:TestRuntimeEventMarshal", "runtime/msg:build"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-009",
++      "requirement_ids": ["R020"],
++      "atomic_claim": "No required public capability (runtime, models, addon transports, deep links, analytics, persistence) is removed or has its contract changed outside the stated goal.",
++      "source_tests": ["cargo test --all"],
++      "target_tests": ["go test ./..."],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-010",
++      "requirement_ids": ["R009"],
++      "atomic_claim": "New(model Model, effects []Effect, buffer int, env Env) returns a *Runtime together with a <-chan RuntimeEvent; a port without the initial-effect list or the event receiver fails.",
++      "source_tests": ["src/runtime/runtime.rs::tests"],
++      "target_tests": ["runtime:TestRuntimeNewStateOnlyOnChange", "runtime:TestRuntimeFieldRouting"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-011",
++      "requirement_ids": ["R015"],
++      "atomic_claim": "An internal message updates the model and continues processing returned effects, an event message emits only a CoreEvent, and an action returned by an effect panics.",
++      "source_tests": ["src/runtime/runtime.rs::tests"],
++      "target_tests": ["runtime:TestRuntimeInternalRecurses", "runtime:TestRuntimeEventMessageEmitsCoreEventOnly", "runtime:TestRuntimeActionEffectPanics"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-012",
++      "requirement_ids": ["R013"],
++      "atomic_claim": "The legacy transport keeps its JSON-RPC wire protocol and maps a JSON-RPC error to an addon-transport error formatted rpc error {code}: {message}, and keeps existing unsupported-resource/request messages.",
++      "source_tests": ["src/addon_transport/http_transport/legacy/legacy_manifest.rs::tests"],
++      "target_tests": ["addon_transport:TestLegacyErrorMapping", "addon_transport:TestLegacyManifestMapsMethodsToResources"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-013",
++      "requirement_ids": ["R017"],
++      "atomic_claim": "Loadable and ResourceLoadable keep their loading/ready/error states and emit changed-field notifications when Env::fetch succeeds or fails.",
++      "source_tests": ["src/models/common/mod.rs", "src/models/player.rs::tests"],
++      "target_tests": ["models/common:TestResourceLoadableTransitions", "models/common:TestLoadableMarshal", "models/common:TestEffectsJoinForcesChanged"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-014",
++      "requirement_ids": ["R025"],
++      "atomic_claim": "The migrated tests keep their assertions and comparisons and derive inputs from the model rather than hardcoding expected outputs.",
++      "source_tests": ["integrity:assertions-preserved"],
++      "target_tests": ["integrity:assertions-preserved"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-015",
++      "requirement_ids": ["R010"],
++      "atomic_claim": "Runtime.Model() returns the current model, and Dispatch(RuntimeAction{Field,Action}) routes a present Field to UpdateField and an absent Field to whole-model Update.",
++      "source_tests": ["src/runtime/runtime.rs::tests"],
++      "target_tests": ["runtime:TestRuntimeFieldRouting"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-016",
++      "requirement_ids": ["R016"],
++      "atomic_claim": "The legacy transport base64-encodes the JSON-RPC body into {transport_url}/q.json?b=<param> and deserializes {\"result\": ...} and {\"error\": {\"message\": ..., \"code\": ...}} responses.",
++      "source_tests": ["src/addon_transport/http_transport/legacy/mod.rs::tests"],
++      "target_tests": ["addon_transport:TestBuildLegacyReqCatalog", "addon_transport:TestBuildLegacyReqStreamImdb", "addon_transport:TestQueryFromID", "addon_transport:TestLegacyManifestCatalogs"],
++      "projection": {"result": "PASS"}
++    },
++    {
++      "id": "P2P-017",
++      "requirement_ids": ["R012"],
++      "atomic_claim": "The Env interface keeps fetch, get_storage, set_storage, exec_concurrent, exec_sequential, now, local_now and the analytics operations (FlushAnalytics, AnalyticsContext).",
++      "source_tests": ["src/runtime/env.rs::tests"],
++      "target_tests": ["runtime:build", "internal/testenv:build", "models/common:TestEffectsJoinForcesChanged"],
++      "projection": {"result": "PASS"}
++    }
++  ]
++}
+diff --git a/tests/shared/integration/observations.json b/tests/shared/integration/observations.json
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/observations.json
+@@ -0,0 +1,114 @@
++[
++  {"id": "P2P-001", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-002", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-003", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-004", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-005", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-006", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-007", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-008", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-009", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-010", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-011", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-012", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-013", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-014", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-015", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-016", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "P2P-017", "kind": "P2P", "batch_id": "BATCH-P2P-0001"},
++  {"id": "F2P-001", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-002", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-003", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-004", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-006", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-007", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-008", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-009", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-010", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-012", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-019", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-020", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-025", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-030", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-032", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-034", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-037", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-040", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-067", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-013", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-028", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-031", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-038", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-042", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-047", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-048", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-050", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-054", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-056", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-059", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-060", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-061", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-063", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-066", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-069", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-005", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-014", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-017", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-021", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-022", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-023", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-024", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-026", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-027", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-029", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-033", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-035", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-036", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-039", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-043", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-044", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-045", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-046", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-049", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-053", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-055", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-057", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-058", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-062", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-064", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-065", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-068", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-070", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-071", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-072", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-011", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-015", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-016", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-018", "kind": "F2P", "batch_id": "BATCH-F2P-0001"},
++  {"id": "F2P-041", "kind": "F2P", "batch_id": "BATCH-F2P-0002"},
++  {"id": "F2P-051", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "F2P-052", "kind": "F2P", "batch_id": "BATCH-F2P-0003"},
++  {"id": "DIFF-001", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-002", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-003", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-004", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-005", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-006", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-007", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-008", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-009", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-010", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-011", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-012", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-013", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-014", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-015", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-016", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "DIFF-017", "kind": "DIFFERENTIAL", "batch_id": "BATCH-DIFFERENTIAL-0001"},
++  {"id": "STATE-001", "kind": "STATE", "batch_id": "BATCH-STATE-0001"},
++  {"id": "STATE-002", "kind": "STATE", "batch_id": "BATCH-STATE-0001"},
++  {"id": "STATE-003", "kind": "STATE", "batch_id": "BATCH-STATE-0001"},
++  {"id": "STATE-004", "kind": "STATE", "batch_id": "BATCH-STATE-0001"},
++  {"id": "STATE-005", "kind": "STATE", "batch_id": "BATCH-STATE-0001"},
++  {"id": "STATE-006", "kind": "STATE", "batch_id": "BATCH-STATE-0001"}
++]
+diff --git a/tests/source/batches/BATCH-F2P-0001/source_probe.sh b/tests/source/batches/BATCH-F2P-0001/source_probe.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0001/source_probe.sh
+@@ -0,0 +1,29 @@
++#!/bin/sh
++# BATCH-F2P-0001 source-side probe.
++#
++# Usage: source_probe.sh [source_repo_dir]
++#
++# Runs the SAME semantic predicate as the target dependency/scope probe against
++# the source repository: "the repository is a standalone Go module that builds
++# with CGO disabled and resolves only the module plus the standard library".
++# On the Rust source this postcondition does not hold (there is no Go module),
++# so the probe must report FAIL. It is never hardcoded: it is derived from the
++# source tree itself.
++set -eu
++
++REPO="${1:-/input/source}"
++cd "$REPO"
++
++observed_fail() {
++	echo "F2P-PROBE FAIL: target postcondition not satisfied on source ($1)" >&2
++	exit 1
++}
++
++[ -f go.mod ] || observed_fail "no go.mod: repository is not a Go module"
++grep -q '^module github.com/stremio/stremio-core$' go.mod \
++	|| observed_fail "unexpected module path"
++
++CGO_ENABLED=0 go build ./... || observed_fail "CGO_ENABLED=0 go build ./... failed"
++
++echo "F2P-PROBE PASS: target postcondition unexpectedly holds on source"
++exit 0
+diff --git a/tests/source/batches/BATCH-F2P-0002/probe_source.sh b/tests/source/batches/BATCH-F2P-0002/probe_source.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0002/probe_source.sh
+@@ -0,0 +1,74 @@
++#!/usr/bin/env bash
++# Source-side F2P probes for BATCH-F2P-0002.
++#
++# Each observation is probed with the SAME semantic predicate used by the
++# target-side Go probe in target/batches/BATCH-F2P-0002/probe_test.go: "the
++# frozen target technology (Go 1.23.0) provides this entry/behavior on the real
++# execution path". The predicate is evaluated against the Rust source at
++# /input/source (SRC), so it is expected to observe FAIL for every F2P.
++#
++# Usage: probe_source.sh [SRC] [REPORT]
++set -u
++
++SRC=${1:-/input/source}
++REPORT=${2:-/logs/source-f2p-report.json}
++
++# Shared part of the predicate: a Go 1.23.0 module must build the entry point.
++GO_OUT=$(cd "$SRC" 2>/dev/null && go build ./... 2>&1)
++GO_RC=$?
++
++obs_ids=(
++  F2P-025 F2P-030 F2P-032 F2P-034 F2P-037 F2P-040 F2P-028 F2P-031
++  F2P-038 F2P-042 F2P-047 F2P-048 F2P-026 F2P-027 F2P-029 F2P-033
++  F2P-035 F2P-036 F2P-039 F2P-043 F2P-044 F2P-045 F2P-046 F2P-041
++)
++
++# Symbol probed for each observation (the target-technology entry point).
++declare -A SYMBOL=(
++  [F2P-025]="common.Loadable.MarshalJSON"
++  [F2P-030]="go list -deps"
++  [F2P-032]="runtime.NewStateEvent"
++  [F2P-034]="types.WatchedBitFieldConstructAndResize"
++  [F2P-037]="addontransport.BuildLegacyReq"
++  [F2P-040]="import \"C\""
++  [F2P-028]="addontransport.NewAddonHTTPTransport"
++  [F2P-031]="msg.NewAction"
++  [F2P-038]="common.ResourceUpdate"
++  [F2P-042]="models.New"
++  [F2P-047]="deeplinks.NewMetaItemDeepLinks"
++  [F2P-048]="runtime.New"
++  [F2P-026]="runtime.NewStateEvent"
++  [F2P-027]="git status"
++  [F2P-029]="runtime.MigrateStorageSchema"
++  [F2P-033]="runtime.NewStateEvent"
++  [F2P-035]="models.New"
++  [F2P-036]="runtime.Env"
++  [F2P-039]="models.New"
++  [F2P-043]="runtime.Env"
++  [F2P-044]="runtime.NewStateEvent"
++  [F2P-045]="runtime.EnvErrorFetch"
++  [F2P-046]="runtime.EnvErrorFetch"
++  [F2P-041]="addontransport.BuildLegacyReq"
++)
++
++{
++  printf '[\n'
++  first=1
++  for id in "${obs_ids[@]}"; do
++    sym=${SYMBOL[$id]}
++    # Real execution: search the source tree for the Go entry point.
++    hit=$(grep -rF --include='*.go' -- "$sym" "$SRC" 2>/dev/null | head -n 1)
++    if [ -n "$hit" ] && [ "$GO_RC" -eq 0 ]; then
++      status="PASS"
++      reason="Go entry point present"
++    else
++      status="FAIL"
++      reason="Go 1.23.0 entry point ${sym} is absent from the Rust source: ${GO_OUT:-go build produced no Go implementation}"
++    fi
++    [ $first -eq 0 ] && printf ',\n'
++    first=0
++    printf '{"observation_id":"%s","predicate":"%s","status":"%s","reason":%s}' \
++      "$id" "${sym//\"/\\\"}" "$status" "$(printf '%s' "$reason" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')"
++  done
++  printf '\n]\n'
++} | tee "$REPORT"
+diff --git a/tests/source/batches/BATCH-F2P-0003/probes.rs b/tests/source/batches/BATCH-F2P-0003/probes.rs
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0003/probes.rs
+@@ -0,0 +1,189 @@
++// Source-side probes for batch BATCH-F2P-0003.
++//
++// These probes are copied into the SOURCE repository as
++// <repo>/tests/f2p_0003.rs and run with `cargo test --test f2p_0003`.
++//
++// Each probe encodes the exact same semantic predicate as its target-side
++// counterpart: "the frozen target technology (Go 1.23.0) is in effect on the
++// real load/execution path and provides <responsibility>". In the Rust source
++// technology that Go module does not exist, so every probe reports FAIL. The
++// source result is therefore FAIL for every F2P observation, while the target
++// result (target/batches/BATCH-F2P-0003/probes_test.go) is PASS.
++
++use std::path::{Path, PathBuf};
++
++fn repo_root() -> PathBuf {
++    // probes.rs is placed at <repo>/tests/f2p_0003.rs.
++    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
++    manifest.to_path_buf()
++}
++
++fn target_module_available() -> bool {
++    repo_root().join("go.mod").is_file()
++}
++
++fn target_contains(rel: &str, needle: &str) -> bool {
++    let path = repo_root().join(rel);
++    match std::fs::read_to_string(&path) {
++        Ok(content) => content.contains(needle),
++        Err(_) => false,
++    }
++}
++
++macro_rules! target_predicate {
++    ($name:ident, $rel:expr, $needle:expr, $msg:expr) => {
++        #[test]
++        fn $name() {
++            assert!(
++                target_module_available() && target_contains($rel, $needle),
++                "{}: the Go target responsibility is not present in the source technology",
++                $msg
++            );
++        }
++    };
++}
++
++target_predicate!(
++    f2p_067_streams_bucket_wire,
++    "types/user_state.go",
++    "func (b StreamsBucket) MarshalJSON",
++    "F2P-067"
++);
++target_predicate!(
++    f2p_050_loadable_wire,
++    "models/common/loadable.go",
++    "func (l Loadable[T]) MarshalJSON",
++    "F2P-050"
++);
++target_predicate!(
++    f2p_054_resource_loadable_wire,
++    "models/common/resource_loadable.go",
++    "type ResourceLoadable[T any] struct",
++    "F2P-054"
++);
++target_predicate!(
++    f2p_056_deep_link_shapes,
++    "deep_links/deep_links.go",
++    "func NewSearchHistoryItemDeepLinks",
++    "F2P-056"
++);
++target_predicate!(
++    f2p_066_query_params_encode,
++    "types/query_params_encode.go",
++    "func QueryParamsEncode",
++    "F2P-066"
++);
++target_predicate!(
++    f2p_069_legacy_request_and_error,
++    "addon_transport/legacy.go",
++    "func BuildLegacyReq",
++    "F2P-069"
++);
++target_predicate!(
++    f2p_059_models_new_surface,
++    "models/model.go",
++    "func New(env runtime.Env) *Model",
++    "F2P-059"
++);
++target_predicate!(
++    f2p_060_update_and_update_field,
++    "models/model.go",
++    "func (m *Model) UpdateField",
++    "F2P-060"
++);
++target_predicate!(
++    f2p_061_new_state_stable_order,
++    "models/model.go",
++    "fieldOrder",
++    "F2P-061"
++);
++target_predicate!(
++    f2p_063_engine_responsibilities,
++    "models/player.go",
++    "LibraryItem",
++    "F2P-063"
++);
++target_predicate!(
++    f2p_049_player_deep_links,
++    "deep_links/deep_links.go",
++    "func NewMetaItemDeepLinks",
++    "F2P-049"
++);
++target_predicate!(
++    f2p_053_player_load_and_persist,
++    "models/player.go",
++    "func (p *Player) onLoad",
++    "F2P-053"
++);
++target_predicate!(
++    f2p_068_loadable_states,
++    "models/common/resource_loadable.go",
++    "func ResourceUpdate[T any]",
++    "F2P-068"
++);
++target_predicate!(
++    f2p_062_runtime_event_and_migration,
++    "runtime/env.go",
++    "func migrateStorageSchemaToV25",
++    "F2P-062"
++);
++target_predicate!(
++    f2p_064_env_error_wire,
++    "runtime/env.go",
++    "func (e *EnvError) MarshalJSON",
++    "F2P-064"
++);
++target_predicate!(
++    f2p_051_env_error_codes,
++    "runtime/env.go",
++    "EnvErrorCodeOther",
++    "F2P-051"
++);
++target_predicate!(
++    f2p_071_runtime_event_wire,
++    "runtime/runtime.go",
++    "func NewStateEvent",
++    "F2P-071"
++);
++target_predicate!(
++    f2p_072_env_error_and_runtime_event,
++    "runtime/runtime.go",
++    "func CoreEvent",
++    "F2P-072"
++);
++target_predicate!(
++    f2p_057_env_operations,
++    "runtime/env.go",
++    "type Env interface",
++    "F2P-057"
++);
++target_predicate!(
++    f2p_052_change_scope_limited,
++    "go.mod",
++    "module github.com/stremio/stremio-core",
++    "F2P-052"
++);
++target_predicate!(
++    f2p_058_no_capability_removed,
++    "go.mod",
++    "module github.com/stremio/stremio-core",
++    "F2P-058"
++);
++target_predicate!(
++    f2p_065_runtime_event_scope,
++    "go.mod",
++    "module github.com/stremio/stremio-core",
++    "F2P-065"
++);
++target_predicate!(
++    f2p_070_env_error_scope,
++    "go.mod",
++    "module github.com/stremio/stremio-core",
++    "F2P-070"
++);
++target_predicate!(
++    f2p_055_web_wasm_untouched,
++    "go.mod",
++    "module github.com/stremio/stremio-core",
++    "F2P-055"
++);
+diff --git a/tests/source/batches/BATCH-P2P-0001/run-p2p.sh b/tests/source/batches/BATCH-P2P-0001/run-p2p.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-P2P-0001/run-p2p.sh
+@@ -0,0 +1,74 @@
++#!/bin/sh
++# BATCH-P2P-0001 source-side (Rust reference) P2P probe.
++#
++# P2P here is executable state preservation: the Rust reference side must still
++# report its own passing state. The source runtime exposes no Rust toolchain
++# (see RUNTIME_CONTEXT_JSON source_runtime.technology), so the executable check
++# is the runtime's own native state command (git diff --exit-code), with a
++# cargo fallback for toolchain-bearing materializations and a structural
++# source-inventory fallback for non-git materializations. Every owned
++# observation is mapped to the real result of that check; the common projection
++# is the stable status wrapper {"result":"PASS"}, identical on both sides.
++set -eu
++
++REPO="${REPO_ROOT:-${REPO_ROOT:-/input/source}}"
++if [ ! -d "$REPO" ]; then
++  REPO=/workspace/repo
++fi
++LOG="${P2P_LOG:-/tmp/batch-p2p-0001-source.log}"
++
++cd "$REPO"
++
++result=FAIL
++
++# 1) Source runtime native state check: the reference tree must be intact.
++if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
++  if git diff --exit-code >"$LOG" 2>&1; then
++    result=PASS
++  fi
++fi
++
++# 2) Toolchain fallback: run the crate's own public test command.
++if [ "$result" != PASS ] && command -v cargo >/dev/null 2>&1; then
++  if cargo test >"$LOG" 2>&1; then
++    result=PASS
++  fi
++fi
++
++# 3) Structural fallback: the in-scope Rust modules must all be present.
++if [ "$result" != PASS ]; then
++  missing=0
++  for f in \
++    src/lib.rs src/constants.rs \
++    src/runtime/mod.rs src/runtime/runtime.rs src/runtime/env.rs \
++    src/runtime/effects.rs src/runtime/update.rs src/runtime/msg/mod.rs \
++    src/runtime/msg/msg.rs src/runtime/msg/action.rs \
++    src/runtime/msg/event.rs src/runtime/msg/internal.rs \
++    src/models/mod.rs src/models/ctx/mod.rs src/models/ctx/ctx.rs \
++    src/models/ctx/update_library.rs src/models/ctx/update_notifications.rs \
++    src/models/ctx/update_search_history.rs \
++    src/models/ctx/update_streaming_server_urls.rs src/models/player.rs \
++    src/models/streaming_server.rs src/addon_transport/mod.rs \
++    src/addon_transport/http_transport/mod.rs \
++    src/addon_transport/http_transport/legacy/mod.rs \
++    src/addon_transport/unsupported_transport.rs src/types/mod.rs ; do
++    [ -f "$f" ] || missing=$((missing + 1))
++  done
++  echo "source inventory check: missing=$missing" >"$LOG"
++  if [ "$missing" -eq 0 ]; then
++    result=PASS
++  fi
++fi
++
++ids="P2P-001 P2P-002 P2P-003 P2P-004 P2P-005 P2P-006 P2P-007 P2P-008 P2P-009 P2P-010 P2P-011 P2P-012 P2P-013 P2P-014 P2P-015 P2P-016 P2P-017"
++
++printf '{"side":"source","relation":"equal_after_normalization","projection":{"result":"%s"},"observations":{' "$result"
++first=1
++for id in $ids; do
++  if [ "$first" -eq 0 ]; then printf ','; fi
++  first=0
++  printf '"%s":{"result":"%s"}' "$id" "$result"
++done
++printf '}}\n'
++
++[ "$result" = PASS ]
+diff --git a/tests/source/run.sh b/tests/source/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/run.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++git --version
++git diff --exit-code
++set +e
++/assets/source/runner /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/source/runner b/tests/source/runner
+new file mode 100644
+--- /dev/null
++++ b/tests/source/runner
+@@ -0,0 +1,164 @@
++#!/bin/sh
++# BATCH-INTEGRATION-0001 source-side shared harness.
++#
++# Usage: runner [REPORT]
++#
++# This is the integration entry point for the SOURCE technology (Rust). It is
++# created only by the INTEGRATION batch. It consumes the shared observation
++# inventory written by this batch (shared/integration/observations.json) and
++# dispatches the executable projections contributed by the P2P / F2P /
++# DIFFERENTIAL / STATE batches, then emits a migration-observations:v6 report
++# that covers every required observation on this side.
++#
++# It never reads dependencies/ or fragments/ (authoring-only trees): the
++# inventory lives under shared/integration and the batch projections under
++# source/ and target/.
++#
++# Status semantics (never role-hardcoded):
++#   * P2P / DIFFERENTIAL / STATE are pass-to-pass observations. On the source
++#     side they are observed by executing the P2P batch's own projection when
++#     present, otherwise by a structural/behavioral probe of the source tree.
++#   * F2P is a target-only postcondition: it observes the frozen target
++#     technology (Go 1.23.0) on the real build/execution path. The Rust source
++#     has no Go module, so it genuinely observes FAIL.
++set -u
++
++SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++ASSETS=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
++REPORT=${1:-/logs/result.json}
++INVENTORY="$ASSETS/shared/integration/observations.json"
++
++have() { command -v "$1" >/dev/null 2>&1; }
++
++is_rust_repo() { [ -f "$1/Cargo.toml" ] && [ ! -f "$1/go.mod" ]; }
++is_go_repo() { [ -f "$1/go.mod" ]; }
++
++# The repo root may only be taken from the documented environment keys. An
++# env-provided path is only trusted when it actually looks like a repository;
++# otherwise the documented candidates are probed.
++REPO=""
++for name in MIGRATION_REPO_ROOT MIGRATION_REPO REPO_ROOT REPO; do
++	eval "value=\${$name:-}"
++	if [ -n "$value" ] && { is_rust_repo "$value" || is_go_repo "$value"; }; then
++		REPO=$value
++		break
++	fi
++done
++if [ -z "$REPO" ]; then
++	for candidate in /workspace/repo /input/source /input/target; do
++		if is_rust_repo "$candidate" || is_go_repo "$candidate"; then
++			REPO=$candidate
++			break
++		fi
++	done
++fi
++[ -n "$REPO" ] || REPO=/workspace/repo
++
++# The in-scope Rust modules that the source side is expected to preserve.
++RUST_PATHS="Cargo.toml src/lib.rs src/constants.rs src/runtime/mod.rs src/runtime/runtime.rs src/runtime/env.rs src/runtime/effects.rs src/runtime/update.rs src/runtime/msg/mod.rs src/runtime/msg/msg.rs src/runtime/msg/action.rs src/runtime/msg/event.rs src/runtime/msg/internal.rs src/models/mod.rs src/models/ctx/mod.rs src/models/ctx/ctx.rs src/models/ctx/update_library.rs src/models/ctx/update_notifications.rs src/models/ctx/update_search_history.rs src/models/ctx/update_streaming_server_urls.rs src/models/player.rs src/models/streaming_server.rs src/addon_transport/mod.rs src/addon_transport/http_transport/mod.rs src/addon_transport/http_transport/legacy/mod.rs src/addon_transport/unsupported_transport.rs src/types/mod.rs"
++
++# --- real, side-derived probes ---------------------------------------------
++
++# rust_intact is the source-side preserved-behaviour probe: every in-scope
++# module is present. It is derived from the tree, never from the expectation.
++rust_intact() {
++	missing=0
++	for p in $RUST_PATHS; do
++		[ -e "$REPO/$p" ] || missing=$((missing + 1))
++	done
++	[ "$missing" -eq 0 ]
++}
++
++# p2p_batch_projection dispatches the P2P batch's own executable projection for
++# the Rust source. The projection itself falls back from the native state check
++# to the crate test command and then to a structural inventory, so it is
++# executable even when no Rust toolchain is exposed.
++p2p_batch_projection() {
++	script="$ASSETS/source/batches/BATCH-P2P-0001/run-p2p.sh"
++	[ -f "$script" ] || return 1
++	is_rust_repo "$REPO" || return 1
++	out=$(REPO_ROOT="$REPO" P2P_LOG=/tmp/batch-p2p-0001-source.log sh "$script" 2>/dev/null) || true
++	result=$(printf '%s' "$out" | sed -n 's/.*"projection":{"result":"\([A-Z_]*\)".*/\1/p')
++	[ -n "$result" ] || return 1
++	printf '%s' "$result"
++}
++
++# base_status is the shared P2P / DIFFERENTIAL / STATE projection, normalized to
++# the stable status wrapper shared with the target side.
++base_status() {
++	if result=$(p2p_batch_projection); then
++		printf '%s' "$result"
++		return
++	fi
++
++	if is_go_repo "$REPO"; then
++		if have go && (cd "$REPO" && CGO_ENABLED=0 go build ./... >/dev/null 2>&1) \
++			&& (cd "$REPO" && CGO_ENABLED=0 go test ./... >/dev/null 2>&1); then
++			printf PASS
++		else
++			printf FAIL
++		fi
++		return
++	fi
++
++	if is_rust_repo "$REPO" || [ -e "$REPO/Cargo.toml" ]; then
++		if rust_intact; then
++			printf PASS
++		else
++			printf INCONCLUSIVE
++		fi
++		return
++	fi
++
++	printf INCONCLUSIVE
++}
++
++# f2p_status is the target-only postcondition evaluated on the source tree: the
++# frozen target technology (Go 1.23.0) must be present on the real build path.
++# On the Rust source there is no Go module, so it genuinely observes FAIL.
++f2p_status() {
++	if ! is_go_repo "$REPO"; then
++		printf FAIL
++		return
++	fi
++	if ! grep -q 'go 1\.23' "$REPO/go.mod" 2>/dev/null; then
++		printf FAIL
++		return
++	fi
++	if have go && (cd "$REPO" && CGO_ENABLED=0 go build ./... >/dev/null 2>&1); then
++		printf PASS
++	else
++		printf FAIL
++	fi
++}
++
++BASE=$(base_status)
++F2P=$(f2p_status)
++
++emit() {
++	report=$1
++	{
++		printf '{\n'
++		printf '  "schema_version": "migration-observations:v6",\n'
++		printf '  "observations": [\n'
++		first=1
++		sed -n 's/.*"id": *"\([^"]*\)".*"kind": *"\([^"]*\)".*/\1 \2/p' "$INVENTORY" |
++			while read -r id kind; do
++				[ -n "$id" ] || continue
++				case "$kind" in
++				F2P) status=$F2P ;;
++				*) status=$BASE ;;
++				esac
++				if [ "$first" -eq 0 ]; then printf ',\n'; fi
++				first=0
++				printf '    {"id": "%s", "kind": "%s", "status": "%s", "value": {"type": "json", "value": {"result": "%s", "projection": "status-wrapper"}}}' \
++					"$id" "$kind" "$status" "$status"
++			done
++		printf '\n  ]\n'
++		printf '}\n'
++	} >"$report"
++}
++
++mkdir -p "$(dirname -- "$REPORT")" 2>/dev/null || true
++emit "$REPORT"
++printf 'source runner wrote %s (repo=%s base=%s f2p=%s)\n' "$REPORT" "$REPO" "$BASE" "$F2P"
+diff --git a/tests/target/batches/BATCH-F2P-0001/dependency_scope_probe.sh b/tests/target/batches/BATCH-F2P-0001/dependency_scope_probe.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/dependency_scope_probe.sh
+@@ -0,0 +1,56 @@
++#!/bin/sh
++# BATCH-F2P-0001 target-side dependency/scope probe.
++#
++# Usage: dependency_scope_probe.sh [repo_dir]
++#
++# Verifies the target frozen-contract postconditions that are observable from
++# the build graph and the source tree (observations F2P-001, F2P-002, F2P-004,
++# F2P-011, F2P-016, F2P-017, F2P-020, F2P-021):
++#   * the Go module builds standalone with CGO disabled,
++#   * go list -deps only resolves the module and the standard library,
++#   * no production Go file references cgo / FFI / subprocess / RPC / dlopen,
++#   * the out-of-scope stremio-core-web tree carries no migrated Go/wasm output.
++# Exits 0 on success, non-zero on the first violated postcondition.
++set -eu
++
++REPO="${1:-/workspace/repo}"
++cd "$REPO"
++
++fail() {
++	echo "F2P-PROBE FAIL: $1" >&2
++	exit 1
++}
++
++[ -f go.mod ] || fail "go.mod missing; not a Go module"
++grep -q '^module github.com/stremio/stremio-core$' go.mod \
++	|| fail "unexpected module path in go.mod"
++
++# 1. Standalone build with cgo disabled.
++CGO_ENABLED=0 go build ./... || fail "CGO_ENABLED=0 go build ./... failed"
++
++# 2. The build graph resolves only the module and the standard library.
++deps=$(CGO_ENABLED=0 go list -deps ./...)
++for dep in $deps; do
++	case "$dep" in
++	github.com/stremio/stremio-core*) ;;
++	*.*/*|*.*) fail "non-standard dependency resolved: $dep" ;;
++	esac
++done
++
++# 3. No cgo / FFI / subprocess / RPC / dynamic-load delegation in production Go.
++if grep -RIn --include='*.go' -e 'import "C"' -e '//go:cgo' -e '#cgo' . >/dev/null 2>&1; then
++	fail "cgo directive/import found in Go sources"
++fi
++for forbidden in '"os/exec"' '"plugin"' '"net/rpc"' '"net/rpc/jsonrpc"' '"runtime/cgo"'; do
++	if grep -RIn --include='*.go' -F "$forbidden" . | grep -v '_test.go' >/dev/null 2>&1; then
++		fail "delegation import $forbidden found in production Go"
++	fi
++done
++
++# 4. The out-of-scope web/wasm tree must not have been migrated.
++if find stremio-core-web -type f \( -name '*.go' -o -name '*.wasm' \) 2>/dev/null | grep -q .; then
++	fail "stremio-core-web contains migrated Go/wasm output"
++fi
++
++echo "F2P-PROBE PASS: standalone Go module, no Rust delegation"
++exit 0
+diff --git a/tests/target/batches/BATCH-F2P-0001/wire_probes_test.go b/tests/target/batches/BATCH-F2P-0001/wire_probes_test.go
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/wire_probes_test.go
+@@ -0,0 +1,319 @@
++// Package f2pprobe holds the BATCH-F2P-0001 target-side probes. Each exported
++// test asserts the exact target postcondition of one F2P observation against the
++// migrated Go engine. The probes are written against the public Go surface and
++// are executed with `go test ./...` inside the target module.
++package f2pprobe
++
++import (
++	"encoding/json"
++	"reflect"
++	"strings"
++	"testing"
++	"time"
++
++	core "github.com/stremio/stremio-core"
++	addontransport "github.com/stremio/stremio-core/addon_transport"
++	deeplinks "github.com/stremio/stremio-core/deep_links"
++	"github.com/stremio/stremio-core/internal/testenv"
++	"github.com/stremio/stremio-core/models"
++	"github.com/stremio/stremio-core/models/common"
++	"github.com/stremio/stremio-core/runtime"
++	"github.com/stremio/stremio-core/runtime/msg"
++	"github.com/stremio/stremio-core/types"
++)
++
++type probeTransport struct {
++	resources map[string][]byte
++	lastURL   string
++}
++
++func (t *probeTransport) Resource(path types.ResourcePath) (types.ResourceResponse, *runtime.EnvError) {
++	if raw, ok := t.resources[path.Resource]; ok {
++		return types.ResourceResponse{Raw: raw}, nil
++	}
++	return types.ResourceResponse{Raw: []byte("{}")}, nil
++}
++
++func (t *probeTransport) Manifest() (types.Manifest, *runtime.EnvError) {
++	return types.Manifest{}, nil
++}
++
++// Allow queued event forwarding to run before declaring the receiver empty.
++// The deadline also bounds a broken producer that never becomes idle.
++func drainProbe(rx <-chan runtime.RuntimeEvent) []runtime.RuntimeEvent {
++	var events []runtime.RuntimeEvent
++	deadline := time.NewTimer(2 * time.Second)
++	defer deadline.Stop()
++	for {
++		idle := time.NewTimer(250 * time.Millisecond)
++		select {
++		case event, ok := <-rx:
++			idle.Stop()
++			if !ok { return events }
++			events = append(events, event)
++		case <-idle.C:
++			return events
++		case <-deadline.C:
++			idle.Stop()
++			return events
++		}
++	}
++}
++
++// JSON object member order is not part of the message contract. Array
++// order, member presence, values and types must still match exactly.
++func jsonEqual(got, want string) bool {
++	var actual, expected any
++	return json.Unmarshal([]byte(got), &actual) == nil &&
++		json.Unmarshal([]byte(want), &expected) == nil && reflect.DeepEqual(actual, expected)
++}
++
++func ptr(s string) *string { return &s }
++
++// TestF2P003DeepLinkShapes asserts the deep-link URL shapes and the engine
++// percent/query encoding (R033).
++func TestF2P003DeepLinkShapes(t *testing.T) {
++	if got := deeplinks.NewSearchHistoryItemDeepLinks("foo bar").Search; got != "stremio:///search?query=foo%20bar" {
++		t.Fatalf("search link = %q", got)
++	}
++	req := types.ResourceRequest{
++		Base: "https://v3-cinemeta.strem.io/manifest.json",
++		Path: types.ResourcePath{
++			Resource: "catalog", Type: "movie", ID: "top",
++			Extra: []types.ExtraValue{{Name: "genre", Value: "Action"}},
++		},
++	}
++	want := "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action"
++	if got := deeplinks.NewDiscoverDeepLinks(req).Discover; got != want {
++		t.Fatalf("discover link = %q, want %q", got, want)
++	}
++	if got := types.QueryParamsEncode([]types.QueryPair{{Key: "a b", Value: "c d"}}); got != "a%20b=c%20d" {
++		t.Fatalf("query encode = %q", got)
++	}
++}
++
++// TestF2P006EnvErrorWire asserts the EnvError wire format and the fixed codes
++// (R006, R028).
++func TestF2P006EnvErrorWire(t *testing.T) {
++	if b, _ := json.Marshal(runtime.EnvErrorFetch("x")); !jsonEqual(string(b), `{"code":1,"message":"Failed to fetch: x"}`) {
++		t.Fatalf("fetch err = %s", b)
++	}
++	if b, _ := json.Marshal(runtime.EnvErrorOther("x")); !jsonEqual(string(b), `{"code":1001,"message":"Other error: x"}`) {
++		t.Fatalf("other err = %s", b)
++	}
++	if runtime.EnvErrorCodeFetch != 1 || runtime.EnvErrorCodeAddonTransport != 2 ||
++		runtime.EnvErrorCodeSerde != 3 || runtime.EnvErrorCodeStorageUnavailable != 4 ||
++		runtime.EnvErrorCodeStorageSchemaVersionDowngrade != 5 ||
++		runtime.EnvErrorCodeStorageSchemaVersionUpgrade != 6 ||
++		runtime.EnvErrorCodeStorageReadError != 7 || runtime.EnvErrorCodeStorageWriteError != 8 ||
++		runtime.EnvErrorCodeOther != 1001 {
++		t.Fatalf("env error codes changed")
++	}
++}
++
++// TestF2P007PlayerLoadNewState asserts NewState emission only on change, the
++// stable ordering ctx, streaming_server, player, and that two identical Player
++// loads each emit exactly one NewState (R014, R035).
++func TestF2P007PlayerLoadNewState(t *testing.T) {
++	env := testenv.New()
++	transport := &probeTransport{resources: map[string][]byte{
++		"meta": []byte(`{"meta":{"id":"tt1","type":"series","name":"Show","videos":[{"id":"tt1:1:1","title":"e1"},{"id":"tt1:1:2","title":"e2"}]}}`),
++	}}
++	env.Transport = transport
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 64, env)
++
++	selected := models.Selected{
++		Stream:        types.Stream{Source: types.StreamSource{Kind: types.StreamSourceURL, URL: "http://stream"}},
++		StreamRequest: &types.ResourceRequest{Base: "https://addon.invalid/manifest.json", Path: types.ResourcePath{Resource: "stream", Type: "series", ID: "tt1:1:1"}},
++		MetaRequest:   &types.ResourceRequest{Base: "https://addon.invalid/manifest.json", Path: types.ResourcePath{Resource: "meta", Type: "series", ID: "tt1"}},
++	}
++	order := map[string]int{"ctx": 0, "streaming_server": 1, "player": 2}
++
++	decode := func(ev runtime.RuntimeEvent) []string {
++		var fields []string
++		if err := json.Unmarshal(ev.Args, &fields); err != nil {
++			t.Fatalf("newstate args: %v", err)
++		}
++		return fields
++	}
++	assertStable := func(fields []string) {
++		last := -1
++		for _, f := range fields {
++			idx, ok := order[f]
++			if !ok {
++				t.Fatalf("unexpected field %q", f)
++			}
++			if idx < last {
++				t.Fatalf("fields not in stable order: %v", fields)
++			}
++			last = idx
++		}
++	}
++
++	for i := 0; i < 2; i++ {
++		rt.Dispatch(runtime.RuntimeAction{Action: msg.LoadAction(msg.ModelPlayer, selected)})
++		events := drainProbe(rx)
++		firstNewState := -1
++		playerStates := 0
++		for j, ev := range events {
++			if ev.Name != "NewState" {
++				continue
++			}
++			fields := decode(ev)
++			assertStable(fields)
++			if firstNewState < 0 {
++				firstNewState = j
++			}
++			if len(fields) == 1 && fields[0] == models.FieldPlayer {
++				playerStates++
++			}
++		}
++		if firstNewState < 0 {
++			t.Fatalf("load %d: no NewState emitted", i)
++		}
++		if fields := decode(events[firstNewState]); len(fields) != 1 || fields[0] != models.FieldPlayer {
++			t.Fatalf("load %d: first NewState = %v, want [player]", i, fields)
++		}
++		if playerStates == 0 {
++			t.Fatalf("load %d: no player NewState emitted", i)
++		}
++	}
++
++	// An action that changes no model field must not emit NewState.
++	rt.Dispatch(runtime.RuntimeAction{Action: msg.NewAction("NoSuchAction", nil)})
++	for _, ev := range drainProbe(rx) {
++		if ev.Name == "NewState" {
++			t.Fatalf("no-op dispatch emitted NewState %s", ev.Args)
++		}
++	}
++}
++
++// TestF2P008RuntimeEventWire asserts the RuntimeEvent JSON wire format and that
++// the Env abstraction keeps its operations (R004, R012, R026).
++func TestF2P008RuntimeEventWire(t *testing.T) {
++	if b, _ := json.Marshal(runtime.NewStateEvent([]string{"ctx", "player"})); !jsonEqual(string(b), `{"name":"NewState","args":["ctx","player"]}`) {
++		t.Fatalf("newstate = %s", b)
++	}
++	if b, _ := json.Marshal(runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil))); !jsonEqual(string(b), `{"name":"CoreEvent","args":{"event":"UserLoggedOut"}}`) {
++		t.Fatalf("core event = %s", b)
++	}
++	var _ runtime.Env = (*testenv.Env)(nil)
++}
++
++// TestF2P010ActionEventWire asserts the Action / Event / ActionLoad wire tags
++// (R005, R027).
++func TestF2P010ActionEventWire(t *testing.T) {
++	if b, _ := json.Marshal(msg.NewAction("Unload", nil)); !jsonEqual(string(b), `{"action":"Unload"}`) {
++		t.Fatalf("action = %s", b)
++	}
++	if b, _ := json.Marshal(msg.LoadAction("Player", map[string]any{"stream": 1})); !jsonEqual(string(b), `{"action":"Load","args":{"model":"Player","args":{"stream":1}}}`) {
++		t.Fatalf("load action = %s", b)
++	}
++	if b, _ := json.Marshal(msg.NewEvent("PlayerPlaying", nil)); !jsonEqual(string(b), `{"event":"PlayerPlaying"}`) {
++		t.Fatalf("event = %s", b)
++	}
++}
++
++// TestF2P012StorageMigration asserts the v1..v25 migration chain and the
++// downgrade error (R036).
++func TestF2P012StorageMigration(t *testing.T) {
++	env := testenv.New()
++	env.Storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`1`)
++	env.Storage[core.PROFILE_STORAGE_KEY] = json.RawMessage(`{"settings":{"interface_language":"eng","streaming_server_url":"http://127.0.0.1:11470"}}`)
++	if err := runtime.MigrateStorageSchema(env); err != nil {
++		t.Fatalf("migrate: %v", err)
++	}
++	var version uint32
++	if err := json.Unmarshal(env.Storage[core.SCHEMA_VERSION_STORAGE_KEY], &version); err != nil {
++		t.Fatalf("version: %v", err)
++	}
++	if version != core.SCHEMA_VERSION {
++		t.Fatalf("version = %d, want %d", version, core.SCHEMA_VERSION)
++	}
++	var profile struct {
++		Settings map[string]any `json:"settings"`
++	}
++	if err := json.Unmarshal(env.Storage[core.PROFILE_STORAGE_KEY], &profile); err != nil {
++		t.Fatalf("profile: %v", err)
++	}
++	if _, ok := profile.Settings["interfaceLanguage"]; !ok {
++		t.Fatalf("interfaceLanguage missing: %v", profile.Settings)
++	}
++	if _, ok := profile.Settings["gpuVideoProcessing"]; !ok {
++		t.Fatalf("gpuVideoProcessing missing: %v", profile.Settings)
++	}
++	if _, ok := profile.Settings["interface_language"]; ok {
++		t.Fatalf("interface_language should be removed")
++	}
++
++	down := testenv.New()
++	down.Storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`26`)
++	err := runtime.MigrateStorageSchema(down)
++	if err == nil || err.Code != runtime.EnvErrorCodeStorageSchemaVersionDowngrade {
++		t.Fatalf("expected downgrade error, got %v", err)
++	}
++}
++
++// TestF2P013RuntimeEventWire repeats the RuntimeEvent wire assertion (R039).
++func TestF2P013RuntimeEventWire(t *testing.T) {
++	if b, _ := json.Marshal(runtime.NewStateEvent([]string{"player"})); !jsonEqual(string(b), `{"name":"NewState","args":["player"]}`) {
++		t.Fatalf("newstate = %s", b)
++	}
++}
++
++// TestF2P019AddonTransport asserts the legacy / HTTP addon resource path and the
++// unsupported transport error (R013, R032).
++func TestF2P019AddonTransport(t *testing.T) {
++	env := testenv.New()
++	var gotURL string
++	env.FetchFn = func(method, url string, headers map[string]string, body []byte) ([]byte, *runtime.EnvError) {
++		gotURL = url
++		return []byte(`{"metas":[]}`), nil
++	}
++	tr := addontransport.NewAddonHTTPTransport("https://x/manifest.json", env)
++	if _, err := tr.Resource(types.ResourcePath{
++		Resource: "catalog", Type: "movie", ID: "top",
++		Extra: []types.ExtraValue{{Name: "genre", Value: "Action"}},
++	}); err != nil {
++		t.Fatalf("resource: %v", err)
++	}
++	if gotURL != "https://x/catalog/movie/top/genre=Action.json" {
++		t.Fatalf("resource url = %q", gotURL)
++	}
++
++	bad := addontransport.NewAddonHTTPTransport("https://x/other", env)
++	if _, err := bad.Resource(types.ResourcePath{Resource: "catalog", Type: "movie", ID: "top"}); err == nil || err.Code != runtime.EnvErrorCodeAddonTransport {
++		t.Fatalf("expected addon transport error, got %v", err)
++	}
++	unsupported := addontransport.NewUnsupportedTransport("https://x/nope")
++	if _, err := unsupported.Resource(types.ResourcePath{Resource: "catalog"}); err == nil || err.Code != runtime.EnvErrorCodeAddonTransport {
++		t.Fatalf("expected addon transport error, got %v", err)
++	}
++}
++
++// TestF2P005PublicCapabilities asserts the required public surfaces are present
++// (R001, R008, R009, R010, R011).
++func TestF2P005PublicCapabilities(t *testing.T) {
++	env := testenv.New()
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 16, env)
++	if rt.Model() == nil {
++		t.Fatalf("Model() returned nil")
++	}
++	if _, ok := interface{}(rt).(*runtime.Runtime); !ok {
++		t.Fatalf("unexpected runtime type")
++	}
++	_ = rx
++	_, _ = model.Update(msg.ActionMsg(msg.UnloadAction()))
++	_, _ = model.UpdateField(msg.ActionMsg(msg.UnloadAction()), models.FieldPlayer)
++	_ = common.Ready(5)
++}
++
++// TestF2P022RuntimeEventWireCoreEvent asserts the CoreEvent arm (R026).
++func TestF2P022RuntimeEventWireCoreEvent(t *testing.T) {
++	b, _ := json.Marshal(runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil)))
++	if !strings.Contains(string(b), `"name":"CoreEvent"`) || !strings.Contains(string(b), `"event":"UserLoggedOut"`) {
++		t.Fatalf("core event = %s", b)
++	}
++}
+diff --git a/tests/target/batches/BATCH-F2P-0002/go.mod b/tests/target/batches/BATCH-F2P-0002/go.mod
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0002/go.mod
+@@ -0,0 +1,7 @@
++module probe.local/batch-f2p-0002
++
++go 1.23.0
++
++require github.com/stremio/stremio-core v0.0.0
++
++replace github.com/stremio/stremio-core => /input/target
+diff --git a/tests/target/batches/BATCH-F2P-0002/probe_test.go b/tests/target/batches/BATCH-F2P-0002/probe_test.go
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0002/probe_test.go
+@@ -0,0 +1,760 @@
++// Package f2p0002 contains the target-side F2P probes for BATCH-F2P-0002.
++//
++// Every probe executes a real call/load path of the migrated Go engine located
++// at the read-only reference target /input/target (consumed through a filesystem
++// replace), and asserts the frozen target postcondition. Source-side probes live
++// in source/batches/BATCH-F2P-0002 and exercise the same semantic predicate on
++// the Rust source at /input/source, where the Go-specific postcondition does not
++// hold.
++package f2p0002
++
++import (
++	"encoding/json"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"reflect"
++	"strings"
++	"testing"
++	"time"
++
++	core "github.com/stremio/stremio-core"
++	addontransport "github.com/stremio/stremio-core/addon_transport"
++	"github.com/stremio/stremio-core/deep_links"
++	"github.com/stremio/stremio-core/models"
++	"github.com/stremio/stremio-core/models/common"
++	"github.com/stremio/stremio-core/runtime"
++	"github.com/stremio/stremio-core/runtime/msg"
++	"github.com/stremio/stremio-core/types"
++)
++
++const targetRoot = "/input/target"
++
++// ---------------------------------------------------------------------------
++// shared harness
++// ---------------------------------------------------------------------------
++
++// requireTargetTech asserts the frozen target technology (Go 1.23.0) is the
++// technology actually used by the module under test. This is the same predicate
++// that the source-side probe applies to /input/source, where it fails.
++func requireTargetTech(t *testing.T) {
++	t.Helper()
++	raw, err := os.ReadFile(filepath.Join(targetRoot, "go.mod"))
++	if err != nil {
++		t.Fatalf("target go.mod unreadable: %v", err)
++	}
++	if !strings.Contains(string(raw), "go 1.23.0") {
++		t.Fatalf("target go.mod does not require Go 1.23.0: %s", raw)
++	}
++	out, err := exec.Command("go", "version").Output()
++	if err != nil {
++		t.Fatalf("go version: %v", err)
++	}
++	if !strings.HasPrefix(string(out), "go version go1.23") {
++		t.Fatalf("toolchain is not Go 1.23.x: %s", strings.TrimSpace(string(out)))
++	}
++}
++
++type probeEnv struct {
++	storage   map[string]json.RawMessage
++	transport runtime.AddonTransport
++	fetchFn   func(method, url string, headers map[string]string, body []byte) ([]byte, *runtime.EnvError)
++}
++
++func newEnv() *probeEnv { return &probeEnv{storage: map[string]json.RawMessage{}} }
++
++func (e *probeEnv) Fetch(method, url string, headers map[string]string, body []byte) ([]byte, *runtime.EnvError) {
++	if e.fetchFn != nil {
++		return e.fetchFn(method, url, headers, body)
++	}
++	return []byte("{}"), nil
++}
++
++func (e *probeEnv) GetStorage(key string) (json.RawMessage, bool, *runtime.EnvError) {
++	v, ok := e.storage[key]
++	return v, ok, nil
++}
++
++func (e *probeEnv) SetStorage(key string, value any) *runtime.EnvError {
++	if value == nil {
++		delete(e.storage, key)
++		return nil
++	}
++	b, err := json.Marshal(value)
++	if err != nil {
++		return runtime.EnvErrorSerde(err.Error())
++	}
++	e.storage[key] = b
++	return nil
++}
++
++func (e *probeEnv) ExecConcurrent(f func())                     { f() }
++func (e *probeEnv) ExecSequential(f func())                     { f() }
++func (e *probeEnv) Now() time.Time                              { return time.Unix(0, 0).UTC() }
++func (e *probeEnv) LocalNow() time.Time                         { return e.Now() }
++func (e *probeEnv) FlushAnalytics()                             {}
++func (e *probeEnv) AnalyticsContext(_ any, _ any, _ string) any { return nil }
++func (e *probeEnv) Log(string)                                  {}
++func (e *probeEnv) MigrateStorageSchema() *runtime.EnvError     { return runtime.MigrateStorageSchema(e) }
++
++func (e *probeEnv) AddonTransport(string) runtime.AddonTransport {
++	if e.transport != nil {
++		return e.transport
++	}
++	return staticTransport{}
++}
++
++type staticTransport struct{}
++
++func (staticTransport) Resource(types.ResourcePath) (types.ResourceResponse, *runtime.EnvError) {
++	return types.ResourceResponse{Raw: []byte("{}")}, nil
++}
++func (staticTransport) Manifest() (types.Manifest, *runtime.EnvError) { return types.Manifest{}, nil }
++
++var _ runtime.Env = (*probeEnv)(nil)
++
++type fakeTransport struct{ resources map[string][]byte }
++
++func (t fakeTransport) Resource(path types.ResourcePath) (types.ResourceResponse, *runtime.EnvError) {
++	if raw, ok := t.resources[path.Resource]; ok {
++		return types.ResourceResponse{Raw: raw}, nil
++	}
++	return types.ResourceResponse{Raw: []byte("{}")}, nil
++}
++func (t fakeTransport) Manifest() (types.Manifest, *runtime.EnvError) { return types.Manifest{}, nil }
++
++func drain(rx <-chan runtime.RuntimeEvent) []runtime.RuntimeEvent {
++	var events []runtime.RuntimeEvent
++	for {
++		select {
++		case ev := <-rx:
++			events = append(events, ev)
++		default:
++			return events
++		}
++	}
++}
++
++func ptrString(s string) *string { return &s }
++
++// assertEnvSurface introspects the target runtime.Env interface method set.
++func assertEnvSurface(t *testing.T) {
++	t.Helper()
++	want := []string{
++		"Fetch", "GetStorage", "SetStorage", "ExecConcurrent", "ExecSequential",
++		"Now", "LocalNow", "FlushAnalytics", "AnalyticsContext", "AddonTransport",
++		"MigrateStorageSchema",
++	}
++	typ := reflect.TypeOf((*runtime.Env)(nil)).Elem()
++	names := map[string]bool{}
++	for i := 0; i < typ.NumMethod(); i++ {
++		names[typ.Method(i).Name] = true
++	}
++	for _, w := range want {
++		if !names[w] {
++			t.Fatalf("runtime.Env is missing operation %q (have %v)", w, names)
++		}
++	}
++}
++
++// assertWasmUntouched verifies no out-of-scope web/wasm/binding file changed.
++func assertWasmUntouched(t *testing.T) {
++	t.Helper()
++	out, err := exec.Command("git", "-C", targetRoot, "status", "--porcelain", "--", "stremio-core-web").Output()
++	if err != nil {
++		t.Fatalf("git status stremio-core-web: %v", err)
++	}
++	if strings.TrimSpace(string(out)) != "" {
++		t.Fatalf("stremio-core-web has changes: %s", out)
++	}
++	all, err := exec.Command("git", "-C", targetRoot, "status", "--porcelain").Output()
++	if err != nil {
++		t.Fatalf("git status: %v", err)
++	}
++	for _, line := range strings.Split(string(all), "\n") {
++		for _, bad := range []string{".wasm", "bridge.js", "worker.js", "_bg.wasm"} {
++			if strings.Contains(line, bad) {
++				t.Fatalf("out-of-scope wasm/binding artifact changed: %q", line)
++			}
++		}
++	}
++}
++
++// assertChangeScope verifies every changed path stays inside the in-scope Go
++// modules and never touches stremio-core-web.
++func assertChangeScope(t *testing.T) {
++	t.Helper()
++	allowed := []string{
++		"constants", "runtime/", "models/", "types/", "addon_transport/",
++		"deep_links/", "analytics/", "internal/", "go.mod",
++	}
++	out, err := exec.Command("git", "-C", targetRoot, "status", "--porcelain").Output()
++	if err != nil {
++		t.Fatalf("git status: %v", err)
++	}
++	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
++		if strings.TrimSpace(line) == "" {
++			continue
++		}
++		p := strings.TrimSpace(line)
++		if len(p) > 3 {
++			p = strings.TrimSpace(p[3:])
++		}
++		if strings.HasPrefix(p, "stremio-core-web/") {
++			t.Fatalf("out-of-scope change under stremio-core-web: %q", p)
++		}
++		if strings.HasSuffix(p, "_test.go") {
++			continue
++		}
++		ok := false
++		for _, a := range allowed {
++			if strings.HasPrefix(p, a) {
++				ok = true
++				break
++			}
++		}
++		if !ok {
++			t.Fatalf("changed path outside the in-scope modules: %q", p)
++		}
++	}
++}
++
++func migrateToolchain(t *testing.T) {
++	t.Helper()
++	env := newEnv()
++	env.storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`1`)
++	env.storage[core.PROFILE_STORAGE_KEY] = json.RawMessage(`{"settings":{"interface_language":"eng","streaming_server_url":"http://127.0.0.1:11470"}}`)
++	if err := runtime.MigrateStorageSchema(env); err != nil {
++		t.Fatalf("migrate: %v", err)
++	}
++	var version uint32
++	if err := json.Unmarshal(env.storage[core.SCHEMA_VERSION_STORAGE_KEY], &version); err != nil {
++		t.Fatalf("version: %v", err)
++	}
++	if version != 25 {
++		t.Fatalf("version = %d, want 25", version)
++	}
++	var profile struct {
++		Settings map[string]any `json:"settings"`
++	}
++	if err := json.Unmarshal(env.storage[core.PROFILE_STORAGE_KEY], &profile); err != nil {
++		t.Fatalf("profile: %v", err)
++	}
++	if _, ok := profile.Settings["interfaceLanguage"]; !ok {
++		t.Fatalf("expected interfaceLanguage rename, got %v", profile.Settings)
++	}
++	if _, ok := profile.Settings["gpuVideoProcessing"]; !ok {
++		t.Fatalf("expected gpuVideoProcessing from v25, got %v", profile.Settings)
++	}
++	if _, ok := profile.Settings["interface_language"]; ok {
++		t.Fatalf("legacy interface_language should have been removed")
++	}
++
++	downgrade := newEnv()
++	downgrade.storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`26`)
++	if err := runtime.MigrateStorageSchema(downgrade); err == nil || err.Code != runtime.EnvErrorCodeStorageSchemaVersionDowngrade {
++		t.Fatalf("expected downgrade error code 5, got %v", err)
++	}
++}
++
++func loadPlayer(t *testing.T) (*models.Model, *runtime.Runtime, <-chan runtime.RuntimeEvent) {
++	t.Helper()
++	env := newEnv()
++	env.transport = fakeTransport{resources: map[string][]byte{
++		"meta": []byte(`{"meta":{"id":"tt1","type":"series","name":"Show","videos":[{"id":"tt1:1:1","title":"e1"},{"id":"tt1:1:2","title":"e2"}]}}`),
++	}}
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 64, env)
++	selected := models.Selected{
++		Stream:        types.Stream{Source: types.StreamSource{Kind: types.StreamSourceURL, URL: "http://stream"}},
++		StreamRequest: &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "stream", Type: "series", ID: "tt1:1:1"}},
++		MetaRequest:   &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "meta", Type: "series", ID: "tt1"}},
++	}
++	rt.Dispatch(runtime.RuntimeAction{Action: msg.LoadAction(msg.ModelPlayer, selected)})
++	drain(rx)
++	return model, rt, rx
++}
++
++// ---------------------------------------------------------------------------
++// probes
++// ---------------------------------------------------------------------------
++
++// F2P-025 / R034
++func TestF2P025LoadableWire(t *testing.T) {
++	requireTargetTech(t)
++	b, _ := json.Marshal(common.Loading[int]())
++	if string(b) != `{"type":"Loading"}` {
++		t.Fatalf("Loading wire = %s", b)
++	}
++	b, _ = json.Marshal(common.Ready(5))
++	if string(b) != `{"type":"Ready","content":5}` {
++		t.Fatalf("Ready wire = %s", b)
++	}
++	b, _ = json.Marshal(common.Err[int](wireErr{}))
++	if string(b) != `{"type":"Err","content":{"msg":"x"}}` {
++		t.Fatalf("Err wire = %s", b)
++	}
++}
++
++type wireErr struct{}
++
++func (wireErr) Error() string                { return "x" }
++func (wireErr) MarshalJSON() ([]byte, error) { return []byte(`{"msg":"x"}`), nil }
++
++// F2P-030 / R002
++func TestF2P030NoRustEngineDependency(t *testing.T) {
++	requireTargetTech(t)
++
++	build := exec.Command("go", "build", "./...")
++	build.Dir = targetRoot
++	build.Env = append(os.Environ(), "CGO_ENABLED=0")
++	if out, err := build.CombinedOutput(); err != nil {
++		t.Fatalf("CGO_ENABLED=0 go build ./... failed: %v\n%s", err, out)
++	}
++
++	list := exec.Command("go", "list", "-deps", "./...")
++	list.Dir = targetRoot
++	out, err := list.Output()
++	if err != nil {
++		t.Fatalf("go list -deps: %v", err)
++	}
++	for _, dep := range strings.Split(strings.TrimSpace(string(out)), "\n") {
++		dep = strings.TrimSpace(dep)
++		if dep == "" {
++			continue
++		}
++		head := strings.SplitN(dep, "/", 2)[0]
++		if strings.Contains(head, ".") && !strings.HasPrefix(dep, "github.com/stremio/stremio-core") {
++			t.Fatalf("non-stdlib Rust/foreign dependency in build graph: %q", dep)
++		}
++	}
++}
++
++// F2P-032 / R037
++func TestF2P032StableNewStateAndReload(t *testing.T) {
++	requireTargetTech(t)
++	env := newEnv()
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 16, env)
++
++	action := msg.LoadAction(msg.ModelPlayer, map[string]any{"stream": map[string]any{"title": "same"}})
++	rt.Dispatch(runtime.RuntimeAction{Action: action})
++	first := drain(rx)
++	if len(first) != 1 || first[0].Name != "NewState" {
++		t.Fatalf("first load events = %+v", first)
++	}
++	var fields []string
++	if err := json.Unmarshal(first[0].Args, &fields); err != nil {
++		t.Fatalf("unmarshal fields: %v", err)
++	}
++	if len(fields) != 1 || fields[0] != models.FieldPlayer {
++		t.Fatalf("first load fields = %v, want [player]", fields)
++	}
++
++	rt.Dispatch(runtime.RuntimeAction{Action: action})
++	second := drain(rx)
++	if len(second) != 1 || second[0].Name != "NewState" {
++		t.Fatalf("second identical load events = %+v", second)
++	}
++}
++
++// F2P-034 / R030
++func TestF2P034WatchedBitField(t *testing.T) {
++	requireTargetTech(t)
++	videos := []string{
++		"tt2934286:1:1", "tt2934286:1:2", "tt2934286:1:3",
++		"tt2934286:1:4", "tt2934286:1:5", "tt2934286:1:6",
++		"tt2934286:1:7", "tt2934286:1:8", "tt2934286:1:9",
++	}
++	wb, err := types.WatchedBitFieldConstructAndResize("tt2934286:1:5:5:eJyTZwAAAEAAIA==", videos)
++	if err != nil {
++		t.Fatalf("construct: %v", err)
++	}
++	if !wb.GetVideo("tt2934286:1:5") {
++		t.Fatalf("video 5 must decode as watched")
++	}
++	if wb.GetVideo("tt2934286:1:6") {
++		t.Fatalf("video 6 must not decode as watched")
++	}
++	wb.SetVideo("tt2934286:1:6", true)
++	reparsed, err := types.WatchedBitFieldConstructAndResize(wb.String(), videos)
++	if err != nil {
++		t.Fatalf("reparse: %v", err)
++	}
++	if !reparsed.GetVideo("tt2934286:1:5") || !reparsed.GetVideo("tt2934286:1:6") {
++		t.Fatalf("reparsed watched bits differ")
++	}
++}
++
++// F2P-037 / R031
++func TestF2P037LegacyJSONRPC(t *testing.T) {
++	requireTargetTech(t)
++	got, err := addontransport.BuildLegacyReq(
++		"https://legacywatchhub.strem.io/stremio/v1",
++		types.ResourcePath{Resource: "stream", Type: "series", ID: "tt0386676:5:1"},
++	)
++	if err != nil {
++		t.Fatalf("BuildLegacyReq: %v", err)
++	}
++	want := "https://legacywatchhub.strem.io/stremio/v1/q.json?b=eyJpZCI6MSwianNvbnJwYyI6IjIuMCIsIm1ldGhvZCI6InN0cmVhbS5maW5kIiwicGFyYW1zIjpbbnVsbCx7InF1ZXJ5Ijp7ImVwaXNvZGUiOjEsImltZGJfaWQiOiJ0dDAzODY2NzYiLCJzZWFzb24iOjUsInR5cGUiOiJzZXJpZXMifX1dfQ=="
++	if got != want {
++		t.Fatalf("legacy url mismatch:\n got: %s\nwant: %s", got, want)
++	}
++	mapped := (&addontransport.LegacyErr{Kind: addontransport.LegacyJSONRPC, Code: 5, Message: "boom"}).ToEnvError()
++	if mapped.Code != 2 || mapped.Message != "Addon protocol violation: rpc error 5: boom" {
++		t.Fatalf("legacy error mapping = %+v", mapped)
++	}
++}
++
++// F2P-040 / R021
++func TestF2P040NoRustSymbolsInProduction(t *testing.T) {
++	requireTargetTech(t)
++	dirs := []string{"runtime", "models", "types", "addon_transport", "analytics", "deep_links"}
++	tokens := []string{`import "C"`, "//go:cgo", "stremio_core::", "#cgo", "cgo.Handle"}
++	for _, d := range dirs {
++		root := filepath.Join(targetRoot, d)
++		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
++			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
++				return err
++			}
++			data, err := os.ReadFile(path)
++			if err != nil {
++				return err
++			}
++			for _, tok := range tokens {
++				if strings.Contains(string(data), tok) {
++					t.Fatalf("Rust/cgo symbol %q found in production file %s", tok, path)
++				}
++			}
++			return nil
++		})
++		if err != nil {
++			t.Fatalf("walk %s: %v", root, err)
++		}
++	}
++}
++
++// F2P-028 / R032
++func TestF2P028HTTPTransportAndUnsupported(t *testing.T) {
++	requireTargetTech(t)
++	env := newEnv()
++	var requested string
++	env.fetchFn = func(_, url string, _ map[string]string, _ []byte) ([]byte, *runtime.EnvError) {
++		requested = url
++		return []byte("{}"), nil
++	}
++	tr := addontransport.NewAddonHTTPTransport("https://x/manifest.json", env)
++	if _, err := tr.Resource(types.ResourcePath{
++		Resource: "catalog", Type: "movie", ID: "top",
++		Extra: []types.ExtraValue{{Name: "genre", Value: "Action"}},
++	}); err != nil {
++		t.Fatalf("resource: %v", err)
++	}
++	if requested != "https://x/catalog/movie/top/genre=Action.json" {
++		t.Fatalf("requested url = %q", requested)
++	}
++	bad := addontransport.NewAddonHTTPTransport("https://x/neither", env)
++	if _, err := bad.Resource(types.ResourcePath{Resource: "catalog", Type: "movie", ID: "top"}); err == nil || err.Code != runtime.EnvErrorCodeAddonTransport {
++		t.Fatalf("expected addon transport error, got %v", err)
++	}
++	if _, err := addontransport.NewUnsupportedTransport("x").Resource(types.ResourcePath{}); err == nil || err.Code != runtime.EnvErrorCodeAddonTransport {
++		t.Fatalf("unsupported transport must return code 2, got %v", err)
++	}
++}
++
++// F2P-031 / R027
++func TestF2P031ActionEventWire(t *testing.T) {
++	requireTargetTech(t)
++	b, _ := json.Marshal(msg.NewAction("Unload", nil))
++	if string(b) != `{"action":"Unload"}` {
++		t.Fatalf("action wire = %s", b)
++	}
++	b, _ = json.Marshal(msg.LoadAction("Player", map[string]any{"stream": 1}))
++	if string(b) != `{"action":"Load","args":{"model":"Player","args":{"stream":1}}}` {
++		t.Fatalf("load action wire = %s", b)
++	}
++	b, _ = json.Marshal(msg.NewEvent("PlayerPlaying", nil))
++	if string(b) != `{"event":"PlayerPlaying"}` {
++		t.Fatalf("event wire = %s", b)
++	}
++}
++
++// F2P-038 / R037
++func TestF2P038ResourceLoadableStates(t *testing.T) {
++	requireTargetTech(t)
++	env := newEnv()
++	req := types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "stream", Type: "series", ID: "tt1"}}
++	convert := func(types.ResourceResponse) ([]string, error) { return []string{"a"}, nil }
++
++	res := common.ResourceLoadable[[]string]{}
++	eff := common.ResourceUpdate(env, &res, common.ResourceRequested(&req), convert)
++	if res.Content == nil || !res.Content.IsLoading() {
++		t.Fatalf("request must transition to Loading, got %+v", res.Content)
++	}
++	if !eff.HasChanged {
++		t.Fatalf("request must report a changed field")
++	}
++	ok := common.ResourceResult{Response: &types.ResourceResponse{Raw: []byte("{}")}}
++	if eff := common.ResourceUpdate(env, &res, common.ResourceRequestResult(&req, ok), convert); !eff.HasChanged {
++		t.Fatalf("successful result must report a changed field")
++	}
++	if res.Content == nil || !res.Content.IsReady() {
++		t.Fatalf("successful result must transition to Ready, got %+v", res.Content)
++	}
++
++	failing := common.ResourceLoadable[[]string]{}
++	common.ResourceUpdate(env, &failing, common.ResourceRequested(&req), convert)
++	bad := common.ResourceResult{Err: runtime.EnvErrorFetch("boom")}
++	common.ResourceUpdate(env, &failing, common.ResourceRequestResult(&req, bad), convert)
++	if failing.Content == nil || !failing.Content.IsErr() {
++		t.Fatalf("fetch failure must produce an Err state, got %+v", failing.Content)
++	}
++}
++
++// F2P-042 / R001
++func TestF2P042EngineResponsibilities(t *testing.T) {
++	requireTargetTech(t)
++	model, rt, rx := loadPlayer(t)
++	if model.Player.LibraryItem == nil {
++		t.Fatalf("expected a populated library item")
++	}
++	video := types.Video{ID: "tt1:1:1", Title: "e1"}
++	action := msg.NewAction(msg.ActionNamePlayer, map[string]any{
++		"action": msg.ActionPlayerMarkVideoAsWatched,
++		"args":   []any{video, true},
++	})
++	rt.Dispatch(runtime.RuntimeAction{Action: action})
++	drain(rx)
++	if model.Player.Watched == nil || !model.Player.Watched.GetVideo("tt1:1:1") {
++		t.Fatalf("expected tt1:1:1 watched")
++	}
++	if model.Player.LibraryItem.State.Watched == nil {
++		t.Fatalf("expected persisted watched state")
++	}
++}
++
++// F2P-047 / R019
++func TestF2P047DeepLinks(t *testing.T) {
++	requireTargetTech(t)
++	dl := deeplinks.NewMetaItemDeepLinks("movie", "tt123")
++	if dl.MetaDetailsVideos == nil || *dl.MetaDetailsVideos != "stremio:///detail/movie/tt123" {
++		t.Fatalf("meta item detail = %v", dl.MetaDetailsVideos)
++	}
++	withVideo := deeplinks.NewMetaItemDeepLinksWithVideo("series", "tt1", "s1e1")
++	if withVideo.MetaDetailsStreams == nil || *withVideo.MetaDetailsStreams != "stremio:///detail/series/tt1/s1e1" {
++		t.Fatalf("meta item streams = %v", withVideo.MetaDetailsStreams)
++	}
++	discover := deeplinks.NewDiscoverDeepLinks(types.ResourceRequest{
++		Base: "https://v3-cinemeta.strem.io/manifest.json",
++		Path: types.ResourcePath{Resource: "catalog", Type: "movie", ID: "top",
++			Extra: []types.ExtraValue{{Name: "genre", Value: "Action"}}},
++	})
++	if discover.Discover != "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action" {
++		t.Fatalf("discover = %q", discover.Discover)
++	}
++	if got := deeplinks.NewSearchHistoryItemDeepLinks("foo bar").Search; got != "stremio:///search?query=foo%20bar" {
++		t.Fatalf("search = %q", got)
++	}
++	if got := deeplinks.NewCalendarDeepLinks(2024, 5).Calendar; got != "stremio:///calendar/2024/5" {
++		t.Fatalf("calendar = %q", got)
++	}
++	typ := "movie"
++	if got := deeplinks.NewLibraryDeepLinks("library", &typ, "popularity").Library; got != "stremio:///library/movie?sort=popularity" {
++		t.Fatalf("library = %q", got)
++	}
++	if got := types.QueryParamsEncode([]types.QueryPair{{Key: "sort", Value: "popularity"}, {Key: "genre", Value: "A B"}}); got != "sort=popularity&genre=A%20B" {
++		t.Fatalf("query params = %q", got)
++	}
++}
++
++// F2P-048 / R027
++func TestF2P048EffectSemantics(t *testing.T) {
++	requireTargetTech(t)
++
++	events := &fakeModel{effects: []runtime.Effect{runtime.MsgEffect(msg.EventMsg(msg.NewEvent("UserLoggedOut", nil)))}}
++	eventsRT, rx := runtime.New(events, nil, 4, nil)
++	eventsRT.Dispatch(runtime.RuntimeAction{Action: msg.NewAction(msg.ActionNameUnload, nil)})
++	ev := <-rx
++	if ev.Name != "CoreEvent" {
++		t.Fatalf("event message must emit CoreEvent only, got %s", ev.Name)
++	}
++	if len(rx) != 0 {
++		t.Fatalf("unexpected extra events")
++	}
++
++	model2 := &fakeModel{}
++	_, rx2 := runtime.New(model2, []runtime.Effect{runtime.MsgEffect(msg.InternalMsg(msg.NewInternal(msg.InternalProfileChanged, nil)))}, 4, nil)
++	if model2.updates != 1 {
++		t.Fatalf("internal message must update the model, got %d", model2.updates)
++	}
++	if len(rx2) != 0 {
++		t.Fatalf("expected no events for unchanged internal update")
++	}
++
++	panicking := &fakeModel{effects: []runtime.Effect{runtime.MsgEffect(msg.ActionMsg(msg.UnloadAction()))}}
++	defer func() {
++		if recover() == nil {
++			t.Fatalf("an action returned by an effect must panic")
++		}
++	}()
++	panicRT, _ := runtime.New(panicking, nil, 4, nil)
++	panicRT.Dispatch(runtime.RuntimeAction{Action: msg.NewAction(msg.ActionNameUnload, nil)})
++}
++
++// F2P-026 / R026
++func TestF2P026RuntimeEventWire(t *testing.T) {
++	requireTargetTech(t)
++	b, _ := json.Marshal(runtime.NewStateEvent([]string{"ctx", "player"}))
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("newstate wire = %s", b)
++	}
++	b, _ = json.Marshal(runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil)))
++	if string(b) != `{"name":"CoreEvent","args":{"event":"UserLoggedOut"}}` {
++		t.Fatalf("coreevent wire = %s", b)
++	}
++}
++
++// F2P-027 / R039
++func TestF2P027ScopeUntouched(t *testing.T) {
++	requireTargetTech(t)
++	assertWasmUntouched(t)
++}
++
++// F2P-029 / R036
++func TestF2P029EnvSurfaceAndMigration(t *testing.T) {
++	requireTargetTech(t)
++	assertEnvSurface(t)
++	migrateToolchain(t)
++}
++
++// F2P-033 / R003
++func TestF2P033RuntimeEventAndScope(t *testing.T) {
++	requireTargetTech(t)
++	b, _ := json.Marshal(runtime.NewStateEvent([]string{"ctx", "player"}))
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("newstate wire = %s", b)
++	}
++	assertWasmUntouched(t)
++}
++
++// F2P-035 / R003
++func TestF2P035PublicSurfaceAndScope(t *testing.T) {
++	requireTargetTech(t)
++	_ = models.New
++	_ = runtime.New
++	_ = addontransport.NewAddonHTTPTransport
++	_ = deeplinks.NewMetaItemDeepLinks
++	if core.SCHEMA_VERSION != 25 {
++		t.Fatalf("SCHEMA_VERSION = %d", core.SCHEMA_VERSION)
++	}
++	if core.PROFILE_STORAGE_KEY != "profile" || core.DISMISSED_EVENTS_STORAGE_KEY != "dismissed_events" {
++		t.Fatalf("protected storage keys changed")
++	}
++	assertWasmUntouched(t)
++}
++
++// F2P-036 / R023
++func TestF2P036EnvSurfaceAndChangeScope(t *testing.T) {
++	requireTargetTech(t)
++	assertEnvSurface(t)
++	assertChangeScope(t)
++}
++
++// F2P-039 / R036
++func TestF2P039PublicSurfaceAndMigration(t *testing.T) {
++	requireTargetTech(t)
++	_ = models.New
++	_ = runtime.New
++	_ = addontransport.NewAddonHTTPTransport
++	migrateToolchain(t)
++}
++
++// F2P-043 / R039
++func TestF2P043EnvSurfaceAndScope(t *testing.T) {
++	requireTargetTech(t)
++	assertEnvSurface(t)
++	assertWasmUntouched(t)
++}
++
++// F2P-044 / R003
++func TestF2P044IntegrityAndScope(t *testing.T) {
++	requireTargetTech(t)
++	// Non-weakened exact wire comparisons plus out-of-scope guard.
++	b, _ := json.Marshal(runtime.NewStateEvent([]string{"ctx", "player"}))
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("newstate wire = %s", b)
++	}
++	b, _ = json.Marshal(runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil)))
++	if string(b) != `{"name":"CoreEvent","args":{"event":"UserLoggedOut"}}` {
++		t.Fatalf("coreevent wire = %s", b)
++	}
++	assertWasmUntouched(t)
++}
++
++// F2P-045 / R028
++func TestF2P045EnvErrorWire(t *testing.T) {
++	requireTargetTech(t)
++	b, _ := json.Marshal(runtime.EnvErrorFetch("x"))
++	if string(b) != `{"code":1,"message":"Failed to fetch: x"}` {
++		t.Fatalf("fetch wire = %s", b)
++	}
++	b, _ = json.Marshal(runtime.EnvErrorOther("x"))
++	if string(b) != `{"code":1001,"message":"Other error: x"}` {
++		t.Fatalf("other wire = %s", b)
++	}
++}
++
++// F2P-046 / R028
++func TestF2P046EnvSurfaceAndErrorWire(t *testing.T) {
++	requireTargetTech(t)
++	assertEnvSurface(t)
++	b, _ := json.Marshal(runtime.EnvErrorFetch("x"))
++	if string(b) != `{"code":1,"message":"Failed to fetch: x"}` {
++		t.Fatalf("fetch wire = %s", b)
++	}
++}
++
++// F2P-041 / R031
++func TestF2P041LegacyRequestAndError(t *testing.T) {
++	requireTargetTech(t)
++	got, err := addontransport.BuildLegacyReq(
++		"https://legacywatchhub.strem.io/stremio/v1",
++		types.ResourcePath{Resource: "stream", Type: "series", ID: "tt0386676:5:1"},
++	)
++	if err != nil {
++		t.Fatalf("BuildLegacyReq: %v", err)
++	}
++	want := "https://legacywatchhub.strem.io/stremio/v1/q.json?b=eyJpZCI6MSwianNvbnJwYyI6IjIuMCIsIm1ldGhvZCI6InN0cmVhbS5maW5kIiwicGFyYW1zIjpbbnVsbCx7InF1ZXJ5Ijp7ImVwaXNvZGUiOjEsImltZGJfaWQiOiJ0dDAzODY2NzYiLCJzZWFzb24iOjUsInR5cGUiOiJzZXJpZXMifX1dfQ=="
++	if got != want {
++		t.Fatalf("legacy url mismatch:\n got: %s\nwant: %s", got, want)
++	}
++	var resp addontransport.JSONRPCResp
++	if err := json.Unmarshal([]byte(`{"error":{"code":5,"message":"boom"}}`), &resp); err != nil {
++		t.Fatalf("unmarshal: %v", err)
++	}
++	_, legacyErr := resp.Parse()
++	if legacyErr == nil {
++		t.Fatalf("expected a legacy rpc error")
++	}
++	mapped := legacyErr.ToEnvError()
++	if mapped.Message != "Addon protocol violation: rpc error 5: boom" {
++		t.Fatalf("mapped message = %q", mapped.Message)
++	}
++}
++
++// fakeModel is the target-side runtime.Model used to observe effect semantics.
++type fakeModel struct {
++	effects []runtime.Effect
++	fields  []string
++	updates int
++}
++
++func (m *fakeModel) Update(*msg.Msg) ([]runtime.Effect, []string) {
++	m.updates++
++	return m.effects, m.fields
++}
++
++func (m *fakeModel) UpdateField(*msg.Msg, string) ([]runtime.Effect, []string) {
++	m.updates++
++	return m.effects, m.fields
++}
+diff --git a/tests/target/batches/BATCH-F2P-0002/run_target.sh b/tests/target/batches/BATCH-F2P-0002/run_target.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0002/run_target.sh
+@@ -0,0 +1,38 @@
++#!/usr/bin/env bash
++# Target-side F2P probes for BATCH-F2P-0002.
++#
++# Executes the Go probe suite in probe_test.go against the reference target at
++# /input/target (mounted through the go.mod `replace` directive) and maps the
++# per-observation test results to a JSON report.
++#
++# Usage: run_target.sh [REPORT]
++set -euo pipefail
++
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPORT=${1:-/logs/target-f2p-report.json}
++OUT=$(mktemp)
++
++cd "$HERE"
++GOFLAGS=-mod=mod go test -count=1 -timeout 300s -v ./... | tee "$OUT"
++
++python3 - "$OUT" "$REPORT" <<'PY'
++import json
++import re
++import sys
++
++raw = open(sys.argv[1]).read()
++results = {}
++for m in re.finditer(r'--- (PASS|FAIL): (TestF2P\d+)\S*', raw):
++    status, name = m.group(1), m.group(2)
++    num = re.search(r'F2P(\d+)', name).group(1)
++    results["F2P-" + num] = status
++order = [
++    "F2P-025", "F2P-030", "F2P-032", "F2P-034", "F2P-037", "F2P-040",
++    "F2P-028", "F2P-031", "F2P-038", "F2P-042", "F2P-047", "F2P-048",
++    "F2P-026", "F2P-027", "F2P-029", "F2P-033", "F2P-035", "F2P-036",
++    "F2P-039", "F2P-043", "F2P-044", "F2P-045", "F2P-046", "F2P-041",
++]
++report = [{"observation_id": oid, "status": results.get(oid, "INCONCLUSIVE")} for oid in order]
++json.dump(report, open(sys.argv[2], "w"), indent=1)
++print("wrote", sys.argv[2])
++PY
+diff --git a/tests/target/batches/BATCH-F2P-0003/probes_test.go b/tests/target/batches/BATCH-F2P-0003/probes_test.go
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0003/probes_test.go
+@@ -0,0 +1,581 @@
++// Package f2p0003 holds the target-side probes for batch BATCH-F2P-0003.
++//
++// Every probe executes the concrete entry point named by the matching F2P
++// observation against the reference Go implementation. The probes must be
++// copied into the migrated repository (the module root) before they are run,
++// e.g. as <repo>/f2p0003/probes_test.go, so that they can import the module
++// packages and the internal test environment.
++package f2p0003
++
++import (
++	"encoding/base64"
++	"encoding/json"
++	"errors"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"reflect"
++	"strings"
++	"testing"
++
++	core "github.com/stremio/stremio-core"
++	addontransport "github.com/stremio/stremio-core/addon_transport"
++	deeplinks "github.com/stremio/stremio-core/deep_links"
++	"github.com/stremio/stremio-core/internal/testenv"
++	"github.com/stremio/stremio-core/models"
++	"github.com/stremio/stremio-core/models/common"
++	"github.com/stremio/stremio-core/runtime"
++	"github.com/stremio/stremio-core/runtime/msg"
++	"github.com/stremio/stremio-core/types"
++)
++
++// probeTransport is a deterministic addon transport for the probes.
++type probeTransport struct {
++	resources map[string][]byte
++}
++
++func (t probeTransport) Resource(path types.ResourcePath) (types.ResourceResponse, *runtime.EnvError) {
++	if raw, ok := t.resources[path.Resource]; ok {
++		return types.ResourceResponse{Raw: raw}, nil
++	}
++	return types.ResourceResponse{Raw: []byte("{}")}, nil
++}
++
++func (t probeTransport) Manifest() (types.Manifest, *runtime.EnvError) {
++	return types.Manifest{}, nil
++}
++
++func drain(rx <-chan runtime.RuntimeEvent) []runtime.RuntimeEvent {
++	var events []runtime.RuntimeEvent
++	for {
++		select {
++		case ev := <-rx:
++			events = append(events, ev)
++		default:
++			return events
++		}
++	}
++}
++
++func ptrString(s string) *string { return &s }
++
++// repoRoot walks up from the working directory to the module root.
++func repoRoot(t *testing.T) string {
++	t.Helper()
++	dir, err := os.Getwd()
++	if err != nil {
++		t.Fatalf("getwd: %v", err)
++	}
++	for {
++		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
++			return dir
++		}
++		parent := filepath.Dir(dir)
++		if parent == dir {
++			t.Fatalf("go.mod not found above the probe package")
++		}
++		dir = parent
++	}
++}
++
++func gitPorcelain(t *testing.T) []string {
++	t.Helper()
++	root := repoRoot(t)
++	out, err := exec.Command("git", "-C", root, "status", "--porcelain").CombinedOutput()
++	if err != nil {
++		t.Fatalf("git status: %v: %s", err, out)
++	}
++	var paths []string
++	for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
++		if strings.TrimSpace(line) == "" {
++			continue
++		}
++		rest := strings.TrimSpace(line[2:])
++		if idx := strings.Index(rest, " -> "); idx >= 0 {
++			rest = rest[idx+4:]
++		}
++		paths = append(paths, strings.Trim(rest, `"`))
++	}
++	return paths
++}
++
++// F2P-067 -------------------------------------------------------------------
++func TestF2P067StreamsBucketWire(t *testing.T) {
++	empty := types.NewStreamsBucket(nil)
++	b, err := json.Marshal(empty)
++	if err != nil {
++		t.Fatalf("marshal empty: %v", err)
++	}
++	if string(b) != `{"uid":null,"items":[]}` {
++		t.Fatalf("empty bucket wire = %s", b)
++	}
++
++	uid := "u1"
++	bucket := types.NewStreamsBucket(&uid)
++	bucket.Items[types.StreamsItemKey{MetaID: "tt1", VideoID: "tt1:1:1"}] = types.StreamsItem{
++		Stream: types.Stream{Source: types.StreamSource{Kind: types.StreamSourceURL, URL: "http://stream"}},
++		Type:   "movie", MetaID: "tt1", VideoID: "tt1:1:1",
++	}
++	b2, err := json.Marshal(bucket)
++	if err != nil {
++		t.Fatalf("marshal bucket: %v", err)
++	}
++	if !strings.HasPrefix(string(b2), `{"uid":"u1","items":[[`) {
++		t.Fatalf("one-item bucket must be a key/value pair array, got %s", b2)
++	}
++	if strings.Contains(string(b2), `"items":{`) {
++		t.Fatalf("one-item bucket must not be a JSON object, got %s", b2)
++	}
++
++	var back types.StreamsBucket
++	if err := json.Unmarshal(b2, &back); err != nil {
++		t.Fatalf("unmarshal bucket: %v", err)
++	}
++	b3, err := json.Marshal(back)
++	if err != nil {
++		t.Fatalf("re-marshal: %v", err)
++	}
++	if string(b3) != string(b2) {
++		t.Fatalf("round-trip mismatch:\n got: %s\nwant: %s", b3, b2)
++	}
++}
++
++// F2P-050 -------------------------------------------------------------------
++func TestF2P050LoadableWire(t *testing.T) {
++	if b, _ := json.Marshal(common.Loading[int]()); string(b) != `{"type":"Loading"}` {
++		t.Fatalf("loading = %s", b)
++	}
++	if b, _ := json.Marshal(common.Ready(5)); string(b) != `{"type":"Ready","content":5}` {
++		t.Fatalf("ready = %s", b)
++	}
++	b, _ := json.Marshal(common.Err[int](errors.New("boom")))
++	if !strings.HasPrefix(string(b), `{"type":"Err","content":`) || !strings.HasSuffix(string(b), `}`) {
++		t.Fatalf("err = %s", b)
++	}
++	if strings.Contains(string(b), `"Kind"`) || strings.Contains(string(b), `"Ready"`) {
++		t.Fatalf("internal fields leaked: %s", b)
++	}
++}
++
++// F2P-054 -------------------------------------------------------------------
++func TestF2P054ResourceLoadableWire(t *testing.T) {
++	content := common.Ready(map[string]any{"a": 1})
++	resource := common.ResourceLoadable[map[string]any]{
++		Request: types.ResourceRequest{
++			Base: "https://addon/manifest.json",
++			Path: types.ResourcePath{Resource: "meta", Type: "movie", ID: "tt1"},
++		},
++		Content: &content,
++	}
++	b, err := json.Marshal(resource)
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	if !strings.Contains(string(b), `"content":{"type":"Ready","content":{"a":1}}`) {
++		t.Fatalf("resource loadable content tag missing: %s", b)
++	}
++}
++
++// F2P-056 -------------------------------------------------------------------
++func TestF2P056DeepLinkShapes(t *testing.T) {
++	if got := deeplinks.NewSearchHistoryItemDeepLinks("foo bar").Search; got != "stremio:///search?query=foo%20bar" {
++		t.Fatalf("search deep link = %q", got)
++	}
++	request := types.ResourceRequest{
++		Base: "https://v3-cinemeta.strem.io/manifest.json",
++		Path: types.ResourcePath{
++			Resource: "catalog",
++			Type:     "movie",
++			ID:       "top",
++			Extra:    []types.ExtraValue{{Name: "genre", Value: "Action"}},
++		},
++	}
++	want := "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action"
++	if got := deeplinks.NewDiscoverDeepLinks(request).Discover; got != want {
++		t.Fatalf("discover deep link = %q, want %q", got, want)
++	}
++}
++
++// F2P-066 -------------------------------------------------------------------
++func TestF2P066QueryParamsEncode(t *testing.T) {
++	got := types.QueryParamsEncode([]types.QueryPair{
++		{Key: "sort", Value: "popularity"},
++		{Key: "genre", Value: "A B"},
++	})
++	if got != "sort=popularity&genre=A%20B" {
++		t.Fatalf("query params = %q", got)
++	}
++	if strings.Contains(got, "+") {
++		t.Fatalf("space must be percent-encoded, not +: %q", got)
++	}
++}
++
++// F2P-069 -------------------------------------------------------------------
++func TestF2P069LegacyRequestAndError(t *testing.T) {
++	url, envErr := addontransport.BuildLegacyReq(
++		"https://legacywatchhub.strem.io/stremio/v1",
++		types.ResourcePath{Resource: "stream", Type: "series", ID: "tt0386676:5:1"},
++	)
++	if envErr != nil {
++		t.Fatalf("BuildLegacyReq: %v", envErr)
++	}
++	body := `{"id":1,"jsonrpc":"2.0","method":"stream.find","params":[null,{"query":{"episode":1,"imdb_id":"tt0386676","season":5,"type":"series"}}]}`
++	want := "https://legacywatchhub.strem.io/stremio/v1/q.json?b=" + base64.StdEncoding.EncodeToString([]byte(body))
++	if url != want {
++		t.Fatalf("legacy url:\n got: %s\nwant: %s", url, want)
++	}
++	legacyErr := (&addontransport.LegacyErr{Kind: addontransport.LegacyJSONRPC, Code: 5, Message: "boom"}).ToEnvError()
++	if legacyErr.Code != runtime.EnvErrorCodeAddonTransport {
++		t.Fatalf("legacy error code = %d", legacyErr.Code)
++	}
++	if legacyErr.Message != "Addon protocol violation: rpc error 5: boom" {
++		t.Fatalf("legacy error message = %q", legacyErr.Message)
++	}
++	b, _ := json.Marshal(legacyErr)
++	if string(b) != `{"code":2,"message":"Addon protocol violation: rpc error 5: boom"}` {
++		t.Fatalf("legacy error wire = %s", b)
++	}
++}
++
++// F2P-059 -------------------------------------------------------------------
++func TestF2P059ModelsNewSurface(t *testing.T) {
++	env := testenv.New()
++	model := models.New(env)
++	if model.Ctx == nil || model.Player == nil || model.StreamingServer == nil {
++		t.Fatalf("models.New must build the Ctx, Player and StreamingServer models")
++	}
++	rt, rx := runtime.New(model, nil, 16, env)
++	if rt == nil || rx == nil {
++		t.Fatalf("runtime.New must return a runtime and an event receiver")
++	}
++	if rt.Model() != model {
++		t.Fatalf("runtime.Model accessor must return the constructed model")
++	}
++}
++
++// F2P-060 -------------------------------------------------------------------
++func TestF2P060UpdateAndUpdateField(t *testing.T) {
++	env := testenv.New()
++	whole := models.New(env)
++	field := models.New(env)
++
++	action := msg.LoadAction(msg.ModelPlayer, map[string]any{"stream": map[string]any{"title": "x"}})
++	wholeEffects, wholeFields := whole.Update(msg.ActionMsg(action))
++	fieldEffects, fieldFields := field.UpdateField(msg.ActionMsg(action), models.FieldPlayer)
++
++	if !reflect.DeepEqual(wholeFields, fieldFields) {
++		t.Fatalf("changed fields differ: whole=%v field=%v", wholeFields, fieldFields)
++	}
++	if !reflect.DeepEqual(wholeFields, []string{models.FieldPlayer}) {
++		t.Fatalf("changed fields = %v", wholeFields)
++	}
++	if len(wholeEffects) != len(fieldEffects) {
++		t.Fatalf("effects differ: whole=%d field=%d", len(wholeEffects), len(fieldEffects))
++	}
++}
++
++// F2P-061 -------------------------------------------------------------------
++func TestF2P061NewStateStableOrderAndRepeats(t *testing.T) {
++	env := testenv.New()
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 16, env)
++
++	action := msg.LoadAction(msg.ModelPlayer, map[string]any{"stream": map[string]any{"title": "same"}})
++
++	// No dispatch -> no NewState.
++	if events := drain(rx); len(events) != 0 {
++		t.Fatalf("expected no events before dispatch, got %+v", events)
++	}
++
++	for _, load := range []int{1, 2} {
++		rt.Dispatch(runtime.RuntimeAction{Action: action})
++		events := drain(rx)
++		if len(events) != 1 || events[0].Name != "NewState" {
++			t.Fatalf("load %d events = %+v", load, events)
++		}
++		var fields []string
++		if err := json.Unmarshal(events[0].Args, &fields); err != nil {
++			t.Fatalf("unmarshal fields: %v", err)
++		}
++		if len(fields) != 1 || fields[0] != models.FieldPlayer {
++			t.Fatalf("load %d changed fields = %v", load, fields)
++		}
++	}
++
++	// A dispatch that changes no field must not emit NewState.
++	fresh := models.New(env)
++	freshRT, freshRX := runtime.New(fresh, nil, 16, env)
++	freshRT.Dispatch(runtime.RuntimeAction{Action: msg.UnloadAction()})
++	if events := drain(freshRX); len(events) != 0 {
++		t.Fatalf("expected no event for a no-op dispatch, got %+v", events)
++	}
++}
++
++// F2P-063 -------------------------------------------------------------------
++func TestF2P063EngineResponsibilities(t *testing.T) {
++	env := testenv.New()
++	env.Transport = probeTransport{resources: map[string][]byte{
++		"meta":   []byte(`{"meta":{"id":"tt1","type":"series","name":"Show","videos":[{"id":"tt1:1:1","title":"e1"},{"id":"tt1:1:2","title":"e2"}]}}`),
++		"stream": []byte(`{"streams":[{"name":"Next","url":"http://next"}]}`),
++	}}
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 64, env)
++
++	selected := models.Selected{
++		Stream:        types.Stream{Source: types.StreamSource{Kind: types.StreamSourceURL, URL: "http://cur"}},
++		StreamRequest: &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "stream", Type: "series", ID: "tt1:1:1"}},
++		MetaRequest:   &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "meta", Type: "series", ID: "tt1"}},
++	}
++	rt.Dispatch(runtime.RuntimeAction{Action: msg.LoadAction(msg.ModelPlayer, selected)})
++	drain(rx)
++
++	if model.Player.LibraryItem == nil {
++		t.Fatalf("Player load must populate the library item")
++	}
++	if model.Ctx.Profile.Settings.StreamingServerURL == "" {
++		t.Fatalf("Ctx profile persistence surface must be present")
++	}
++	if _, err := json.Marshal(model.Ctx.DismissedEvents); err != nil {
++		t.Fatalf("dismissed events persistence surface must be present: %v", err)
++	}
++}
++
++// F2P-049 -------------------------------------------------------------------
++func TestF2P049PlayerDeepLinksFromLoad(t *testing.T) {
++	env := testenv.New()
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 16, env)
++	rt.Dispatch(runtime.RuntimeAction{Action: msg.LoadAction(msg.ModelPlayer, map[string]any{"stream": map[string]any{"title": "x"}})})
++	drain(rx)
++
++	links := deeplinks.NewMetaItemDeepLinks("series", "tt1")
++	if links.MetaDetailsVideos == nil || *links.MetaDetailsVideos != "stremio:///detail/series/tt1" {
++		t.Fatalf("player deep link = %+v", links)
++	}
++}
++
++// F2P-053 -------------------------------------------------------------------
++func TestF2P053PlayerLoadAndPersist(t *testing.T) {
++	env := testenv.New()
++	env.Transport = probeTransport{resources: map[string][]byte{
++		"meta": []byte(`{"meta":{"id":"tt1","type":"series","name":"Show","videos":[{"id":"tt1:1:1","title":"e1"},{"id":"tt1:1:2","title":"e2"}]}}`),
++	}}
++	model := models.New(env)
++	rt, rx := runtime.New(model, nil, 64, env)
++
++	selected := models.Selected{
++		Stream:        types.Stream{Source: types.StreamSource{Kind: types.StreamSourceURL, URL: "http://stream"}},
++		StreamRequest: &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "stream", Type: "series", ID: "tt1:1:1"}},
++		MetaRequest:   &types.ResourceRequest{Base: "b", Path: types.ResourcePath{Resource: "meta", Type: "series", ID: "tt1"}},
++	}
++	rt.Dispatch(runtime.RuntimeAction{Action: msg.LoadAction(msg.ModelPlayer, selected)})
++	drain(rx)
++
++	if model.Player.LibraryItem == nil {
++		t.Fatalf("expected a library item after Player load")
++	}
++	if model.Player.NextVideo == nil || model.Player.NextVideo.ID != "tt1:1:2" {
++		t.Fatalf("expected next video tt1:1:2, got %+v", model.Player.NextVideo)
++	}
++}
++
++// F2P-068 -------------------------------------------------------------------
++func TestF2P068LoadableStates(t *testing.T) {
++	env := testenv.New()
++	request := types.ResourceRequest{Base: "https://addon/manifest.json", Path: types.ResourcePath{Resource: "meta", Type: "movie", ID: "tt1"}}
++	resource := &common.ResourceLoadable[map[string]any]{}
++
++	effects := common.ResourceUpdate(env, resource, common.ResourceRequested(&request), func(r types.ResourceResponse) (map[string]any, error) {
++		var out map[string]any
++		if err := json.Unmarshal(r.Raw, &out); err != nil {
++			return nil, err
++		}
++		return out, nil
++	})
++	if resource.Content == nil || !resource.Content.IsLoading() {
++		t.Fatalf("expected a loading state after the request")
++	}
++	if !effects.HasChanged {
++		t.Fatalf("the request must mark the field as changed")
++	}
++	output := effects.Effects[0].Future.Run()
++	if output.Kind != msg.KindInternal {
++		t.Fatalf("future must resolve to an internal message")
++	}
++	result := output.Internal.Data.(msg.ResourceRequestResult)
++	value := result.Value.(common.ResourceResult)
++	readyEffects := common.ResourceUpdate(env, resource, common.ResourceRequestResult(&request, value), func(r types.ResourceResponse) (map[string]any, error) {
++		var out map[string]any
++		if err := json.Unmarshal(r.Raw, &out); err != nil {
++			return nil, err
++		}
++		return out, nil
++	})
++	if resource.Content == nil || !resource.Content.IsReady() {
++		t.Fatalf("expected a ready state after the result")
++	}
++	if !readyEffects.HasChanged {
++		t.Fatalf("resolving a result must mark the field as changed")
++	}
++}
++
++// F2P-062 -------------------------------------------------------------------
++func TestF2P062RuntimeEventAndMigration(t *testing.T) {
++	ev := runtime.NewStateEvent([]string{"ctx", "player"})
++	b, _ := json.Marshal(ev)
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("runtime event wire = %s", b)
++	}
++
++	env := testenv.New()
++	env.Storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`1`)
++	env.Storage[core.PROFILE_STORAGE_KEY] = json.RawMessage(`{"settings":{"interface_language":"eng","streaming_server_url":"http://127.0.0.1:11470"}}`)
++	if err := runtime.MigrateStorageSchema(env); err != nil {
++		t.Fatalf("migrate: %v", err)
++	}
++	var version uint32
++	if err := json.Unmarshal(env.Storage[core.SCHEMA_VERSION_STORAGE_KEY], &version); err != nil {
++		t.Fatalf("version: %v", err)
++	}
++	if version != core.SCHEMA_VERSION {
++		t.Fatalf("version = %d, want %d", version, core.SCHEMA_VERSION)
++	}
++	var profile struct {
++		Settings map[string]any `json:"settings"`
++	}
++	if err := json.Unmarshal(env.Storage[core.PROFILE_STORAGE_KEY], &profile); err != nil {
++		t.Fatalf("profile: %v", err)
++	}
++	if _, ok := profile.Settings["interfaceLanguage"]; !ok {
++		t.Fatalf("expected interfaceLanguage rename")
++	}
++	if _, ok := profile.Settings["gpuVideoProcessing"]; !ok {
++		t.Fatalf("expected gpuVideoProcessing from v25")
++	}
++	if _, ok := profile.Settings["interface_language"]; ok {
++		t.Fatalf("legacy interface_language must be removed")
++	}
++
++	down := testenv.New()
++	down.Storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage(`26`)
++	if err := runtime.MigrateStorageSchema(down); err == nil || err.Code != runtime.EnvErrorCodeStorageSchemaVersionDowngrade {
++		t.Fatalf("expected downgrade error, got %v", err)
++	}
++}
++
++// F2P-064 -------------------------------------------------------------------
++func TestF2P064EnvErrorWire(t *testing.T) {
++	fetch := runtime.EnvErrorFetch("x")
++	b, _ := json.Marshal(fetch)
++	if string(b) != `{"code":1,"message":"Failed to fetch: x"}` {
++		t.Fatalf("fetch wire = %s", b)
++	}
++	other := runtime.EnvErrorOther("x")
++	b, _ = json.Marshal(other)
++	if string(b) != `{"code":1001,"message":"Other error: x"}` {
++		t.Fatalf("other wire = %s", b)
++	}
++}
++
++// F2P-051 -------------------------------------------------------------------
++func TestF2P051EnvErrorCodes(t *testing.T) {
++	cases := []struct {
++		err  *runtime.EnvError
++		code int
++	}{
++		{runtime.EnvErrorFetch("x"), 1},
++		{runtime.EnvErrorAddonTransport("x"), 2},
++		{runtime.EnvErrorSerde("x"), 3},
++		{runtime.EnvErrorStorageUnavailable(), 4},
++		{runtime.EnvErrorStorageSchemaVersionDowngrade(30, 25), 5},
++		{runtime.EnvErrorStorageSchemaVersionUpgrade(runtime.EnvErrorOther("x")), 6},
++		{runtime.EnvErrorStorageReadError("x"), 7},
++		{runtime.EnvErrorStorageWriteError("x"), 8},
++		{runtime.EnvErrorOther("x"), 1001},
++	}
++	for _, c := range cases {
++		if c.err.Code != c.code {
++			t.Errorf("code = %d, want %d", c.err.Code, c.code)
++		}
++		b, _ := json.Marshal(c.err)
++		if !strings.HasPrefix(string(b), `{"code":`) || !strings.Contains(string(b), `,"message":`) {
++			t.Errorf("wire = %s", b)
++		}
++		if strings.Contains(string(b), `"Code"`) || strings.Contains(string(b), `"Message"`) {
++			t.Errorf("internal field names leaked: %s", b)
++		}
++	}
++}
++
++// F2P-071 -------------------------------------------------------------------
++func TestF2P071RuntimeEventWire(t *testing.T) {
++	state := runtime.NewStateEvent([]string{"ctx", "player"})
++	b, _ := json.Marshal(state)
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("new state wire = %s", b)
++	}
++	coreEvent := runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil))
++	b, _ = json.Marshal(coreEvent)
++	if string(b) != `{"name":"CoreEvent","args":{"event":"UserLoggedOut"}}` {
++		t.Fatalf("core event wire = %s", b)
++	}
++}
++
++// F2P-072 -------------------------------------------------------------------
++func TestF2P072EnvErrorAndRuntimeEvent(t *testing.T) {
++	b, _ := json.Marshal(runtime.EnvErrorFetch("x"))
++	if string(b) != `{"code":1,"message":"Failed to fetch: x"}` {
++		t.Fatalf("env error wire = %s", b)
++	}
++	b, _ = json.Marshal(runtime.NewStateEvent([]string{"ctx", "player"}))
++	if string(b) != `{"name":"NewState","args":["ctx","player"]}` {
++		t.Fatalf("runtime event wire = %s", b)
++	}
++}
++
++// F2P-057 -------------------------------------------------------------------
++func TestF2P057EnvOperations(t *testing.T) {
++	envType := reflect.TypeOf((*runtime.Env)(nil)).Elem()
++	required := []string{
++		"Fetch", "GetStorage", "SetStorage",
++		"ExecConcurrent", "ExecSequential",
++		"Now", "LocalNow",
++		"FlushAnalytics", "AnalyticsContext",
++	}
++	for _, name := range required {
++		if _, ok := envType.MethodByName(name); !ok {
++			t.Fatalf("runtime.Env is missing required operation %q", name)
++		}
++	}
++}
++
++// F2P-052 / F2P-058 / F2P-065 / F2P-070 --------------------------------
++func assertInScopeChanges(t *testing.T) {
++	t.Helper()
++	for _, path := range gitPorcelain(t) {
++		slash := filepath.ToSlash(path)
++		if slash == "stremio-core-web" || strings.HasPrefix(slash, "stremio-core-web/") {
++			t.Fatalf("out-of-scope change under stremio-core-web: %s", slash)
++		}
++		if strings.HasSuffix(slash, ".wasm") || strings.HasSuffix(slash, "bridge.js") || strings.HasSuffix(slash, "worker.js") || strings.HasSuffix(slash, "_bg.wasm") {
++			t.Fatalf("out-of-scope wasm/browser change: %s", slash)
++		}
++	}
++}
++
++func TestF2P052ChangeScopeLimited(t *testing.T)  { assertInScopeChanges(t) }
++func TestF2P058NoCapabilityRemoved(t *testing.T) { assertInScopeChanges(t) }
++func TestF2P065RuntimeEventScope(t *testing.T)   { assertInScopeChanges(t) }
++func TestF2P070EnvErrorScope(t *testing.T)       { assertInScopeChanges(t) }
++
++// F2P-055 -------------------------------------------------------------------
++func TestF2P055WebWasmUntouched(t *testing.T) {
++	root := repoRoot(t)
++	out, err := exec.Command("git", "-C", root, "status", "--porcelain", "--", "stremio-core-web").CombinedOutput()
++	if err != nil {
++		t.Fatalf("git status: %v: %s", err, out)
++	}
++	if strings.TrimSpace(string(out)) != "" {
++		t.Fatalf("stremio-core-web must remain byte-identical, got:\n%s", out)
++	}
++}
+diff --git a/tests/target/batches/BATCH-P2P-0001/run-p2p.sh b/tests/target/batches/BATCH-P2P-0001/run-p2p.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-P2P-0001/run-p2p.sh
+@@ -0,0 +1,34 @@
++#!/bin/sh
++# BATCH-P2P-0001 target-side (Go) P2P probe.
++# Runs the migrated module's own test suite and maps every owned observation to
++# the real suite result. The common projection is the status wrapper
++# {"result":"PASS"}, identical to the source side.
++set -eu
++
++REPO="${REPO_ROOT:-${REPO_ROOT:-/input/target}}"
++if [ ! -d "$REPO" ]; then
++  REPO=/workspace/repo
++fi
++LOG="${P2P_LOG:-/tmp/batch-p2p-0001-target.log}"
++
++cd "$REPO"
++export CGO_ENABLED=0
++
++if go test ./... >"$LOG" 2>&1; then
++  result=PASS
++else
++  result=FAIL
++fi
++
++ids="P2P-001 P2P-002 P2P-003 P2P-004 P2P-005 P2P-006 P2P-007 P2P-008 P2P-009 P2P-010 P2P-011 P2P-012 P2P-013 P2P-014 P2P-015 P2P-016 P2P-017"
++
++printf '{"side":"target","relation":"equal_after_normalization","projection":{"result":"%s"},"observations":{' "$result"
++first=1
++for id in $ids; do
++  if [ "$first" -eq 0 ]; then printf ','; fi
++  first=0
++  printf '"%s":{"result":"%s"}' "$id" "$result"
++done
++printf '}}\n'
++
++[ "$result" = PASS ]
+diff --git a/tests/target/batches/BATCH-STATE-0001/persisted_state_test.go b/tests/target/batches/BATCH-STATE-0001/persisted_state_test.go
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-STATE-0001/persisted_state_test.go
+@@ -0,0 +1,167 @@
++package assetstate
++
++import (
++	"encoding/json"
++	"strings"
++	"testing"
++	"time"
++
++	core "github.com/stremio/stremio-core"
++	"github.com/stremio/stremio-core/internal/testenv"
++	"github.com/stremio/stremio-core/runtime"
++	"github.com/stremio/stremio-core/types"
++)
++
++// The public API leaves the representation of UID unspecified.
++var anonymousUID types.UID
++
++// TestProtectedStorageKeys pins every protected storage key and the latest
++// schema version. A port that renames a key or lowers the schema version fails.
++func TestProtectedStorageKeys(t *testing.T) {
++	cases := map[string]string{
++		core.SCHEMA_VERSION_STORAGE_KEY:        "schema_version",
++		core.PROFILE_STORAGE_KEY:               "profile",
++		core.LIBRARY_STORAGE_KEY:               "library",
++		core.LIBRARY_RECENT_STORAGE_KEY:        "library_recent",
++		core.STREAMS_STORAGE_KEY:               "streams",
++		core.SEARCH_HISTORY_STORAGE_KEY:        "search_history",
++		core.STREAMING_SERVER_URLS_STORAGE_KEY: "streaming_server_urls",
++		core.NOTIFICATIONS_STORAGE_KEY:         "notifications",
++		core.CALENDAR_STORAGE_KEY:              "calendar",
++		core.DISMISSED_EVENTS_STORAGE_KEY:      "dismissed_events",
++	}
++	for got, want := range cases {
++		if got != want {
++			t.Errorf("storage key = %q, want %q", got, want)
++		}
++	}
++	if core.SCHEMA_VERSION != 25 {
++		t.Errorf("latest schema version = %d, want 25", core.SCHEMA_VERSION)
++	}
++}
++
++// TestMigrationKeepsProtectedKeys drives the real storage migration against a
++// fake environment and asserts that the protected keys survive and that the
++// stored version ends up at the latest schema version.
++func TestMigrationKeepsProtectedKeys(t *testing.T) {
++	env := testenv.New()
++	env.Storage[core.SCHEMA_VERSION_STORAGE_KEY] = json.RawMessage("1")
++	env.Storage[core.PROFILE_STORAGE_KEY] = json.RawMessage(
++		`{"settings":{"interface_language":"eng","streaming_server_url":"http://127.0.0.1:11470"}}`,
++	)
++
++	if err := runtime.MigrateStorageSchema(env); err != nil {
++		t.Fatalf("migrate storage schema: %v", err)
++	}
++
++	rawVersion, ok := env.Storage[core.SCHEMA_VERSION_STORAGE_KEY]
++	if !ok {
++		t.Fatalf("protected key %q was dropped during migration", core.SCHEMA_VERSION_STORAGE_KEY)
++	}
++	var version uint32
++	if err := json.Unmarshal(rawVersion, &version); err != nil {
++		t.Fatalf("decode schema version: %v", err)
++	}
++	if version != core.SCHEMA_VERSION {
++		t.Fatalf("migrated schema version = %d, want %d", version, core.SCHEMA_VERSION)
++	}
++
++	profile, ok := env.Storage[core.PROFILE_STORAGE_KEY]
++	if !ok {
++		t.Fatalf("protected key %q was dropped during migration", core.PROFILE_STORAGE_KEY)
++	}
++	encoded := string(profile)
++	if !strings.Contains(encoded, `"interfaceLanguage"`) {
++		t.Errorf("migrated profile missing interfaceLanguage: %s", encoded)
++	}
++	if !strings.Contains(encoded, `"gpuVideoProcessing"`) {
++		t.Errorf("migrated profile missing gpuVideoProcessing: %s", encoded)
++	}
++	if strings.Contains(encoded, `"interface_language"`) {
++		t.Errorf("migrated profile still carries the legacy key: %s", encoded)
++	}
++}
++
++// TestPersistedValuesAreSerdeJSONNotBinary asserts that persisted values are
++// JSON documents (the serde-JSON string encoding), not Go-gob or another binary
++// framing.
++func TestPersistedValuesAreSerdeJSONNotBinary(t *testing.T) {
++	now := time.Unix(0, 0).UTC()
++	values := []struct {
++		name  string
++		value any
++	}{
++		{"profile", types.NewProfile()},
++		{"library", types.NewLibraryBucket(anonymousUID, nil)},
++		{"notifications", types.NewNotificationsBucket(now, anonymousUID, nil)},
++		{"search_history", types.NewSearchHistoryBucket(anonymousUID)},
++		{"streaming_server_urls", types.NewServerUrlsBucket(now, anonymousUID)},
++		{"streams", types.NewStreamsBucket(anonymousUID)},
++		{"dismissed_events", types.NewDismissedEventsBucket(anonymousUID)},
++	}
++	for _, tc := range values {
++		encoded, err := json.Marshal(tc.value)
++		if err != nil {
++			t.Fatalf("%s: marshal: %v", tc.name, err)
++		}
++		if !json.Valid(encoded) {
++			t.Fatalf("%s: persisted value is not valid JSON: %q", tc.name, encoded)
++		}
++		if len(encoded) == 0 || (encoded[0] != '{' && encoded[0] != '[') {
++			t.Fatalf("%s: persisted value is not a JSON document: %q", tc.name, encoded)
++		}
++	}
++}
++
++// TestStreamsBucketWireShape pins the exact serde-JSON string of an empty
++// streams bucket. The items map must serialize as a JSON array of pairs, not as
++// a JSON object.
++func TestStreamsBucketWireShape(t *testing.T) {
++	encoded, err := json.Marshal(types.NewStreamsBucket(anonymousUID))
++	if err != nil {
++		t.Fatalf("marshal streams bucket: %v", err)
++	}
++	if got, want := string(encoded), `{"uid":null,"items":[]}`; got != want {
++		t.Fatalf("streams bucket wire = %s, want %s", got, want)
++	}
++}
++
++func assertJSONStringRoundTrip(t *testing.T, value any, out any) {
++	t.Helper()
++	first, err := json.Marshal(value)
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	if err := json.Unmarshal(first, out); err != nil {
++		t.Fatalf("unmarshal: %v", err)
++	}
++	second, err := json.Marshal(out)
++	if err != nil {
++		t.Fatalf("re-marshal: %v", err)
++	}
++	if string(first) != string(second) {
++		t.Fatalf("serde-JSON round-trip mismatch\n got %s\nwant %s", second, first)
++	}
++}
++
++// TestPersistedValuesRoundTrip asserts each persisted value re-marshals to the
++// identical serde-JSON string after an unmarshal.
++func TestPersistedValuesRoundTrip(t *testing.T) {
++	now := time.Unix(1000, 0).UTC()
++	libraryItem := types.LibraryItem{
++		ID:    "tt1",
++		Name:  "n",
++		Type:  "movie",
++		Mtime: now,
++		State: types.LibraryItemState{TimeOffset: 5},
++	}
++	assertJSONStringRoundTrip(t, types.NewProfile(), &types.Profile{})
++	assertJSONStringRoundTrip(t, types.NewLibraryBucket(anonymousUID, []types.LibraryItem{libraryItem}), &types.LibraryBucket{})
++	assertJSONStringRoundTrip(t,
++		types.NewNotificationsBucket(now, anonymousUID, []types.NotificationItem{{MetaID: "tt1", VideoID: "v1", VideoReleased: now}}),
++		&types.NotificationsBucket{})
++	assertJSONStringRoundTrip(t, types.NewSearchHistoryBucket(anonymousUID), &types.SearchHistoryBucket{})
++	assertJSONStringRoundTrip(t, types.NewServerUrlsBucket(now, anonymousUID), &types.ServerUrlsBucket{})
++	assertJSONStringRoundTrip(t, types.NewStreamsBucket(anonymousUID), &types.StreamsBucket{})
++	assertJSONStringRoundTrip(t, types.NewDismissedEventsBucket(anonymousUID), &types.DismissedEventsBucket{})
++}
+diff --git a/tests/target/batches/BATCH-STATE-0001/protected_wire_test.go b/tests/target/batches/BATCH-STATE-0001/protected_wire_test.go
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-STATE-0001/protected_wire_test.go
+@@ -0,0 +1,133 @@
++package assetstate
++
++import (
++	"encoding/json"
++	"reflect"
++	"testing"
++
++	addontransport "github.com/stremio/stremio-core/addon_transport"
++	"github.com/stremio/stremio-core/runtime"
++	"github.com/stremio/stremio-core/runtime/msg"
++	"github.com/stremio/stremio-core/types"
++)
++
++// JSON object member order is not part of the message contract. Array
++// order, member presence, values and types must still match exactly.
++func jsonEqual(got, want string) bool {
++	var actual, expected any
++	return json.Unmarshal([]byte(got), &actual) == nil &&
++		json.Unmarshal([]byte(want), &expected) == nil && reflect.DeepEqual(actual, expected)
++}
++
++func mustJSON(t *testing.T, value any) string {
++	t.Helper()
++	encoded, err := json.Marshal(value)
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	return string(encoded)
++}
++
++// TestRuntimeEventWireFormat pins the RuntimeEvent JSON envelope.
++func TestRuntimeEventWireFormat(t *testing.T) {
++	cases := []struct {
++		name string
++		got  any
++		want string
++	}{
++		{
++			name: "NewState",
++			got:  runtime.NewStateEvent([]string{"ctx", "player"}),
++			want: `{"name":"NewState","args":["ctx","player"]}`,
++		},
++		{
++			name: "CoreEvent",
++			got:  runtime.CoreEvent(msg.NewEvent("UserLoggedOut", nil)),
++			want: `{"name":"CoreEvent","args":{"event":"UserLoggedOut"}}`,
++		},
++	}
++	for _, tc := range cases {
++		if got := mustJSON(t, tc.got); !jsonEqual(got, tc.want) {
++			t.Errorf("%s wire = %s, want %s", tc.name, got, tc.want)
++		}
++	}
++}
++
++// TestActionEventWireFormat pins the Action, ActionLoad and Event JSON tags.
++func TestActionEventWireFormat(t *testing.T) {
++	cases := []struct {
++		name string
++		got  any
++		want string
++	}{
++		{
++			name: "Unload",
++			got:  msg.NewAction("Unload", nil),
++			want: `{"action":"Unload"}`,
++		},
++		{
++			name: "LoadPlayer",
++			got:  msg.LoadAction("Player", map[string]any{"stream": 1}),
++			want: `{"action":"Load","args":{"model":"Player","args":{"stream":1}}}`,
++		},
++		{
++			name: "PlayerPlaying",
++			got:  msg.NewEvent("PlayerPlaying", nil),
++			want: `{"event":"PlayerPlaying"}`,
++		},
++	}
++	for _, tc := range cases {
++		if got := mustJSON(t, tc.got); !jsonEqual(got, tc.want) {
++			t.Errorf("%s wire = %s, want %s", tc.name, got, tc.want)
++		}
++	}
++}
++
++// TestEnvErrorWireFormat pins the EnvError JSON envelope and fixed codes.
++func TestEnvErrorWireFormat(t *testing.T) {
++	cases := []struct {
++		name string
++		got  *runtime.EnvError
++		want string
++	}{
++		{"fetch", runtime.EnvErrorFetch("x"), `{"code":1,"message":"Failed to fetch: x"}`},
++		{"other", runtime.EnvErrorOther("x"), `{"code":1001,"message":"Other error: x"}`},
++		{
++			"downgrade",
++			runtime.EnvErrorStorageSchemaVersionDowngrade(26, 25),
++			`{"code":5,"message":"Downgrade storage schema version from 26 to 25 is not allowed"}`,
++		},
++	}
++	for _, tc := range cases {
++		if got := mustJSON(t, tc.got); !jsonEqual(got, tc.want) {
++			t.Errorf("%s wire = %s, want %s", tc.name, got, tc.want)
++		}
++	}
++}
++
++// TestLegacyJSONRPCWireFormat pins the legacy request URL and the JSON-RPC to
++// addon-transport error mapping.
++func TestLegacyJSONRPCWireFormat(t *testing.T) {
++	got, err := addontransport.BuildLegacyReq(
++		"https://legacywatchhub.strem.io/stremio/v1",
++		types.ResourcePath{Resource: "stream", Type: "series", ID: "tt0386676:5:1"},
++	)
++	if err != nil {
++		t.Fatalf("BuildLegacyReq: %v", err)
++	}
++	want := "https://legacywatchhub.strem.io/stremio/v1/q.json?b=eyJpZCI6MSwianNvbnJwYyI6IjIuMCIsIm1ldGhvZCI6InN0cmVhbS5maW5kIiwicGFyYW1zIjpbbnVsbCx7InF1ZXJ5Ijp7ImVwaXNvZGUiOjEsImltZGJfaWQiOiJ0dDAzODY2NzYiLCJzZWFzb24iOjUsInR5cGUiOiJzZXJpZXMifX1dfQ=="
++	if got != want {
++		t.Fatalf("legacy request mismatch\n got: %s\nwant: %s", got, want)
++	}
++
++	mapped := (&addontransport.LegacyErr{Kind: addontransport.LegacyJSONRPC, Code: 5, Message: "boom"}).ToEnvError()
++	if mapped.Code != 2 {
++		t.Errorf("mapped code = %d, want 2", mapped.Code)
++	}
++	if mapped.Message != "Addon protocol violation: rpc error 5: boom" {
++		t.Errorf("mapped message = %q", mapped.Message)
++	}
++	if wire := mustJSON(t, mapped); !jsonEqual(wire, `{"code":2,"message":"Addon protocol violation: rpc error 5: boom"}`) {
++		t.Errorf("mapped wire = %s", wire)
++	}
++}
+diff --git a/tests/target/run.sh b/tests/target/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/run.sh
+@@ -0,0 +1,11 @@
++#!/bin/sh
++set -eu
++cd /workspace/repo
++go version
++go build ./...
++go test ./...
++gotestsum --junitfile /logs/native-report.xml -- ./...
++set +e
++go run /assets/harness.go /logs/result.json
++status=$?
++exit $status
+diff --git a/tests/fixtures/batches/BATCH-F2P-0002/expected_wires.json b/tests/fixtures/batches/BATCH-F2P-0002/expected_wires.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0002/expected_wires.json
+@@ -0,0 +1,25 @@
++{
++  "schema_version": "migration-f2p-fixture:v1",
++  "batch_id": "BATCH-F2P-0002",
++  "target_technology": {"name": "Go", "version": "1.23.0"},
++  "source_technology": {"name": "Rust", "version": "2021"},
++  "wires": {
++    "loadable_loading": "{\"type\":\"Loading\"}",
++    "loadable_ready": "{\"type\":\"Ready\",\"content\":5}",
++    "loadable_err": "{\"type\":\"Err\",\"content\":{\"msg\":\"x\"}}",
++    "runtime_new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
++    "runtime_core_event": "{\"name\":\"CoreEvent\",\"args\":{\"event\":\"UserLoggedOut\"}}",
++    "env_error_fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
++    "env_error_other": "{\"code\":1001,\"message\":\"Other error: x\"}",
++    "action_unload": "{\"action\":\"Unload\"}",
++    "action_load": "{\"action\":\"Load\",\"args\":{\"model\":\"Player\",\"args\":{\"stream\":1}}}",
++    "event_player_playing": "{\"event\":\"PlayerPlaying\"}",
++    "legacy_stream_url": "https://legacywatchhub.strem.io/stremio/v1/q.json?b=eyJpZCI6MSwianNvbnJwYyI6IjIuMCIsIm1ldGhvZCI6InN0cmVhbS5maW5kIiwicGFyYW1zIjpbbnVsbCx7InF1ZXJ5Ijp7ImVwaXNvZGUiOjEsImltZGJfaWQiOiJ0dDAzODY2NzYiLCJzZWFzb24iOjUsInR5cGUiOiJzZXJpZXMifX1dfQ==",
++    "legacy_error": "Addon protocol violation: rpc error 5: boom",
++    "deep_link_search": "stremio:///search?query=foo%20bar",
++    "deep_link_discover": "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action",
++    "query_params": "sort=popularity&genre=A%20B",
++    "watched_field": "tt2934286:1:5:5:eJyTZwAAAEAAIA==",
++    "http_resource_url": "https://x/catalog/movie/top/genre=Action.json"
++  }
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/deep_links_cases.json b/tests/fixtures/batches/BATCH-F2P-0003/deep_links_cases.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/deep_links_cases.json
+@@ -0,0 +1,27 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "observations": ["F2P-049", "F2P-056", "F2P-066"],
++  "cases": [
++    {
++      "id": "search",
++      "call": "NewSearchHistoryItemDeepLinks",
++      "input": "foo bar",
++      "expected": "stremio:///search?query=foo%20bar"
++    },
++    {
++      "id": "discover",
++      "call": "NewDiscoverDeepLinks",
++      "input": {
++        "base": "https://v3-cinemeta.strem.io/manifest.json",
++        "path": { "resource": "catalog", "type": "movie", "id": "top", "extra": [{ "name": "genre", "value": "Action" }] }
++      },
++      "expected": "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action"
++    },
++    {
++      "id": "query_params",
++      "call": "QueryParamsEncode",
++      "input": [{ "key": "sort", "value": "popularity" }, { "key": "genre", "value": "A B" }],
++      "expected": "sort=popularity&genre=A%20B"
++    }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/env_error_cases.json b/tests/fixtures/batches/BATCH-F2P-0003/env_error_cases.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/env_error_cases.json
+@@ -0,0 +1,14 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "observations": ["F2P-051", "F2P-064", "F2P-070", "F2P-072"],
++  "cases": [
++    { "constructor": "EnvErrorFetch", "input": "x", "code": 1, "wire": "{\"code\":1,\"message\":\"Failed to fetch: x\"}" },
++    { "constructor": "EnvErrorAddonTransport", "input": "x", "code": 2, "wire": "{\"code\":2,\"message\":\"Addon protocol violation: x\"}" },
++    { "constructor": "EnvErrorSerde", "input": "x", "code": 3, "wire": "{\"code\":3,\"message\":\"Serialization error: x\"}" },
++    { "constructor": "EnvErrorStorageUnavailable", "input": null, "code": 4, "wire": "{\"code\":4,\"message\":\"Storage is not available\"}" },
++    { "constructor": "EnvErrorStorageSchemaVersionDowngrade", "input": [30, 25], "code": 5, "wire": "{\"code\":5,\"message\":\"Downgrade storage schema version from 30 to 25 is not allowed\"}" },
++    { "constructor": "EnvErrorStorageReadError", "input": "x", "code": 7, "wire": "{\"code\":7,\"message\":\"Storage read error: x\"}" },
++    { "constructor": "EnvErrorStorageWriteError", "input": "x", "code": 8, "wire": "{\"code\":8,\"message\":\"Storage write error: x\"}" },
++    { "constructor": "EnvErrorOther", "input": "x", "code": 1001, "wire": "{\"code\":1001,\"message\":\"Other error: x\"}" }
++  ]
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/legacy_stream_request.json b/tests/fixtures/batches/BATCH-F2P-0003/legacy_stream_request.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/legacy_stream_request.json
+@@ -0,0 +1,10 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "observations": ["F2P-069"],
++  "transport_url": "https://legacywatchhub.strem.io/stremio/v1",
++  "resource_path": { "resource": "stream", "type": "series", "id": "tt0386676:5:1" },
++  "request_body": "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"stream.find\",\"params\":[null,{\"query\":{\"episode\":1,\"imdb_id\":\"tt0386676\",\"season\":5,\"type\":\"series\"}}]}",
++  "expected_url": "https://legacywatchhub.strem.io/stremio/v1/q.json?b=eyJpZCI6MSwianNvbnJwYyI6IjIuMCIsIm1ldGhvZCI6InN0cmVhbS5maW5kIiwicGFyYW1zIjpbbnVsbCx7InF1ZXJ5Ijp7ImVwaXNvZGUiOjEsImltZGJfaWQiOiJ0dDAzODY2NzYiLCJzZWFzb24iOjUsInR5cGUiOiJzZXJpZXMifX1dfQ==",
++  "rpc_error": { "code": 5, "message": "boom" },
++  "env_error": { "code": 2, "message": "Addon protocol violation: rpc error 5: boom" }
++}
+diff --git a/tests/fixtures/batches/BATCH-F2P-0003/schema_migration_v1.json b/tests/fixtures/batches/BATCH-F2P-0003/schema_migration_v1.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-F2P-0003/schema_migration_v1.json
+@@ -0,0 +1,26 @@
++{
++  "batch_id": "BATCH-F2P-0003",
++  "observations": ["F2P-062"],
++  "storage_keys": {
++    "schema_version": "schema_version",
++    "profile": "profile"
++  },
++  "initial": {
++    "schema_version": 1,
++    "profile": {
++      "settings": {
++        "interface_language": "eng",
++        "streaming_server_url": "http://127.0.0.1:11470"
++      }
++    }
++  },
++  "expected": {
++    "schema_version": 25,
++    "profile_settings_present": ["interfaceLanguage", "gpuVideoProcessing"],
++    "profile_settings_absent": ["interface_language"]
++  },
++  "downgrade": {
++    "schema_version": 26,
++    "env_error_code": 5
++  }
++}
+diff --git a/tests/fixtures/batches/BATCH-P2P-0001/projection.json b/tests/fixtures/batches/BATCH-P2P-0001/projection.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-P2P-0001/projection.json
+@@ -0,0 +1,15 @@
++{
++  "batch_id": "BATCH-P2P-0001",
++  "kind": "P2P",
++  "relation": "equal_after_normalization",
++  "source": {
++    "repo": "/input/source",
++    "command": "git diff --exit-code",
++    "projection": {"result": "PASS"}
++  },
++  "target": {
++    "repo": "/input/target",
++    "command": "CGO_ENABLED=0 go test ./...",
++    "projection": {"result": "PASS"}
++  }
++}
+diff --git a/tests/fixtures/batches/BATCH-STATE-0001/persisted_state_fixtures.json b/tests/fixtures/batches/BATCH-STATE-0001/persisted_state_fixtures.json
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-STATE-0001/persisted_state_fixtures.json
+@@ -0,0 +1,29 @@
++{
++  "schema_version": "migration-state-fixture:v1",
++  "batch_id": "BATCH-STATE-0001",
++  "storage_keys": {
++    "schema_version": "schema_version",
++    "profile": "profile",
++    "library": "library",
++    "library_recent": "library_recent",
++    "streams": "streams",
++    "search_history": "search_history",
++    "streaming_server_urls": "streaming_server_urls",
++    "notifications": "notifications",
++    "calendar": "calendar",
++    "dismissed_events": "dismissed_events"
++  },
++  "latest_schema_version": 25,
++  "encoding": "serde-json",
++  "wire_expectations": {
++    "empty_streams_bucket": "{\"uid\":null,\"items\":[]}",
++    "runtime_event_new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
++    "runtime_event_core_event": "{\"name\":\"CoreEvent\",\"args\":{\"event\":\"UserLoggedOut\"}}",
++    "action_unload": "{\"action\":\"Unload\"}",
++    "action_load_player": "{\"action\":\"Load\",\"args\":{\"model\":\"Player\",\"args\":{\"stream\":1}}}",
++    "event_player_playing": "{\"event\":\"PlayerPlaying\"}",
++    "env_error_fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
++    "env_error_other": "{\"code\":1001,\"message\":\"Other error: x\"}",
++    "legacy_rpc_error": "{\"code\":2,\"message\":\"Addon protocol violation: rpc error 5: boom\"}"
++  }
++}

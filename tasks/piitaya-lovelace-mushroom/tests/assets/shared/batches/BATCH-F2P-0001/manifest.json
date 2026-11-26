@@ -1,0 +1,43 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "role": "Fail-to-pass observations for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation migration of the mushroom-cards plugin.",
+  "migration": {
+    "source": { "language_name": "TypeScript", "name": "Superstruct", "version": "2.0.2" },
+    "target": { "language_name": "TypeScript", "name": "Zod", "version": "3.23.8" }
+  },
+  "surfaces": {
+    "source": "source/batches/BATCH-F2P-0001",
+    "target": "target/batches/BATCH-F2P-0001",
+    "fixtures": "fixtures/batches/BATCH-F2P-0001",
+    "shared": "shared/batches/BATCH-F2P-0001"
+  },
+  "predicate_core": "shared/batches/BATCH-F2P-0001/probe-core.js",
+  "ts_loader": "shared/batches/BATCH-F2P-0001/ts-loader.js",
+  "drivers": {
+    "source": "source/batches/BATCH-F2P-0001/probe.js",
+    "target": "target/batches/BATCH-F2P-0001/probe.js"
+  },
+  "execution": {
+    "invocation": "node <driver> <repoRoot> <reportPath>",
+    "source_repo": "/input/source",
+    "target_repo": "/input/target",
+    "note": "The same semantic predicate core runs on both sides. Target side must observe PASS for every observation; source side must observe FAIL because the Zod target postcondition is not provided by the Superstruct baseline.",
+    "harness_entries": {
+      "source": "source/runner",
+      "target": "target/runner.js",
+      "created_by": "INTEGRATION"
+    }
+  },
+  "conventions": {
+    "source_harness_entry": "source/runner",
+    "target_harness_entry": "target/runner.js",
+    "created_by": "INTEGRATION",
+    "state_checks": "empty for F2P batches"
+  },
+  "observation_count": 24,
+  "requirements_covered": [
+    "R001", "R016", "R017",
+    "S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008", "S009", "S010"
+  ]
+}

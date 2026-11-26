@@ -1,0 +1,41 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "description": "Request corpus for the Express(4.17.1) -> Fastify(4.28.1) server.js P2P probes. Both the source and the target probe issue exactly these requests so their normalized projections can be compared.",
+  "requests": [
+    { "id": "GET /", "method": "GET", "path": "/" },
+    { "id": "GET /start", "method": "GET", "path": "/start" },
+    { "id": "GET /webcam/resolution", "method": "GET", "path": "/webcam/resolution" },
+    { "id": "GET /counter/areas", "method": "GET", "path": "/counter/areas" },
+    { "id": "POST /counter/areas empty", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": {} },
+    { "id": "POST /counter/areas named", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": { "countingAreas": { "a1": { "name": "test", "type": "polygon", "color": "yellow" } } } },
+    { "id": "GET /tracker/sse", "method": "GET", "path": "/tracker/sse", "stream": true },
+    { "id": "GET /recording/start", "method": "GET", "path": "/recording/start" },
+    { "id": "GET /recording/stop", "method": "GET", "path": "/recording/stop" },
+    { "id": "GET /recordings", "method": "GET", "path": "/recordings" },
+    { "id": "GET /recordings paged", "method": "GET", "path": "/recordings?limit=5&offset=10" },
+    { "id": "GET /recording/:id", "method": "GET", "path": "/recording/P2P-RECORDING-ID" },
+    { "id": "GET /recording/:id/tracker", "method": "GET", "path": "/recording/P2P-RECORDING-ID/tracker" },
+    { "id": "DELETE /recording/:id", "method": "DELETE", "path": "/recording/P2P-RECORDING-ID" },
+    { "id": "GET /recording/:id/counter", "method": "GET", "path": "/recording/P2P-RECORDING-ID/counter" },
+    { "id": "GET /recording/:id/counter empty", "method": "GET", "path": "/recording/P2P-EMPTY/counter" },
+    { "id": "GET /recording/:id/counter/csv", "method": "GET", "path": "/recording/P2P-RECORDING-ID/counter/csv" },
+    { "id": "GET /status", "method": "GET", "path": "/status" },
+    { "id": "GET /config", "method": "GET", "path": "/config" },
+    { "id": "GET /files", "method": "GET", "path": "/files" },
+    { "id": "GET /ui", "method": "GET", "path": "/ui" },
+    { "id": "POST /ui", "method": "POST", "path": "/ui", "content_type": "application/json", "body": { "counterEnabled": true, "pathfinderEnabled": false } },
+    { "id": "GET /api/doc", "method": "GET", "path": "/api/doc" },
+    { "id": "GET /api/doc/index.html", "method": "GET", "path": "/api/doc/index.html" },
+    { "id": "GET unknown page", "method": "GET", "path": "/a-page-that-does-not-exist" }
+  ],
+  "payloads": {
+    "json_90kb": { "description": "90 kB of JSON accepted by the 100kb body-parser default", "pad_bytes": 92160 },
+    "json_110kb": { "description": "110 kB of JSON rejected by the 100kb body-parser default", "pad_bytes": 112640 },
+    "malformed_json": "{\"",
+    "multipart_video": { "field": "video", "filename": "p2p-demo.mp4", "content_type": "video/mp4", "bytes": 32 },
+    "multipart_wrong_field": { "field": "file", "filename": "p2p-demo.mp4", "content_type": "video/mp4", "bytes": 32 },
+    "multipart_wrong_name": { "field": "video", "filename": "p2p-demo.txt", "content_type": "text/plain", "bytes": 32 }
+  }
+}

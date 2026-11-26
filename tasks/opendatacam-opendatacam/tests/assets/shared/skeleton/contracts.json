@@ -1,0 +1,78 @@
+{
+  "skeleton_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-SKELETON-0001",
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Express", "version": "4.17.1" },
+    "target": { "name": "Fastify", "version": "4.28.1" }
+  },
+  "routes": [
+    { "method": "GET", "path": "/" },
+    { "method": "GET", "path": "/start" },
+    { "method": "GET", "path": "/webcam/stream" },
+    { "method": "GET", "path": "/webcam/resolution" },
+    { "method": "GET", "path": "/console" },
+    { "method": "POST", "path": "/counter/areas" },
+    { "method": "GET", "path": "/counter/areas" },
+    { "method": "GET", "path": "/tracker/sse" },
+    { "method": "GET", "path": "/recording/start" },
+    { "method": "GET", "path": "/recording/stop" },
+    { "method": "GET", "path": "/recordings" },
+    { "method": "GET", "path": "/recording/:id/tracker" },
+    { "method": "GET", "path": "/recording/:id" },
+    { "method": "DELETE", "path": "/recording/:id" },
+    { "method": "GET", "path": "/recording/:id/counter" },
+    { "method": "GET", "path": "/recording/:id/counter/csv" },
+    { "method": "GET", "path": "/status" },
+    { "method": "GET", "path": "/config" },
+    { "method": "GET", "path": "/files" },
+    { "method": "POST", "path": "/files" },
+    { "method": "GET", "path": "/ui" },
+    { "method": "POST", "path": "/ui" },
+    { "method": "GET", "path": "/api/doc" },
+    { "method": "GET", "path": "/*", "name": "next-catch-all" }
+  ],
+  "status_contracts": {
+    "side_effect_routes": {
+      "routes": ["GET /start", "GET /recording/start", "GET /recording/stop", "POST /counter/areas", "POST /ui"],
+      "status": 200,
+      "body": "OK",
+      "content_type_prefix": "text/plain"
+    },
+    "recording_counter": { "route": "GET /recording/:id/counter", "empty": 404, "empty_body": "Not Found", "failure": 500 },
+    "json_body_parser": {
+      "content_type": "application/json",
+      "body_limit_bytes": 102400,
+      "malformed_body": { "status": 400, "content_type_prefix": "text/plain" },
+      "empty_body_parsed_as": {}
+    },
+    "files_upload": { "route": "POST /files", "field": "video", "filename_pattern": "\\.(mp4|avi|mov)$", "invalid": 500 }
+  },
+  "sse": {
+    "route": "GET /tracker/sse",
+    "content_type": "text/event-stream",
+    "initial": "retry: 2000",
+    "frame_fields": ["videoResolution", "trackerDataForLastFrame", "appState", "counterSummary", "trackerSummary"]
+  },
+  "csv": {
+    "route": "GET /recording/:id/counter/csv",
+    "columns": ["timestamp", "area", "name", "id", "bearing", "countingDirection"]
+  },
+  "field_sets": {
+    "GET /status": ["counterSummary", "trackerSummary", "videoResolution", "appState"],
+    "appState": ["yoloStatus", "isListeningToYOLO", "recordingStatus"]
+  },
+  "preserved_modules": [
+    "Next.js pages",
+    "React/Redux client rendering",
+    "YOLO/Darknet subprocess",
+    "node-moving-things-tracker",
+    "MongoDbManager collections (recordings/tracker/counter/app)",
+    "config.json schema, ports and environment handling",
+    "GPS handling"
+  ],
+  "dependencies": {
+    "target_required": ["fastify@4.28.1", "@fastify/static@7.0.4", "@fastify/multipart@8.3.0"],
+    "source_forbidden_in_target": ["express", "serve-static", "body-parser", "csv-express", "server-sent-events", "multer"]
+  }
+}

@@ -1,0 +1,589 @@
+{
+  "schema_version": "migration-contract-cases:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "description": "Executable public-contract probes for the pev2 TypeScript -> Rust migration. Each case names one owned CONTRACT observation and one or more probes. A probe invokes the same public entry point on both the source (TypeScript PlanService / exported helpers) and the target (Rust pev2_core) and contributes one normalized value per side.",
+  "normalization": {
+    "string": "collapse internal runs of whitespace to a single space and trim",
+    "number": "parse as f64",
+    "boolean": "identity",
+    "error": "{\"__error__\": <message normalized as string>}",
+    "missing": "{\"__missing__\": true}",
+    "json": "recursively normalize then serialize with sorted object keys"
+  },
+  "cases": [
+    {
+      "observation_id": "CONTRACT-001",
+      "requirement_ids": ["R001"],
+      "surface": "pev2-core parsing, cleanup, line-splitting, node-construction and metric API",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxRows"],
+          "expect": 100
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxTotalCost"],
+          "expect": 1.0
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxEstimateFactor"],
+          "expect": 20.0
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-002",
+      "requirement_ids": ["R002"],
+      "surface": "pev2-core public entry points exported from lib.rs and wasm.rs",
+      "probes": [
+        {
+          "fn": "public_entry_points",
+          "args": [],
+          "expect": [
+            "create_plan",
+            "cleanup_source",
+            "find_node_by_id",
+            "find_node_by_subplan_name",
+            "from_json",
+            "from_source",
+            "from_text",
+            "should_show_prop",
+            "split_balanced",
+            "split_into_lines"
+          ]
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-003",
+      "requirement_ids": ["R003"],
+      "surface": "PlanService.fromSource / pev2_core::from_source",
+      "probes": [
+        {
+          "fn": "from_source",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        },
+        {
+          "fn": "from_source",
+          "args": ["not a plan"],
+          "error": true,
+          "expect": "Unable to parse plan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-004",
+      "requirement_ids": ["R004"],
+      "surface": "PlanService.createPlan / pev2_core::create_plan",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)", "", "SELECT  a     b"],
+          "extract": ["query"],
+          "expect": "SELECT a b"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-005",
+      "requirement_ids": ["R005"],
+      "surface": "PlanService.fromText / pev2_core::from_text",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-006",
+      "requirement_ids": ["R006"],
+      "surface": "PlanService.fromJson / pev2_core::from_json",
+      "probes": [
+        {
+          "fn": "from_json",
+          "args": ["\"[\n  {\n    \"\"Plan\"\": {\n      \"\"Node Type\"\": \"\"Seq Scan\"\"\n    }\n  }\n]\""],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-007",
+      "requirement_ids": ["R007"],
+      "surface": "PlanService.cleanupSource and PlanService.splitIntoLines / cleanup_source, split_into_lines",
+      "probes": [
+        {
+          "fn": "cleanup_source",
+          "args": ["│  Seq Scan on t  │\nQUERY PLAN\n(1 row)\n"],
+          "expect": "  Seq Scan on t  \n\n"
+        },
+        {
+          "fn": "split_into_lines",
+          "args": ["  ->  Index Scan using idx on t  (cost=0.00..1.00 rows=1 width=4)\n        Index Cond: (a = 1)\n"],
+          "extract": ["length"],
+          "expect": 2
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-008",
+      "requirement_ids": ["R008"],
+      "surface": "Property key strings in the serialized plan content",
+      "probes": [
+        {
+          "fn": "from_source",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["Plan"],
+          "present_keys": ["Actual Loops", "Actual Rows"],
+          "expect": true
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-009",
+      "requirement_ids": ["R009"],
+      "surface": "Node constructor / pev2_core::parse_node_type",
+      "probes": [
+        {
+          "fn": "parse_node_type",
+          "args": ["Index Scan using idx on t"],
+          "extract": ["Node Type"],
+          "expect": "Index Scan"
+        },
+        {
+          "fn": "parse_node_type",
+          "args": ["Index Scan using idx on t"],
+          "extract": ["Index Name"],
+          "expect": "idx"
+        },
+        {
+          "fn": "parse_node_type",
+          "args": ["Index Scan using idx on t"],
+          "extract": ["Relation Name"],
+          "expect": "t"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-010",
+      "requirement_ids": ["R010"],
+      "surface": "splitBalanced / split_balanced",
+      "probes": [
+        {
+          "fn": "split_balanced",
+          "args": ["a,(b,c),d", ","],
+          "expect": ["a", "(b,c)", "d"]
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-011",
+      "requirement_ids": ["R011"],
+      "surface": "findNodeById, findNodeBySubplanName, shouldShowProp / find_node_by_id, find_node_by_subplan_name, should_show_prop",
+      "probes": [
+        {
+          "fn": "find_node_by_id_present",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)", 1],
+          "expect": true
+        },
+        {
+          "fn": "find_node_by_subplan_name_absent",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)", "missing"],
+          "expect": false
+        },
+        {
+          "fn": "should_show_prop",
+          "args": ["Filter", "(a = 1)"],
+          "expect": true
+        },
+        {
+          "fn": "should_show_prop",
+          "args": ["Filter", ""],
+          "expect": false
+        },
+        {
+          "fn": "should_show_prop",
+          "args": ["Node Type", "Seq Scan"],
+          "expect": false
+        },
+        {
+          "fn": "should_show_prop",
+          "args": ["Actual Rows", 0],
+          "expect": false
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-012",
+      "requirement_ids": ["R012"],
+      "surface": "JSON-serialized plan content structure",
+      "probes": [
+        {
+          "fn": "from_source",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "present_keys": ["Plan"],
+          "expect": true
+        },
+        {
+          "fn": "from_source",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-013",
+      "requirement_ids": ["R013"],
+      "surface": "fromSource JSON/text routing",
+      "probes": [
+        {
+          "fn": "from_source",
+          "args": ["{\"Plan\": {\"Node Type\": \"Seq Scan\"}}"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        },
+        {
+          "fn": "from_source",
+          "args": ["[\n  { \"Plan\": { \"Node Type\": \"Seq Scan\" } }\n]"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        },
+        {
+          "fn": "from_source",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-014",
+      "requirement_ids": ["R014"],
+      "surface": "cleanupSource text normalization",
+      "probes": [
+        {
+          "fn": "cleanup_source",
+          "args": ["│  Seq Scan on t  │\nQUERY PLAN\n(1 row)\n"],
+          "expect": "  Seq Scan on t  \n\n"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-015",
+      "requirement_ids": ["R015"],
+      "surface": "splitIntoLines line reassembly",
+      "probes": [
+        {
+          "fn": "split_into_lines",
+          "args": ["  ->  Index Scan using idx on t  (cost=0.00..1.00 rows=1 width=4)\n        Index Cond: (a = 1)\n"],
+          "extract": ["length"],
+          "expect": 2
+        },
+        {
+          "fn": "split_into_lines",
+          "args": ["Seq Scan on t  (cost=0.00\n  ..1.00 rows=1 width=4)\n"],
+          "extract": ["length"],
+          "expect": 1
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-016",
+      "requirement_ids": ["R016"],
+      "surface": "fromText indentation/depth tree construction",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Nested Loop  (cost=0.00..1.00 rows=1 width=4)\n  ->  Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\n"],
+          "extract": ["Plan", "Plans", 0, "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-017",
+      "requirement_ids": ["R017"],
+      "surface": "fromText auxiliary information parsing",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)\n"],
+          "extract": ["Plan", "Actual Loops"],
+          "expect": 0
+        },
+        {
+          "fn": "from_text",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\n  Buffers: shared hit=3\n"],
+          "extract": ["Plan", "Shared Hit Blocks"],
+          "expect": 3
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-018",
+      "requirement_ids": ["R018"],
+      "surface": "Parent Relationship assignment",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Nested Loop  (cost=0.00..1.00 rows=1 width=4)\n  ->  Seq Scan on a  (cost=0.00..0.50 rows=1 width=4)\n  ->  Seq Scan on b  (cost=0.00..0.50 rows=1 width=4)\n"],
+          "extract": ["Plan", "Plans", 0, "Parent Relationship"],
+          "expect": "Outer"
+        },
+        {
+          "fn": "from_text",
+          "args": ["Nested Loop  (cost=0.00..1.00 rows=1 width=4)\n  ->  Seq Scan on a  (cost=0.00..0.50 rows=1 width=4)\n  ->  Seq Scan on b  (cost=0.00..0.50 rows=1 width=4)\n"],
+          "extract": ["Plan", "Plans", 1, "Parent Relationship"],
+          "expect": "Inner"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-019",
+      "requirement_ids": ["R019"],
+      "surface": "never-executed node normalization",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)\n"],
+          "extract": ["Plan", "Actual Rows"],
+          "expect": 0
+        },
+        {
+          "fn": "from_text",
+          "args": ["Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)\n"],
+          "extract": ["Plan", "Actual Total Time"],
+          "expect": 0
+        },
+        {
+          "fn": "from_text",
+          "args": ["Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)\n"],
+          "extract": ["Plan", "Actual Startup Time"],
+          "expect": 0
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-020",
+      "requirement_ids": ["R020"],
+      "surface": "fractional actual rows marker",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["Nested Loop  (cost=0.00..12.97 rows=4 width=16) (actual time=0.017..0.025 rows=1.00 loops=1)\n  ->  Limit  (cost=0.00..3.22 rows=1 width=4) (actual time=0.003..0.004 rows=0.25 loops=4)\n        ->  Seq Scan on data  (cost=0.00..41.88 rows=13 width=4) (actual time=0.003..0.003 rows=0.25 loops=4)\n"],
+          "extract": ["Plan", "Plans", 0, "Plans", 0, "Actual Rows"],
+          "expect": 0.25
+        },
+        {
+          "fn": "from_text",
+          "args": ["Nested Loop  (cost=0.00..12.97 rows=4 width=16) (actual time=0.017..0.025 rows=1.00 loops=1)\n  ->  Limit  (cost=0.00..3.22 rows=1 width=4) (actual time=0.003..0.004 rows=0.25 loops=4)\n        ->  Seq Scan on data  (cost=0.00..41.88 rows=13 width=4) (actual time=0.003..0.003 rows=0.25 loops=4)\n"],
+          "extract": ["Plan", "Plans", 0, "Plans", 0, "*Actual Rows Is Fractional"],
+          "expect": true
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-021",
+      "requirement_ids": ["R021"],
+      "surface": "fromText error result",
+      "probes": [
+        {
+          "fn": "from_text",
+          "args": ["not a plan"],
+          "error": true,
+          "expect": "Unable to parse plan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-022",
+      "requirement_ids": ["R022"],
+      "surface": "fromJson embedded JSON extraction",
+      "probes": [
+        {
+          "fn": "from_json",
+          "args": ["\"[\n  {\n    \"\"Plan\"\": {\n      \"\"Node Type\"\": \"\"Seq Scan\"\"\n    }\n  }\n]\""],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-023",
+      "requirement_ids": ["R023"],
+      "surface": "getPlanContent array handling",
+      "probes": [
+        {
+          "fn": "get_plan_content",
+          "args": ["{\"Plan\": {\"Node Type\": \"Seq Scan\"}}"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Seq Scan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-024",
+      "requirement_ids": ["R024"],
+      "surface": "getPlanContent missing Plan error",
+      "probes": [
+        {
+          "fn": "get_plan_content",
+          "args": ["{\"foo\": 1}"],
+          "error": true,
+          "expect": "Invalid plan"
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-025",
+      "requirement_ids": ["R025"],
+      "surface": "createPlan isAnalyze/isVerbose flags",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["isAnalyze"],
+          "expect": true
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["{\"Plan\": {\"Node Type\": \"Aggregate\", \"Plans\": [{\"Node Type\": \"Seq Scan\", \"Output\": [\"a\"]}]}}"],
+          "extract": ["isVerbose"],
+          "expect": true
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-026",
+      "requirement_ids": ["R026"],
+      "surface": "createPlan nodeId assignment and ctes collection",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)"],
+          "extract": ["content", "Plan", "nodeId"],
+          "expect": 1
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-027",
+      "requirement_ids": ["R027"],
+      "surface": "createPlan maximum metrics",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxCost"],
+          "expect": 1.0
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on t  (cost=0.00..1.00 rows=1 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxDuration"],
+          "expect": 0.2
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-028",
+      "requirement_ids": ["R028"],
+      "surface": "createPlan maxBlocks and maxIo",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Update on a  (cost=0.00..266690.72 rows=0 width=0) (actual time=10.00..11.00 rows=0 loops=1)\n    Buffers: shared hit=2 read=4 dirtied=6 written=8\n    I/O Timings: read=2 write=4\n  ->  Seq Scan on a  (cost=0.00..0.00 rows=10 width=1) (actual time=9.00..10.00 rows=10000000 loops=1)\n        Buffers: shared hit=1 read=2 written=4\n        I/O Timings: read=1 write=2\n"],
+          "extract": ["content", "maxIo"],
+          "expect": 3.0
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Update on a  (cost=0.00..266690.72 rows=0 width=0) (actual time=10.00..11.00 rows=0 loops=1)\n    Buffers: shared hit=2 read=4 dirtied=6 written=8\n    I/O Timings: read=2 write=4\n  ->  Seq Scan on a  (cost=0.00..0.00 rows=10 width=1) (actual time=9.00..10.00 rows=10000000 loops=1)\n        Buffers: shared hit=1 read=2 written=4\n        I/O Timings: read=1 write=2\n"],
+          "extract": ["content", "maxBlocks", "Shared"],
+          "expect": 13.0
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-029",
+      "requirement_ids": ["R029"],
+      "surface": "createPlan maxEstimateFactor",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on foo  (cost=0.00..1.00 rows=10 width=4) (actual time=0.1..0.2 rows=100 loops=1)"],
+          "extract": ["content", "maxEstimateFactor"],
+          "expect": 20.0
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on foo  (cost=0.00..1.00 rows=10 width=4)"],
+          "extract": ["content", "maxEstimateFactor"],
+          "expect": 1.0
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-030",
+      "requirement_ids": ["R030"],
+      "surface": "exclusive duration/cost and revised fields",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Nested Loop  (cost=0.00..611.27 rows=13400 width=8) (actual time=0.025..10.198 rows=34956 loops=1)\n  Join Filter: (t1.c1 > t2.c2)\n  ->  Seq Scan on t1  (cost=0.00..6.02 rows=402 width=4) (actual time=0.013..0.058 rows=402 loops=1)\n  ->  Materialize  (cost=0.00..2.50 rows=100 width=4) (actual time=0.000..0.008 rows=100 loops=402)\n        ->  Seq Scan on t2  (cost=0.00..2.00 rows=100 width=4) (actual time=0.005..0.015 rows=100 loops=1)\n"],
+          "extract": ["content", "Plan", "Plans", 1, "*Duration (exclusive)"],
+          "expect": 3.201
+        },
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["Seq Scan on foo  (cost=0.00..18334.00 rows=1000000 width=37)"],
+          "extract": ["content", "Plan", "*Plan Rows Revised"],
+          "expect": 1000000.0
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-031",
+      "requirement_ids": ["R031"],
+      "surface": "CTE Scan and InitPlan duration corrections",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": [" Aggregate  (cost=38.51..38.52 rows=1 width=4)\n   CTE e\n     ->  Seq Scan on employes  (cost=0.00..38.25 rows=11 width=8)\n   ->  CTE Scan on e  (cost=0.00..0.25 rows=4 width=4)\n"],
+          "extract": ["ctes", "length"],
+          "expect": 1
+        }
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-032",
+      "requirement_ids": ["R032"],
+      "surface": "ModifyTable to Operation conversion",
+      "probes": [
+        {
+          "fn": "from_source_then_create_plan",
+          "args": ["{\"Plan\": {\"Node Type\": \"ModifyTable\", \"Operation\": \"Insert\", \"Relation Name\": \"foo\"}}"],
+          "extract": ["content", "Plan", "Node Type"],
+          "expect": "Insert"
+        },
+        {
+          "fn": "from_text",
+          "args": ["Insert on foo  (cost=0.00..0.01 rows=1 width=24) (actual time=0.504..0.505 rows=0 loops=1)\n"],
+          "extract": ["Plan", "Node Type"],
+          "expect": "Insert"
+        }
+      ]
+    }
+  ]
+}

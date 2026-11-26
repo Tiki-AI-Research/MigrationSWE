@@ -1,0 +1,93 @@
+schema_version = "1.3"
+artifacts = ["/logs/artifacts"]
+
+
+[task]
+name = "tikiai/immersive-web"
+description = "Migrate webvr-polyfill from Rollup/Babel/Mocha to Vite 5.4 and Vitest 2.1."
+authors = []
+keywords = ["migration", "javascript", "webvr", "vite", "vitest", "nodejs"]
+
+[metadata]
+task_id = "immersive-w-webvr-polyfill-20260911094313-be1b9f"
+original_title = "immersive-w-webvr-polyfill-20260911094313-be1b9f"
+category = "Framework_migration"
+language = "JavaScript"
+source_technology = "Rollup 0.55 / Babel 6 / Mocha 5"
+target_technology = "Vite 5.4 / Vitest 2.1"
+equivalence_class = "E3"
+persistent_state_involved = false
+migration_units = ["scripts", "dependencies", "lockfile", "vite-build", "vitest-suite", "legacy-removal", "ci-runtime", "distribution", "publication"]
+f2p_count = 27
+p2p_count = 23
+repository_url = "https://github.com/immersive-web/webvr-polyfill"
+upstream_commit_hash = "e77ab9a4a59aad0035f90a3dfa17c582113b84cf"
+replay_base_commit = "a1efca7a94d05af5a048ab3b5d9c12fdc22bafae"
+base_commit_hash = "a1efca7a94d05af5a048ab3b5d9c12fdc22bafae"
+
+[metadata.tests]
+f2p_count = 27
+p2p_count = 23
+fail_to_pass_count = 27
+pass_to_pass_count = 23
+allowed_change_paths = [
+    ".npmignore",
+    ".travis.yml",
+    ".gitignore",
+    ".babelrc",
+    "package.json",
+    "package-lock.json",
+    "rollup.config.js",
+    "rollup.config.min.js",
+    "vite.config.mjs",
+    "vite.config.js",
+    "vitest.config.mjs",
+    "vitest.config.js",
+    "scripts/build-vite.mjs",
+    "scripts/watch-vite.mjs",
+    "test/.babelrc",
+    "test/init.js",
+    "test/setup.js",
+    "test/setup.mjs",
+    "test/utils.js",
+    "test/webvr-polyfill.test.js",
+    ".github/workflows/*.yml",
+    ".github/workflows/*.yaml",
+]
+
+[verifier]
+network_mode = "no-network"
+environment_mode = "separate"
+user = "root" # root orchestrates only; npm/Node/Vite/Vitest are dropped to candidate in verifier.py
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "no-network"
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:immersive-web-verifier-image-20261126"
+image_digest = "sha256:62aae6bf059bf485b8fba528bf0c51ffe989cfc72c47789e1e1744dcd11b5ae9"
+[[verifier.collect]]
+command = "python3 /workspace/collect_candidate.py --repo /workspace/repo --contract /workspace/task-contract.json --patch /logs/artifacts/model.patch --manifest /logs/artifacts/model.patch.manifest.json"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+timeout_sec = 7200.0
+user = "evaluator"
+
+[environment]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+build_timeout_sec = 1800.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:immersive-web-task-image-20261126"
+image_digest = "sha256:dcfe86065d299b4fc63830468b29fe0b93b63acbc9658f4b706f1b4f8d26ef0f"

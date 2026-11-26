@@ -1,0 +1,1212 @@
+{
+  "schema_version": "migration-grader-coverage-audit:v2",
+  "status": "PENDING_RECALIBRATION",
+  "method": "Each requirement is checked at sub-requirement level: the behaviours it claims are listed one by one, each behaviour names the node whose assertions discharge it (principal evidence), and each carries the real observation from the reference target run and from the unpatched-source qualification run. A requirement id appearing in the registry is not coverage by itself: nodes registered under a requirement but not used as principal evidence are reported separately as supporting nodes.",
+  "clauses": [
+    {
+      "requirement_id": "R001",
+      "requirement": "The shiv command still accepts -e/--entry-point, -c/--console-script, -o/--output-file, -p/--python, --site-packages, --build-id, --compressed/--uncompressed, --compile-pyc, -E/--extend-pythonpath, and --help/--halp.",
+      "behaviours": [
+        {
+          "behaviour": "the full public option set is still accepted by the real command",
+          "principal_observation_ids": [
+            "P2P-001"
+          ],
+          "target_status": {
+            "P2P-001": "PASS"
+          },
+          "source_status": {
+            "P2P-001": "PASS"
+          }
+        },
+        {
+          "behaviour": "help is one real eager option under -h/--help/--halp",
+          "principal_observation_ids": [
+            "P2P-010"
+          ],
+          "target_status": {
+            "P2P-010": "PASS"
+          },
+          "source_status": {
+            "P2P-010": "PASS"
+          }
+        },
+        {
+          "behaviour": "equals-form disallowed pip options are rejected",
+          "principal_observation_ids": [
+            "F2P-007"
+          ],
+          "target_status": {
+            "F2P-007": "PASS"
+          },
+          "source_status": {
+            "F2P-007": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a metadata entry point wins over a same-named launcher",
+          "principal_observation_ids": [
+            "P2P-051"
+          ],
+          "target_status": {
+            "P2P-051": "PASS"
+          },
+          "source_status": {
+            "P2P-051": "PASS"
+          }
+        },
+        {
+          "behaviour": "path-like and unsupported script names are rejected",
+          "principal_observation_ids": [
+            "P2P-052"
+          ],
+          "target_status": {
+            "P2P-052": "PASS"
+          },
+          "source_status": {
+            "P2P-052": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-007",
+        "F2P-008",
+        "P2P-001",
+        "P2P-002",
+        "P2P-004",
+        "P2P-006",
+        "P2P-007",
+        "P2P-009",
+        "P2P-010",
+        "P2P-011",
+        "P2P-013",
+        "P2P-015",
+        "P2P-016",
+        "P2P-017",
+        "P2P-018",
+        "P2P-019",
+        "P2P-020",
+        "P2P-021",
+        "P2P-022",
+        "P2P-023",
+        "P2P-024",
+        "P2P-025",
+        "P2P-026",
+        "P2P-027",
+        "P2P-028",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-032",
+        "P2P-034",
+        "P2P-035",
+        "P2P-037",
+        "P2P-038",
+        "P2P-039",
+        "P2P-040",
+        "P2P-041",
+        "P2P-045",
+        "P2P-051",
+        "P2P-052"
+      ],
+      "principal_observation_ids": [
+        "F2P-007",
+        "P2P-001",
+        "P2P-010",
+        "P2P-051",
+        "P2P-052"
+      ],
+      "supporting_observation_ids": [
+        "F2P-008",
+        "P2P-002",
+        "P2P-004",
+        "P2P-006",
+        "P2P-007",
+        "P2P-009",
+        "P2P-011",
+        "P2P-013",
+        "P2P-015",
+        "P2P-016",
+        "P2P-017",
+        "P2P-018",
+        "P2P-019",
+        "P2P-020",
+        "P2P-021",
+        "P2P-022",
+        "P2P-023",
+        "P2P-024",
+        "P2P-025",
+        "P2P-026",
+        "P2P-027",
+        "P2P-028",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-032",
+        "P2P-034",
+        "P2P-035",
+        "P2P-037",
+        "P2P-038",
+        "P2P-039",
+        "P2P-040",
+        "P2P-041",
+        "P2P-045"
+      ],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R002",
+      "requirement": "shiv-info still accepts a positional pyz path and the -j/--json output option.",
+      "behaviours": [
+        {
+          "behaviour": "shiv-info keeps its positional archive argument and -j/--json flag",
+          "principal_observation_ids": [
+            "P2P-002"
+          ],
+          "target_status": {
+            "P2P-002": "PASS"
+          },
+          "source_status": {
+            "P2P-002": "PASS"
+          }
+        },
+        {
+          "behaviour": "the JSON view is one parseable object",
+          "principal_observation_ids": [
+            "P2P-042"
+          ],
+          "target_status": {
+            "P2P-042": "PASS"
+          },
+          "source_status": {
+            "P2P-042": "PASS"
+          }
+        },
+        {
+          "behaviour": "the text view binds every value to its own label",
+          "principal_observation_ids": [
+            "P2P-043"
+          ],
+          "target_status": {
+            "P2P-043": "PASS"
+          },
+          "source_status": {
+            "P2P-043": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "P2P-042",
+        "P2P-043",
+        "P2P-050"
+      ],
+      "principal_observation_ids": [
+        "P2P-002",
+        "P2P-042",
+        "P2P-043"
+      ],
+      "supporting_observation_ids": [
+        "P2P-050"
+      ],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R003",
+      "requirement": "Missing pip args, missing output file, disallowed pip args, over-long shebang, and failed pip install still produce the same exit codes and error text.",
+      "behaviours": [
+        {
+          "behaviour": "missing pip arguments exit 1 with the recorded text",
+          "principal_observation_ids": [
+            "F2P-009"
+          ],
+          "target_status": {
+            "F2P-009": "PASS"
+          },
+          "source_status": {
+            "F2P-009": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a missing output file exits 1 with the recorded text",
+          "principal_observation_ids": [
+            "F2P-009"
+          ],
+          "target_status": {
+            "F2P-009": "PASS"
+          },
+          "source_status": {
+            "F2P-009": "FAIL"
+          }
+        },
+        {
+          "behaviour": "space-form disallowed pip arguments are rejected",
+          "principal_observation_ids": [
+            "P2P-008",
+            "F2P-009"
+          ],
+          "target_status": {
+            "P2P-008": "PASS",
+            "F2P-009": "PASS"
+          },
+          "source_status": {
+            "P2P-008": "PASS",
+            "F2P-009": "FAIL"
+          }
+        },
+        {
+          "behaviour": "equals-form disallowed pip arguments are rejected",
+          "principal_observation_ids": [
+            "F2P-009",
+            "F2P-007"
+          ],
+          "target_status": {
+            "F2P-009": "PASS",
+            "F2P-007": "PASS"
+          },
+          "source_status": {
+            "F2P-009": "FAIL",
+            "F2P-007": "FAIL"
+          }
+        },
+        {
+          "behaviour": "an over-long shebang exits with the recorded text",
+          "principal_observation_ids": [
+            "P2P-032",
+            "F2P-009"
+          ],
+          "target_status": {
+            "P2P-032": "PASS",
+            "F2P-009": "PASS"
+          },
+          "source_status": {
+            "P2P-032": "PASS",
+            "F2P-009": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a failed pip install exits 1 with Pip install failed!",
+          "principal_observation_ids": [
+            "F2P-009"
+          ],
+          "target_status": {
+            "F2P-009": "PASS"
+          },
+          "source_status": {
+            "F2P-009": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a pip child killed by a signal is also a failed install",
+          "principal_observation_ids": [
+            "F2P-010"
+          ],
+          "target_status": {
+            "F2P-010": "PASS"
+          },
+          "source_status": {
+            "F2P-010": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-007",
+        "F2P-009",
+        "F2P-010",
+        "P2P-008",
+        "P2P-032"
+      ],
+      "principal_observation_ids": [
+        "F2P-007",
+        "F2P-009",
+        "F2P-010",
+        "P2P-008",
+        "P2P-032"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R004",
+      "requirement": "A pyz built for the hello package still executes and prints 'hello world'.",
+      "behaviours": [
+        {
+          "behaviour": "a built archive runs and writes the payload's stdout",
+          "principal_observation_ids": [
+            "P2P-004"
+          ],
+          "target_status": {
+            "P2P-004": "PASS"
+          },
+          "source_status": {
+            "P2P-004": "PASS"
+          }
+        },
+        {
+          "behaviour": "the packaged entry point keeps its runtime output",
+          "principal_observation_ids": [
+            "P2P-009"
+          ],
+          "target_status": {
+            "P2P-009": "PASS"
+          },
+          "source_status": {
+            "P2P-009": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "P2P-004",
+        "P2P-009"
+      ],
+      "principal_observation_ids": [
+        "P2P-004",
+        "P2P-009"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R005",
+      "requirement": "shiv-info text output still identifies the archive path and its metadata and JSON output is still valid JSON; both views describe the same archive state, including build identifier, timestamp, interpreter, entry-point mode, compression, extraction settings, reproducibility, and recorded source hashes. Recorded environment.json fields are reported with their recorded values; the interpreter and compression state may be carried by an explicitly recognized equivalent representation.",
+      "behaviours": [
+        {
+          "behaviour": "the JSON view reports the archive's recorded state",
+          "principal_observation_ids": [
+            "P2P-042",
+            "P2P-050"
+          ],
+          "target_status": {
+            "P2P-042": "PASS",
+            "P2P-050": "PASS"
+          },
+          "source_status": {
+            "P2P-042": "PASS",
+            "P2P-050": "PASS"
+          }
+        },
+        {
+          "behaviour": "the text view reports the archive's recorded state",
+          "principal_observation_ids": [
+            "P2P-043",
+            "P2P-050"
+          ],
+          "target_status": {
+            "P2P-043": "PASS",
+            "P2P-050": "PASS"
+          },
+          "source_status": {
+            "P2P-043": "PASS",
+            "P2P-050": "PASS"
+          }
+        },
+        {
+          "behaviour": "a missing archive is rejected with a clear error",
+          "principal_observation_ids": [
+            "P2P-047"
+          ],
+          "target_status": {
+            "P2P-047": "PASS"
+          },
+          "source_status": {
+            "P2P-047": "PASS"
+          }
+        },
+        {
+          "behaviour": "a plain zip without environment.json is rejected",
+          "principal_observation_ids": [
+            "P2P-048"
+          ],
+          "target_status": {
+            "P2P-048": "PASS"
+          },
+          "source_status": {
+            "P2P-048": "PASS"
+          }
+        },
+        {
+          "behaviour": "a corrupt archive is rejected with a distinct error",
+          "principal_observation_ids": [
+            "P2P-049"
+          ],
+          "target_status": {
+            "P2P-049": "PASS"
+          },
+          "source_status": {
+            "P2P-049": "PASS"
+          }
+        },
+        {
+          "behaviour": "both views express interpreter and compression state",
+          "principal_observation_ids": [
+            "F2P-013"
+          ],
+          "target_status": {
+            "F2P-013": "PASS"
+          },
+          "source_status": {
+            "F2P-013": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "P2P-042",
+        "P2P-043",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049",
+        "P2P-050"
+      ],
+      "principal_observation_ids": [
+        "F2P-013",
+        "P2P-042",
+        "P2P-043",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049",
+        "P2P-050"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R006",
+      "requirement": "Unrecognized arguments passed to shiv are still forwarded to pip install unchanged.",
+      "behaviours": [
+        {
+          "behaviour": "unrecognised arguments are forwarded to pip unchanged",
+          "principal_observation_ids": [
+            "P2P-006",
+            "P2P-008"
+          ],
+          "target_status": {
+            "P2P-006": "PASS",
+            "P2P-008": "PASS"
+          },
+          "source_status": {
+            "P2P-006": "PASS",
+            "P2P-008": "PASS"
+          }
+        },
+        {
+          "behaviour": "forwarded tokens keep their order and spelling",
+          "principal_observation_ids": [
+            "P2P-026"
+          ],
+          "target_status": {
+            "P2P-026": "PASS"
+          },
+          "source_status": {
+            "P2P-026": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "P2P-008"
+      ],
+      "principal_observation_ids": [
+        "P2P-006",
+        "P2P-008",
+        "P2P-026"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R007",
+      "requirement": "The project declares and uses click 8.1.7 and no longer uses click 6.7.",
+      "behaviours": [
+        {
+          "behaviour": "setup.cfg declares click==8.1.7",
+          "principal_observation_ids": [
+            "F2P-001"
+          ],
+          "target_status": {
+            "F2P-001": "PASS"
+          },
+          "source_status": {
+            "F2P-001": "FAIL"
+          }
+        },
+        {
+          "behaviour": "installed metadata declares click==8.1.7",
+          "principal_observation_ids": [
+            "F2P-003"
+          ],
+          "target_status": {
+            "F2P-003": "PASS"
+          },
+          "source_status": {
+            "F2P-003": "FAIL"
+          }
+        },
+        {
+          "behaviour": "no formal dependency file still permits click 6.7",
+          "principal_observation_ids": [
+            "F2P-004"
+          ],
+          "target_status": {
+            "F2P-004": "PASS"
+          },
+          "source_status": {
+            "F2P-004": "FAIL"
+          }
+        },
+        {
+          "behaviour": "the isolated source environment reports Click 6.7",
+          "principal_observation_ids": [
+            "P2P-054",
+            "P2P-055"
+          ],
+          "target_status": {
+            "P2P-054": "PASS",
+            "P2P-055": "PASS"
+          },
+          "source_status": {
+            "P2P-054": "PASS",
+            "P2P-055": "PASS"
+          }
+        },
+        {
+          "behaviour": "the target environment stays consistent after installation",
+          "principal_observation_ids": [
+            "P2P-056"
+          ],
+          "target_status": {
+            "P2P-056": "PASS"
+          },
+          "source_status": {
+            "P2P-056": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-001",
+        "F2P-003",
+        "F2P-004",
+        "P2P-054",
+        "P2P-055",
+        "P2P-056"
+      ],
+      "principal_observation_ids": [
+        "F2P-001",
+        "F2P-003",
+        "F2P-004",
+        "P2P-054",
+        "P2P-055",
+        "P2P-056"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R008",
+      "requirement": "All public CLI commands, options, exit codes, and error formatting remain backward-compatible with existing specifications.",
+      "behaviours": [
+        {
+          "behaviour": "the CLI surface and its messages stay backward compatible",
+          "principal_observation_ids": [
+            "P2P-007"
+          ],
+          "target_status": {
+            "P2P-007": "PASS"
+          },
+          "source_status": {
+            "P2P-007": "PASS"
+          }
+        },
+        {
+          "behaviour": "shiv-info errors keep their distinct categories",
+          "principal_observation_ids": [
+            "P2P-047",
+            "P2P-048",
+            "P2P-049"
+          ],
+          "target_status": {
+            "P2P-047": "PASS",
+            "P2P-048": "PASS",
+            "P2P-049": "PASS"
+          },
+          "source_status": {
+            "P2P-047": "PASS",
+            "P2P-048": "PASS",
+            "P2P-049": "PASS"
+          }
+        },
+        {
+          "behaviour": "a missing console script is diagnosed by name",
+          "principal_observation_ids": [
+            "P2P-046"
+          ],
+          "target_status": {
+            "P2P-046": "PASS"
+          },
+          "source_status": {
+            "P2P-046": "PASS"
+          }
+        },
+        {
+          "behaviour": "a failing launcher keeps status 33 and its stderr channel",
+          "principal_observation_ids": [
+            "P2P-045",
+            "F2P-014"
+          ],
+          "target_status": {
+            "P2P-045": "PASS",
+            "F2P-014": "PASS"
+          },
+          "source_status": {
+            "P2P-045": "PASS",
+            "F2P-014": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a successful launcher returns its own status",
+          "principal_observation_ids": [
+            "F2P-014"
+          ],
+          "target_status": {
+            "F2P-014": "PASS"
+          },
+          "source_status": {
+            "F2P-014": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-010",
+        "F2P-014",
+        "P2P-045",
+        "P2P-046",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049",
+        "P2P-051",
+        "P2P-052"
+      ],
+      "principal_observation_ids": [
+        "F2P-014",
+        "P2P-007",
+        "P2P-045",
+        "P2P-046",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049"
+      ],
+      "supporting_observation_ids": [
+        "F2P-010",
+        "P2P-051",
+        "P2P-052"
+      ],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R009",
+      "requirement": "Unrecognized flags and options intended for dependency installation continue to be forwarded to pip install unchanged.",
+      "behaviours": [
+        {
+          "behaviour": "pip arguments are passed through without rewriting",
+          "principal_observation_ids": [
+            "P2P-006",
+            "P2P-008"
+          ],
+          "target_status": {
+            "P2P-006": "PASS",
+            "P2P-008": "PASS"
+          },
+          "source_status": {
+            "P2P-006": "PASS",
+            "P2P-008": "PASS"
+          }
+        },
+        {
+          "behaviour": "unrecognised pip tokens keep their declared order",
+          "principal_observation_ids": [
+            "P2P-026"
+          ],
+          "target_status": {
+            "P2P-026": "PASS"
+          },
+          "source_status": {
+            "P2P-026": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "P2P-008"
+      ],
+      "principal_observation_ids": [
+        "P2P-006",
+        "P2P-008",
+        "P2P-026"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R010",
+      "requirement": "Packaging and execution of zipapps continue to produce valid executables that execute correctly.",
+      "behaviours": [
+        {
+          "behaviour": "built archives run and print their payload",
+          "principal_observation_ids": [
+            "P2P-004",
+            "P2P-009"
+          ],
+          "target_status": {
+            "P2P-004": "PASS",
+            "P2P-009": "PASS"
+          },
+          "source_status": {
+            "P2P-004": "PASS",
+            "P2P-009": "PASS"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-014",
+        "P2P-045",
+        "P2P-051"
+      ],
+      "principal_observation_ids": [
+        "P2P-004",
+        "P2P-009"
+      ],
+      "supporting_observation_ids": [
+        "F2P-014",
+        "P2P-045",
+        "P2P-051"
+      ],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R011",
+      "requirement": "Archive and extraction publication are all-or-nothing: a failed replacement leaves the complete previous result readable and byte-identical, a failed first attempt leaves nothing that could be mistaken for a result, two concurrent builds leave one complete archive, and a corrupt member causes extraction to fail without damaging a prior result or blocking a later valid extraction.",
+      "behaviours": [
+        {
+          "behaviour": "a failure after packaging started keeps the previous archive",
+          "principal_observation_ids": [
+            "F2P-011"
+          ],
+          "target_status": {
+            "F2P-011": "PASS"
+          },
+          "source_status": {
+            "F2P-011": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a failure on a fresh target leaves no archive",
+          "principal_observation_ids": [
+            "F2P-011"
+          ],
+          "target_status": {
+            "F2P-011": "PASS"
+          },
+          "source_status": {
+            "F2P-011": "FAIL"
+          }
+        },
+        {
+          "behaviour": "concurrent builds leave one complete archive",
+          "principal_observation_ids": [
+            "F2P-011"
+          ],
+          "target_status": {
+            "F2P-011": "PASS"
+          },
+          "source_status": {
+            "F2P-011": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a corrupt package member leaves no partial extraction or damaged prior result, and a later valid extraction succeeds",
+          "principal_observation_ids": [
+            "F2P-011"
+          ],
+          "target_status": {
+            "F2P-011": "PASS"
+          },
+          "source_status": {
+            "F2P-011": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-011"
+      ],
+      "principal_observation_ids": [
+        "F2P-011"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R012",
+      "requirement": "A file lock provides mutual exclusion across threads and processes using the same path, honours a finite timeout and polling interval, raises TimeoutError identifying the lock path, and releases after normal exit and exceptions; competing builds of one output path therefore leave one complete, member-unique archive with no temporary residue.",
+      "behaviours": [
+        {
+          "behaviour": "a bounded acquisition honours timeout and poll_interval",
+          "principal_observation_ids": [
+            "F2P-012"
+          ],
+          "target_status": {
+            "F2P-012": "PASS"
+          },
+          "source_status": {
+            "F2P-012": "FAIL"
+          }
+        },
+        {
+          "behaviour": "a timed-out acquisition raises TimeoutError naming the path",
+          "principal_observation_ids": [
+            "F2P-012"
+          ],
+          "target_status": {
+            "F2P-012": "PASS"
+          },
+          "source_status": {
+            "F2P-012": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-012"
+      ],
+      "principal_observation_ids": [
+        "F2P-012"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    },
+    {
+      "requirement_id": "R013",
+      "requirement": "Both shiv-info views express the archive's interpreter and compression state, using an explicitly recognized representation, so the two views describe the same complete archive state.",
+      "behaviours": [
+        {
+          "behaviour": "the JSON view names the interpreter",
+          "principal_observation_ids": [
+            "F2P-013"
+          ],
+          "target_status": {
+            "F2P-013": "PASS"
+          },
+          "source_status": {
+            "F2P-013": "FAIL"
+          }
+        },
+        {
+          "behaviour": "the JSON view names the compression state",
+          "principal_observation_ids": [
+            "F2P-013"
+          ],
+          "target_status": {
+            "F2P-013": "PASS"
+          },
+          "source_status": {
+            "F2P-013": "FAIL"
+          }
+        },
+        {
+          "behaviour": "the text view names the interpreter",
+          "principal_observation_ids": [
+            "F2P-013"
+          ],
+          "target_status": {
+            "F2P-013": "PASS"
+          },
+          "source_status": {
+            "F2P-013": "FAIL"
+          }
+        },
+        {
+          "behaviour": "the text view names the compression state",
+          "principal_observation_ids": [
+            "F2P-013"
+          ],
+          "target_status": {
+            "F2P-013": "PASS"
+          },
+          "source_status": {
+            "F2P-013": "FAIL"
+          }
+        }
+      ],
+      "registry_observation_ids": [
+        "F2P-013"
+      ],
+      "principal_observation_ids": [
+        "F2P-013"
+      ],
+      "supporting_observation_ids": [],
+      "behaviours_without_principal_evidence": []
+    }
+  ],
+  "clauses_total": 13,
+  "behaviours_total": 48,
+  "coverage_errors": [],
+  "observations_without_clause": [],
+  "observation_states": {
+    "node_pass": {
+      "meaning": "the node ran and its assertions held",
+      "observation_ids": [
+        "F2P-001",
+        "F2P-003",
+        "F2P-004",
+        "F2P-007",
+        "F2P-008",
+        "F2P-009",
+        "F2P-010",
+        "F2P-011",
+        "F2P-012",
+        "F2P-013",
+        "F2P-014",
+        "P2P-001",
+        "P2P-002",
+        "P2P-004",
+        "P2P-006",
+        "P2P-007",
+        "P2P-008",
+        "P2P-009",
+        "P2P-010",
+        "P2P-011",
+        "P2P-013",
+        "P2P-015",
+        "P2P-016",
+        "P2P-017",
+        "P2P-018",
+        "P2P-019",
+        "P2P-020",
+        "P2P-021",
+        "P2P-022",
+        "P2P-023",
+        "P2P-024",
+        "P2P-025",
+        "P2P-026",
+        "P2P-027",
+        "P2P-028",
+        "P2P-029",
+        "P2P-030",
+        "P2P-031",
+        "P2P-032",
+        "P2P-034",
+        "P2P-035",
+        "P2P-037",
+        "P2P-038",
+        "P2P-039",
+        "P2P-040",
+        "P2P-041",
+        "P2P-042",
+        "P2P-043",
+        "P2P-045",
+        "P2P-046",
+        "P2P-047",
+        "P2P-048",
+        "P2P-049",
+        "P2P-050",
+        "P2P-051",
+        "P2P-052",
+        "P2P-054",
+        "P2P-055",
+        "P2P-056"
+      ]
+    },
+    "runtime_inconclusive_path": {
+      "meaning": "a path that reports itself as unverified: the node is INCONCLUSIVE, the hard gate reports an unfinished evaluation, and the reward is 0",
+      "paths": {}
+    },
+    "platform_not_executed": {
+      "meaning": "the platform never ran. That is not an observation about the platform, and it is not counted as a pass.",
+      "paths": {
+        "P2P-045": "Windows .exe launchers are generated by distlib ScriptMaker. On Windows the node records a coverage gap (INCONCLUSIVE); on this Linux verifier the platform is simply not executed, which is not an observation about Windows and is not counted as a pass.",
+        "P2P-052": "The unsupported .exe name case is POSIX-specific. The Windows launcher behaviour itself is not executed on the Linux verifier."
+      }
+    },
+    "unasserted_sub_requirement": {
+      "meaning": "the node passes but deliberately does not assert this sub-requirement; it stays open until a target gate asserts it",
+      "nodes": {
+        "P2P-050": [
+          "this node checks interpreter and compression only when the report already expresses them, because a P2P node must hold on the unpatched base, which reports neither. The presence requirement is not left open: F2P-013 asserts it on the real JSON and text output and fails on the base."
+        ]
+      }
+    }
+  },
+  "declared_uncovered_scope": [
+    "P2P-045",
+    "P2P-052"
+  ],
+  "closed_scope": [
+    {
+      "scope": "EXC-P2P-013-SOURCE-ORDER-SCOPE",
+      "observation_ids": [
+        "P2P-013"
+      ],
+      "reason": "Both declared orders are compared at helper level and then built and run end to end (P2P-013). The later declared source provides the effective console script for a duplicated name, and the selected marker changes when the order is reversed."
+    }
+  ],
+  "evidence": {
+    "reference_target_run": {
+      "artifact": "authoring/acceptance-runs/reference/verifier/verifier-result.json",
+      "artifact_sha256_location": "authoring/acceptance-runs/SHA256SUMS",
+      "ctrf": {
+        "failed": 0,
+        "other": 0,
+        "passed": 60,
+        "pending": 0,
+        "skipped": 0,
+        "start": 0,
+        "stop": 0,
+        "tests": 60
+      },
+      "status": "success",
+      "hardgate": "PASS",
+      "observations": 60,
+      "p2p": "49/49",
+      "f2p_pass": "11/11",
+      "f2p_fail": "0/11",
+      "test_progress": {
+        "T": 1.0,
+        "passed": 17,
+        "score_components": {
+          "F2P": {
+            "passed": 11,
+            "score": 1.0,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 6,
+            "score": 1.0,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "candidate_patch_error": null,
+      "reward": 1.0,
+      "artifact_sha256": "sha256:f53e675f3ba2e016ce95075a94b9c546eceedc9a6e9b23a4400a60a1b9217a87",
+      "artifact_origin": "Harbor Oracle (archived reference run; final job id recorded in authoring/BUILD-AUDIT-2026-10-26.md)"
+    },
+    "source_qualification_run": {
+      "artifact": "authoring/acceptance-runs/source/logs/source-result.json",
+      "artifact_sha256_location": "authoring/acceptance-runs/SHA256SUMS",
+      "role": "source",
+      "code_state": "unpatched base at the fixed commit, Click 6.7",
+      "status": null,
+      "hardgate": null,
+      "observations": 60,
+      "p2p": "49/49",
+      "f2p_pass": "0/11",
+      "f2p_fail": "11/11",
+      "test_progress": null,
+      "candidate_patch_error": null,
+      "artifact_sha256": "sha256:478b6dfb8dece51a45b409b2202c32a8802342d1f672ee3262ec2a418f655cfa"
+    },
+    "reference_source_role_run": {
+      "artifact": null,
+      "role": "source",
+      "code_state": "reference-patch-applied (historical; not reproduced)",
+      "note": "Compatibility evidence for the source role entry only; it is not source qualification and no baseline row comes from it. The historical directory acceptance-runs/reference-source/ is not present in this workspace and was not reconstructed from memory.",
+      "status": null,
+      "hardgate": null,
+      "observations": null,
+      "p2p": null,
+      "f2p_pass": null,
+      "f2p_fail": null,
+      "test_progress": null,
+      "candidate_patch_error": null,
+      "available": false,
+      "artifact_sha256": null
+    },
+    "valid_non_migrating_run": {
+      "artifact": "authoring/acceptance-runs/no-op/verifier/verifier-result.json",
+      "artifact_sha256_location": "authoring/acceptance-runs/SHA256SUMS",
+      "patch": "documentation-only patch; applies cleanly and changes no behaviour",
+      "status": "failed",
+      "hardgate": "PASS",
+      "observations": 60,
+      "p2p": "49/49",
+      "f2p_pass": "0/11",
+      "f2p_fail": "11/11",
+      "test_progress": {
+        "T": 0.0,
+        "passed": 0,
+        "score_components": {
+          "F2P": {
+            "passed": 0,
+            "score": 0.0,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 0,
+            "score": 0.0,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "candidate_patch_error": null,
+      "reward": 0.0,
+      "artifact_sha256": "sha256:e045f8e57c27b2a42fb73d6c39f0c2799c23bab201ccf14270f656dcb302cec5",
+      "patch_file": {
+        "path": "authoring/acceptance-runs/patches/noop.patch",
+        "sha256": "sha256:f65abac987670721a11fd61c43fc0b16fcab7925080ec14b130e1821bafb6296"
+      }
+    },
+    "empty_patch_run": {
+      "artifact": "authoring/acceptance-runs/empty/verifier/verifier-result.json",
+      "artifact_sha256_location": "authoring/acceptance-runs/SHA256SUMS",
+      "note": "Input rejection only: the patch never enters the test phase, so this run says nothing about migration detection.",
+      "status": "failed",
+      "hardgate": "FAIL",
+      "observations": 0,
+      "p2p": "0/0",
+      "f2p_pass": "0/0",
+      "f2p_fail": "0/0",
+      "test_progress": {
+        "T": 0.0
+      },
+      "candidate_patch_error": "model patch is empty",
+      "reward": 0.0,
+      "artifact_sha256": "sha256:84df9b6ba1b11e997ab8cadba63caeeeb457288d475e836bd55537a4a65ed58b",
+      "patch_file": {
+        "path": "authoring/acceptance-runs/patches/empty.patch",
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "partial_migration_run": {
+      "artifact": "authoring/acceptance-runs/partial/verifier/verifier-result.json",
+      "artifact_sha256": "sha256:4f9faf7fca74d9a46ff9a990727bf2e2259e928ba56f0ac805ac0271c756ef09",
+      "artifact_sha256_location": "authoring/acceptance-runs/SHA256SUMS",
+      "patch_file": {
+        "path": "authoring/acceptance-runs/patches/partial.patch",
+        "sha256": "sha256:58e77a6c2868aaf56914ca57372ff8c3e230043628d7901dad05d1ce3c5cea25"
+      },
+      "patch": "setup.cfg only: click>=6.7,!=7.0 -> click==8.1.7; no other migration change",
+      "status": "failed",
+      "hardgate": "PASS",
+      "observations": 60,
+      "p2p": "49/49",
+      "f2p_pass": "3/11",
+      "f2p_fail": "8/11",
+      "test_progress": {
+        "T": 0.219697,
+        "passed": 4,
+        "score_components": {
+          "F2P": {
+            "passed": 3,
+            "score": 0.2727273,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 1,
+            "score": 0.1666667,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "candidate_patch_error": null,
+      "reward": 0.219697
+    }
+  },
+  "post_change_note": "2026-11-05 F2P-011 now treats a corrupt package member, not an absent site-packages member, as an extraction failure; F2P-012 no longer requires preservation of unrelated hard-linked file content. The evidence block below is historical only, and these revised assertions are pending Oracle, source-qualification, and model-trial recalibration."
+}

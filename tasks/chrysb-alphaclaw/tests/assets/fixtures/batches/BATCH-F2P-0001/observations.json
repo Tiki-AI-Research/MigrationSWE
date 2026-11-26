@@ -1,0 +1,414 @@
+{
+  "schema_version": "migration-asset-f2p-observations:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "observations": [
+    {
+      "id": "F2P-001",
+      "predicate": "static_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/agents-service.test.js::tests/server/agents-service.test.js#test:overwrites orphaned env var when channel is not in config",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/agents-service.test.js; surface: tests/server/agents-service.test.js#test:overwrites orphaned env var when channel is not in config. Behavior: Run tests/server/agents-service.test.js#test:overwrites orphaned env var when channel is not in config. Required postcondition: GET /login.html without setup_token returns 200 text/html with the file bytes and GET /css/theme.css returns the CSS file. An Express static mount naively replaced by a Hono catch-all or auth redirect returns 302 or 404 for /login.html and fails the public-static input.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R044"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-14975"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-002",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-auth.test.js::tests/server/routes-auth.test.js#test:rejects query-string token auth",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-auth.test.js; surface: tests/server/routes-auth.test.js#test:rejects query-string token auth. Behavior: Run tests/server/routes-auth.test.js#test:rejects query-string token auth. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12505"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-007",
+      "predicate": "raw_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid-sequence",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/onboarding-github.test.js::tests/server/onboarding-github.test.js#test:creates org-owned new repos through the organization endpoint",
+      "atomic_claim": "Drive this state/lifecycle transition across the migration and verify the persisted state/invariant still holds under the target framework. Scope: tests/server/onboarding-github.test.js; surface: tests/server/onboarding-github.test.js#test:creates org-owned new repos through the organization endpoint. Behavior: Run tests/server/onboarding-github.test.js#test:creates org-owned new repos through the organization endpoint. Required postcondition: POST /webhook/foo with Content-Type application/json and raw bytes {\"a\":1} reaches the gateway with those exact bytes, while POST /webhook/foo with 5 MB plus 1 raw byte returns 413. A Hono handler using c.req.json() parses and re-serializes or rejects the bytes and breaks signature validation, unlike raw arrayBuffer middleware.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R043"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12277"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-009",
+      "predicate": "sse_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-pairings.test.js::tests/server/routes-pairings.test.js#test:returns not found when reject target does not exist",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-pairings.test.js; surface: tests/server/routes-pairings.test.js#test:returns not found when reject target does not exist. Behavior: Run tests/server/routes-pairings.test.js#test:returns not found when reject target does not exist. Required postcondition: GET /api/events/status yields a first event: status frame within 2 seconds, further status frames near 2-second intervals, a : keepalive comment near 15 seconds, and stops on disconnect. A Hono handler that returns one buffered Response cannot produce incremental frames or cancel timers.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R045"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12950"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-010",
+      "predicate": "ws_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/import-scanner.test.js::tests/server/import-scanner.test.js#test:ignores openclaw.json5 as an unsupported config filename",
+      "atomic_claim": "Exercise this module/type interop path (ESM/CJS, dynamic import, type erasure) on the migrated code and verify the required target behavior. Scope: tests/server/import-scanner.test.js; surface: tests/server/import-scanner.test.js#test:ignores openclaw.json5 as an unsupported config filename. Behavior: Run tests/server/import-scanner.test.js#test:ignores openclaw.json5 as an unsupported config filename. Required postcondition: An HTTP Upgrade to /api/ws/chat without setup_token returns HTTP/1.1 401 and closes before chat bridging; with a valid setup_token cookie the socket opens and echoes messages. A Hono app that only implements fetch handling without wiring the Node upgrade event or WebSocket bridge cannot produce either outcome.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R046"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12454"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-011",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-onboarding.test.js::tests/server/routes-onboarding.test.js#test:server/routes/onboarding",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-onboarding.test.js; surface: tests/server/routes-onboarding.test.js#test:server/routes/onboarding. Behavior: Run tests/server/routes-onboarding.test.js#test:server/routes/onboarding. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-13375"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-013",
+      "predicate": "proxy_hops_hono",
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "scenario": "target-postcondition",
+      "surface": "lib/server/routes/auth.js::POST /api/auth/logout",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: lib/server/routes/auth.js; surface: POST /api/auth/logout. Behavior: GET /api/auth/status returns {\"authEnabled\":true} when SETUP_PASSWORD is set and {\"authEnabled\":false} when absent; POST /api/auth/logout returns {\"ok\":true} and clears setup_token with an expired Set-Cookie.. Required postcondition: With TRUST_PROXY_HOPS=1, socket 127.0.0.1, and X-Forwarded-For 198.51.100.7, failed login and /v1 auth attempts throttle the 198.51.100.7 key and eventually return 429; with TRUST_PROXY_HOPS=0 the same request throttles 127.0.0.1. A Hono migration that ignores X-Forwarded-For or always uses the socket address cannot distinguish the two cases.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R048"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-14538"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-003",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "boundary",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/exec-defaults-config.test.js::tests/server/exec-defaults-config.test.js#test:does not add or change exec approvals defaults when defaults is a non-empty object",
+      "atomic_claim": "Execute this boundary/degenerate input on the migrated code and verify the required target behavior; a config-only naive migration must fail. Scope: tests/server/exec-defaults-config.test.js; surface: tests/server/exec-defaults-config.test.js#test:does not add or change exec approvals defaults when defaults is a non-empty object. Behavior: Run tests/server/exec-defaults-config.test.js#test:does not add or change exec approvals defaults when defaults is a non-empty object. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-10854"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-004",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/secret-detector.test.js::tests/server/secret-detector.test.js#test:matchesValuePrefix",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/secret-detector.test.js; surface: tests/server/secret-detector.test.js#test:matchesValuePrefix. Behavior: Run tests/server/secret-detector.test.js#test:matchesValuePrefix. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12190"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-005",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid-sequence",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-webhooks.test.js::tests/server/routes-webhooks.test.js#test:updates webhook destination mapping",
+      "atomic_claim": "Drive this state/lifecycle transition across the migration and verify the persisted state/invariant still holds under the target framework. Scope: tests/server/routes-webhooks.test.js; surface: tests/server/routes-webhooks.test.js#test:updates webhook destination mapping. Behavior: Run tests/server/routes-webhooks.test.js#test:updates webhook destination mapping. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-13302"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-006",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-system.test.js::tests/server/routes-system.test.js#test:persists the OpenAI-compatible API feature toggle",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-system.test.js; surface: tests/server/routes-system.test.js#test:persists the OpenAI-compatible API feature toggle. Behavior: Run tests/server/routes-system.test.js#test:persists the OpenAI-compatible API feature toggle. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-13211"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-008",
+      "predicate": "static_hono",
+      "family": "target-runtime",
+      "input_class": "boundary",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-agents.test.js::tests/server/routes-agents.test.js#test:returns 404 on GET /api/agents/:id when missing",
+      "atomic_claim": "Execute this boundary/degenerate input on the migrated code and verify the required target behavior; a config-only naive migration must fail. Scope: tests/server/routes-agents.test.js; surface: tests/server/routes-agents.test.js#test:returns 404 on GET /api/agents/:id when missing. Behavior: Run tests/server/routes-agents.test.js#test:returns 404 on GET /api/agents/:id when missing. Required postcondition: GET /login.html without setup_token returns 200 text/html with the file bytes and GET /css/theme.css returns the CSS file. An Express static mount naively replaced by a Hono catch-all or auth redirect returns 302 or 404 for /login.html and fails the public-static input.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R044"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12187"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-012",
+      "predicate": "raw_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-onboarding.test.js::tests/server/routes-onboarding.test.js#test:allows new workspace repos owned by organizations when github verification passes",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-onboarding.test.js; surface: tests/server/routes-onboarding.test.js#test:allows new workspace repos owned by organizations when github verification passes. Behavior: Run tests/server/routes-onboarding.test.js#test:allows new workspace repos owned by organizations when github verification passes. Required postcondition: POST /webhook/foo with Content-Type application/json and raw bytes {\"a\":1} reaches the gateway with those exact bytes, while POST /webhook/foo with 5 MB plus 1 raw byte returns 413. A Hono handler using c.req.json() parses and re-serializes or rejects the bytes and breaks signature validation, unlike raw arrayBuffer middleware.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R043"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-10749"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-014",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "boundary",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-models.test.js::tests/server/routes-models.test.js#test:serves the bundled catalog while a dynamic refresh resolves empty",
+      "atomic_claim": "Execute this boundary/degenerate input on the migrated code and verify the required target behavior; a config-only naive migration must fail. Scope: tests/server/routes-models.test.js; surface: tests/server/routes-models.test.js#test:serves the bundled catalog while a dynamic refresh resolves empty. Behavior: Run tests/server/routes-models.test.js#test:serves the bundled catalog while a dynamic refresh resolves empty. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-13312"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-015",
+      "predicate": "proxy_hops_hono",
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "scenario": "target-postcondition",
+      "surface": "lib/server/routes/auth.js::Pre-handler body limit rejection",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: lib/server/routes/auth.js; surface: Pre-handler body limit rejection. Behavior: A request exceeding its applicable limit returns 413 and the route handler plus gateway forwarding are not invoked: 5 MB JSON for /api/*, 5 MB raw for webhooks, and 50 MB JSON for enabled /v1/*.. Required postcondition: With TRUST_PROXY_HOPS=1, socket 127.0.0.1, and X-Forwarded-For 198.51.100.7, failed login and /v1 auth attempts throttle the 198.51.100.7 key and eventually return 429; with TRUST_PROXY_HOPS=0 the same request throttles 127.0.0.1. A Hono migration that ignores X-Forwarded-For or always uses the socket address cannot distinguish the two cases.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R048"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-10845"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-016",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid-sequence",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/agents-service.test.js::tests/server/agents-service.test.js#test:deletes stored custom workspace path when keepWorkspace is false",
+      "atomic_claim": "Drive this state/lifecycle transition across the migration and verify the persisted state/invariant still holds under the target framework. Scope: tests/server/agents-service.test.js; surface: tests/server/agents-service.test.js#test:deletes stored custom workspace path when keepWorkspace is false. Behavior: Run tests/server/agents-service.test.js#test:deletes stored custom workspace path when keepWorkspace is false. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-14799"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-017",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/operation-events.test.js::tests/server/operation-events.test.js#test:server/operation-events",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/operation-events.test.js; surface: tests/server/operation-events.test.js#test:server/operation-events. Behavior: Run tests/server/operation-events.test.js#test:server/operation-events. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-14485"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-018",
+      "predicate": "raw_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-models.test.js::tests/server/routes-models.test.js#test:re-syncs auth references on PUT /api/models/config",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-models.test.js; surface: tests/server/routes-models.test.js#test:re-syncs auth references on PUT /api/models/config. Behavior: Run tests/server/routes-models.test.js#test:re-syncs auth references on PUT /api/models/config. Required postcondition: POST /webhook/foo with Content-Type application/json and raw bytes {\"a\":1} reaches the gateway with those exact bytes, while POST /webhook/foo with 5 MB plus 1 raw byte returns 413. A Hono handler using c.req.json() parses and re-serializes or rejects the bytes and breaks signature validation, unlike raw arrayBuffer middleware.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R043"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12968"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-019",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-onboarding.test.js::tests/server/routes-onboarding.test.js#test:requires codex oauth or an OpenAI API key for openai-codex provider",
+      "atomic_claim": "Exercise this module/type interop path (ESM/CJS, dynamic import, type erasure) on the migrated code and verify the required target behavior. Scope: tests/server/routes-onboarding.test.js; surface: tests/server/routes-onboarding.test.js#test:requires codex oauth or an OpenAI API key for openai-codex provider. Behavior: Run tests/server/routes-onboarding.test.js#test:requires codex oauth or an OpenAI API key for openai-codex provider. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12579"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-020",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "boundary",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/gateway.test.js::tests/server/gateway.test.js#test:treats whatsapp as configured when selfChatMode is false, saved creds exist, but allowFrom is empty",
+      "atomic_claim": "Execute this boundary/degenerate input on the migrated code and verify the required target behavior; a config-only naive migration must fail. Scope: tests/server/gateway.test.js; surface: tests/server/gateway.test.js#test:treats whatsapp as configured when selfChatMode is false, saved creds exist, but allowFrom is empty. Behavior: Run tests/server/gateway.test.js#test:treats whatsapp as configured when selfChatMode is false, saved creds exist, but allowFrom is empty. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12030"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-021",
+      "predicate": "ws_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/webhook-middleware.test.js::tests/server/webhook-middleware.test.js#test:server/webhook-middleware",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/webhook-middleware.test.js; surface: tests/server/webhook-middleware.test.js#test:server/webhook-middleware. Behavior: Run tests/server/webhook-middleware.test.js#test:server/webhook-middleware. Required postcondition: An HTTP Upgrade to /api/ws/chat without setup_token returns HTTP/1.1 401 and closes before chat bridging; with a valid setup_token cookie the socket opens and echoes messages. A Hono app that only implements fetch handling without wiring the Node upgrade event or WebSocket bridge cannot produce either outcome.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R046"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-12600"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-022",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "declared-behavior",
+      "scenario": "target-postcondition",
+      "surface": "lib/server.js::POST /webhook/test",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: lib/server.js; surface: POST /webhook/test. Behavior: POST /webhook/test, POST /hooks/test, and POST /gmail-pubsub receive the exact raw request bytes rather than a parsed JSON object under the existing 5 MB limit; forwarding a signed payload preserves those bytes so signature validation passes, while an oversized raw body is rejected 413.. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-11826"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-023",
+      "predicate": "health_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/routes-browse.test.js::tests/server/routes-browse.test.js#test:caps requested browse tree depth",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/routes-browse.test.js; surface: tests/server/routes-browse.test.js#test:caps requested browse tree depth. Behavior: Run tests/server/routes-browse.test.js#test:caps requested browse tree depth. Required postcondition: GET /health served after startup returns 200 JSON from a Hono fetch handler using Hono middleware and response primitives; a config-only change that swaps the dependency but still dispatches through an Express application fails because the request never enters Hono's handler chain.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-14344"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-024",
+      "predicate": "json_body_hono",
+      "family": "target-runtime",
+      "input_class": "valid",
+      "scenario": "target-postcondition",
+      "surface": "tests/server/git-shim.test.js::tests/server/git-shim.test.js#test:does not inject auth for git commands outside the managed repo root",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: tests/server/git-shim.test.js; surface: tests/server/git-shim.test.js#test:does not inject auth for git commands outside the managed repo root. Behavior: Run tests/server/git-shim.test.js#test:does not inject auth for git commands outside the managed repo root. Required postcondition: POST /api/auth/login with Content-Type application/json and {\"password\":\"<SETUP_PASSWORD>\"} returns 200 {\"ok\":true} only when Hono body middleware parses the JSON, and PUT /api/env with a body over 5 MB returns 413 before the handler. A naive Hono swap without explicit body middleware observes no parsed JSON and does not enforce the limit, unlike Express json().. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "contract_requirement_ids": [
+        "R042"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-13849"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

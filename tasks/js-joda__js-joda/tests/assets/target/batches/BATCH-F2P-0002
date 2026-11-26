@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+'use strict';
+
+const path = require('path');
+const batch = require(path.join(__dirname, '..', '..', 'shared', 'batches', 'BATCH-F2P-0002'));
+
+const side = batch.createSide('target');
+
+function main(argv) {
+  const repoRoot = argv[2] || process.cwd();
+  const report = side.buildReport(repoRoot);
+  process.stdout.write(`${JSON.stringify(report)}\n`);
+  return 0;
+}
+
+module.exports = side;
+
+if (require.main === module) {
+  process.exitCode = main(process.argv);
+}

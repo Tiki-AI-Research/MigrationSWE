@@ -1,0 +1,86 @@
+{
+  "build_commands": [
+    [
+      "pnpm",
+      "run",
+      "build"
+    ]
+  ],
+  "environment": {},
+  "executor": {
+    "id": "command",
+    "version": "1"
+  },
+  "harness_command": [
+    "node",
+    "{verifier}/evaluator-runner.mjs",
+    "{report}"
+  ],
+  "native_test_commands": [
+    [
+      "pnpm",
+      "test"
+    ],
+    [
+      "pnpm",
+      "run",
+      "test:types"
+    ]
+  ],
+  "preflight_commands": [
+    [
+      "node",
+      "--version"
+    ],
+    [
+      "pnpm",
+      "--version"
+    ]
+  ],
+  "schema_version": "migration-environment-runtime:v3",
+  "technology": {
+    "framework": {
+      "name": "vitest",
+      "version": "5.0.1"
+    },
+    "language": {
+      "name": "javascript",
+      "version": "esnext"
+    },
+    "toolchain": {
+      "name": "pnpm",
+      "version": "10.33.4"
+    }
+  },
+  "timeout_seconds": 1800.0,
+  "workdir": "/workspace/repo",
+  "workspace_materializations": [
+    {
+      "mode": "copy",
+      "source": "/opt/migration/dependencies/node_modules",
+      "target": "node_modules"
+    }
+  ],
+  "writable_storage": [
+    {
+      "executable": true,
+      "id": "build-types",
+      "initialization": "empty",
+      "lifecycle": "attempt",
+      "network": "disabled",
+      "size_limit": null,
+      "source": null,
+      "target": "types"
+    },
+    {
+      "executable": true,
+      "id": "vitest-cache",
+      "initialization": "empty",
+      "lifecycle": "attempt",
+      "network": "disabled",
+      "size_limit": null,
+      "source": null,
+      "target": ".vitest"
+    }
+  ]
+}

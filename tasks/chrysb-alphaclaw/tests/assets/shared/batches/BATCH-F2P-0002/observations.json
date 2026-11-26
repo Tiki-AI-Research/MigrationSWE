@@ -1,0 +1,643 @@
+{
+  "schema_version": "migration-f2p-probe-manifest:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "observation_count": 24,
+  "source_technology": {
+    "name": "Express",
+    "version": "5.2.1"
+  },
+  "target_technology": {
+    "name": "Hono",
+    "version": "4.13.7"
+  },
+  "execution": {
+    "source_command": "ALPHACLAW_REPO_ROOT=<SOURCE_REPO_ROOT> node source/batches/BATCH-F2P-0002/<OBSERVATION_ID>.js",
+    "target_command": "ALPHACLAW_REPO_ROOT=<TARGET_REPO_ROOT> node target/batches/BATCH-F2P-0002/<OBSERVATION_ID>.js",
+    "exit_codes": {
+      "PASS": 0,
+      "FAIL": 1,
+      "INCONCLUSIVE": 2
+    },
+    "shared_library": "shared/batches/BATCH-F2P-0002/probe-lib.js"
+  },
+  "observations": [
+    {
+      "observation_id": "F2P-037",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "lib/server::GET /v1/models",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": null,
+      "probe": "gzip-proxy",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-037.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-037.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "tests/server/watchdog-notify.test.js::tests/server/watchdog-notify.test.js#test:reports partial Slack delivery failure when one account is missing a bot token",
+      "projection": "error-semantics",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/watchdog-notify.test.js",
+        "name": "reports partial Slack delivery failure when one account is missing a bot token"
+      },
+      "probe": "health",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-031.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-031.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "tests/server/gateway.test.js::tests/server/gateway.test.js#test:removes the prior managed entry when REMOTE_MCP_NAME changes",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/gateway.test.js",
+        "name": "removes the prior managed entry when REMOTE_MCP_NAME changes"
+      },
+      "probe": "sse",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-025.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-025.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "tests/server/onboarding-github.test.js::tests/server/onboarding-github.test.js#test:clones without embedding the github token in the command line",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/onboarding-github.test.js",
+        "name": "clones without embedding the github token in the command line"
+      },
+      "probe": "raw-webhook",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-026.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-026.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "lib/server/routes/auth.js::GET /health",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": null,
+      "probe": "trust-proxy",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-027.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-027.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "tests/server/routes-usage.test.js::tests/server/routes-usage.test.js#test:server/routes/usage",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-usage.test.js",
+        "name": "server/routes/usage"
+      },
+      "probe": "raw-webhook",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-028.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-028.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "tests/server/openclaw-channel-plugin-preflight.test.js::tests/server/openclaw-channel-plugin-preflight.test.js#test:does not update current, disabled, or non-official plugins",
+      "projection": "state-persistence",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/openclaw-channel-plugin-preflight.test.js",
+        "name": "does not update current, disabled, or non-official plugins"
+      },
+      "probe": "sse",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-029.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-029.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "tests/server/secret-detector.test.js::tests/server/secret-detector.test.js#test:skips values that are already env var references",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/secret-detector.test.js",
+        "name": "skips values that are already env var references"
+      },
+      "probe": "health",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-030.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-030.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-032",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "tests/server/routes-telegram.test.js::tests/server/routes-telegram.test.js#test:quotes git-sync commit messages as a single shell arg",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-telegram.test.js",
+        "name": "quotes git-sync commit messages as a single shell arg"
+      },
+      "probe": "sse",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-032.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-032.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-033",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "tests/server/cron-service.test.js::tests/server/cron-service.test.js#test:uses --system-event when editing main systemEvent job prompts",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/cron-service.test.js",
+        "name": "uses --system-event when editing main systemEvent job prompts"
+      },
+      "probe": "health",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-033.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-033.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-034",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "tests/server/git-shim.test.js::tests/server/git-shim.test.js#test:server git shim scripts",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/git-shim.test.js",
+        "name": "server git shim scripts"
+      },
+      "probe": "sse",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-034.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-034.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-035",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "tests/server/gateway.test.js::tests/server/gateway.test.js#test:uses REMOTE_MCP_NAME as the server key when set",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/gateway.test.js",
+        "name": "uses REMOTE_MCP_NAME as the server key when set"
+      },
+      "probe": "raw-webhook",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-035.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-035.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-036",
+      "requirement_ids": [
+        "R044"
+      ],
+      "surface": "tests/server/routes-agents.test.js::tests/server/routes-agents.test.js#test:updates an agent on PUT /api/agents/:id",
+      "projection": "state-persistence",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-agents.test.js",
+        "name": "updates an agent on PUT /api/agents/:id"
+      },
+      "probe": "static-public",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-036.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-036.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-038",
+      "requirement_ids": [
+        "R044"
+      ],
+      "surface": "tests/server/openclaw-channel-plugin-preflight.test.js::tests/server/openclaw-channel-plugin-preflight.test.js#test:server/openclaw-channel-plugin-preflight",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/openclaw-channel-plugin-preflight.test.js",
+        "name": "server/openclaw-channel-plugin-preflight"
+      },
+      "probe": "static-public",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-038.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-038.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-039",
+      "requirement_ids": [
+        "R042"
+      ],
+      "surface": "tests/server/routes-pairings.test.js::tests/server/routes-pairings.test.js#test:rejects invalid pairing approval input before running command",
+      "projection": "error-semantics",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-pairings.test.js",
+        "name": "rejects invalid pairing approval input before running command"
+      },
+      "probe": "json-body",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-039.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-039.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-040",
+      "requirement_ids": [
+        "R046"
+      ],
+      "surface": "tests/server/agents-service.test.js::tests/server/agents-service.test.js#test:migrates single-account channel config before adding another account",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/agents-service.test.js",
+        "name": "migrates single-account channel config before adding another account"
+      },
+      "probe": "websocket",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-040.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-040.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-041",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "tests/server/import-temp.test.js::tests/server/import-temp.test.js#test:server/onboarding/import-temp",
+      "projection": "interop",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/import-temp.test.js",
+        "name": "server/onboarding/import-temp"
+      },
+      "probe": "raw-webhook",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-041.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-041.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-042",
+      "requirement_ids": [
+        "R044"
+      ],
+      "surface": "tests/server/agents-service.test.js::tests/server/agents-service.test.js#test:creates a whatsapp channel account with allowlist defaults",
+      "projection": "state-persistence",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/agents-service.test.js",
+        "name": "creates a whatsapp channel account with allowlist defaults"
+      },
+      "probe": "static-public",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-042.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-042.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-043",
+      "requirement_ids": [
+        "R045"
+      ],
+      "surface": "tests/server/routes-onboarding.test.js::tests/server/routes-onboarding.test.js#test:does not treat nested openclaw config as an imported config during completion",
+      "projection": "interop",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-onboarding.test.js",
+        "name": "does not treat nested openclaw config as an imported config during completion"
+      },
+      "probe": "sse",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-043.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-043.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-044",
+      "requirement_ids": [
+        "R042"
+      ],
+      "surface": "tests/server/onboarding-validation.test.js::tests/server/onboarding-validation.test.js#test:accepts canonical GPT-5.5 with an OpenAI API key and no Codex OAuth",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/onboarding-validation.test.js",
+        "name": "accepts canonical GPT-5.5 with an OpenAI API key and no Codex OAuth"
+      },
+      "probe": "json-body",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-044.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-044.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-045",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "tests/server/routes-proxy.test.js::tests/server/routes-proxy.test.js#test:rejects /v1 requests when no gateway token is configured",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-proxy.test.js",
+        "name": "rejects /v1 requests when no gateway token is configured"
+      },
+      "probe": "health",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-045.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-045.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-046",
+      "requirement_ids": [
+        "R042"
+      ],
+      "surface": "tests/server/webhooks-db.test.js::tests/server/webhooks-db.test.js#test:server/webhooks-db",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/webhooks-db.test.js",
+        "name": "server/webhooks-db"
+      },
+      "probe": "json-body",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-046.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-046.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-047",
+      "requirement_ids": [
+        "R046"
+      ],
+      "surface": "tests/server/routes-webhooks.test.js::tests/server/routes-webhooks.test.js#test:deletes oauth callback alias when deleting webhook",
+      "projection": "state-persistence",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/routes-webhooks.test.js",
+        "name": "deletes oauth callback alias when deleting webhook"
+      },
+      "probe": "websocket",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-047.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-047.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    },
+    {
+      "observation_id": "F2P-048",
+      "requirement_ids": [
+        "R044"
+      ],
+      "surface": "tests/server/onboarding-validation.test.js::tests/server/onboarding-validation.test.js#test:accepts OPENROUTER_API_KEY when the selected model uses the openrouter provider",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "bound_entry": {
+        "file": "tests/server/onboarding-validation.test.js",
+        "name": "accepts OPENROUTER_API_KEY when the selected model uses the openrouter provider"
+      },
+      "probe": "static-public",
+      "source_probe": "source/batches/BATCH-F2P-0002/F2P-048.js",
+      "target_probe": "target/batches/BATCH-F2P-0002/F2P-048.js",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_technology": {
+        "name": "Hono",
+        "version": "4.13.7"
+      },
+      "source_technology": {
+        "name": "Express",
+        "version": "5.2.1"
+      }
+    }
+  ]
+}

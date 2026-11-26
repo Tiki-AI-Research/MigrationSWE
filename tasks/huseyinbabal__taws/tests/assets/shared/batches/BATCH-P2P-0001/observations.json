@@ -1,0 +1,322 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "executable_projection": {
+    "source": {
+      "runner": "source/batches/BATCH-P2P-0001/probe.sh",
+      "report_arg": "{report}",
+      "expect": "PASS"
+    },
+    "target": {
+      "runner": "target/batches/BATCH-P2P-0001/probe.sh",
+      "report_arg": "{report}",
+      "expect": "PASS"
+    }
+  },
+  "common_projection": {
+    "result": "PASS"
+  },
+  "normalization": "parse the probe report JSON; compare the normalised scalar field `result` of each observation; surrounding whitespace and newlines are ignored",
+  "source_side": {
+    "language": "Rust",
+    "repository_hint": "/workspace/repo",
+    "native_command": [
+      "git",
+      "diff",
+      "--exit-code"
+    ],
+    "test_command": [
+      "cargo",
+      "test",
+      "--offline"
+    ],
+    "test_timeout_sec": 1500
+  },
+  "target_side": {
+    "language": "Go",
+    "repository_hint": "/workspace/repo",
+    "test_command": [
+      "go",
+      "test",
+      "-v",
+      "-count=1",
+      "./..."
+    ],
+    "test_timeout_sec": 1500
+  },
+  "observations": [
+    {
+      "id": "P2P-001",
+      "requirement_ids": [
+        "R022"
+      ],
+      "surface": "SSM session exit reporting",
+      "source_test_selector": "structural:SSM session exited",
+      "target_test_selector": "SYM:reportSSMExit",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-002",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "taws root command flag set",
+      "source_test_selector": "structural:list-profiles",
+      "target_test_selector": "SYM:log-level",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-003",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "YAML preferences document at taws/config.yaml",
+      "source_test_selector": "test_serialize_deserialize",
+      "target_test_selector": "TestSerializeDeserialize",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-004",
+      "requirement_ids": [
+        "R003"
+      ],
+      "surface": "taws subcommand tree (completion, list-profiles, list-regions)",
+      "source_test_selector": "structural:list-regions",
+      "target_test_selector": "SYM:list-profiles",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-005",
+      "requirement_ids": [
+        "R030"
+      ],
+      "surface": "ported public test suite",
+      "source_test_selector": "suite",
+      "target_test_selector": "suite",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "--readonly write suppression",
+      "source_test_selector": "test_unknown_resource_has_no_api_config",
+      "target_test_selector": "TestReadOnlyBlocksMutatingActions",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-007",
+      "requirement_ids": [
+        "R008"
+      ],
+      "surface": "directly addressable resource key set",
+      "source_test_selector": "test_get_all_resource_keys",
+      "target_test_selector": "TestGetAllResourceKeys",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-008",
+      "requirement_ids": [
+        "R016"
+      ],
+      "surface": "list, describe and action operation results",
+      "source_test_selector": "test_parse_ec2_response",
+      "target_test_selector": "TestParseEC2Response",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-009",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "pagination configuration handling",
+      "source_test_selector": "test_parse_with_pagination",
+      "target_test_selector": "TestJSONParseWithPagination",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-010",
+      "requirement_ids": [
+        "R010"
+      ],
+      "surface": "AWS protocol dispatch (query, json, rest-json, rest-xml)",
+      "source_test_selector": "test_api_protocol_deserialize",
+      "target_test_selector": "TestAPIProtocolDeserialize",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-011",
+      "requirement_ids": [
+        "R006"
+      ],
+      "surface": "recently-used-region ordering",
+      "source_test_selector": "test_add_recent_region",
+      "target_test_selector": "TestAddRecentRegion",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-012",
+      "requirement_ids": [
+        "R020"
+      ],
+      "surface": "next-page loadability and max_results",
+      "source_test_selector": "test_parse_with_pagination",
+      "target_test_selector": "TestFetchResourcesPaginatedJSONProtocol",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-013",
+      "requirement_ids": [
+        "R014"
+      ],
+      "surface": "AWS override environment variables",
+      "source_test_selector": "test_get_login_cache_dir_env_override",
+      "target_test_selector": "TestGetLoginCacheDirEnvOverride",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-014",
+      "requirement_ids": [
+        "R019"
+      ],
+      "surface": "custom endpoint URL resolution",
+      "source_test_selector": "iam_includes_region_for_esc",
+      "target_test_selector": "TestNewHTTPClientHonorsEndpointEnvOverride",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-015",
+      "requirement_ids": [
+        "R023"
+      ],
+      "surface": "retained public CLI/config/aws/resource capabilities",
+      "source_test_selector": "suite",
+      "target_test_selector": "suite",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-016",
+      "requirement_ids": [
+        "R013"
+      ],
+      "surface": "AWS credential resolution chain",
+      "source_test_selector": "test_parse_ini_file_with_role_arn",
+      "target_test_selector": "TestParseINIFileWithRoleArn",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-017",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "request construction from api_config/action_configs/describe_config",
+      "source_test_selector": "test_resolve_static_param_template_replaces_all_placeholders",
+      "target_test_selector": "TestResolveStaticParamTemplateReplacesAllPlaceholders",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-018",
+      "requirement_ids": [
+        "R017"
+      ],
+      "surface": "taws startup with bad preferences file",
+      "source_test_selector": "test_default_config",
+      "target_test_selector": "TestLoadInvalidDoesNotPanic",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-019",
+      "requirement_ids": [
+        "R015"
+      ],
+      "surface": "list-profiles and list-regions output",
+      "source_test_selector": "test_parse_ini_file",
+      "target_test_selector": "TestParseINIFile",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-020",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "configuration loader error handling",
+      "source_test_selector": "test_default_config",
+      "target_test_selector": "TestLoadMissingFileLogsWarningAndUsesDefaults",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-021",
+      "requirement_ids": [
+        "R021"
+      ],
+      "surface": "SSO / console-login requirement reporting",
+      "source_test_selector": "test_credentials_error_sso_vs_console_login",
+      "target_test_selector": "TestCredentialsErrorSSOVsConsoleLogin",
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    }
+  ]
+}

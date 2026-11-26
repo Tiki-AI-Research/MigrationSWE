@@ -1,0 +1,46 @@
+{
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "kind": "DIFFERENTIAL",
+  "role": "Shared-case-corpus differential assets comparing the Superstruct 2.0.2 baseline with the Zod 3.23.8 migration of the mushroom-cards configuration schemas and handleStructError.",
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "surface": {
+    "shared": "shared/batches/BATCH-DIFFERENTIAL-0001",
+    "source": "source/batches/BATCH-DIFFERENTIAL-0001",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0001",
+    "fixtures": "fixtures/batches/BATCH-DIFFERENTIAL-0001"
+  },
+  "corpus": {
+    "path": "fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json",
+    "family": "shared-case-corpus",
+    "projection": "normalized-result"
+  },
+  "normalization": {
+    "parse": "{ decision }",
+    "handle": "{ decision, entries: sorted(level + ':' + dottedKeyPath) }",
+    "handle_native": "{ passthrough, errors }",
+    "shape": "{ keys: sorted(exportKeys) }",
+    "capabilities": "{ exportName: present }",
+    "levels": {
+      "ui.errors.config.key_missing": "missing",
+      "ui.errors.config.key_not_expected": "unexpected",
+      "ui.errors.config.key_wrong_type": "wrong_type"
+    },
+    "union_expansion": "Superstruct emits one leaf failure per failed union branch; those union-shadowed leaf failures are collapsed so the preserved contract (skip union branches) is comparable with Zod's single invalid_union issue."
+  },
+  "harness": {
+    "shared": "shared/batches/BATCH-DIFFERENTIAL-0001/harness.js",
+    "source_probe": "source/batches/BATCH-DIFFERENTIAL-0001/probe.js",
+    "target_probe": "target/batches/BATCH-DIFFERENTIAL-0001/probe.js",
+    "source_invocation": "node source/batches/BATCH-DIFFERENTIAL-0001/probe.js <sourceRepoRoot> <corpus.json> <out.json>",
+    "target_invocation": "node target/batches/BATCH-DIFFERENTIAL-0001/probe.js <targetRepoRoot> <corpus.json> <out.json>",
+    "relation": "equal_after_normalization",
+    "created_by": "DIFFERENTIAL",
+    "note": "source/runner and target/runner.js are promoted by the INTEGRATION batch; this batch only authors the probes above."
+  },
+  "authoring_execution": {
+    "source": "/input/source",
+    "target": "/input/target",
+    "source_result": "all 27 corpus cases produced the same normalized result as the target",
+    "target_result": "all 27 corpus cases produced the same normalized result as the source"
+  }
+}

@@ -1,0 +1,13 @@
+diff --git a/test/utilities.spec.js b/test/utilities.spec.js
+index 1386df5..700fea8 100644
+--- a/test/utilities.spec.js
++++ b/test/utilities.spec.js
+@@ -141,7 +141,7 @@ describe('utilities: Test of the utilities functions', function() {
+       const name = 'my$Invalid#fileName.png123';
+       const expected = 'my$Invalid#fileName.png123';
+       let result = parseFileName(opts, name);
+-      assert.equal(result, expected);
++      assert.strictEqual(result, expected);
+     });
+ 
+     it('Cuts of file name length if it more then 255 chars.', () => {

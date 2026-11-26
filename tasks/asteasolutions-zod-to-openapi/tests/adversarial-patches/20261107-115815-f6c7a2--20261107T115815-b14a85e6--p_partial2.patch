@@ -1,0 +1,118 @@
+diff --git a/src/metadata.ts b/src/metadata.ts
+index 8bb51cc..1f8fcdd 100644
+--- a/src/metadata.ts
++++ b/src/metadata.ts
+@@ -208,11 +208,11 @@ export class Metadata {
+     const internal = this.getMetadataFromInternalRegistry(zodSchema);
+     const general = zodSchema.meta();
+ 
+-    if (!internal) {
++    if (!internal && !general) {
+       return general;
+     }
+ 
+-    const { _internal, ...rest } = internal;
++    const { _internal, ...rest } = internal ?? {};
+ 
+     const { id, title, ...restGeneral } = general ?? {};
+ 
+diff --git a/src/openapi-generator.ts b/src/openapi-generator.ts
+index 8434ca9..5da7b83 100644
+--- a/src/openapi-generator.ts
++++ b/src/openapi-generator.ts
+@@ -207,15 +207,15 @@ export class OpenAPIGenerator {
+     ];
+ 
+     this.definitions.sort((left, right) => {
+-      // No type means "plain zod schema" => it comes as highest priority based on the array above
+-      if (!('type' in left)) {
+-        if (!('type' in right)) {
++      // A plain zod schema comes as highest priority based on the array above
++      if (isAnyZodType(left)) {
++        if (isAnyZodType(right)) {
+           return 0;
+         }
+         return -1;
+       }
+ 
+-      if (!('type' in right)) {
++      if (isAnyZodType(right)) {
+         return 1;
+       }
+ 
+@@ -227,7 +227,7 @@ export class OpenAPIGenerator {
+   }
+ 
+   private generateSingle(definition: OpenAPIDefinitions | ZodType): void {
+-    if (!('type' in definition)) {
++    if (isAnyZodType(definition)) {
+       this.generateSchemaWithRef(definition);
+       return;
+     }
+diff --git a/src/zod-extensions.ts b/src/zod-extensions.ts
+index 6498d4e..b4d428f 100644
+--- a/src/zod-extensions.ts
++++ b/src/zod-extensions.ts
+@@ -185,26 +185,42 @@ export function extendZodWithOpenApi(zod: typeof z) {
+     if (isZodType(result, 'ZodObject')) {
+       const currentMetadata = Metadata.getMetadataFromRegistry(result);
+ 
+-      const originalExtend = result.extend;
+-      result.extend = function (...args: Parameters<typeof originalExtend>) {
+-        const extendedResult = originalExtend.apply(result, args);
+-
+-        const { _internal, ...rest } = currentMetadata ?? {};
+-
+-        Metadata.setMetadataInRegistry(extendedResult, {
+-          _internal: {
+-            extendedFrom: _internal?.refId
+-              ? { refId: _internal.refId, schema: result }
+-              : _internal?.extendedFrom,
+-          },
+-        });
+-
+-        // This is hacky. Yes we can do that directly in the meta call above,
+-        // but that would not override future calls to .extend. That's why
+-        // we call openapi explicitly here. And in that case might as well add the metadata
+-        // here instead of through the meta call
+-        return extendedResult.openapi(rest);
+-      } as typeof originalExtend;
++      // Zod 4.1 added `safeExtend`. Metadata inheritance should be identical
++      // for every object extension method.
++      const preserveMetadataFromObjectExtension = (
++        method: 'extend' | 'safeExtend'
++      ) => {
++        const originalMethod = (result as any)[method] as (
++          ...args: any[]
++        ) => ZodObject;
++
++        if (typeof originalMethod !== 'function') {
++          return;
++        }
++
++        (result as any)[method] = function (...args: any[]) {
++          const extendedResult = originalMethod.apply(result, args);
++
++          const { _internal, ...rest } = currentMetadata ?? {};
++
++          Metadata.setMetadataInRegistry(extendedResult, {
++            _internal: {
++              extendedFrom: _internal?.refId
++                ? { refId: _internal.refId, schema: result }
++                : _internal?.extendedFrom,
++            },
++          });
++
++          // This is hacky. Yes we can do that directly in the meta call above,
++          // but that would not override future calls to the extension method.
++          // That's why we call openapi explicitly here. And in that case might
++          // as well add the metadata here instead of through the meta call.
++          return extendedResult.openapi(rest);
++        };
++      };
++
++      preserveMetadataFromObjectExtension('extend');
++      preserveMetadataFromObjectExtension('safeExtend');
+ 
+       preserveMetadataFromModifier(result, 'catchall');
+     }

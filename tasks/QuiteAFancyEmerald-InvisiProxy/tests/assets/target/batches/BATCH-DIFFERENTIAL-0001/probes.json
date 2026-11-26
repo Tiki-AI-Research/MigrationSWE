@@ -1,0 +1,41 @@
+{
+  "schema_version": "migration-probes:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "side": "target",
+  "target_mount": "/input/target",
+  "family": "shared-case-corpus",
+  "execution": {
+    "mode": "executed",
+    "executed_on": "built copy of /input/target (identical sources; only views/dist build artifacts added)",
+    "build_command": "node run-command.mjs build",
+    "start_command": "node backend.js",
+    "expected_side_result": "PASS"
+  },
+  "probes": [
+    {"case_id": "DIFF-001", "run": "GET / plus WebSocket upgrade /wisp/ on one port", "observed": "HTTP 200 and a single listening port with the upgrade listener attached", "side_result": "PASS"},
+    {"case_id": "DIFF-002", "run": "diff out-of-scope assets against base", "observed": "no differences under views/sw.js, views/sw-blacklist.js, views/uv, views/scram, src/templates.mjs, src/source-rewrites.mjs, run-command.mjs, config.json, ecosystem.config.js", "side_result": "PASS"},
+    {"case_id": "DIFF-003", "run": "listen then connect", "observed": "serverUrl derived 0.0.0.0:8080; probe copy bound 127.0.0.1:8123 and connected", "side_result": "PASS"},
+    {"case_id": "DIFF-004", "run": "GET /documentation, /robots.txt", "observed": "200 text/html; charset=utf-8 and (usingSEO=false) 404 image/vnd.microsoft.icon", "side_result": "PASS"},
+    {"case_id": "DIFF-005", "run": "disguiseFiles=true GET /documentation, /, /not-a-real-page", "observed": "loader text/html; default route serves exempt login as text/html", "side_result": "PASS"},
+    {"case_id": "DIFF-006", "run": "GET /not-a-real-page", "observed": "404 image/vnd.microsoft.icon with pre-rendered error page", "side_result": "PASS"},
+    {"case_id": "DIFF-007", "run": "GET /github/router (alt for wisp), /github/does-not-exist", "observed": "302 to wisp-protocol URL; 404 image/vnd.microsoft.icon", "side_result": "PASS"},
+    {"case_id": "DIFF-008", "run": "GET each static prefix", "observed": "GET /assets/js/card.js returned 200 text/javascript; other prefixes mounted equivalently", "side_result": "PASS"},
+    {"case_id": "DIFF-009", "run": "GET /service.js, /service-blacklist.js", "observed": "200 application/javascript; charset=utf-8 with Service-Worker-Allowed: /", "side_result": "PASS"},
+    {"case_id": "DIFF-010", "run": "WS upgrade /wisp/", "observed": "upgrade handler attached to createServer(app); wisp.route invoked for the wisp suffix", "side_result": "PASS"},
+    {"case_id": "DIFF-011", "run": "GET /test-shutdown with src/.shutdown", "observed": "wisp.stop() and server.close() invoked, shutdown file unlinked", "side_result": "PASS"},
+    {"case_id": "DIFF-012", "run": "GET /", "observed": "X-Content-Type-Options: nosniff present; no Content-Security-Policy; no X-Powered-By", "side_result": "PASS"},
+    {"case_id": "DIFF-013", "run": "GET //documentation//, /documentation/, ///documentation//", "observed": "all 200, equal body to /documentation after normalization", "side_result": "PASS"},
+    {"case_id": "DIFF-014", "run": "GET /favicon.ico", "observed": "200 with empty body", "side_result": "PASS"},
+    {"case_id": "DIFF-015", "run": "disguiseFiles=true GET /documentation", "observed": "200 loader body with text/html", "side_result": "PASS"},
+    {"case_id": "DIFF-016", "run": "GET /robots.txt, /assets/js/card.js, /login, /github", "observed": "not disguised, served as real content/redirect", "side_result": "PASS"},
+    {"case_id": "DIFF-017", "run": "disguiseFiles=true GET /documentation.ico", "observed": "200 documentation body, image/vnd.microsoft.icon, Access-Control-Allow-Origin: null", "side_result": "PASS"},
+    {"case_id": "DIFF-018", "run": "GET /documentation with sec-fetch-dest: document and Cookie HistoryHide=true", "observed": "404", "side_result": "PASS"},
+    {"case_id": "DIFF-019", "run": "disguised unknown github key", "observed": "disguised 404 page", "side_result": "PASS"},
+    {"case_id": "DIFF-020", "run": "pathname=/proxy GET /proxy/", "observed": "explicit prefixed index route; no root catch-all installed", "side_result": "PASS"},
+    {"case_id": "DIFF-021", "run": "all public routes", "observed": "public HTTP contract preserved", "side_result": "PASS"},
+    {"case_id": "DIFF-022", "run": "git diff base", "observed": "only src/server.mjs, package.json, pnpm-lock.yaml differ", "side_result": "PASS"},
+    {"case_id": "DIFF-023", "run": "inspect server.mjs imports", "observed": "routes.mjs and templates.mjs exports imported unchanged", "side_result": "PASS"},
+    {"case_id": "DIFF-024", "run": "hash client assets", "observed": "client assets byte-identical", "side_result": "PASS"},
+    {"case_id": "DIFF-025", "run": "review diff and checks", "observed": "no checks removed or weakened; no hardcoded inputs", "side_result": "PASS"}
+  ]
+}

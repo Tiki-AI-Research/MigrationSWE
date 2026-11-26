@@ -1,0 +1,714 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "source_technology": {
+    "language_name": "JavaScript",
+    "language_version": "unknown",
+    "name": "Fastify",
+    "version": "5.12.3"
+  },
+  "target_technology": {
+    "language_name": "JavaScript",
+    "language_version": "unknown",
+    "name": "Express",
+    "version": "5.1.0"
+  },
+  "cases": [
+    {
+      "id": "F2P-027",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R031"
+      ],
+      "public_surface": "src/server.mjs::GET /test-shutdown",
+      "entry": "create src/.shutdown, then GET /test-shutdown",
+      "iteration": "Input: create src/.shutdown then `GET /test-shutdown`. Expected: wisp stops, the HTTP server closes, src/.shutdown is deleted, and the process exits cleanly.",
+      "postcondition": "Input: `GET /`. Expected: no X-Powered-By header. A default express() app always emits `X-Powered-By: Express`, whereas Fastify did not; the target must call app.disable('x-powered-by'), so a naive Express migration leaks the framework identity.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "no_x_powered_by",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-030",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R033"
+      ],
+      "public_surface": "src/server.mjs::GET /github/does-not-exist",
+      "entry": "GET /github/wisp then GET /github/does-not-exist",
+      "iteration": "Input: `GET /github/wisp` and `GET /github/does-not-exist`. Expected: the first returns a redirect to the externalPages.github.wisp URL; the second returns 404.",
+      "postcondition": "Input: `GET /assets/js/card.js`. Expected: 200 with the file body from views/dist/assets. @fastify/static registered static routes that take precedence over the page route; with express.static the mount must be placed after the `:path` handler or the page route shadows the asset and returns the loader/404.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "static_mount_precedence",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-033",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R035"
+      ],
+      "public_surface": "src/server.mjs::GET /github/wisp",
+      "entry": "GET /github/wisp then GET /github/does-not-exist",
+      "iteration": "Input: `GET /github/wisp` and `GET /github/does-not-exist`. Expected: the first returns a redirect to the externalPages.github.wisp URL; the second returns 404.",
+      "postcondition": "Input: `GET /`. Expected: helmet default headers such as X-Content-Type-Options: nosniff, no Content-Security-Policy, and no X-Powered-By. The target mounts standalone helmet 8 middleware plus app.disable('x-powered-by'); a config-only migration that keeps registering @fastify/helmet on an Express app throws at startup because Express has no register/plugin API.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "helmet_security_headers",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-036",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R037"
+      ],
+      "public_surface": "src/server.mjs::GET /not-a-real-page",
+      "entry": "GET /not-a-real-page on the root pathname",
+      "iteration": "Input: `GET /not-a-real-page` on the root pathname. Expected: 404 with the pre-rendered views/error.html content and content type image/vnd.microsoft.icon when disguiseFiles is enabled.",
+      "postcondition": "Input: `GET /github/wisp`. Expected: a 302 redirect to the configured GitHub URL and the server boots. Express 5 uses path-to-regexp v8, which rejects some Fastify-style route patterns at registration time, so route strings cannot be copied verbatim; a naive port that reuses the Fastify patterns throws during startup.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "github_route_pattern_boot",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-043",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R035"
+      ],
+      "public_surface": "src/server.mjs::WebSocket upgrade handling on the shared server",
+      "entry": "HTTP GET plus WebSocket upgrade to /wisp/ on the shared port",
+      "iteration": "Input: an HTTP upgrade request to /wisp/ on the shared port. Expected: the request is routed to wisp.route and the WebSocket handshake completes rather than being dropped or answered as an HTTP route.",
+      "postcondition": "Input: `GET /`. Expected: helmet default headers such as X-Content-Type-Options: nosniff, no Content-Security-Policy, and no X-Powered-By. The target mounts standalone helmet 8 middleware plus app.disable('x-powered-by'); a config-only migration that keeps registering @fastify/helmet on an Express app throws at startup because Express has no register/plugin API.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "helmet_security_headers",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-025",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R032"
+      ],
+      "public_surface": "src/server.mjs::GET /assets/js/card.js",
+      "entry": "GET /robots.txt, /assets/js/card.js, /login and /github",
+      "iteration": "Input: `GET /robots.txt`, `GET /assets/js/card.js`, `GET /login`, and `GET /github`. Expected: each bypasses the loader and returns its real content or redirect.",
+      "postcondition": "Input: `GET /` with serverUrl.pathname='/'. Expected: 200 with the default page (or disguised loader). In Express 5 the `/:path` parameter does not match the empty-segment root, so without an explicit root route the request falls through to the 404 handler and a config-only port returns 404.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "root_route_default_page",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-026",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R035"
+      ],
+      "public_surface": "src/server.mjs::GET /github.ico",
+      "entry": "GET /github.ico with disguiseFiles enabled",
+      "iteration": "Input: `GET /github.ico` or an unknown `:redirect` requiring the modified path with disguiseFiles=true. Expected: the disguised 404 page, not the generic 404 type.",
+      "postcondition": "Input: `GET /`. Expected: helmet default headers such as X-Content-Type-Options: nosniff, no Content-Security-Policy, and no X-Powered-By. The target mounts standalone helmet 8 middleware plus app.disable('x-powered-by'); a config-only migration that keeps registering @fastify/helmet on an Express app throws at startup because Express has no register/plugin API.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "helmet_security_headers",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-028",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R039"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation/",
+      "entry": "GET //documentation// and GET /documentation/",
+      "iteration": "Input: `GET //documentation//` and `GET /documentation/`. Expected: both return the same page as `GET /documentation` rather than a 404.",
+      "postcondition": "Input: `GET /sitemap.xml` and `GET /robots.txt` with usingSEO=true. Expected: application/xml and text/plain respectively. Express res.type maps the same extensions as Fastify reply.type, but for files with unknown extensions res.send would fall back to a generic type, so the target must apply its configured fallback (image/vnd.microsoft.icon when disguiseFiles is on) explicitly.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "content_type_fallback",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-029",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R001"
+      ],
+      "public_surface": "src/server.mjs::GET /favicon.ico",
+      "entry": "GET /favicon.ico",
+      "iteration": "Input: `GET /favicon.ico`. Expected: a response with an empty body, not the disguised loader or the 404 page.",
+      "postcondition": "Input: `GET /browsing` against the built server. Expected: 200 with the body of views/dist/pages/surf.html and a text/html content type produced by an Express router. The source produced this through Fastify app.get plus @fastify/static/@fastify/helmet plugins; Express 5 has no such plugins, so a config-only swap that leaves the Fastify registrations in place cannot serve the page.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "express_router_serves_page",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-031",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R001"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation",
+      "entry": "GET /documentation with disguiseFiles enabled",
+      "iteration": "Input: `GET //documentation//` and `GET /documentation/`. Expected: both return the same page as `GET /documentation` rather than a 404.",
+      "postcondition": "Input: `GET /browsing` against the built server. Expected: 200 with the body of views/dist/pages/surf.html and a text/html content type produced by an Express router. The source produced this through Fastify app.get plus @fastify/static/@fastify/helmet plugins; Express 5 has no such plugins, so a config-only swap that leaves the Fastify registrations in place cannot serve the page.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "express_router_serves_page",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-032",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R036"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation",
+      "entry": "GET /documentation with disguiseFiles enabled",
+      "iteration": "Input: config.disguiseFiles=true and `GET /documentation`. Expected: the loader page body; the default route and the 404 page carry content type image/vnd.microsoft.icon.",
+      "postcondition": "Input: an HTTP GET and a WebSocket upgrade to /wisp/ on the single listening port. Expected: both are served, with the upgrade reaching mrrowisp. The target builds createServer(app) and attaches the upgrade listener; Fastify used a serverFactory, whereas calling app.listen() in Express creates its own server with no upgrade wiring and the Wisp handshake fails.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "shared_http_and_upgrade_server",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-034",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R034"
+      ],
+      "public_surface": "src/server.mjs::GET /proxy/",
+      "entry": "GET /proxy/ with config.pathname set to /proxy",
+      "iteration": "Input: config.pathname='/proxy'. Expected: `GET /proxy/` serves pages.index and unmatched unrelated paths are not answered by a catch-all 404 handler on the root.",
+      "postcondition": "Input: `GET /` with cookie HistoryHide=true and header sec-fetch-dest: document. Expected: status 404. Fastify rewrote the status in an onSend hook; Express has no post-handler send hook, so the target must wrap res.writeHead in middleware, and a naive port that only sets status inside one route leaves static responses at 200.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "history_hide_status_override",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-035",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R035"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation",
+      "entry": "GET /documentation with disguiseFiles enabled",
+      "iteration": "Input: config.disguiseFiles=true and `GET /documentation`. Expected: the loader page body; the default route and the 404 page carry content type image/vnd.microsoft.icon.",
+      "postcondition": "Input: `GET /`. Expected: helmet default headers such as X-Content-Type-Options: nosniff, no Content-Security-Policy, and no X-Powered-By. The target mounts standalone helmet 8 middleware plus app.disable('x-powered-by'); a config-only migration that keeps registering @fastify/helmet on an Express app throws at startup because Express has no register/plugin API.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "helmet_security_headers",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-037",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R037"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation",
+      "entry": "GET /documentation with disguiseFiles enabled",
+      "iteration": "Input: config.disguiseFiles=true and `GET /documentation`. Expected: the loader page body; the default route and the 404 page carry content type image/vnd.microsoft.icon.",
+      "postcondition": "Input: `GET /github/wisp`. Expected: a 302 redirect to the configured GitHub URL and the server boots. Express 5 uses path-to-regexp v8, which rejects some Fastify-style route patterns at registration time, so route strings cannot be copied verbatim; a naive port that reuses the Fastify patterns throws during startup.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "github_route_pattern_boot",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-038",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R039"
+      ],
+      "public_surface": "src/server.mjs::GET /login",
+      "entry": "GET /robots.txt, /assets/js/card.js, /login and /github",
+      "iteration": "Input: `GET /robots.txt`, `GET /assets/js/card.js`, `GET /login`, and `GET /github`. Expected: each bypasses the loader and returns its real content or redirect.",
+      "postcondition": "Input: `GET /sitemap.xml` and `GET /robots.txt` with usingSEO=true. Expected: application/xml and text/plain respectively. Express res.type maps the same extensions as Fastify reply.type, but for files with unknown extensions res.send would fall back to a generic type, so the target must apply its configured fallback (image/vnd.microsoft.icon when disguiseFiles is on) explicitly.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "content_type_fallback",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-039",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R034"
+      ],
+      "public_surface": "src/server.mjs::GET /login",
+      "entry": "GET /robots.txt, /assets/js/card.js, /login and /github",
+      "iteration": "Input: `GET /robots.txt`, `GET /assets/js/card.js`, `GET /login`, and `GET /github`. Expected: each bypasses the loader and returns its real content or redirect.",
+      "postcondition": "Input: `GET /` with cookie HistoryHide=true and header sec-fetch-dest: document. Expected: status 404. Fastify rewrote the status in an onSend hook; Express has no post-handler send hook, so the target must wrap res.writeHead in middleware, and a naive port that only sets status inside one route leaves static responses at 200.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "history_hide_status_override",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-040",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R037"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation/",
+      "entry": "GET //documentation// and GET /documentation/",
+      "iteration": "Input: `GET //documentation//` and `GET /documentation/`. Expected: both return the same page as `GET /documentation` rather than a 404.",
+      "postcondition": "Input: `GET /github/wisp`. Expected: a 302 redirect to the configured GitHub URL and the server boots. Express 5 uses path-to-regexp v8, which rejects some Fastify-style route patterns at registration time, so route strings cannot be copied verbatim; a naive port that reuses the Fastify patterns throws during startup.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "github_route_pattern_boot",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-041",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R031"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation",
+      "entry": "GET /documentation with disguiseFiles enabled",
+      "iteration": "Input: `GET /documentation` with header sec-fetch-dest: document and cookie HistoryHide=true. Expected: the response status is 404 even though the page body would otherwise be served.",
+      "postcondition": "Input: `GET /`. Expected: no X-Powered-By header. A default express() app always emits `X-Powered-By: Express`, whereas Fastify did not; the target must call app.disable('x-powered-by'), so a naive Express migration leaks the framework identity.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "no_x_powered_by",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-042",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R035"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation.ico",
+      "entry": "GET /documentation.ico with disguiseFiles enabled",
+      "iteration": "Input: `GET /documentation.ico` with disguiseFiles=true. Expected: the documentation page body with content type image/vnd.microsoft.icon and header Access-Control-Allow-Origin: null.",
+      "postcondition": "Input: `GET /`. Expected: helmet default headers such as X-Content-Type-Options: nosniff, no Content-Security-Policy, and no X-Powered-By. The target mounts standalone helmet 8 middleware plus app.disable('x-powered-by'); a config-only migration that keeps registering @fastify/helmet on an Express app throws at startup because Express has no register/plugin API.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "helmet_security_headers",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-044",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R030"
+      ],
+      "public_surface": "src/server.mjs::GET /not-a-real-page",
+      "entry": "GET /not-a-real-page on the root pathname",
+      "iteration": "Input: `GET /not-a-real-page` on the root pathname. Expected: 404 with the pre-rendered views/error.html content and content type image/vnd.microsoft.icon when disguiseFiles is enabled.",
+      "postcondition": "Input: `GET ///documentation//` on the Express target. Expected: 200 with the documentation page. Express 5 alone does not collapse duplicate slashes and treats the trailing slash as a distinct path, so path-to-regexp v8 never matches `/:path` and a config-only Express swap returns the 404 page.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "duplicate_slash_normalization",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-045",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R039"
+      ],
+      "public_surface": "src/server.mjs::GET /github/does-not-exist",
+      "entry": "GET /github/wisp then GET /github/does-not-exist",
+      "iteration": "Input: `GET /github/wisp` and `GET /github/does-not-exist`. Expected: the first returns a redirect to the externalPages.github.wisp URL; the second returns 404.",
+      "postcondition": "Input: `GET /sitemap.xml` and `GET /robots.txt` with usingSEO=true. Expected: application/xml and text/plain respectively. Express res.type maps the same extensions as Fastify reply.type, but for files with unknown extensions res.send would fall back to a generic type, so the target must apply its configured fallback (image/vnd.microsoft.icon when disguiseFiles is on) explicitly.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "content_type_fallback",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-046",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R033"
+      ],
+      "public_surface": "src/server.mjs::GET /documentation.ico",
+      "entry": "GET /documentation.ico with disguiseFiles enabled",
+      "iteration": "Input: `GET /documentation.ico` with disguiseFiles=true. Expected: the documentation page body with content type image/vnd.microsoft.icon and header Access-Control-Allow-Origin: null.",
+      "postcondition": "Input: `GET /assets/js/card.js`. Expected: 200 with the file body from views/dist/assets. @fastify/static registered static routes that take precedence over the page route; with express.static the mount must be placed after the `:path` handler or the page route shadows the asset and returns the loader/404.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "static_mount_precedence",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-047",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R033"
+      ],
+      "public_surface": "src/server.mjs::GET /login",
+      "entry": "GET /robots.txt, /assets/js/card.js, /login and /github",
+      "iteration": "Input: `GET /robots.txt`, `GET /assets/js/card.js`, `GET /login`, and `GET /github`. Expected: each bypasses the loader and returns its real content or redirect.",
+      "postcondition": "Input: `GET /assets/js/card.js`. Expected: 200 with the file body from views/dist/assets. @fastify/static registered static routes that take precedence over the page route; with express.static the mount must be placed after the `:path` handler or the page route shadows the asset and returns the loader/404.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "static_mount_precedence",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-048",
+      "kind": "F2P",
+      "family": "target-runtime",
+      "requirement_ids": [
+        "R034"
+      ],
+      "public_surface": "src/server.mjs::GET //documentation//",
+      "entry": "GET //documentation// and GET /documentation/",
+      "iteration": "Input: `GET //documentation//` and `GET /documentation/`. Expected: both return the same page as `GET /documentation` rather than a 404.",
+      "postcondition": "Input: `GET /` with cookie HistoryHide=true and header sec-fetch-dest: document. Expected: status 404. Fastify rewrote the status in an onSend hook; Express has no post-handler send hook, so the target must wrap res.writeHead in middleware, and a naive port that only sets status inside one route leaves static responses at 200.",
+      "target_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Express",
+        "version": "5.1.0"
+      },
+      "source_technology": {
+        "language_name": "JavaScript",
+        "language_version": "unknown",
+        "name": "Fastify",
+        "version": "5.12.3"
+      },
+      "check": "history_hide_status_override",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

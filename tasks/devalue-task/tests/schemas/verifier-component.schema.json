@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "migration-verifier-component:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "cheating_detected",
+    "p2p_pass_ratio",
+    "f2p_pass_ratio",
+    "groups",
+    "errors",
+    "verifier_result"
+  ],
+  "properties": {
+    "schema_version": {"const": "migration-verifier-component:v1"},
+    "status": {
+      "enum": [
+        "passed",
+        "candidate_failed",
+        "infrastructure_error",
+        "inconclusive"
+      ]
+    },
+    "cheating_detected": {"type": "boolean"},
+    "p2p_pass_ratio": {"$ref": "#/$defs/ratio"},
+    "f2p_pass_ratio": {"$ref": "#/$defs/ratio"},
+    "groups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p2p", "f2p"],
+      "properties": {
+        "p2p": {"$ref": "#/$defs/group"},
+        "f2p": {"$ref": "#/$defs/group"}
+      }
+    },
+    "errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["infrastructure_error"],
+      "properties": {
+        "infrastructure_error": {"type": "boolean"}
+      }
+    },
+    "verifier_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"const": "verifier-result.json"},
+        "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  },
+  "$defs": {
+    "ratio": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "number", "minimum": 0, "maximum": 1}
+      ]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "passed", "total"],
+      "properties": {
+        "status": {
+          "enum": ["PASS", "FAIL", "INFRA_ERROR", "INCONCLUSIVE", "NA", "NOT_RUN"]
+        },
+        "passed": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

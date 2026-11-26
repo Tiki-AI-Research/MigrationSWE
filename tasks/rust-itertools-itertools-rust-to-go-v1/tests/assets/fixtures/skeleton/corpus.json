@@ -1,0 +1,70 @@
+{
+  "schema_version": "migration-corpus:v1",
+  "migration": {
+    "source": "Rust",
+    "target": "Go"
+  },
+  "shared": true,
+  "cases": [
+    {
+      "id": "CORPUS-INTERLEAVE",
+      "operation": "Interleave",
+      "input": [[1, 2], [-1, -2]],
+      "expected": [1, -1, 2, -2]
+    },
+    {
+      "id": "CORPUS-INTERLEAVE-SHORTEST",
+      "operation": "InterleaveShortest",
+      "input": [[1, 2, 3], [-1, -2]],
+      "expected": [1, -1, 2, -2, 3]
+    },
+    {
+      "id": "CORPUS-IPRODUCT",
+      "operation": "Iproduct",
+      "input": [[1, 2], [10, 20]],
+      "expected": [[1, 10], [1, 20], [2, 10], [2, 20]]
+    },
+    {
+      "id": "CORPUS-IZIP",
+      "operation": "Izip",
+      "input": [[1, 2, 3], [10, 20]],
+      "expected": [[1, 10], [2, 20]]
+    },
+    {
+      "id": "CORPUS-CHAIN",
+      "operation": "ChainConcatenates",
+      "input": [[1], [2, 3], [4]],
+      "expected": [1, 2, 3, 4]
+    },
+    {
+      "id": "CORPUS-CONCAT",
+      "operation": "Concat",
+      "input": [[[1], [2, 3], [4, 5, 6]]],
+      "expected": [1, 2, 3, 4, 5, 6]
+    },
+    {
+      "id": "CORPUS-ARRAY-WINDOWS",
+      "operation": "ArrayWindows",
+      "input": [[1, 2, 3, 4, 5], 3],
+      "expected": [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+    },
+    {
+      "id": "CORPUS-CIRCULAR-ARRAY-WINDOWS",
+      "operation": "CircularArrayWindows",
+      "input": [[1, 2, 3, 4], 3],
+      "expected": [[1, 2, 3], [2, 3, 4], [3, 4, 1], [4, 1, 2]]
+    },
+    {
+      "id": "CORPUS-MERGE",
+      "operation": "Merge",
+      "input": [[0, 3, 6, 9], [0, 5, 10]],
+      "expected": [0, 0, 3, 5, 6, 9, 10]
+    },
+    {
+      "id": "CORPUS-DEDUP",
+      "operation": "Dedup",
+      "input": [[1, 1, 2, 2, 2, 3, 1]],
+      "expected": [1, 2, 3, 1]
+    }
+  ]
+}

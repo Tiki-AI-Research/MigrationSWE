@@ -1,0 +1,66 @@
+{
+  "schema_version": "migration-fixtures:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "fixtures": {
+    "FIX-BASIC-AUTH": {
+      "client_id": "a b",
+      "client_secret": "c:d",
+      "auth_type": "BasicAuth",
+      "expected_authorization": "Basic YStiOmMlM0Fk",
+      "urlencoded_credential": "a+b:c%3Ad",
+      "setbasicauth_credential": "a b:c:d",
+      "setbasicauth_authorization": "Basic YSBiOmM6ZA=="
+    },
+    "FIX-CONTENT-TYPE": {
+      "token_url": "https://example.com/token",
+      "accepted_content_types": ["application/json", "Application/JSON; charset=utf-8"],
+      "rejected_content_type": "text/plain",
+      "rejected_error_fragment": "text/plain"
+    },
+    "FIX-TOKEN-TYPE": {
+      "raw_json": "{\"access_token\":\"t\",\"token_type\":\"BEARER\"}",
+      "expected_canonical": "bearer",
+      "expected_remarshal": "{\"access_token\":\"t\",\"token_type\":\"bearer\"}"
+    },
+    "FIX-SCOPE": {
+      "raw_json_scope": "a b c",
+      "expected_count": 3,
+      "expected_remarshal": "a b c"
+    },
+    "FIX-DEVICE": {
+      "interval_present": 10,
+      "interval_absent_default_seconds": 5,
+      "slow_down_add_seconds": 5,
+      "backoff_cap_seconds": 10
+    },
+    "FIX-REVOCATION": {
+      "insecure_url": "http://example.com/revoke",
+      "expected_error_kind": "ConfigurationInsecureURL",
+      "expected_calls": 0,
+      "ok_status": 200,
+      "ok_body": "{\"ignored\":true}"
+    },
+    "FIX-INTROSPECTION": {
+      "aud_string": "{\"active\":true,\"aud\":\"one\"}",
+      "aud_array": "{\"active\":true,\"aud\":[\"one\",\"two\"]}"
+    },
+    "FIX-ERROR-ORDER": {
+      "error": "invalid_grant",
+      "error_description": "bad",
+      "error_uri": "u",
+      "expected_key_order": ["error", "error_description", "error_uri"]
+    },
+    "FIX-SECRET": {
+      "value": "s3cr3t",
+      "expected_format": "ClientSecret([redacted])"
+    },
+    "FIX-MISSING-URL": {
+      "expected_endpoint": "token",
+      "expected_error_kind": "ConfigurationMissingURL"
+    },
+    "FIX-GOMOD": {
+      "forbidden_requires": ["golang.org/x/oauth2"],
+      "allowed_directives": ["module", "go"]
+    }
+  }
+}

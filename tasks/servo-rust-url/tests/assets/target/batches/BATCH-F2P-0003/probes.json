@@ -1,0 +1,297 @@
+{
+  "schema_version": "migration-asset-probes:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "side": "target",
+  "root": "/input/target",
+  "probes": [
+    {
+      "observation_id": "F2P-054",
+      "requirement_ids": [
+        "R021"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "With GOPROXY=off and an empty module cache, `go build ./...` succeeds and `go list -m all` lists only github.com/servo/rust-url, while idna.DomainToASCII(\"faß.de\") still returns \"xn--fa-hia.de\", so the IDNA and Punycode behavior is implemented with the Go standard library rather than a third-party module.",
+      "predicate": "With GOPROXY=off and an empty module cache, `go build ./...` succeeds and `go list -m all` lists only github.com/servo/rust-url, while idna.DomainToASCII(\"faß.de\") still returns \"xn--fa-hia.de\", so the IDNA and Punycode behavior is implemented with the Go standard library rather than a third-party module.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-052",
+      "requirement_ids": [
+        "R110"
+      ],
+      "projection": "target-execution-path",
+      "entry": "percent_encoding/src/lib.rs",
+      "invocation": "d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\"",
+      "predicate": "d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\"",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-064",
+      "requirement_ids": [
+        "R105"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/lib.rs",
+      "invocation": "u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\"",
+      "predicate": "u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\"",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-065",
+      "requirement_ids": [
+        "R111"
+      ],
+      "projection": "target-execution-path",
+      "entry": "idna/src/lib.rs",
+      "invocation": "idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost",
+      "predicate": "idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-066",
+      "requirement_ids": [
+        "R103"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/quirks.rs",
+      "invocation": "url.Parse(\"http://example.com/\").PortOrKnownDefault()==(80,true) and Port()==(0,false), url.Parse(\"https://x:8443/\").Port()==(8443,true), and after u,_:=url.Parse(\"http://example.com/\"); p:=uint16(80); u.SetPort(&p), u.Port()==(0,false) and u.AsStr()==\"http://example.com/\"",
+      "predicate": "url.Parse(\"http://example.com/\").PortOrKnownDefault()==(80,true) and Port()==(0,false), url.Parse(\"https://x:8443/\").Port()==(8443,true), and after u,_:=url.Parse(\"http://example.com/\"); p:=uint16(80); u.SetPort(&p), u.Port()==(0,false) and u.AsStr()==\"http://example.com/\"",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-071",
+      "requirement_ids": [
+        "R105"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/lib.rs",
+      "invocation": "u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\"",
+      "predicate": "u,_:=url.Parse(\"http://a/?x=1#frag\"); u.QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish() yields AsStr()==\"http://a/?a=b#frag\"; a target that removes the query yields \"http://a/#frag\"",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-068",
+      "requirement_ids": [
+        "R002"
+      ],
+      "projection": "dependency-execution",
+      "entry": "url/src/lib.rs",
+      "invocation": "With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub",
+      "predicate": "With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-055",
+      "requirement_ids": [
+        "R022"
+      ],
+      "projection": "dependency-execution",
+      "entry": "url/tests/unit.rs",
+      "invocation": "The collected patch relative to baseline adds only go.mod and .go files under url/, idna/, percentencoding/, formurlencoded/, and internal/; `go test ./url` passes while url/tests/urltestdata.json is byte-identical, showing the change set is limited to the added Go module and its test assets",
+      "predicate": "The collected patch relative to baseline adds only go.mod and .go files under url/, idna/, percentencoding/, formurlencoded/, and internal/; `go test ./url` passes while url/tests/urltestdata.json is byte-identical, showing the change set is limited to the added Go module and its test assets",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-056",
+      "requirement_ids": [
+        "R025"
+      ],
+      "projection": "dependency-execution",
+      "entry": "url/tests/unit.rs",
+      "invocation": "The files url/tests/urltestdata.json, url/tests/setters_tests.json, idna/tests/IdnaTestV2.txt, idna/tests/punycode_tests.json, and idna/tests/bad_punycode_tests.json are byte-identical to baseline while the runtime test reads url/tests/urltestdata.json; mutating one expected value there makes `go test ./url` fail, so expected values are not hardcoded",
+      "predicate": "The files url/tests/urltestdata.json, url/tests/setters_tests.json, idna/tests/IdnaTestV2.txt, idna/tests/punycode_tests.json, and idna/tests/bad_punycode_tests.json are byte-identical to baseline while the runtime test reads url/tests/urltestdata.json; mutating one expected value there makes `go test ./url` fail, so expected values are not hardcoded",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-057",
+      "requirement_ids": [
+        "R110"
+      ],
+      "projection": "target-execution-path",
+      "entry": "percent_encoding/src/lib.rs",
+      "invocation": "d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\"",
+      "predicate": "d:=percentencoding.DecodeString(\"%00%9F%92%96\"); _,err:=d.DecodeUTF8() returns a *percentencoding.UTF8Error with ValidUpTo()==1 and ErrorLen()==(1,true), and d.DecodeUTF8Lossy()==\"\\x00\\uFFFD\\uFFFD\\uFFFD\"",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-059",
+      "requirement_ids": [
+        "R109"
+      ],
+      "projection": "target-execution-path",
+      "entry": "percent_encoding/src/ascii_set.rs",
+      "invocation": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "predicate": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-060",
+      "requirement_ids": [
+        "R102"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/lib.rs",
+      "invocation": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is",
+      "predicate": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-061",
+      "requirement_ids": [
+        "R109"
+      ],
+      "projection": "target-execution-path",
+      "entry": "percent_encoding/src/lib.rs",
+      "invocation": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "predicate": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-062",
+      "requirement_ids": [
+        "R109"
+      ],
+      "projection": "target-execution-path",
+      "entry": "percent_encoding/src/ascii_set.rs",
+      "invocation": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "predicate": "percentencoding.PercentEncodeByte(0x3F)==\"%3F\", and with s:=percentencoding.NonAlphanumeric, t:=s.Add('a'), PercentEncode([]byte(\"a\"), &s)==\"a\" while PercentEncode([]byte(\"a\"), &t)==\"%61\"; lowercase \"%3f\" or a mutating Add fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-063",
+      "requirement_ids": [
+        "R102"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/lib.rs",
+      "invocation": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is",
+      "predicate": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-067",
+      "requirement_ids": [
+        "R002"
+      ],
+      "projection": "dependency-execution",
+      "entry": "url/src/lib.rs",
+      "invocation": "With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub",
+      "predicate": "With CGO_ENABLED=0 and a cargo stub first on PATH that exits 1, url.Parse(\"http://[:::1]\") returns a nil *URL with errors.Is(err, url.ErrInvalidIPv6Address)==true and idna.DomainToASCII(\"example.com\") returns \"example.com\"; a cgo/FFI/subprocess/RPC/dlopen binding to the Rust crates fails CGO_ENABLED=0 or the cargo stub",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-069",
+      "requirement_ids": [
+        "R101"
+      ],
+      "projection": "target-execution-path",
+      "entry": "url/src/lib.rs",
+      "invocation": "url.Parse(\"data:text/plain,Hello?World#\") yields Fragment()==(\"\",true) (empty-but-present) while url.Parse(\"data:text/plain,Hello\") yields Fragment()==(\"\",false); a Rust Option<&str> mapping that collapses None and Some(\"\") to the same value fails this pair",
+      "predicate": "url.Parse(\"data:text/plain,Hello?World#\") yields Fragment()==(\"\",true) (empty-but-present) while url.Parse(\"data:text/plain,Hello\") yields Fragment()==(\"\",false); a Rust Option<&str> mapping that collapses None and Some(\"\") to the same value fails this pair",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-049",
+      "requirement_ids": [
+        "R019"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "With the Rust crate sources removed and cargo absent, `go test ./...` compiles and url.Parse(\"https://example.com/\") returns AsStr \"https://example.com/\"; `go list -deps github.com/servo/rust-url/url` reports only the Go standard library and github.com/servo/rust-url/... packages, so no Go source imports or calls the Rust crates.",
+      "predicate": "With the Rust crate sources removed and cargo absent, `go test ./...` compiles and url.Parse(\"https://example.com/\") returns AsStr \"https://example.com/\"; `go list -deps github.com/servo/rust-url/url` reports only the Go standard library and github.com/servo/rust-url/... packages, so no Go source imports or calls the Rust crates.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-050",
+      "requirement_ids": [
+        "R104"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "u,_:=url.Parse(\"http://a/b/c?q#frag\"); u.PathSegmentsMut().Pop().Push(\"2/100%.png\") yields Path()==\"/b/2%2F100%25.png\" with Query()==(\"q\",true) and Fragment()==(\"frag\",true); leaving / or % unencoded produces \"/b/2/100%.png\".",
+      "predicate": "u,_:=url.Parse(\"http://a/b/c?q#frag\"); u.PathSegmentsMut().Pop().Push(\"2/100%.png\") yields Path()==\"/b/2%2F100%25.png\" with Query()==(\"q\",true) and Fragment()==(\"frag\",true); leaving / or % unencoded produces \"/b/2/100%.png\".",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-053",
+      "requirement_ids": [
+        "R024"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "`git diff --name-only` lists no path under url/src/, idna/src/, percent_encoding/src/, form_urlencoded/src/, or Cargo.toml, yet url.Parse(\"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\").Path()==\"/rust-lang/rust/issues\", so the Go outcome does not depend on editing the Rust crates.",
+      "predicate": "`git diff --name-only` lists no path under url/src/, idna/src/, percent_encoding/src/, form_urlencoded/src/, or Cargo.toml, yet url.Parse(\"https://github.com/rust-lang/rust/issues?labels=E-easy&state=open\").Path()==\"/rust-lang/rust/issues\", so the Go outcome does not depend on editing the Rust crates.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-058",
+      "requirement_ids": [
+        "R112"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "punycode.EncodeString(\"bücher\")==(\"bcher-kva\",true) and punycode.DecodeToString(\"bcher-kva\")==(\"bücher\",true), while punycode.Decode(\"<<>>\") returns (nil,false); a port that panics or reports ok==true for malformed input fails.",
+      "predicate": "punycode.EncodeString(\"bücher\")==(\"bcher-kva\",true) and punycode.DecodeToString(\"bcher-kva\")==(\"bücher\",true), while punycode.Decode(\"<<>>\") returns (nil,false); a port that panics or reports ok==true for malformed input fails.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-070",
+      "requirement_ids": [
+        "R102"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is.",
+      "predicate": "url.Parse(\"http://[:::1]\") returns nil with errors.Is(err, url.ErrInvalidIPv6Address)==true and errors.Is(err, url.ErrInvalidPort)==false; a target returning a formatted string error instead of the sentinel value fails errors.Is.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-072",
+      "requirement_ids": [
+        "R106"
+      ],
+      "projection": "target-condition",
+      "entry": "runtime",
+      "invocation": "url.ParseHost(\"[2001:0db8:0000:0000:0000:ff00:0042:8329]\").String()==\"[2001:db8::ff00:42:8329]\" and url.ParseHost(\"[:::1]\") returns an error with errors.Is(err, url.ErrInvalidIPv6Address)==true; uppercase or uncompressed output fails.",
+      "predicate": "url.ParseHost(\"[2001:0db8:0000:0000:0000:ff00:0042:8329]\").String()==\"[2001:db8::ff00:42:8329]\" and url.ParseHost(\"[:::1]\") returns an error with errors.Is(err, url.ErrInvalidIPv6Address)==true; uppercase or uncompressed output fails.",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-051",
+      "requirement_ids": [
+        "R111"
+      ],
+      "projection": "target-entry-identity",
+      "entry": "idna/src/uts46.rs",
+      "invocation": "idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost",
+      "predicate": "idna.DomainToASCII(\"foo_bar.example\")==(\"foo_bar.example\",nil) while idna.DomainToASCIIStrict(\"foo_bar.example\") returns an error with errors.Is(err, idna.ErrInvalidDomain)==true; identical results for both functions indicate the STD3/hyphen/DNS-length strictness was lost",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

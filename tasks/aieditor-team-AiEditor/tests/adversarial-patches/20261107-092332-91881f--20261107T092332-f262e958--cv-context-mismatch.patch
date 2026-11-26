@@ -1,0 +1,12 @@
+diff --git a/src/ai/OpenAiService.ts b/src/ai/OpenAiService.ts
+--- a/src/ai/OpenAiService.ts
++++ b/src/ai/OpenAiService.ts
+@@ -88,7 +88,7 @@
+     constructor(config: OpenAiServiceConfig) {
+         const provider = config.provider ? getAiProvider(config.provider) : undefined
+         const model = config.model ?? provider?.model
+-        if (!model?.trim()) throw new Error('OpenAiService requires a model')
++        if (!model?.trim()) throw new Error('QA CONTEXT MISMATCH')
+         this.config = {...config, model}
+         this.model = model
+         this.client = config.client ?? new OpenAI({

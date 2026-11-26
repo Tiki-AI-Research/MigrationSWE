@@ -1,0 +1,229 @@
+{
+  "schema": "migration-contract-fixture:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "migration": "js-joda",
+  "category": "version_upgrade",
+  "source_version": "6.1.0",
+  "target_version": "6.3.2",
+  "relation": "equal_after_normalization",
+  "probe": {
+    "shared": "shared/batches/BATCH-CONTRACT-0001/contract-probe.js",
+    "source_entry": "source/batches/BATCH-CONTRACT-0001/probe.js",
+    "target_entry": "target/batches/BATCH-CONTRACT-0001/probe.js",
+    "usage": "node <entry> <repoRoot> [outFile]",
+    "report_schema": "migration-contract-probe:v1",
+    "timeout_seconds": 300
+  },
+  "observations": [
+    {
+      "id": "CONTRACT-001",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "packages/core package entry points",
+      "source_path": "packages/core/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-002",
+      "requirement_ids": [
+        "R010"
+      ],
+      "surface": "core module named exports",
+      "source_path": "packages/core/src/js-joda.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-003",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "timezone, locale and extra package entry points",
+      "source_path": "packages/timezone/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-004",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "locale module named exports",
+      "source_path": "packages/locale/src/js-joda-locale.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-005",
+      "requirement_ids": [
+        "R013"
+      ],
+      "surface": "prebuilt locale package manifests",
+      "source_path": "packages/locale/packages/de/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-006",
+      "requirement_ids": [
+        "R015"
+      ],
+      "surface": "timezone plugin side-effect registration",
+      "source_path": "packages/timezone/src/js-joda-timezone.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-007",
+      "requirement_ids": [
+        "R016"
+      ],
+      "surface": "core immutable date-time types",
+      "source_path": "packages/core/src/LocalDate.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-008",
+      "requirement_ids": [
+        "R017"
+      ],
+      "surface": "ZonedDateTime.now() rendering with timezone plugin",
+      "source_path": "packages/core/src/ZonedDateTime.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-009",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "extra Interval behavior",
+      "source_path": "packages/extra/src/Interval.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-010",
+      "requirement_ids": [
+        "R019"
+      ],
+      "surface": "locale formatting output per locale",
+      "source_path": "packages/locale/src/js-joda-locale.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-011",
+      "requirement_ids": [
+        "R020"
+      ],
+      "surface": "packages/core verification commands",
+      "source_path": "packages/core/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-012",
+      "requirement_ids": [
+        "R021"
+      ],
+      "surface": "distribution build scripts",
+      "source_path": "packages/locale/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-013",
+      "requirement_ids": [
+        "R023"
+      ],
+      "surface": "core public capabilities",
+      "source_path": "packages/core/src/temporal/ChronoUnit.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-014",
+      "requirement_ids": [
+        "R024"
+      ],
+      "surface": "public exports and package entry points",
+      "source_path": "packages/core/src/js-joda.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-015",
+      "requirement_ids": [
+        "R025"
+      ],
+      "surface": "parse/format/arithmetic result semantics",
+      "source_path": "packages/core/src/LocalTime.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-016",
+      "requirement_ids": [
+        "R028"
+      ],
+      "surface": "change scope across the working tree",
+      "source_path": "lerna.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-017",
+      "requirement_ids": [
+        "R029"
+      ],
+      "surface": "packaged IANA time zone data",
+      "source_path": "packages/timezone/data/packed/latest.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-018",
+      "requirement_ids": [
+        "R030"
+      ],
+      "surface": "CLDR and prebuilt locale data semantics",
+      "source_path": "packages/locale/src/format/cldr/CldrCache.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-019",
+      "requirement_ids": [
+        "R031"
+      ],
+      "surface": "library capability positioning",
+      "source_path": "packages/extra/package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-020",
+      "requirement_ids": [
+        "R032"
+      ],
+      "surface": "test-suite assertion integrity",
+      "source_path": "packages/core/test/reference/DurationTest.js",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "CONTRACT-021",
+      "requirement_ids": [
+        "R033"
+      ],
+      "surface": "location of produced changes",
+      "source_path": "package.json",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    }
+  ]
+}

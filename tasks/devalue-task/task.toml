@@ -1,0 +1,89 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/devalue-task"
+description = "Upgrade the devalue serializer from 4.3.3 to 6.0.0."
+authors = []
+keywords = ["migration", "javascript", "devalue", "serialization", "version-upgrade", "nodejs"]
+
+[metadata]
+task_id = "sveltejs-devalue-20260917115727-7db606"
+original_title = "sveltejs/devalue"
+category = "Version_upgrade"
+language = "JavaScript"
+source_technology = "devalue 4.3.3"
+target_technology = "devalue 6.0.0"
+persistent_state_involved = false
+migration_units = [
+    "MU001",
+    "MU002",
+    "MU003",
+    "MU004",
+    "MU005",
+    "MU006",
+    "MU007",
+    "MU008",
+    "MU009",
+    "MU010",
+    "MU011",
+    "MU012",
+    "MU013",
+    "MU014",
+    "MU015",
+    "MU016",
+    "MU017",
+    "MU018",
+    "MU021",
+    "MU022",
+    "MU024",
+    "MU025",
+    "MU026",
+]
+f2p_count = 61
+p2p_count = 22
+repository_url = "https://github.com/sveltejs/devalue"
+base_commit_hash = "3ba57a6a8e60b171f624b6343be704b23a34af6e"
+
+[metadata.tests]
+f2p_count = 61
+p2p_count = 22
+fail_to_pass_count = 61
+pass_to_pass_count = 22
+allowed_change_paths = ["**"]
+
+[verifier]
+network_mode = "no-network"
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:devalue-task-verifier-image-20261126"
+image_digest = "sha256:9ec63b50976c9cc617a9eab1636673c9f35cfa7dbcd6ed79f1d1f3bf0e68d1b2"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -N . && git diff --binary --full-index 3ba57a6a8e60b171f624b6343be704b23a34af6e -- > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+build_timeout_sec = 1800.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:devalue-task-task-image-20261126"
+image_digest = "sha256:cdf71f74e63671ee8f54035559eb6035c32585fd9a5eaf915488209027daf5bc"

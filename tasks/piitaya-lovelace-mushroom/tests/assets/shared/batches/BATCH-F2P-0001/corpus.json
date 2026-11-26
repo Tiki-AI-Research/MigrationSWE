@@ -1,0 +1,397 @@
+{
+  "schema_version": "migration-corpus:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "source_technology": {
+    "language_name": "TypeScript",
+    "name": "Superstruct",
+    "version": "2.0.2"
+  },
+  "target_technology": {
+    "language_name": "TypeScript",
+    "name": "Zod",
+    "version": "3.23.8"
+  },
+  "note": "Shared configuration inputs for the BATCH-F2P-0001 predicates. Both sides consume this corpus through shared/batches/BATCH-F2P-0001/probe-core.js.",
+  "observations": {
+    "F2P-001": {
+      "predicate": "offending_value",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Localized validation messages emitted by handleStructError",
+      "projection": "target-execution-path",
+      "input": {
+        "primary_info": 123
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S004"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00137"
+      ]
+    },
+    "F2P-002": {
+      "predicate": "dependency_imports",
+      "coverage_surface": "package.json::dependency manifest",
+      "projection": "dependency-declaration",
+      "input": "package.json/package-lock.json dependency declarations",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "R016"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00172"
+      ]
+    },
+    "F2P-004": {
+      "predicate": "strict_entity_card",
+      "coverage_surface": "src/cards/entity-card/entity-card-config.ts::Card, chip and badge config and editor modules that compose or call the exported schemas",
+      "projection": "target-execution-path",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "bogus": 1
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S008"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00141"
+      ]
+    },
+    "F2P-005": {
+      "predicate": "zod_error_detection",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::runtime entry",
+      "projection": "target-entry-identity",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": 42
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00135"
+      ]
+    },
+    "F2P-006": {
+      "predicate": "key_missing",
+      "coverage_surface": "src/shared/config/lovelace-card-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
+      "projection": "target-execution-path",
+      "input": {},
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S003"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00084"
+      ]
+    },
+    "F2P-007": {
+      "predicate": "dependency_execution",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
+      "projection": "dependency-execution",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": "light.kitchen"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "R017"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00159"
+      ]
+    },
+    "F2P-008": {
+      "predicate": "non_validation_passthrough",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys",
+      "projection": "target-execution-path",
+      "input": "TypeError(\"boom\")",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00087"
+      ]
+    },
+    "F2P-009": {
+      "predicate": "enum_reject",
+      "coverage_surface": "src/shared/config/appearance-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
+      "projection": "target-execution-path",
+      "input": {
+        "primary_info": "bogus"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S005"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00104"
+      ]
+    },
+    "F2P-011": {
+      "predicate": "dependency_manifest",
+      "coverage_surface": "package-lock.json::dependency manifest",
+      "projection": "dependency-declaration",
+      "input": "package.json/package-lock.json dependency declarations",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S009"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00099"
+      ]
+    },
+    "F2P-012": {
+      "predicate": "unknown_key_strict",
+      "coverage_surface": "src/shared/config/entity-config.ts::runtime entry",
+      "projection": "target-entry-identity",
+      "input": {
+        "entity": "light.kitchen",
+        "bogus": 1
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S002"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00090"
+      ]
+    },
+    "F2P-015": {
+      "predicate": "action_dispatch",
+      "coverage_surface": "actionConfigStruct dynamic-action dispatch",
+      "projection": "target-condition",
+      "input": {
+        "action": "url"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S007"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00067"
+      ]
+    },
+    "F2P-017": {
+      "predicate": "union_skip",
+      "coverage_surface": "src/shared/config/entity-config.ts::Exported config types EntitySharedConfig, AppearanceSharedConfig and the other config types",
+      "projection": "target-execution-path",
+      "input": 7,
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S006"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00102"
+      ]
+    },
+    "F2P-022": {
+      "predicate": "card_parse_zod",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
+      "projection": "target-execution-path",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": 42
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00139"
+      ]
+    },
+    "F2P-003": {
+      "predicate": "offending_value",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Strength of the validation checks",
+      "projection": "target-execution-path",
+      "input": {
+        "primary_info": 123
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S004"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00112"
+      ]
+    },
+    "F2P-010": {
+      "predicate": "non_validation_passthrough",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Public capabilities and contracts of the migrated modules",
+      "projection": "target-execution-path",
+      "input": "TypeError(\"boom\")",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00111"
+      ]
+    },
+    "F2P-014": {
+      "predicate": "unknown_key_strict",
+      "coverage_surface": "src/shared/config/entity-config.ts::entitySharedConfigStruct, entityNameStruct, appearanceSharedConfigStruct, layoutStruct and actionConfigStruct parse results",
+      "projection": "target-execution-path",
+      "input": {
+        "entity": "light.kitchen",
+        "bogus": 1
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S002"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00106"
+      ]
+    },
+    "F2P-016": {
+      "predicate": "zod_error_detection",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_missing error entries produced from validation failures",
+      "projection": "target-execution-path",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": 42
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00146"
+      ]
+    },
+    "F2P-018": {
+      "predicate": "element_editor_input",
+      "coverage_surface": "src/utils/lovelace/element-editor.ts::Card, chip and badge config and editor modules that compose or call the exported schemas",
+      "projection": "target-execution-path",
+      "input": {
+        "primary_info": 123
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S004"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00165"
+      ]
+    },
+    "F2P-019": {
+      "predicate": "action_dispatch",
+      "coverage_surface": "src/ha/panels/lovelace/editor/structs/action-struct.ts::Pass/fail decision of every exported schema for a fixed configuration input",
+      "projection": "target-execution-path",
+      "input": {
+        "action": "url"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S007"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00072"
+      ]
+    },
+    "F2P-020": {
+      "predicate": "unknown_key_strict",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_not_expected warning entries produced from validation failures",
+      "projection": "target-execution-path",
+      "input": {
+        "entity": "light.kitchen",
+        "bogus": 1
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00132"
+      ]
+    },
+    "F2P-024": {
+      "predicate": "union_skip",
+      "coverage_surface": "src/shared/config/entity-config.ts::Message aggregation for a value that fails several union alternatives",
+      "projection": "target-execution-path",
+      "input": 7,
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S002"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00096"
+      ]
+    },
+    "F2P-013": {
+      "predicate": "offending_value",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::mushroom-* custom element tag names and YAML option names",
+      "projection": "target-execution-path",
+      "input": {
+        "primary_info": 123
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "S004"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00157"
+      ]
+    },
+    "F2P-021": {
+      "predicate": "dependency_execution",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::Exported schema names, config type names and localization keys",
+      "projection": "dependency-execution",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": "light.kitchen"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "R017"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00098"
+      ]
+    },
+    "F2P-023": {
+      "predicate": "dependency_execution",
+      "coverage_surface": "src/ha/common/structs/handle-errors.ts::key_missing error entries produced from validation failures",
+      "projection": "dependency-execution",
+      "input": {
+        "type": "custom:mushroom-entity-card",
+        "entity": "light.kitchen"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "requirement_ids": [
+        "R017"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00118"
+      ]
+    }
+  }
+}

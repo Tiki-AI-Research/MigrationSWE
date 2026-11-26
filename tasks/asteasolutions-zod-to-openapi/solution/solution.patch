@@ -1,0 +1,364 @@
+diff --git a/package-lock.json b/package-lock.json
+index 70c3c9473f6a1d3bd2f083643f13f73b405277aa..0d5c61364f24262bdeb0006d4cd5f0d3907a346d 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -23,7 +23,7 @@
+         "tsd": "^0.32.0",
+         "typescript": "^5.5.4",
+         "yaml": "^2.2.2",
+-        "zod": "^4.0.5"
++        "zod": "^4.1.0"
+       },
+       "peerDependencies": {
+         "zod": "^4.0.0"
+@@ -5142,9 +5142,9 @@
+       }
+     },
+     "node_modules/zod": {
+-      "version": "4.0.5",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.0.5.tgz",
+-      "integrity": "sha512-/5UuuRPStvHXu7RS+gmvRf4NXrNxpSllGwDnCBcJZtQsKrviYXm54yDGV2KYNLT5kq0lHGcl7lqWJLgSaG+tgA==",
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.1.0.tgz",
++      "integrity": "sha512-UWxluYj2IDX9MHRXTMbB/2eeWrAMmmMSESM+MfT9MQw8U1qo9q5ASW08anoJh6AJ7pkt099fLdNFmfI+4aChHg==",
+       "dev": true,
+       "license": "MIT",
+       "funding": {
+@@ -8856,9 +8856,9 @@
+       "dev": true
+     },
+     "zod": {
+-      "version": "4.0.5",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.0.5.tgz",
+-      "integrity": "sha512-/5UuuRPStvHXu7RS+gmvRf4NXrNxpSllGwDnCBcJZtQsKrviYXm54yDGV2KYNLT5kq0lHGcl7lqWJLgSaG+tgA==",
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.1.0.tgz",
++      "integrity": "sha512-UWxluYj2IDX9MHRXTMbB/2eeWrAMmmMSESM+MfT9MQw8U1qo9q5ASW08anoJh6AJ7pkt099fLdNFmfI+4aChHg==",
+       "dev": true
+     }
+   }
+diff --git a/package.json b/package.json
+index 05d062f2fedef8717acdc68fdbb2f8351f51497e..ad05fdab95c9f6b667c6f1a25f1e0051765fdea6 100644
+--- a/package.json
++++ b/package.json
+@@ -51,7 +51,7 @@
+     "tsd": "^0.32.0",
+     "typescript": "^5.5.4",
+     "yaml": "^2.2.2",
+-    "zod": "^4.0.5"
++    "zod": "^4.1.0"
+   },
+   "author": "Astea Solutions <info@asteasolutions.com>",
+   "license": "MIT"
+diff --git a/spec/types/discriminated-union.spec.ts b/spec/types/discriminated-union.spec.ts
+index 99c00680b1fd017d8d9fd29976bd6d198ea1a26f..ff9badc3a203b3058f6f0f426a33de61ef72d481 100644
+--- a/spec/types/discriminated-union.spec.ts
++++ b/spec/types/discriminated-union.spec.ts
+@@ -1,7 +1,122 @@
+ import { z } from 'zod';
+-import { expectSchema } from '../lib/helpers';
++import { createSchemas, expectSchema } from '../lib/helpers';
+ 
+ describe('discriminated union', () => {
++  it.each(['3.0.0', '3.1.0', '3.2.0'] as const)(
++    'preserves valid mapping order when a reverse name is a later string value (%s)',
++    version => {
++      const Numeric = z
++        .object({ kind: z.enum({ 0: 'Zero', 1: 'One', Zero: 0, One: 1 }) })
++        .openapi('NumericKind');
++      const Text = z
++        .object({ kind: z.enum(['text', 'Zero']) })
++        .openapi('TextKind');
++      const Union = z
++        .discriminatedUnion('kind', [Numeric, Text])
++        .openapi('CollisionDU');
++      const components = createSchemas([Union], { version });
++      const generated = components?.schemas?.['CollisionDU'];
++
++      const expected = {
++        oneOf: [
++          { $ref: '#/components/schemas/NumericKind' },
++          { $ref: '#/components/schemas/TextKind' },
++        ],
++        discriminator: {
++          propertyName: 'kind',
++          mapping: {
++            Zero: '#/components/schemas/TextKind',
++            text: '#/components/schemas/TextKind',
++          },
++        },
++      };
++
++      expect(generated).toEqual(expected);
++      expect(JSON.stringify(generated)).toBe(JSON.stringify(expected));
++    }
++  );
++
++  it.each(['3.0.0', '3.1.0', '3.2.0'] as const)(
++    'retains actual string enum values that also name numeric members (%s)',
++    version => {
++      enum MixedKind {
++        Zero,
++        One,
++        First = 'One',
++        Second = 'Zero',
++      }
++
++      const Mixed = z
++        .object({ kind: z.enum(MixedKind).openapi({ type: 'string' }) })
++        .openapi('MixedKind');
++      const Union = z.discriminatedUnion('kind', [Mixed]).openapi('MixedDU');
++      const components = createSchemas([Union], { version });
++      const generated = components?.schemas?.['MixedDU'];
++      const expected = {
++        oneOf: [{ $ref: '#/components/schemas/MixedKind' }],
++        discriminator: {
++          propertyName: 'kind',
++          mapping: {
++            Zero: '#/components/schemas/MixedKind',
++            One: '#/components/schemas/MixedKind',
++          },
++        },
++      };
++
++      expect(Mixed.safeParse({ kind: 'One' }).success).toBe(true);
++      expect(Mixed.safeParse({ kind: 'Zero' }).success).toBe(true);
++      expect(generated).toEqual(expected);
++      expect(JSON.stringify(generated)).toBe(JSON.stringify(expected));
++    }
++  );
++
++  it.each(['3.0.0', '3.1.0', '3.2.0'] as const)(
++    'omits numeric enum reverse names from discriminator mappings (%s)',
++    version => {
++      enum NumericKind {
++        Zero,
++        One,
++      }
++
++      const Numeric = z
++        .object({ kind: z.nativeEnum(NumericKind) })
++        .openapi('NumericKind');
++      const Text = z.object({ kind: z.literal('text') }).openapi('TextKind');
++      const Union = z
++        .discriminatedUnion('kind', [Numeric, Text])
++        .openapi('NumericKindDU');
++      const NumericOnly = z
++        .discriminatedUnion('kind', [Numeric])
++        .openapi('NumericOnlyDU');
++
++      expect(Numeric.safeParse({ kind: 'Zero' }).success).toBe(false);
++      expect(Numeric.safeParse({ kind: 0 }).success).toBe(true);
++
++      const components = createSchemas([Numeric, Text, Union, NumericOnly], {
++        version,
++      });
++      expect(components?.schemas?.['NumericKindDU']).toEqual({
++        oneOf: [
++          { $ref: '#/components/schemas/NumericKind' },
++          { $ref: '#/components/schemas/TextKind' },
++        ],
++        discriminator: {
++          propertyName: 'kind',
++          mapping: { text: '#/components/schemas/TextKind' },
++        },
++      });
++      expect(components?.schemas?.['NumericOnlyDU']).toEqual({
++        oneOf: [{ $ref: '#/components/schemas/NumericKind' }],
++        discriminator: { propertyName: 'kind', mapping: {} },
++      });
++      expect(components?.schemas?.['NumericKind']).toEqual({
++        type: 'object',
++        properties: { kind: { type: 'integer', enum: [0, 1] } },
++        required: ['kind'],
++      });
++    }
++  );
++
+   it('supports basic discriminated unions', () => {
+     const Text = z.object({ type: z.literal('text'), text: z.string() });
+     const Image = z.object({ type: z.literal('image'), src: z.string() });
+diff --git a/spec/types/recursive-schemas.spec.ts b/spec/types/recursive-schemas.spec.ts
+index 3a48ab31932c65f3a1bf29f5b2726254d3ae8f4c..af8a68de25e4f216935ef18a011a70458098fb38 100644
+--- a/spec/types/recursive-schemas.spec.ts
++++ b/spec/types/recursive-schemas.spec.ts
+@@ -6,6 +6,38 @@ import { SchemaObject } from 'src/types';
+ // Based on https://zod.dev/api?id=recursive-objects
+ 
+ describe('recursive schemas (new getter approach)', () => {
++  it.each(['3.0.0', '3.1.0', '3.2.0'] as const)(
++    'preserves partial enum records with recursive values (%s)',
++    version => {
++      const Node: z.ZodType = z
++        .object({
++          name: z.string(),
++          get children() {
++            return z.partialRecord(z.enum(['left', 'right']), Node);
++          },
++        })
++        .openapi('Node');
++
++      expectSchema(
++        [Node],
++        {
++          Node: {
++            type: 'object',
++            properties: {
++              name: { type: 'string' },
++              children: {
++                type: 'object',
++                additionalProperties: { $ref: '#/components/schemas/Node' },
++              },
++            },
++            required: ['name', 'children'],
++          },
++        },
++        { version }
++      );
++    }
++  );
++
+   describe('basic recursive functionality', () => {
+     it('supports basic recursive lazy schemas with getters', () => {
+       const categorySchema: z.ZodType<unknown> = z
+diff --git a/src/metadata.ts b/src/metadata.ts
+index 8bb51cc4f192b60128255a2699098841ee7ab063..534e192ea284e3b81530264a5663b874c9bee3d9 100644
+--- a/src/metadata.ts
++++ b/src/metadata.ts
+@@ -199,9 +199,13 @@ export class Metadata {
+   static getMetadataFromInternalRegistry(
+     zodSchema: ZodType
+   ): ZodOpenApiFullMetadata | undefined {
+-    return zodToOpenAPIRegistry.get(zodSchema) as
++    const metadata = zodToOpenAPIRegistry.get(zodSchema) as
+       | ZodOpenApiFullMetadata
+       | undefined;
++
++    // Zod 4.0 returned an empty object for a clone with no inherited
++    // registry metadata. Preserve that distinction from a root schema.
++    return metadata ?? (zodSchema._zod.parent ? {} : undefined);
+   }
+ 
+   static getMetadataFromRegistry(zodSchema: ZodType): any {
+diff --git a/src/openapi-generator.ts b/src/openapi-generator.ts
+index 8434ca9522a73edfbe1a00fde2cea1cd03d5880b..5da7b83b61353e267dac64d0d5700ea8b0c141a9 100644
+--- a/src/openapi-generator.ts
++++ b/src/openapi-generator.ts
+@@ -207,15 +207,15 @@ export class OpenAPIGenerator {
+     ];
+ 
+     this.definitions.sort((left, right) => {
+-      // No type means "plain zod schema" => it comes as highest priority based on the array above
+-      if (!('type' in left)) {
+-        if (!('type' in right)) {
++      // A plain zod schema comes as highest priority based on the array above
++      if (isAnyZodType(left)) {
++        if (isAnyZodType(right)) {
+           return 0;
+         }
+         return -1;
+       }
+ 
+-      if (!('type' in right)) {
++      if (isAnyZodType(right)) {
+         return 1;
+       }
+ 
+@@ -227,7 +227,7 @@ export class OpenAPIGenerator {
+   }
+ 
+   private generateSingle(definition: OpenAPIDefinitions | ZodType): void {
+-    if (!('type' in definition)) {
++    if (isAnyZodType(definition)) {
+       this.generateSchemaWithRef(definition);
+       return;
+     }
+diff --git a/src/transformers/discriminated-union.ts b/src/transformers/discriminated-union.ts
+index 17a469295b3e48350d0aabd0ed67b0699584dd0d..8a29a32d7d589bde1a20bb42f26afd3b00e1cc70 100644
+--- a/src/transformers/discriminated-union.ts
++++ b/src/transformers/discriminated-union.ts
+@@ -58,14 +58,31 @@ export class DiscriminatedUnionTransformer {
+       return undefined;
+     }
+ 
+-    const mapping: Record<string, string> = {};
++    const validMappings = new Map<string, string>();
+ 
+     for (const schema of schemas) {
+       const refId = Metadata.getRefId(schema) as string;
+       const values = this.getDiscriminatorValues(schema, discriminator);
+ 
+       for (const value of values) {
+-        mapping[value] = generateSchemaRef(refId);
++        validMappings.set(value, generateSchemaRef(refId));
++      }
++    }
++
++    const mapping: Record<string, string> = {};
++
++    // Retain the baseline insertion order even when an early reverse name
++    // is also an actual string value in a later option. Only actual values
++    // determine which entries survive and the reference each entry uses.
++    for (const schema of schemas) {
++      const values = this.getDiscriminatorValues(schema, discriminator, true);
++
++      for (const value of values) {
++        const ref = validMappings.get(value);
++
++        if (ref !== undefined) {
++          mapping[value] = ref;
++        }
+       }
+     }
+ 
+@@ -77,7 +94,8 @@ export class DiscriminatedUnionTransformer {
+ 
+   private getDiscriminatorValues(
+     schema: ZodType,
+-    discriminator: string
++    discriminator: string,
++    includeEnumReverseNames = false
+   ): string[] {
+     if (isZodType(schema, 'ZodObject')) {
+       const value = schema.def.shape?.[discriminator];
+@@ -87,7 +105,11 @@ export class DiscriminatedUnionTransformer {
+       }
+ 
+       if (isZodType(value, 'ZodEnum')) {
+-        return Object.values(value._zod.def.entries).filter(isString);
++        const entries = Object.values(value._zod.def.entries).filter(isString);
++
++        return includeEnumReverseNames
++          ? entries
++          : entries.filter(entry => value._zod.values.has(entry));
+       }
+ 
+       if (isZodType(value, 'ZodLiteral')) {
+@@ -104,7 +126,11 @@ export class DiscriminatedUnionTransformer {
+       return [
+         ...new Set(
+           nestedOptions.flatMap(option =>
+-            this.getDiscriminatorValues(option, discriminator)
++            this.getDiscriminatorValues(
++              option,
++              discriminator,
++              includeEnumReverseNames
++            )
+           )
+         ),
+       ];
+diff --git a/src/transformers/record.ts b/src/transformers/record.ts
+index 69d792437e4027c74d3d397f0308901c84cca2bc..7c7e7bf6c7e57f071e5424318987bd1a0a577f01 100644
+--- a/src/transformers/record.ts
++++ b/src/transformers/record.ts
+@@ -16,7 +16,9 @@ export class RecordTransformer {
+       ? mapItem(propertiesType)
+       : {};
+ 
+-    if (isZodType(keyType, 'ZodEnum')) {
++    // Zod 4.1 uses an enum clone without values for partial records.
++    // In Zod 4.0 its union key took the additionalProperties branch.
++    if (isZodType(keyType, 'ZodEnum') && keyType._zod.values) {
+       // Native enums have their keys as both number and strings however the number is an
+       // internal representation and the string is the access point for a documentation
+       const keys = Object.values(keyType._zod.def.entries).filter(isString);

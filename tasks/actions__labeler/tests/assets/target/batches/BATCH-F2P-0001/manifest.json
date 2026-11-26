@@ -1,0 +1,34 @@
+{
+  "schema": "migration-side-manifest:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "side": "target",
+  "language": "Go",
+  "probe_root": "/input/target",
+  "entrypoint": {
+    "runner": "target/runner",
+    "created_by": "INTEGRATION",
+    "status": "pending"
+  },
+  "harness": "target/batches/BATCH-F2P-0001/harness.sh",
+  "probe": {
+    "package": "github.com/actions/labeler/f2pprobe",
+    "files": [
+      "shared/batches/BATCH-F2P-0001/probes/doc.go",
+      "shared/batches/BATCH-F2P-0001/probes/probe_test.go"
+    ],
+    "command": [
+      "timeout",
+      "300",
+      "go",
+      "test",
+      "./f2pprobe/",
+      "-count=1",
+      "-timeout",
+      "240s"
+    ],
+    "timeout_sec": 300,
+    "note": "Executed against /input/target; all 24 probes pass on the frozen Go target."
+  },
+  "observations": [],
+  "behavior_contract_revision": "labeler-behavior-v4"
+}

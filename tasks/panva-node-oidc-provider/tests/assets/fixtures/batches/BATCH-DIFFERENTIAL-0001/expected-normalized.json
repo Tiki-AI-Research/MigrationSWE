@@ -1,0 +1,312 @@
+{
+  "discovery": {
+    "status": 200,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"authorization_endpoint\":\"http://127.0.0.1:{{PORT}}/auth\",\"claims_parameter_supported\":false,\"claims_supported\":[\"sub\",\"sid\",\"auth_time\",\"iss\"],\"code_challenge_methods_supported\":[\"S256\"],\"end_session_endpoint\":\"http://127.0.0.1:{{PORT}}/session/end\",\"grant_types_supported\":[\"implicit\",\"authorization_code\",\"refresh_token\"],\"issuer\":\"http://127.0.0.1\",\"jwks_uri\":\"http://127.0.0.1:{{PORT}}/jwks\",\"authorization_response_iss_parameter_supported\":true,\"response_modes_supported\":[\"form_post\",\"fragment\",\"query\"],\"response_types_supported\":[\"code id_token\",\"code\",\"id_token\",\"none\"],\"scopes_supported\""
+  },
+  "discovery_oauth": {
+    "status": 200,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"authorization_endpoint\":\"http://127.0.0.1:{{PORT}}/auth\",\"claims_parameter_supported\":false,\"claims_supported\":[\"sub\",\"sid\",\"auth_time\",\"iss\"],\"code_challenge_methods_supported\":[\"S256\"],\"end_session_endpoint\":\"http://127.0.0.1:{{PORT}}/session/end\",\"grant_types_supported\":[\"implicit\",\"authorization_code\",\"refresh_token\"],\"issuer\":\"http://127.0.0.1\",\"jwks_uri\":\"http://127.0.0.1:{{PORT}}/jwks\",\"authorization_response_iss_parameter_supported\":true,\"response_modes_supported\":[\"form_post\",\"fragment\",\"query\"],\"response_types_supported\":[\"code id_token\",\"code\",\"id_token\",\"none\"],\"scopes_supported\""
+  },
+  "jwks": {
+    "status": 200,
+    "content-type": "application/jwk-set+json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"keys\":[{\"kty\":\"RSA\",\"use\":\"sig\",\"kid\":\"main\",\"alg\":\"RS256\",\"e\":\"{{E}}\",\"n\":\"{{N}}\"}]}"
+  },
+  "jwks_head": {
+    "status": 200,
+    "content-type": "application/jwk-set+json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": ""
+  },
+  "not_found": {
+    "status": 404,
+    "content-type": "text/plain; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "Not Found"
+  },
+  "me_unauth": {
+    "status": 401,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": "Bearer realm=\"http://127.0.0.1\", DPoP realm=\"http://127.0.0.1\", algs=\"ES256 Ed25519 EdDSA\"",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_token\",\"error_description\":\"no access token provided\"}"
+  },
+  "token_empty": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"no client authentication mechanism provided\"}"
+  },
+  "token_no_dup": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"unsupported_grant_type\",\"error_description\":\"unsupported grant_type requested\"}"
+  },
+  "token_invalid_client": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"client_id mismatch\"}"
+  },
+  "token_xml": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"only application/x-www-form-urlencoded content-type bodies are supported on POST /token\"}"
+  },
+  "token_json": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"only application/x-www-form-urlencoded content-type bodies are supported on POST /token\"}"
+  },
+  "token_badescape": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_grant\",\"error_description\":\"grant request is invalid\"}"
+  },
+  "token_oversize": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"failed to parse the request body\"}"
+  },
+  "token_upper": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"missing required parameter 'grant_type'\"}"
+  },
+  "token_slash": {
+    "status": 400,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_request\",\"error_description\":\"missing required parameter 'grant_type'\"}"
+  },
+  "options_token": {
+    "status": 204,
+    "content-type": null,
+    "www-authenticate": null,
+    "access-control-allow-origin": "https://rp.example",
+    "access-control-allow-methods": "POST",
+    "access-control-expose-headers": null,
+    "access-control-max-age": "3600",
+    "set-cookie-names": [],
+    "body": ""
+  },
+  "options_me": {
+    "status": 204,
+    "content-type": null,
+    "www-authenticate": null,
+    "access-control-allow-origin": "https://rp.example",
+    "access-control-allow-methods": "GET,POST",
+    "access-control-expose-headers": null,
+    "access-control-max-age": "3600",
+    "set-cookie-names": [],
+    "body": ""
+  },
+  "me_cors": {
+    "status": 401,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": "Bearer realm=\"http://127.0.0.1\", DPoP realm=\"http://127.0.0.1\", algs=\"ES256 Ed25519 EdDSA\"",
+    "access-control-allow-origin": "https://rp.example",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_token\",\"error_description\":\"no access token provided\"}"
+  },
+  "auth_noparams": {
+    "status": 400,
+    "content-type": "text/html; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "<!DOCTYPE html>\n    <html>\n    <head>\n      <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n      <meta charset=\"utf-8\">\n      <title>oops! something went wrong</title>\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n      <style>\n        @import url(https://fonts.googleapis.com/css?family=Roboto:400,100);h1{font-weight:100;text-align:center;font-size:2.3em}body{font-family:Roboto,sans-serif;margin-top:25px;margin-bottom:25px}.container{padding:0 40px 10px;width:274px;background-color:#F7F7F7;margin:0 auto 10px;border-radius:2px;box-shadow:0 2"
+  },
+  "auth_interaction_cookie": {
+    "status": 303,
+    "content-type": "text/html; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [
+      "_interaction",
+      "_interaction_resume"
+    ],
+    "body": "Redirecting to /interaction/{{UID}}."
+  },
+  "head_auth": {
+    "status": 400,
+    "content-type": "text/html; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": ""
+  },
+  "registration_wrong_ct": {
+    "status": 404,
+    "content-type": "text/plain; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "Not Found"
+  },
+  "session_end": {
+    "status": 200,
+    "content-type": "text/html; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [
+      "_session"
+    ],
+    "body": "<!DOCTYPE html>\n<html>\n<head>\n  <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n  <title>Submitting Callback</title>\n  <script>\n    document.addEventListener('DOMContentLoaded', function () { document.forms[0].submit() });\n  </script>\n</head>\n<body>\n  <form method=\"post\" action=\"http://127.0.0.1:{{PORT}}/session/end/confirm\">\n    <input type=\"hidden\" name=\"xsrf\" value=\"{{XSRF}}\"/>\n<input type=\"hidden\" name=\"logout\" value=\"yes\"/>\n    <noscript>\n      Your browser does not support JavaScript or you've disabled it.<br/>\n      <button autofocus type=\"submit\">Continue</button>\n    </noscript>"
+  },
+  "device_authorization_get": {
+    "status": 404,
+    "content-type": "text/plain; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": null,
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "Not Found"
+  },
+  "proxy_discovery": {
+    "status": 200,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": null,
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": null,
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"authorization_endpoint\":\"http://127.0.0.1:{{PORT}}/auth\",\"claims_parameter_supported\":false,\"claims_supported\":[\"sub\",\"sid\",\"auth_time\",\"iss\"],\"code_challenge_methods_supported\":[\"S256\"],\"end_session_endpoint\":\"http://127.0.0.1:{{PORT}}/session/end\",\"grant_types_supported\":[\"implicit\",\"authorization_code\",\"refresh_token\"],\"issuer\":\"http://127.0.0.1\",\"jwks_uri\":\"http://127.0.0.1:{{PORT}}/jwks\",\"authorization_response_iss_parameter_supported\":true,\"response_modes_supported\":[\"form_post\",\"fragment\",\"query\"],\"response_types_supported\":[\"code id_token\",\"code\",\"id_token\",\"none\"],\"scopes_supported\""
+  },
+  "proxy_me": {
+    "status": 401,
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": "Bearer realm=\"http://127.0.0.1\", DPoP realm=\"http://127.0.0.1\", algs=\"ES256 Ed25519 EdDSA\"",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": null,
+    "access-control-expose-headers": "WWW-Authenticate",
+    "access-control-max-age": null,
+    "set-cookie-names": [],
+    "body": "{\"error\":\"invalid_token\",\"error_description\":\"no access token provided\"}"
+  },
+  "identity": {
+    "exports": [
+      "ExternalSigningKey",
+      "Provider",
+      "default",
+      "errors",
+      "interactionPolicy"
+    ],
+    "eventEmitter": true,
+    "callback": "function",
+    "listen": "function",
+    "createContext": "function",
+    "use": "function",
+    "hasMiddleware": true,
+    "hasKeys": false,
+    "hasApp": true,
+    "hasMountPath": false,
+    "outOfScopeSurfaceKept": false
+  }
+}

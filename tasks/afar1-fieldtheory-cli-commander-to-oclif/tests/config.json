@@ -1,0 +1,955 @@
+{
+  "assets": {
+    "migration_units": "migration-units.json",
+    "production_sink_baseline": "production-sink-baseline.json",
+    "source_baseline_outputs": "source-baseline-outputs.json",
+    "source_test_baseline": "source-test-baseline.json",
+    "target_test_baseline": "target-test-baseline.json"
+  },
+  "base_commit": "542c1167c127a788940731a2ef60493f0f522533",
+  "base_commit_hash": "542c1167c127a788940731a2ef60493f0f522533",
+  "duplicate_is_failure": true,
+  "execution_backend": "docker",
+  "executor": {
+    "id": "command",
+    "version": "1"
+  },
+  "f2p": [
+    "F2P-004",
+    "F2P-022",
+    "F2P-023",
+    "F2P-005",
+    "F2P-019",
+    "F2P-007",
+    "F2P-009",
+    "F2P-013",
+    "F2P-014",
+    "F2P-015",
+    "F2P-017",
+    "F2P-020",
+    "F2P-021",
+    "F2P-024",
+    "F2P-056"
+  ],
+  "group_applicability": {
+    "DIFFERENTIAL": {
+      "status": "required"
+    },
+    "F2P": {
+      "status": "required"
+    },
+    "P2P": {
+      "status": "required"
+    },
+    "STATE": {
+      "status": "na"
+    }
+  },
+  "migration_config_schema": "migration-grader-config:v6",
+  "migration_unit_checks": {
+    "MU001": {
+      "observation_ids": [
+        "F2P-004",
+        "F2P-022",
+        "F2P-023",
+        "F2P-005",
+        "F2P-019",
+        "F2P-007",
+        "F2P-009",
+        "F2P-013",
+        "F2P-014",
+        "F2P-015",
+        "F2P-017",
+        "F2P-020",
+        "F2P-021",
+        "F2P-024",
+        "F2P-056"
+      ]
+    }
+  },
+  "missing_is_failure": true,
+  "normalization_policy": {
+    "exceptions": "type-and-message",
+    "floating_point": "exact-unless-contract-declares-tolerance",
+    "ordering": "declared-order",
+    "platform_paths": "posix-normalized",
+    "python_repr_addresses": "stable-placeholder",
+    "timestamps": "exact"
+  },
+  "p2p": [
+    "P2P-015",
+    "P2P-036",
+    "P2P-010",
+    "P2P-013",
+    "P2P-014",
+    "P2P-016",
+    "P2P-017",
+    "P2P-018",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-024",
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-028",
+    "P2P-030",
+    "P2P-031",
+    "P2P-032",
+    "P2P-033",
+    "P2P-034",
+    "P2P-035",
+    "P2P-037",
+    "P2P-038",
+    "P2P-039"
+  ],
+  "policy": {
+    "bridge_sink_paths": [
+      "*.cjs",
+      "*.js",
+      "*.mjs",
+      "*.ts",
+      "bin/**/*.js",
+      "bin/**/*.mjs",
+      "bin/**/*.ts",
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "src/**/*.js",
+      "src/**/*.mjs",
+      "src/**/*.ts"
+    ],
+    "bridge_sink_rules": [
+      {
+        "class": "subprocess",
+        "description": "spawn/exec/fork of an external process",
+        "id": "BRIDGE-SUBPROCESS",
+        "patterns": [
+          "from\\s+['\"](?:node:)?child_process['\"]",
+          "require\\s*\\(\\s*['\"](?:node:)?child_process['\"]\\s*\\)",
+          "(?<![.\\w$])(?:spawn|spawnSync|execSync|execFile|execFileSync|execFileSync)\\s*\\(",
+          "(?<![.\\w$])fork\\s*\\(",
+          "\\b(?:child_process|cp|cpSync)\\.(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)\\s*\\("
+        ]
+      },
+      {
+        "class": "ffi",
+        "description": "native addon or FFI symbol lookup",
+        "id": "BRIDGE-FFI",
+        "patterns": [
+          "\\bprocess\\.dlopen\\s*\\(",
+          "\\bffi\\.(?:Library|dlopen)\\s*\\(",
+          "require\\s*\\(\\s*['\"][^'\"]*ffi[^'\"]*['\"]\\s*\\)",
+          "['\"][^'\"]+\\.node['\"]"
+        ]
+      },
+      {
+        "class": "rpc_http",
+        "description": "socket, HTTP or RPC bridge to another runtime",
+        "id": "BRIDGE-RPC-HTTP",
+        "patterns": [
+          "\\bnet\\.(?:connect|createConnection)\\s*\\(",
+          "\\b(?:http|https)\\.request\\s*\\(",
+          "\\b(?:http|https|net|dgram|tls)\\.createServer\\s*\\(",
+          "\\bcreateServer\\s*\\(",
+          "new\\s+WebSocket\\s*\\(",
+          "\\bgrpc\\b",
+          "from\\s+['\"](?:node:)?(?:net|dgram|tls|grpc[^'\"]*)['\"]"
+        ]
+      },
+      {
+        "class": "dynamic_load",
+        "description": "computed module load or code evaluation",
+        "id": "BRIDGE-DYNAMIC-LOAD",
+        "patterns": [
+          "\\brequire\\s*\\(\\s*[^'\"\\s)]",
+          "\\bimport\\s*\\(\\s*[^'\"\\s)]",
+          "\\bmodule\\._load\\s*\\(",
+          "new\\s+Function\\s*\\(",
+          "\\bvm\\.(?:runIn\\w*|compileFunction|Script)\\s*\\(",
+          "(?<![.\\w$])eval\\s*\\("
+        ]
+      },
+      {
+        "class": "legacy_runtime",
+        "description": "import of the superseded source framework module",
+        "id": "BRIDGE-LEGACY-RUNTIME",
+        "patterns": [
+          "\\bfrom\\s+['\"]commander['\"]",
+          "\\brequire\\s*\\(\\s*['\"]commander['\"]\\s*\\)",
+          "\\bfrom\\s+['\"]commander/[^'\"]+['\"]",
+          "\\bimport\\s*\\(\\s*['\"]commander(?:/[^'\"]*)?['\"]\\s*\\)"
+        ],
+        "modules": [
+          "commander"
+        ]
+      }
+    ],
+    "change_scope": {
+      "description": "instruction.md Constraints 5: the only writable surface for a candidate",
+      "allowed_paths": [
+        "src",
+        "bin",
+        "tests",
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "vitest.config.ts",
+        "node_modules",
+        ".git"
+      ],
+      "backup_suffixes": [
+        ".bak",
+        ".orig",
+        ".rej",
+        ".swp",
+        ".swo",
+        ".tmp",
+        ".old",
+        ".save",
+        "~"
+      ],
+      "modifiable_existing_tests": [
+        "tests/cli.test.ts",
+        "tests/engine.test.ts"
+      ],
+      "required_registration_cleanups": [
+        {
+          "path": "tests/cli.test.ts",
+          "from": "ft paths, current, state, recent, navigation aliases, library, commands, app, and install command groups are registered",
+          "to": "ft paths, current, recent, navigation aliases, library, commands, app, and install command groups are registered",
+          "obsolete_command": "state"
+        }
+      ]
+    },
+    "deceptive_fallback_rules": [
+      {
+        "id": "BATCH-F2P-0001-FALLBACK-001",
+        "kind": "literal",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts",
+          "bin/ft.mjs"
+        ],
+        "target": "from 'commander'"
+      },
+      {
+        "id": "BATCH-F2P-0002-DECEPTIVE-001",
+        "kind": "import",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts",
+          "bin/ft.mjs",
+          "src/cli-runtime.ts",
+          "src/cli-commands.ts"
+        ],
+        "target": "commander"
+      },
+      {
+        "id": "BATCH-F2P-0002-DECEPTIVE-002",
+        "kind": "literal",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts",
+          "bin/ft.mjs",
+          "src/cli-runtime.ts",
+          "src/cli-commands.ts"
+        ],
+        "target": "from 'commander'"
+      },
+      {
+        "id": "BATCH-F2P-0003-DECEPT-001",
+        "kind": "import",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts",
+          "bin/ft.mjs"
+        ],
+        "target": "commander"
+      },
+      {
+        "id": "BATCH-F2P-0003-DECEPT-002",
+        "kind": "literal",
+        "paths": [
+          "src/cli.ts",
+          "bin/ft.mjs"
+        ],
+        "target": "require('commander')"
+      },
+      {
+        "id": "BATCH-P2P-0002-RULE-001",
+        "kind": "import",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts",
+          "bin/ft.mjs"
+        ],
+        "target": "commander"
+      }
+    ],
+    "dependency_probe": {
+      "allowed_registries": [
+        "registry.npmjs.org"
+      ],
+      "verify_installed": true,
+      "require_lockfile": false
+    },
+    "forbidden_report_markers": [
+      "HARDCODED_VERIFIER_PASS"
+    ],
+    "ordinary_residue_rules": [
+      {
+        "id": "BATCH-F2P-0001-RESIDUE-001",
+        "kind": "literal",
+        "paths": [
+          "package.json"
+        ],
+        "target": "\"commander\": \"^14.0.3\""
+      },
+      {
+        "id": "BATCH-F2P-0001-RESIDUE-002",
+        "kind": "literal",
+        "paths": [
+          "package-lock.json"
+        ],
+        "target": "node_modules/commander"
+      },
+      {
+        "id": "BATCH-F2P-0003-RESIDUE-001",
+        "kind": "literal",
+        "paths": [
+          "package.json"
+        ],
+        "target": "\"commander\""
+      },
+      {
+        "id": "BATCH-P2P-0001-RESIDUE-001",
+        "kind": "literal",
+        "paths": [
+          "src/cli.ts",
+          "src/companion-cli.ts"
+        ],
+        "target": "from 'commander'"
+      }
+    ],
+    "protected_paths": [
+      ".migration_eval",
+      ".harbor_eval",
+      "grader-output.json"
+    ],
+    "state_applicable": false,
+    "test_integrity_tolerance": {
+      "allow_equivalent_rewrite": true,
+      "allow_equivalent_test_selection": true,
+      "framework_registration_flag_key_cases": [
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft wiki: --engine option is registered"
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft search, stats, and status expose --json"
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft skill install exposes a non-interactive force option"
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft install app command is registered"
+        }
+      ],
+      "declared_equivalent_case_profiles": [
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft wiki: --engine option is registered",
+          "minimum_count": 1,
+          "minimum_strength": 1,
+          "required_values": [
+            "engine"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft search, stats, and status expose --json",
+          "minimum_count": 1,
+          "minimum_strength": 1,
+          "required_values": [
+            "json"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft skill install exposes a non-interactive force option",
+          "minimum_count": 2,
+          "minimum_strength": 2,
+          "required_values": [
+            "force",
+            "yes"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft install app command is registered",
+          "minimum_count": 3,
+          "minimum_strength": 3,
+          "required_values": [
+            "install-dir",
+            "json",
+            "open"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft sync: media is on by default and exposes --no-media",
+          "minimum_count": 2,
+          "minimum_strength": 2,
+          "required_markers": [
+            "allowNo",
+            "default",
+            "media"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "ft wiki: description mentions engine prerequisite",
+          "minimum_count": 1,
+          "minimum_strength": 1,
+          "required_values": [
+            "claude",
+            "codex"
+          ]
+        },
+        {
+          "path": "tests/cli.test.ts",
+          "test_name": "repo workflow state is not a CLI command",
+          "minimum_count": 1,
+          "minimum_strength": 1,
+          "required_values": [
+            "state"
+          ]
+        },
+        {
+          "path": "tests/engine.test.ts",
+          "test_name": "ft model: command is registered and shows help",
+          "minimum_count": 1,
+          "minimum_strength": 1,
+          "required_values": [
+            "LLM engine"
+          ]
+        }
+      ],
+      "declared_test_case_renames": [
+        {
+          "from": "ft paths, current, state, recent, navigation aliases, library, commands, app, and install command groups are registered",
+          "path": "tests/cli.test.ts",
+          "reason": "instruction.md step 8 removes the stale 'state' command entry from this test title and its expected command list; the reference solution performs the same rename",
+          "to": "ft paths, current, recent, navigation aliases, library, commands, app, and install command groups are registered"
+        }
+      ],
+      "forbid_assertion_expectation_rewrite": true,
+      "forbid_assertion_removal": true,
+      "forbid_assertion_weakening": true,
+      "forbid_empty_added_test": true,
+      "forbid_excluded_test_selection": true,
+      "forbid_narrowed_test_selection": true,
+      "forbid_no_assertion_added_test": true,
+      "forbid_test_removal": true,
+      "mode": "semantic-preserving-only",
+      "require_declared_equivalence": true
+    }
+  },
+  "protected_paths": [
+    "verifier",
+    "assets",
+    "config.json"
+  ],
+  "public_contract": {
+    "allowed_asset_roots": [
+      "fixtures",
+      "shared",
+      "source",
+      "target"
+    ],
+    "allowed_files": [
+      ".dockerignore",
+      "Dockerfile",
+      "assets/assets-manifest.json",
+      "assets/build-deps/repo/base-repo.bundle",
+      "assets/build-deps/repo/build-context.tar",
+      "assets/case-observation-inventory.json",
+      "assets/fixtures/batches/BATCH-DIFFERENTIAL-0001/bookmarks.jsonl",
+      "assets/fixtures/batches/BATCH-F2P-0002/bookmarks.jsonl",
+      "assets/fixtures/batches/BATCH-F2P-0003/observations.json",
+      "assets/fixtures/batches/BATCH-F2P-0003/update-check/.update-check",
+      "assets/fixtures/batches/BATCH-P2P-0001/bookmarks-fixture.jsonl",
+      "assets/fixtures/batches/BATCH-P2P-0002/search-bookmark.jsonl",
+      "assets/fixtures/bookmark-feed-note-tweet.json",
+      "assets/fixtures/tweet-result-by-rest-id-note-tweet.json",
+      "assets/harness.mjs",
+      "assets/images.manifest.json",
+      "assets/migration-units.json",
+      "assets/production-sink-baseline.json",
+      "assets/shared/batches/BATCH-DIFFERENTIAL-0001/runner.mjs",
+      "assets/shared/batches/BATCH-F2P-0002/cli-probe-lib.mjs",
+      "assets/shared/batches/BATCH-F2P-0002/observations.mjs",
+      "assets/shared/batches/BATCH-F2P-0002/runner.mjs",
+      "assets/shared/batches/BATCH-F2P-0003/loader-hooks.mjs",
+      "assets/shared/batches/BATCH-F2P-0003/preload.mjs",
+      "assets/shared/batches/BATCH-F2P-0003/probe.mjs",
+      "assets/shared/batches/BATCH-P2P-0002/p2p-harness.mjs",
+      "assets/shared/integration/module-log-hooks.mjs",
+      "assets/shared/integration/observations.json",
+      "assets/shared/integration/preload.mjs",
+      "assets/shared/integration/run-integration.mjs",
+      "assets/shared/validated-observations/selection.json",
+      "assets/source-baseline-outputs.json",
+      "assets/source-test-baseline.json",
+      "assets/source/run.mjs",
+      "assets/target-test-baseline.json",
+      "assets/target/batches/BATCH-DIFFERENTIAL-0001/run.mjs",
+      "assets/target/batches/BATCH-F2P-0001/probe.mjs",
+      "assets/target/batches/BATCH-F2P-0002/run-probes.mjs",
+      "assets/target/batches/BATCH-F2P-0003/probe.mjs",
+      "assets/target/batches/BATCH-P2P-0001/probe.mjs",
+      "assets/target/batches/BATCH-P2P-0001/projections.mjs",
+      "assets/target/batches/BATCH-P2P-0001/results.json",
+      "assets/target/batches/BATCH-P2P-0002/run-target.mjs",
+      "assets/target/run.sh",
+      "config.json",
+      "docker-compose.yaml",
+      "grader.py",
+      "test.sh",
+      "verifier/comparison.py",
+      "verifier/dependency_probe.py",
+      "verifier/differential.py",
+      "verifier/evidence.py",
+      "verifier/harbor_entry.py",
+      "verifier/hardgate.py",
+      "verifier/hardgate_engine.py",
+      "verifier/integrity.py",
+      "verifier/native_test_collector.py",
+      "verifier/observation_adapter.py",
+      "verifier/observations.py",
+      "verifier/progress.py",
+      "verifier/residue.py",
+      "verifier/reward.py",
+      "verifier/sandbox.py",
+      "verifier/self_check.py",
+      "verifier/state_preservation.py",
+      "verifier/test.patch",
+      "verifier/test_security_regression.py",
+      "verifier/verifier.py",
+      "verifier/verifier_engine.py"
+    ],
+    "assets_root": "/tests/assets",
+    "base_commit": "542c1167c127a788940731a2ef60493f0f522533",
+    "candidate_root": "/app",
+    "evaluator_status": "CERTIFIED",
+    "logs_root": "/logs",
+    "mode": "VERIFIER_ONLY",
+    "required_files": [
+      "Dockerfile",
+      "assets/case-observation-inventory.json",
+      "assets/migration-units.json",
+      "assets/source-baseline-outputs.json",
+      "assets/source-test-baseline.json",
+      "assets/target-test-baseline.json",
+      "config.json",
+      "docker-compose.yaml",
+      "grader.py",
+      "test.sh",
+      "verifier/harbor_entry.py",
+      "verifier/hardgate.py",
+      "verifier/progress.py",
+      "verifier/reward.py",
+      "verifier/test.patch",
+      "verifier/verifier.py"
+    ],
+    "runtime_error": null,
+    "schema_version": "migration-public-projection:v1",
+    "task_id": "tp-77e2636995be2c199c600c4b224153b3",
+    "usable_for_scoring": true,
+    "validated": true,
+    "verifier_root": "/tests/verifier"
+  },
+  "reports": {
+    "ctrf": "/logs/verifier/ctrf.json",
+    "reward": "/logs/verifier/reward.json",
+    "reward_details": "/logs/verifier/reward-details.json",
+    "verifier": "/logs/verifier/verifier-result.json"
+  },
+  "repository_url": "https://github.com/afar1/fieldtheory-cli",
+  "result_owner": "harbor",
+  "reward_mode": "VERIFIER_ONLY",
+  "runtime": {
+    "build_commands": [
+      [
+        "npm",
+        "run",
+        "build"
+      ]
+    ],
+    "environment": {
+      "HOME": "/tmp/FirefoxHome",
+      "npm_config_audit": "false",
+      "npm_config_fund": "false",
+      "npm_config_update_notifier": "false"
+    },
+    "executor": {
+      "id": "command",
+      "version": "1"
+    },
+    "harness_command": [
+      "node",
+      "{assets}/harness.mjs",
+      "{report}"
+    ],
+    "native_test_commands": [
+      [
+        "npm",
+        "test"
+      ],
+      [
+        "npm",
+        "test",
+        "--",
+        "--test-reporter=junit",
+        "--test-reporter-destination={report}"
+      ]
+    ],
+    "preflight_commands": [
+      [
+        "node",
+        "--version"
+      ],
+      [
+        "npm",
+        "--version"
+      ],
+      [
+        "git",
+        "--version"
+      ]
+    ],
+    "schema_version": "migration-environment-runtime:v3",
+    "technology": {
+      "framework": {
+        "name": "oclif",
+        "version": "4.0.0"
+      },
+      "language": {
+        "name": "TypeScript",
+        "version": "unknown"
+      },
+      "toolchain": {
+        "name": "typescript",
+        "version": "6.0.2"
+      }
+    },
+    "timeout_seconds": 1800.0,
+    "workdir": "/workspace/repo",
+    "workspace_materializations": [
+      {
+        "mode": "copy",
+        "source": "/opt/migration/dependencies/node_modules",
+        "target": "node_modules"
+      }
+    ],
+    "writable_storage": [
+      {
+        "executable": false,
+        "id": "dist",
+        "initialization": "empty",
+        "lifecycle": "attempt",
+        "network": "disabled",
+        "size_limit": null,
+        "source": null,
+        "target": "dist"
+      }
+    ]
+  },
+  "schema_version": "deepswe-verifier-config/v3",
+  "skip_is_failure": true,
+  "source_runtime_sha256": "sha256:b54334bc689e8ca93c21e8cdbc064dc5067e5821ba4b2f7419970bd07caf985e",
+  "source_technology": {
+    "language_name": "TypeScript",
+    "language_version": "unknown",
+    "name": "Commander.js",
+    "version": "14.0.3"
+  },
+  "suite": "tp-77e2636995be2c199c600c4b224153b3",
+  "target_runtime_sha256": "sha256:a719f37fac2fa6bbef3884ac10b30fc75a6255fbe24539752198e31cbf127825",
+  "target_technology": {
+    "language_name": "TypeScript",
+    "language_version": "unknown",
+    "name": "oclif",
+    "version": "4.0.0"
+  },
+  "task_id": "tp-77e2636995be2c199c600c4b224153b3",
+  "tests": {
+    "differential": [
+      {
+        "id": "DIFF-001",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-002",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-003",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-004",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-005",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-006",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-007",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-008",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-009",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-010",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-012",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-013",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-014",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-015",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-016",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-017",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-018",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-019",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-020",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-021",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-022",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-023",
+        "kind": "DIFFERENTIAL"
+      },
+      {
+        "id": "DIFF-024",
+        "kind": "DIFFERENTIAL"
+      }
+    ],
+    "f2p": [
+      {
+        "id": "F2P-004",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-022",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-023",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-005",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-019",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-007",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-009",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-013",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-014",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-015",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-017",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-020",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-021",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-024",
+        "kind": "F2P"
+      },
+      {
+        "id": "F2P-056",
+        "kind": "F2P"
+      }
+    ],
+    "p2p": [
+      {
+        "id": "P2P-015",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-036",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-010",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-013",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-014",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-016",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-017",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-018",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-019",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-020",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-021",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-022",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-024",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-025",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-026",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-027",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-028",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-030",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-031",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-032",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-033",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-034",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-035",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-037",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-038",
+        "kind": "P2P"
+      },
+      {
+        "id": "P2P-039",
+        "kind": "P2P"
+      }
+    ],
+    "state": []
+  }
+}

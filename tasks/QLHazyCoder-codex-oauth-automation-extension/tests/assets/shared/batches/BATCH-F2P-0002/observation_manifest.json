@@ -1,0 +1,185 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "migration": {
+    "category": "backend_framework",
+    "source": "Python http.server 3.10",
+    "target": "Flask 3.1.2"
+  },
+  "probe_drivers": {
+    "shared": "shared/batches/BATCH-F2P-0002/probe_runner.py",
+    "source": "source/batches/BATCH-F2P-0002/run_source_probes.py",
+    "target": "target/batches/BATCH-F2P-0002/run_target_probes.py"
+  },
+  "observations": [
+    {
+      "id": "F2P-029",
+      "requirement_ids": ["R029"],
+      "helper": "custom_mail_helper",
+      "call": "OPTIONS /messages",
+      "predicate": "204 + three CORS headers + Flask served + no http.server dispatch"
+    },
+    {
+      "id": "F2P-035",
+      "requirement_ids": ["R033"],
+      "helper": "custom_mail_helper",
+      "call": "POST /random-email (text/plain JSON body)",
+      "predicate": "200 ok:true email fields + Flask served + no http.server dispatch"
+    },
+    {
+      "id": "F2P-040",
+      "requirement_ids": ["R039"],
+      "helper": "custom_mail_helper",
+      "call": "POST /random-email n=3",
+      "predicate": "200 ok:true 3 distinct emails committed in generated_emails + Flask served"
+    },
+    {
+      "id": "F2P-045",
+      "requirement_ids": ["R037"],
+      "helper": "hotmail_helper",
+      "call": "POST /append-account-log",
+      "predicate": "200 one 5-field tab-separated line + Flask served"
+    },
+    {
+      "id": "F2P-026",
+      "requirement_ids": ["R001"],
+      "helper": "custom_mail_helper",
+      "call": "POST /health",
+      "predicate": "200 ok:true JSON + CORS + Flask served + no BaseHTTPRequestHandler.do_POST"
+    },
+    {
+      "id": "F2P-030",
+      "requirement_ids": ["R029"],
+      "helper": "custom_mail_helper",
+      "call": "OPTIONS /messages",
+      "predicate": "204 + CORS + Flask served + no http.server dispatch"
+    },
+    {
+      "id": "F2P-032",
+      "requirement_ids": ["R031"],
+      "helper": "hotmail_helper",
+      "call": "GET /messages",
+      "predicate": "404 JSON failure envelope + Flask served"
+    },
+    {
+      "id": "F2P-034",
+      "requirement_ids": ["R038"],
+      "helper": "hotmail_helper",
+      "call": "POST /messages {}",
+      "predicate": "500 missing-credentials JSON + Flask served"
+    },
+    {
+      "id": "F2P-039",
+      "requirement_ids": ["R022"],
+      "helper": "hotmail_helper",
+      "call": "POST /append-account-log (dependency trace)",
+      "predicate": "no http.server symbols/import + Flask served"
+    },
+    {
+      "id": "F2P-041",
+      "requirement_ids": ["R036"],
+      "helper": "hotmail_helper",
+      "call": "POST /sync-account-run-records",
+      "predicate": "snapshot summary {total:1,success:1,failed:0,retryTotal:2} + Flask served"
+    },
+    {
+      "id": "F2P-044",
+      "requirement_ids": ["R001"],
+      "helper": "both",
+      "call": "import both modules + live request",
+      "predicate": "module functions callable + Flask served + no http.server dispatch"
+    },
+    {
+      "id": "F2P-025",
+      "requirement_ids": ["R022"],
+      "helper": "custom_mail_helper",
+      "call": "POST /messages,/code,/health,/env,/random-email",
+      "predicate": "no route 404/405 + no http.server symbols + Flask app present"
+    },
+    {
+      "id": "F2P-027",
+      "requirement_ids": ["R001"],
+      "helper": "custom_mail_helper",
+      "call": "POST /random-email",
+      "predicate": "200 ok:true email/emails/domain/count + Flask served"
+    },
+    {
+      "id": "F2P-028",
+      "requirement_ids": ["R030"],
+      "helper": "custom_mail_helper",
+      "call": "POST /does-not-exist",
+      "predicate": "404 Unsupported path JSON + charset utf-8 + Flask served"
+    },
+    {
+      "id": "F2P-031",
+      "requirement_ids": ["R041"],
+      "helper": "hotmail_helper",
+      "call": "concurrent POST /append-account-log",
+      "predicate": "2 complete non-interleaved lines + Flask served (threaded)"
+    },
+    {
+      "id": "F2P-033",
+      "requirement_ids": ["R035"],
+      "helper": "custom_mail_helper",
+      "call": "POST /health",
+      "predicate": "Content-Type application/json; charset=utf-8 + Flask served"
+    },
+    {
+      "id": "F2P-036",
+      "requirement_ids": ["R033"],
+      "helper": "custom_mail_helper",
+      "call": "POST /random-email (text/plain JSON body)",
+      "predicate": "200 ok:true email fields + Flask served"
+    },
+    {
+      "id": "F2P-037",
+      "requirement_ids": ["R023"],
+      "helper": "hotmail_helper",
+      "call": "POST /append-account-log (delegation trace)",
+      "predicate": "no subprocess/RPC/FFI delegation + Flask served"
+    },
+    {
+      "id": "F2P-038",
+      "requirement_ids": ["R029"],
+      "helper": "hotmail_helper",
+      "call": "OPTIONS /messages",
+      "predicate": "204 + CORS + Flask served + no http.server dispatch"
+    },
+    {
+      "id": "F2P-042",
+      "requirement_ids": ["R031"],
+      "helper": "hotmail_helper",
+      "call": "GET /messages",
+      "predicate": "404 JSON failure envelope + Flask served"
+    },
+    {
+      "id": "F2P-043",
+      "requirement_ids": ["R030"],
+      "helper": "hotmail_helper",
+      "call": "POST /does-not-exist",
+      "predicate": "404 Unsupported path JSON + charset utf-8 + Flask served"
+    },
+    {
+      "id": "F2P-046",
+      "requirement_ids": ["R036"],
+      "helper": "hotmail_helper",
+      "call": "POST /sync-account-run-records",
+      "predicate": "snapshot summary + retryCount retained + Flask served"
+    },
+    {
+      "id": "F2P-047",
+      "requirement_ids": ["R038"],
+      "helper": "hotmail_helper",
+      "call": "POST /messages {}",
+      "predicate": "500 missing-credentials JSON + Flask served"
+    },
+    {
+      "id": "F2P-048",
+      "requirement_ids": ["R022"],
+      "helper": "hotmail_helper",
+      "call": "success/404/500/204 responses",
+      "predicate": "all responses JSON + CORS + no http.server dispatch"
+    }
+  ]
+}

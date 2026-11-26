@@ -1,0 +1,1147 @@
+{
+  "schema_version": "jssip-preparation-measurement/v1",
+  "evidence_kind": "new_measurement",
+  "historical_evidence": false,
+  "started_at": "2026-10-23T06:17:40.815507+00:00",
+  "completed_at": "2026-10-25T16:47:56.048125+00:00",
+  "network_mode": "none",
+  "base_commit": "7a963d16ae5c17b430b57b307d3f3ba74c0cbb1f",
+  "base_tree_hash": "c91ed3499a434baf7835782d3abc947499921539",
+  "runtime": {
+    "node": "v20.20.2",
+    "npm": "10.8.2"
+  },
+  "target_applied": false,
+  "facts": {
+    "manifest_pegjs": "^0.7.0",
+    "lock_root_pegjs": "^0.7.0",
+    "lock_pegjs": {
+      "version": "0.7.0",
+      "resolved": "https://registry.npmjs.org/pegjs/-/pegjs-0.7.0.tgz",
+      "integrity": "sha512-LKb5vROzG2N6FVpITS8zy4BSB8M5z8JgiM0LzgvUVRIdScHys8RYlYvHVSL3WeXMLowF9MZj1hPusuVvTgeq4w==",
+      "dev": true,
+      "bin": {
+        "pegjs": "bin/pegjs"
+      },
+      "engines": {
+        "node": ">= 0.6.6"
+      }
+    },
+    "npm_scripts": {
+      "lint": "node npm-scripts.mjs lint",
+      "lint:fix": "node npm-scripts.mjs lint:fix",
+      "test": "node npm-scripts.mjs test",
+      "coverage": "node npm-scripts.mjs coverage",
+      "build": "node npm-scripts.mjs build",
+      "typescript:build": "node npm-scripts.mjs typescript:build",
+      "release": "node npm-scripts.mjs release",
+      "docs": "node npm-scripts.mjs docs",
+      "docs:watch": "node npm-scripts.mjs docs:watch",
+      "docs:check": "node npm-scripts.mjs docs:check"
+    },
+    "start_rules": [
+      "CRLF",
+      "DIGIT",
+      "ALPHA",
+      "HEXDIG",
+      "WSP",
+      "OCTET",
+      "DQUOTE",
+      "SP",
+      "HTAB",
+      "alphanum",
+      "reserved",
+      "unreserved",
+      "mark",
+      "escaped",
+      "LWS",
+      "SWS",
+      "HCOLON",
+      "TEXT_UTF8_TRIM",
+      "TEXT_UTF8char",
+      "UTF8_NONASCII",
+      "UTF8_CONT",
+      "LHEX",
+      "token",
+      "token_nodot",
+      "separators",
+      "word",
+      "STAR",
+      "SLASH",
+      "EQUAL",
+      "LPAREN",
+      "RPAREN",
+      "RAQUOT",
+      "LAQUOT",
+      "COMMA",
+      "SEMI",
+      "COLON",
+      "LDQUOT",
+      "RDQUOT",
+      "comment",
+      "ctext",
+      "quoted_string",
+      "quoted_string_clean",
+      "qdtext",
+      "quoted_pair",
+      "SIP_URI_noparams",
+      "SIP_URI",
+      "uri_scheme",
+      "uri_scheme_sips",
+      "uri_scheme_sip",
+      "userinfo",
+      "user",
+      "user_unreserved",
+      "password",
+      "hostport",
+      "host",
+      "hostname",
+      "domainlabel",
+      "toplabel",
+      "IPv6reference",
+      "IPv6address",
+      "h16",
+      "ls32",
+      "IPv4address",
+      "dec_octet",
+      "port",
+      "uri_parameters",
+      "uri_parameter",
+      "transport_param",
+      "user_param",
+      "method_param",
+      "ttl_param",
+      "maddr_param",
+      "lr_param",
+      "other_param",
+      "pname",
+      "pvalue",
+      "paramchar",
+      "param_unreserved",
+      "headers",
+      "header",
+      "hname",
+      "hvalue",
+      "hnv_unreserved",
+      "Request_Response",
+      "Request_Line",
+      "Request_URI",
+      "absoluteURI",
+      "hier_part",
+      "net_path",
+      "abs_path",
+      "opaque_part",
+      "uric",
+      "uric_no_slash",
+      "path_segments",
+      "segment",
+      "param",
+      "pchar",
+      "scheme",
+      "authority",
+      "srvr",
+      "reg_name",
+      "query",
+      "SIP_Version",
+      "INVITEm",
+      "ACKm",
+      "OPTIONSm",
+      "BYEm",
+      "CANCELm",
+      "REGISTERm",
+      "SUBSCRIBEm",
+      "NOTIFYm",
+      "REFERm",
+      "Method",
+      "Status_Line",
+      "Status_Code",
+      "extension_code",
+      "Reason_Phrase",
+      "Allow_Events",
+      "Call_ID",
+      "Contact",
+      "contact_param",
+      "name_addr",
+      "display_name",
+      "contact_params",
+      "c_p_q",
+      "c_p_expires",
+      "delta_seconds",
+      "qvalue",
+      "generic_param",
+      "gen_value",
+      "Content_Disposition",
+      "disp_type",
+      "disp_param",
+      "handling_param",
+      "Content_Encoding",
+      "Content_Length",
+      "Content_Type",
+      "media_type",
+      "m_type",
+      "discrete_type",
+      "composite_type",
+      "extension_token",
+      "x_token",
+      "m_subtype",
+      "m_parameter",
+      "m_value",
+      "CSeq",
+      "CSeq_value",
+      "Expires",
+      "Event",
+      "event_type",
+      "From",
+      "from_param",
+      "tag_param",
+      "Max_Forwards",
+      "Min_Expires",
+      "Name_Addr_Header",
+      "Proxy_Authenticate",
+      "challenge",
+      "other_challenge",
+      "auth_param",
+      "digest_cln",
+      "realm",
+      "realm_value",
+      "domain",
+      "URI",
+      "nonce",
+      "nonce_value",
+      "opaque",
+      "stale",
+      "algorithm",
+      "qop_options",
+      "qop_value",
+      "Proxy_Require",
+      "Record_Route",
+      "rec_route",
+      "Reason",
+      "reason_param",
+      "reason_cause",
+      "Require",
+      "Route",
+      "route_param",
+      "Subscription_State",
+      "substate_value",
+      "subexp_params",
+      "event_reason_value",
+      "Subject",
+      "Supported",
+      "To",
+      "to_param",
+      "Via",
+      "via_param",
+      "via_params",
+      "via_ttl",
+      "via_maddr",
+      "via_received",
+      "via_branch",
+      "response_port",
+      "rport",
+      "sent_protocol",
+      "protocol_name",
+      "transport",
+      "sent_by",
+      "via_host",
+      "via_port",
+      "ttl",
+      "WWW_Authenticate",
+      "Session_Expires",
+      "s_e_expires",
+      "s_e_params",
+      "s_e_refresher",
+      "extension_header",
+      "header_value",
+      "message_body",
+      "uuid_URI",
+      "uuid",
+      "hex4",
+      "hex8",
+      "hex12",
+      "Refer_To",
+      "Replaces",
+      "call_id",
+      "replaces_param",
+      "to_tag",
+      "from_tag",
+      "early_flag"
+    ],
+    "parser_sha256": "8fc107d49142abaf09d863bc56656cdc3f36e7b254394ddcc72daa7ef1521d1b",
+    "runtime_probe": {
+      "exports": [
+        "parse",
+        "toSource",
+        "SyntaxError"
+      ],
+      "entrypointGrammar": true,
+      "string": {
+        "value": {
+          "_parameters": {},
+          "_headers": {},
+          "_scheme": "sip",
+          "_user": "a",
+          "_host": "b"
+        }
+      },
+      "options": {
+        "error": "TypeError",
+        "message": "s.replace is not a function"
+      },
+      "null": {
+        "error": "TypeError",
+        "message": "Cannot read properties of null (reading 'replace')"
+      },
+      "bogus": {
+        "error": "Error",
+        "message": "Invalid rule name: \"bogus\"."
+      },
+      "optionsBogus": {
+        "error": "TypeError",
+        "message": "s.replace is not a function"
+      },
+      "inherited": {
+        "value": -1
+      }
+    },
+    "reference_equals_source_parser": true,
+    "behavior_dump_equals_imported_expected": true
+  },
+  "commands": [
+    {
+      "label": "source_identity",
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD",
+        "HEAD^{tree}"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "7a963d16ae5c17b430b57b307d3f3ba74c0cbb1f\nc91ed3499a434baf7835782d3abc947499921539\n",
+      "stderr": ""
+    },
+    {
+      "label": "clean_source",
+      "argv": [
+        "git",
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "node_version",
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "v20.20.2\n",
+      "stderr": ""
+    },
+    {
+      "label": "npm_version",
+      "argv": [
+        "npm",
+        "--version"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "10.8.2\n",
+      "stderr": ""
+    },
+    {
+      "label": "existing_tests",
+      "argv": [
+        "npm",
+        "run",
+        "test"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "\n> jssip@3.13.8 test\n> node npm-scripts.mjs test\n\nnpm-scripts.mjs \u001b[36m[INFO] [test]\u001b[0m running task \"test\"\nnpm-scripts.mjs \u001b[36m[INFO] [test]\u001b[0m \nnpm-scripts.mjs \u001b[36m[INFO] [test]\u001b[0m test()\nnpm-scripts.js [INFO] executing command: jest --silent false --detectOpenHandles \n",
+      "stderr": "PASS src/test/test-parser.ts\n  parser\n    ✓ parse URI (19 ms)\n    ✓ parse NameAddr (11 ms)\n    ✓ parse invalid NameAddr with non UTF-8 characters (4 ms)\n    ✓ parse NameAddr with token display_name (3 ms)\n    ✓ parse NameAddr with no space between DQUOTE and LAQUOT (4 ms)\n    ✓ parse NameAddr with no display_name (3 ms)\n    ✓ parse multiple Contact (7 ms)\n    ✓ parse Via (9 ms)\n    ✓ parse CSeq (2 ms)\n    ✓ parse authentication challenge (3 ms)\n    ✓ parse Event (3 ms)\n    ✓ parse Session-Expires (2 ms)\n    ✓ parse Reason (3 ms)\n    ✓ parse host (4 ms)\n    ✓ parse Refer-To (7 ms)\n    ✓ parse Replaces (3 ms)\n    ✓ parse Status Line (3 ms)\n    ✓ parse message (9 ms)\n\nPASS src/test/test-SubscriberNotifier.ts\n  subscriber/notifier communication\n    ✓ should handle subscriber/notifier communication (2136 ms)\n\nPASS src/test/test-DigestAuthentication.ts\n  DigestAuthentication\n    ✓ parse no auth testrealm@host.com -RFC 2617- (8 ms)\n    ✓ digest authenticate qop = null (3 ms)\n    ✓ digest authenticate qop = auth (2 ms)\n    ✓ digest authenticate qop = auth-int and empty body (2 ms)\n    ✓ digest authenticate qop = auth-int and non-empty body (2 ms)\n\nPASS src/test/test-URI.ts\n  URI\n    ✓ new URI (27 ms)\n\nPASS src/test/test-UA.ts\n  UA\n    ✓ UA wrong configuration (18 ms)\n    ✓ UA no WS connection (23 ms)\n\nPASS src/test/test-Utils.ts\n  Utils\n    ✓ normalizeTarget() valid targets (21 ms)\n    ✓ normalizeTarget() invalid targets (4 ms)\n\nPASS src/test/test-NameAddrHeader.ts\n  NameAddrHeader\n    ✓ new NameAddrHeader (5 ms)\n\nPASS src/test/test-JsSIP.ts\n  Properties\n    ✓ should have a name property (5 ms)\n    ✓ should have a version property (1 ms)\n\nTest Suites: 8 passed, 8 total\nTests:       32 passed, 32 total\nSnapshots:   0 total\nTime:        5.383 s\nRan all test suites.\n"
+    },
+    {
+      "label": "source_contract_probe",
+      "argv": [
+        "node",
+        "-e",
+        "\nconst g=require('./src/Grammar.js'), j=require('./src/JsSIP.js');\nconst out={exports:Object.keys(g),entrypointGrammar:j.Grammar===g};\nfor(const [label,arg] of [['string','SIP_URI'],['options',{startRule:'SIP_URI'}],['null',null],['bogus','bogus'],['optionsBogus',{startRule:'bogus'}],['inherited','constructor']]) {\n  try {out[label]={value:g.parse('sip:a@b',arg)}}\n  catch(e){out[label]={error:e.constructor.name,message:e.message}}\n}\nconsole.log(JSON.stringify(out));\n"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "{\"exports\":[\"parse\",\"toSource\",\"SyntaxError\"],\"entrypointGrammar\":true,\"string\":{\"value\":{\"_parameters\":{},\"_headers\":{},\"_scheme\":\"sip\",\"_user\":\"a\",\"_host\":\"b\"}},\"options\":{\"error\":\"TypeError\",\"message\":\"s.replace is not a function\"},\"null\":{\"error\":\"TypeError\",\"message\":\"Cannot read properties of null (reading 'replace')\"},\"bogus\":{\"error\":\"Error\",\"message\":\"Invalid rule name: \\\"bogus\\\".\"},\"optionsBogus\":{\"error\":\"TypeError\",\"message\":\"s.replace is not a function\"},\"inherited\":{\"value\":-1}}\n",
+      "stderr": ""
+    },
+    {
+      "label": "solution_apply_check",
+      "argv": [
+        "git",
+        "apply",
+        "--check",
+        "/preparation/solution/solution.patch"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test_patch_apply_check",
+      "argv": [
+        "git",
+        "apply",
+        "--check",
+        "/preparation/tests/verifier/test.patch"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test_patch_apply",
+      "argv": [
+        "git",
+        "apply",
+        "/preparation/tests/verifier/test.patch"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "migration_harness",
+      "argv": [
+        "node",
+        "src/test/migration-verifier/run-checks.cjs",
+        "--repo=/workspace/repo",
+        "--reference=/preparation/tests/verifier/reference-grammar.js",
+        "--expected=/preparation/tests/verifier/expected.json"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "[{\"testId\":\"f2p-package-declares-peggy\",\"name\":\"f2p-package-declares-peggy\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"peggy devDependency is undefined\"},{\"testId\":\"f2p-package-drops-pegjs\",\"name\":\"f2p-package-drops-pegjs\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"pegjs still declared: ^0.7.0\"},{\"testId\":\"f2p-lock-declares-peggy\",\"name\":\"f2p-lock-declares-peggy\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":6,\"message\":\"lock root peggy is undefined\"},{\"testId\":\"f2p-lock-drops-pegjs\",\"name\":\"f2p-lock-drops-pegjs\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":5,\"message\":\"lock still contains pegjs: node_modules/pegjs\"},{\"testId\":\"f2p-npm-scripts-uses-peggy\",\"name\":\"f2p-npm-scripts-uses-peggy\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"npm-scripts.mjs does not reference peggy\"},{\"testId\":\"f2p-npm-scripts-drops-pegjs\",\"name\":\"f2p-npm-scripts-drops-pegjs\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"npm-scripts.mjs still invokes the pegjs generator\"},{\"testId\":\"f2p-grammar-js-generated-by-peggy\",\"name\":\"f2p-grammar-js-generated-by-peggy\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"src/Grammar.js is not marked as generated by Peggy\"},{\"testId\":\"f2p-grammar-js-not-pegjs-generated\",\"name\":\"f2p-grammar-js-not-pegjs-generated\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"src/Grammar.js still marked as generated by PEG.js\"},{\"testId\":\"f2p-grammar-js-peggy-runtime\",\"name\":\"f2p-grammar-js-peggy-runtime\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"src/Grammar.js missing peggy runtime marker peg$SyntaxError\"},{\"testId\":\"f2p-grammar-module-surface\",\"name\":\"f2p-grammar-module-surface\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":28,\"message\":\"unexpected exports: [\\\"SyntaxError\\\",\\\"parse\\\",\\\"toSource\\\"]\"},{\"testId\":\"f2p-grammar-start-rules-count\",\"name\":\"f2p-grammar-start-rules-count\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"StartRules is not an array\"},{\"testId\":\"f2p-grammar-start-rules-set\",\"name\":\"f2p-grammar-start-rules-set\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"StartRules is not an array\"},{\"testId\":\"f2p-grammar-start-rules-selectable\",\"name\":\"f2p-grammar-start-rules-selectable\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"StartRules is not an exported array\"},{\"testId\":\"f2p-grammar-unknown-rule-basic\",\"name\":\"f2p-grammar-unknown-rule-basic\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":2,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-escape-quote\",\"name\":\"f2p-grammar-escape-quote\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-escape-control\",\"name\":\"f2p-grammar-escape-control\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":3,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-escape-nonascii\",\"name\":\"f2p-grammar-escape-nonascii\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-declared-only-membership\",\"name\":\"f2p-grammar-declared-only-membership\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"expected invalid-rule error, got -1\"},{\"testId\":\"f2p-grammar-rule-name-coercion\",\"name\":\"f2p-grammar-rule-name-coercion\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-start-rules-inert\",\"name\":\"f2p-grammar-start-rules-inert\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"Cannot read properties of undefined (reading 'slice')\"},{\"testId\":\"f2p-grammar-null-second-argument\",\"name\":\"f2p-grammar-null-second-argument\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"parse(input, null) threw TypeError: Cannot read properties of null (reading 'replace')\"},{\"testId\":\"f2p-grammar-escape-printable\",\"name\":\"f2p-grammar-escape-printable\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-escape-boundaries\",\"name\":\"f2p-grammar-escape-boundaries\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":0,\"message\":\"expected plain Error, got TypeError\"},{\"testId\":\"f2p-grammar-coercion-error-propagates\",\"name\":\"f2p-grammar-coercion-error-propagates\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"expected the coercion error to propagate, got THROW:TypeError:s.replace is not a function\"},{\"testId\":\"f2p-grammar-options-empty\",\"name\":\"f2p-grammar-options-empty\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"{} \\\"\\\": THROW:TypeError:s.replace is not a function vs VALUE:-1\"},{\"testId\":\"f2p-grammar-options-exotic-empty\",\"name\":\"f2p-grammar-options-exotic-empty\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"null prototype \\\"\\\": THROW:TypeError:Cannot convert object to primitive value vs VALUE:-1\"},{\"testId\":\"f2p-grammar-start-rule-undefined\",\"name\":\"f2p-grammar-start-rule-undefined\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"{startRule:undefined} \\\"\\\": THROW:TypeError:s.replace is not a function vs VALUE:-1\"},{\"testId\":\"f2p-grammar-start-rule-nonenumerable-accessor\",\"name\":\"f2p-grammar-start-rule-nonenumerable-accessor\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":3,\"message\":\"non-enumerable startRule: THROW:TypeError:s.replace is not a function vs VALUE:{\\\"__type\\\":\\\"URI\\\",\\\"_headers\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"_host\\\":\\\"example.com\\\",\\\"_parameters\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"_scheme\\\":\\\"sip\\\",\\\"_user\\\":\\\"alice\\\"}\"},{\"testId\":\"f2p-grammar-coerced-declared-rule\",\"name\":\"f2p-grammar-coerced-declared-rule\",\"group\":\"F2P\",\"status\":\"failed\",\"duration\":1,\"message\":\"coerced startRule [object String]: THROW:TypeError:s.replace is not a function vs VALUE:{\\\"__type\\\":\\\"URI\\\",\\\"_headers\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"_host\\\":\\\"example.com\\\",\\\"_parameters\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"_scheme\\\":\\\"sip\\\",\\\"_user\\\":\\\"alice\\\"}\"},{\"testId\":\"p2p-behavior-uri-sip-basic\",\"name\":\"p2p-behavior-uri-sip-basic\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-uri-params-headers\",\"name\":\"p2p-behavior-uri-params-headers\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":4,\"message\":\"\"},{\"testId\":\"p2p-behavior-uri-invalid\",\"name\":\"p2p-behavior-uri-invalid\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-grammar-invalid-minus-one\",\"name\":\"p2p-behavior-grammar-invalid-minus-one\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-nameaddr-quoted\",\"name\":\"p2p-behavior-nameaddr-quoted\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":2,\"message\":\"\"},{\"testId\":\"p2p-behavior-nameaddr-token\",\"name\":\"p2p-behavior-nameaddr-token\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-contact-multiple\",\"name\":\"p2p-behavior-contact-multiple\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-record-route-multiple\",\"name\":\"p2p-behavior-record-route-multiple\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-via-multiple\",\"name\":\"p2p-behavior-via-multiple\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":4,\"message\":\"\"},{\"testId\":\"p2p-behavior-cseq\",\"name\":\"p2p-behavior-cseq\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-from\",\"name\":\"p2p-behavior-from\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-to\",\"name\":\"p2p-behavior-to\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-content-type\",\"name\":\"p2p-behavior-content-type\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":2,\"message\":\"\"},{\"testId\":\"p2p-behavior-content-length\",\"name\":\"p2p-behavior-content-length\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-event\",\"name\":\"p2p-behavior-event\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-session-expires\",\"name\":\"p2p-behavior-session-expires\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-subscription-state\",\"name\":\"p2p-behavior-subscription-state\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-reason\",\"name\":\"p2p-behavior-reason\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-refer-to\",\"name\":\"p2p-behavior-refer-to\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-replaces\",\"name\":\"p2p-behavior-replaces\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-status-line\",\"name\":\"p2p-behavior-status-line\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-host-types\",\"name\":\"p2p-behavior-host-types\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-content-disposition\",\"name\":\"p2p-behavior-content-disposition\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-uuid\",\"name\":\"p2p-behavior-uuid\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-digest-challenge\",\"name\":\"p2p-behavior-digest-challenge\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-max-forwards\",\"name\":\"p2p-behavior-max-forwards\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-call-id\",\"name\":\"p2p-behavior-call-id\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-expires\",\"name\":\"p2p-behavior-expires\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":0,\"message\":\"\"},{\"testId\":\"p2p-behavior-parse-message-request\",\"name\":\"p2p-behavior-parse-message-request\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":2,\"message\":\"\"},{\"testId\":\"p2p-behavior-parse-message-response\",\"name\":\"p2p-behavior-parse-message-response\",\"group\":\"P2P\",\"status\":\"passed\",\"duration\":1,\"message\":\"\"},{\"testId\":\"p2p-behavior-differential-fuzz\",\"name\":\"p2p-behavior-differential-fuzz\",\"group\":\"differential\",\"status\":\"passed\",\"duration\":380,\"message\":\"\"}]",
+      "stderr": ""
+    },
+    {
+      "label": "baseline_behavior_dump",
+      "argv": [
+        "node",
+        "src/test/migration-verifier/run-checks.cjs",
+        "--repo=/workspace/repo",
+        "--reference=/preparation/tests/verifier/reference-grammar.js",
+        "--expected=/preparation/tests/verifier/expected.json",
+        "--dump=1"
+      ],
+      "cwd": "/workspace/repo",
+      "exit_code": 0,
+      "stdout": "{\n  \"p2p-behavior-uri-sip-basic\": \"{\\\"__type\\\":\\\"Object\\\",\\\"aor\\\":\\\"sip:alice@example.com\\\",\\\"host\\\":\\\"example.com\\\",\\\"scheme\\\":\\\"sip\\\",\\\"user\\\":\\\"alice\\\"}\",\n  \"p2p-behavior-uri-params-headers\": \"{\\\"__type\\\":\\\"Object\\\",\\\"aor\\\":\\\"sip:aliCE@versatica.com\\\",\\\"baz\\\":null,\\\"foo\\\":\\\"ABc\\\",\\\"host\\\":\\\"versatica.com\\\",\\\"port\\\":6060,\\\"scheme\\\":\\\"sip\\\",\\\"toString\\\":\\\"sip:aliCE@versatica.com:6060;transport=tcp;foo=ABc;baz?X-Header-1=AaA1&X-Header-1=AAA2&X-Header-2=BbB\\\",\\\"transport\\\":\\\"tcp\\\",\\\"user\\\":\\\"aliCE\\\",\\\"xheader\\\":[\\\"AaA1\\\",\\\"AAA2\\\"]}\",\n  \"p2p-behavior-uri-invalid\": \"{\\\"__type\\\":\\\"Object\\\"}\",\n  \"p2p-behavior-grammar-invalid-minus-one\": \"{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":-1,\\\"status\\\":-1,\\\"uri\\\":-1}\",\n  \"p2p-behavior-nameaddr-quoted\": \"{\\\"__type\\\":\\\"Object\\\",\\\"display\\\":\\\"Iñaki\\\",\\\"expires\\\":\\\"3600\\\",\\\"host\\\":\\\"example.com\\\",\\\"port\\\":6060,\\\"tag\\\":\\\"abc\\\",\\\"toString\\\":\\\"\\\\\\\"Iñaki\\\\\\\" <sip:alice@example.com:6060;transport=tcp>;tag=abc;expires=3600\\\"}\",\n  \"p2p-behavior-nameaddr-token\": \"{\\\"__type\\\":\\\"Object\\\",\\\"baz\\\":null,\\\"display\\\":\\\"Bob\\\",\\\"foo\\\":\\\"bar\\\",\\\"host\\\":\\\"example.com\\\"}\",\n  \"p2p-behavior-contact-multiple\": \"[{\\\"__type\\\":\\\"Object\\\",\\\"display\\\":\\\"A\\\",\\\"expires\\\":\\\"1\\\",\\\"host\\\":\\\"b.com\\\"},{\\\"__type\\\":\\\"Object\\\",\\\"display\\\":\\\"B\\\",\\\"host\\\":\\\"c.com\\\",\\\"q\\\":\\\"0.5\\\"}]\",\n  \"p2p-behavior-record-route-multiple\": \"[{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"b.com\\\"},{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"d.com\\\"}]\",\n  \"p2p-behavior-via-multiple\": \"{\\\"__type\\\":\\\"Object\\\",\\\"branch\\\":\\\"1234\\\",\\\"host\\\":\\\"[1:ab::FF]\\\",\\\"host_type\\\":\\\"IPv6\\\",\\\"params\\\":{\\\"__type\\\":\\\"Object\\\",\\\"param1\\\":\\\"Foo\\\",\\\"param3\\\":\\\"Bar\\\"},\\\"port\\\":6060,\\\"protocol\\\":\\\"SIP\\\",\\\"rport\\\":1111,\\\"transport\\\":\\\"UDP\\\"}\",\n  \"p2p-behavior-cseq\": \"{\\\"__type\\\":\\\"Object\\\",\\\"method\\\":\\\"INVITE\\\",\\\"value\\\":1}\",\n  \"p2p-behavior-from\": \"{\\\"__type\\\":\\\"Object\\\",\\\"display\\\":\\\"Alice\\\",\\\"host\\\":\\\"example.com\\\",\\\"tag\\\":\\\"1928301774\\\"}\",\n  \"p2p-behavior-to\": \"{\\\"__type\\\":\\\"Object\\\",\\\"display\\\":\\\"Bob\\\",\\\"host\\\":\\\"example.com\\\"}\",\n  \"p2p-behavior-content-type\": \"{\\\"__type\\\":\\\"Object\\\",\\\"params\\\":\\\"text/plain;charset=utf-8\\\",\\\"plain\\\":\\\"application/sdp\\\"}\",\n  \"p2p-behavior-content-length\": \"{\\\"__type\\\":\\\"Object\\\",\\\"n\\\":123,\\\"zero\\\":0}\",\n  \"p2p-behavior-event\": \"{\\\"__type\\\":\\\"Object\\\",\\\"event\\\":\\\"presence\\\",\\\"params\\\":{\\\"__type\\\":\\\"Object\\\",\\\"id\\\":\\\"1\\\"}}\",\n  \"p2p-behavior-session-expires\": \"{\\\"__type\\\":\\\"Object\\\",\\\"basic\\\":{\\\"__type\\\":\\\"Object\\\",\\\"expires\\\":1800},\\\"refresher\\\":{\\\"__type\\\":\\\"Object\\\",\\\"expires\\\":1800,\\\"refresher\\\":\\\"uac\\\"}}\",\n  \"p2p-behavior-subscription-state\": \"{\\\"__type\\\":\\\"Object\\\",\\\"basic\\\":{\\\"__type\\\":\\\"Object\\\",\\\"expires\\\":3600,\\\"reason\\\":\\\"timeout\\\",\\\"state\\\":\\\"active\\\"},\\\"pending\\\":{\\\"__type\\\":\\\"Object\\\",\\\"retry_after\\\":5,\\\"state\\\":\\\"pending\\\"}}\",\n  \"p2p-behavior-reason\": \"{\\\"__type\\\":\\\"Object\\\",\\\"detailed\\\":{\\\"__type\\\":\\\"Object\\\",\\\"cause\\\":200,\\\"params\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"protocol\\\":\\\"sip\\\",\\\"text\\\":\\\"Call completed\\\"},\\\"simple\\\":{\\\"__type\\\":\\\"Object\\\",\\\"cause\\\":486,\\\"params\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"protocol\\\":\\\"sip\\\"}}\",\n  \"p2p-behavior-refer-to\": \"{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"example.com\\\",\\\"user\\\":\\\"carol\\\"}\",\n  \"p2p-behavior-replaces\": \"{\\\"__type\\\":\\\"Object\\\",\\\"call_id\\\":\\\"abc123\\\",\\\"early_only\\\":true,\\\"from_tag\\\":\\\"2\\\",\\\"to_tag\\\":\\\"1\\\"}\",\n  \"p2p-behavior-status-line\": \"[{\\\"__type\\\":\\\"Object\\\",\\\"reason_phrase\\\":\\\"OK\\\",\\\"sip_version\\\":\\\"SIP/2.0\\\",\\\"status_code\\\":200},{\\\"__type\\\":\\\"Object\\\",\\\"reason_phrase\\\":\\\"Not Found\\\",\\\"sip_version\\\":\\\"SIP/2.0\\\",\\\"status_code\\\":404}]\",\n  \"p2p-behavior-host-types\": \"{\\\"__type\\\":\\\"Object\\\",\\\"domain\\\":{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"example.com\\\",\\\"host_type\\\":\\\"domain\\\"},\\\"ipv4\\\":{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"192.168.0.1\\\",\\\"host_type\\\":\\\"IPv4\\\"},\\\"ipv6\\\":{\\\"__type\\\":\\\"Object\\\",\\\"host\\\":\\\"[2001:db8::1]\\\",\\\"host_type\\\":\\\"IPv6\\\"}}\",\n  \"p2p-behavior-content-disposition\": \"{\\\"__type\\\":\\\"Object\\\",\\\"render\\\":{\\\"__type\\\":\\\"Object\\\"},\\\"session\\\":{\\\"__type\\\":\\\"Object\\\"}}\",\n  \"p2p-behavior-uuid\": \"\\\"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\\\"\",\n  \"p2p-behavior-digest-challenge\": \"{\\\"__type\\\":\\\"Object\\\",\\\"nonce\\\":\\\"dcd98b7102dd2f0e8b11d0f600bfb0c093\\\",\\\"opaque\\\":\\\"5ccc069c403ebaf9f0171e9517f40e41\\\",\\\"qop\\\":[\\\"auth\\\",\\\"auth-int\\\"],\\\"realm\\\":\\\"testrealm@host.com\\\"}\",\n  \"p2p-behavior-max-forwards\": \"{\\\"__type\\\":\\\"Object\\\",\\\"value\\\":70,\\\"zero\\\":0}\",\n  \"p2p-behavior-call-id\": \"{\\\"__type\\\":\\\"Object\\\",\\\"value\\\":\\\"a84b4c76e66710@pc33.atlanta.com\\\"}\",\n  \"p2p-behavior-expires\": \"{\\\"__type\\\":\\\"Object\\\",\\\"value\\\":3600}\",\n  \"p2p-behavior-parse-message-request\": \"{\\\"__type\\\":\\\"Object\\\",\\\"body\\\":\\\"v=0\\\\r\\\\n\\\",\\\"callId\\\":\\\"a84b4c76e66710@pc33.atlanta.com\\\",\\\"contentType\\\":\\\"application/sdp\\\",\\\"cseq\\\":314159,\\\"fromTag\\\":\\\"1928301774\\\",\\\"method\\\":\\\"INVITE\\\",\\\"toHost\\\":\\\"biloxi.com\\\"}\",\n  \"p2p-behavior-parse-message-response\": \"{\\\"__type\\\":\\\"Object\\\",\\\"callId\\\":\\\"a84b4c76e66710@pc33.atlanta.com\\\",\\\"cseq\\\":314159,\\\"method\\\":\\\"INVITE\\\",\\\"reason\\\":\\\"OK\\\",\\\"status\\\":200,\\\"toTag\\\":\\\"a6c85cf\\\"}\",\n  \"p2p-behavior-differential-fuzz\": \"{\\\"__type\\\":\\\"Object\\\",\\\"checked\\\":4000}\"\n}",
+      "stderr": ""
+    }
+  ],
+  "nodes": [
+    {
+      "testId": "f2p-package-declares-peggy",
+      "name": "f2p-package-declares-peggy",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "peggy devDependency is undefined"
+    },
+    {
+      "testId": "f2p-package-drops-pegjs",
+      "name": "f2p-package-drops-pegjs",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "pegjs still declared: ^0.7.0"
+    },
+    {
+      "testId": "f2p-lock-declares-peggy",
+      "name": "f2p-lock-declares-peggy",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "lock root peggy is undefined"
+    },
+    {
+      "testId": "f2p-lock-drops-pegjs",
+      "name": "f2p-lock-drops-pegjs",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "lock still contains pegjs: node_modules/pegjs"
+    },
+    {
+      "testId": "f2p-npm-scripts-uses-peggy",
+      "name": "f2p-npm-scripts-uses-peggy",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "npm-scripts.mjs does not reference peggy"
+    },
+    {
+      "testId": "f2p-npm-scripts-drops-pegjs",
+      "name": "f2p-npm-scripts-drops-pegjs",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "npm-scripts.mjs still invokes the pegjs generator"
+    },
+    {
+      "testId": "f2p-grammar-js-generated-by-peggy",
+      "name": "f2p-grammar-js-generated-by-peggy",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "src/Grammar.js is not marked as generated by Peggy"
+    },
+    {
+      "testId": "f2p-grammar-js-not-pegjs-generated",
+      "name": "f2p-grammar-js-not-pegjs-generated",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "src/Grammar.js still marked as generated by PEG.js"
+    },
+    {
+      "testId": "f2p-grammar-js-peggy-runtime",
+      "name": "f2p-grammar-js-peggy-runtime",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "src/Grammar.js missing peggy runtime marker peg$SyntaxError"
+    },
+    {
+      "testId": "f2p-grammar-module-surface",
+      "name": "f2p-grammar-module-surface",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "unexpected exports: [\"SyntaxError\",\"parse\",\"toSource\"]"
+    },
+    {
+      "testId": "f2p-grammar-start-rules-count",
+      "name": "f2p-grammar-start-rules-count",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "StartRules is not an array"
+    },
+    {
+      "testId": "f2p-grammar-start-rules-set",
+      "name": "f2p-grammar-start-rules-set",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "StartRules is not an array"
+    },
+    {
+      "testId": "f2p-grammar-start-rules-selectable",
+      "name": "f2p-grammar-start-rules-selectable",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "StartRules is not an exported array"
+    },
+    {
+      "testId": "f2p-grammar-unknown-rule-basic",
+      "name": "f2p-grammar-unknown-rule-basic",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-escape-quote",
+      "name": "f2p-grammar-escape-quote",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-escape-control",
+      "name": "f2p-grammar-escape-control",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-escape-nonascii",
+      "name": "f2p-grammar-escape-nonascii",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-declared-only-membership",
+      "name": "f2p-grammar-declared-only-membership",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected invalid-rule error, got -1"
+    },
+    {
+      "testId": "f2p-grammar-rule-name-coercion",
+      "name": "f2p-grammar-rule-name-coercion",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-start-rules-inert",
+      "name": "f2p-grammar-start-rules-inert",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "StartRules is not an array"
+    },
+    {
+      "testId": "f2p-grammar-null-second-argument",
+      "name": "f2p-grammar-null-second-argument",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "parse(input, null) threw TypeError: Cannot read properties of null (reading 'replace')"
+    },
+    {
+      "testId": "f2p-grammar-escape-printable",
+      "name": "f2p-grammar-escape-printable",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-escape-boundaries",
+      "name": "f2p-grammar-escape-boundaries",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected plain Error, got TypeError"
+    },
+    {
+      "testId": "f2p-grammar-coercion-error-propagates",
+      "name": "f2p-grammar-coercion-error-propagates",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "expected the coercion error to propagate, got THROW:TypeError:s.replace is not a function"
+    },
+    {
+      "testId": "f2p-grammar-options-empty",
+      "name": "f2p-grammar-options-empty",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "{} \"\": THROW:TypeError:s.replace is not a function vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-options-exotic-empty",
+      "name": "f2p-grammar-options-exotic-empty",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "null prototype \"\": THROW:TypeError:Cannot convert object to primitive value vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-start-rule-undefined",
+      "name": "f2p-grammar-start-rule-undefined",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "{startRule:undefined} \"\": THROW:TypeError:s.replace is not a function vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-start-rule-nonenumerable-accessor",
+      "name": "f2p-grammar-start-rule-nonenumerable-accessor",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "non-enumerable startRule: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-coerced-declared-rule",
+      "name": "f2p-grammar-coerced-declared-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "coerced startRule [object String]: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-options-ignore-peggy-library",
+      "name": "f2p-grammar-options-ignore-peggy-library",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "peg$library changed the parse result: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-options-ignore-peggy-position",
+      "name": "f2p-grammar-options-ignore-peggy-position",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "Peggy internal option changed the parse result: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-options-inherited-start-rule",
+      "name": "f2p-grammar-options-inherited-start-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "inherited startRule: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-options-inherited-invalid",
+      "name": "f2p-grammar-options-inherited-invalid",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "inherited startRule bogus: THROW:TypeError:s.replace is not a function vs THROW:Error:Invalid rule name: \"bogus\"."
+    },
+    {
+      "testId": "f2p-grammar-boxed-string-start-rule",
+      "name": "f2p-grammar-boxed-string-start-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "boxed String startRule: VALUE:{\"__type\":\"Object\",\"uri\":{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}} vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-boxed-number-start-rule",
+      "name": "f2p-grammar-boxed-number-start-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "boxed Number startRule: THROW:TypeError:s.replace is not a function vs THROW:Error:Invalid rule name: \"5\"."
+    },
+    {
+      "testId": "f2p-grammar-boxed-boolean-start-rule",
+      "name": "f2p-grammar-boxed-boolean-start-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "boxed Boolean startRule: THROW:TypeError:s.replace is not a function vs THROW:Error:Invalid rule name: \"true\"."
+    },
+    {
+      "testId": "f2p-grammar-function-start-rule",
+      "name": "f2p-grammar-function-start-rule",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "function startRule coercion: VALUE:{\"__type\":\"Object\",\"uri\":{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}} vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-cross-realm-boxed-string",
+      "name": "f2p-grammar-cross-realm-boxed-string",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "cross-realm boxed String: VALUE:{\"__type\":\"Object\",\"uri\":{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}} vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-cross-realm-boxed-number",
+      "name": "f2p-grammar-cross-realm-boxed-number",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "cross-realm boxed Number: THROW:TypeError:s.replace is not a function vs THROW:Error:Invalid rule name: \"5\"."
+    },
+    {
+      "testId": "f2p-grammar-cross-realm-boxed-boolean",
+      "name": "f2p-grammar-cross-realm-boxed-boolean",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "cross-realm boxed Boolean: THROW:TypeError:s.replace is not a function vs THROW:Error:Invalid rule name: \"true\"."
+    },
+    {
+      "testId": "f2p-grammar-non-boxed-prototype-object",
+      "name": "f2p-grammar-non-boxed-prototype-object",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "non-boxed prototype object: THROW:TypeError:String.prototype.toString requires that 'this' be a String vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-spoofed-to-string-tag-is-options",
+      "name": "f2p-grammar-spoofed-to-string-tag-is-options",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "spoofed String toStringTag: THROW:TypeError:s.replace is not a function vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-proxy-boxed-primitive-is-options",
+      "name": "f2p-grammar-proxy-boxed-primitive-is-options",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "proxy around boxed primitive: THROW:TypeError:String.prototype.toString requires that 'this' be a String vs VALUE:-1"
+    },
+    {
+      "testId": "f2p-grammar-options-getter-read-once",
+      "name": "f2p-grammar-options-getter-read-once",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "startRule getter value: THROW:TypeError:s.replace is not a function vs VALUE:{\"__type\":\"URI\",\"_headers\":{\"__type\":\"Object\"},\"_host\":\"example.com\",\"_parameters\":{\"__type\":\"Object\"},\"_scheme\":\"sip\",\"_user\":\"alice\"}"
+    },
+    {
+      "testId": "f2p-grammar-types-parse-inputs",
+      "name": "f2p-grammar-types-parse-inputs",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "tsc failed for src/test/migration-verifier/types/type-parse-inputs.ts:\nsrc/test/migration-verifier/types/type-parse-inputs.ts(4,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(5,40): error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(6,40): error TS2345: Argument of type 'bigint' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(7,40): error TS2345: Argument of type 'symbol' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(8,40): error TS2345: Argument of type '() => void' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(9,40): error TS2345: Argument of type 'String' is not assignable to parameter of type 'string'.\n  'string' is a primitive, but 'String' is a wrapper object. Prefer using 'string' when possible.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(10,40): error TS2345: Argument of type 'Number' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(11,40): error TS2345: Argument of type 'Boolean' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(12,40): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string | undefined'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(14,40): error TS2345: Argument of type '{ startRule: string; }' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(15,40): error TS2345: Argument of type '{ startRule: string; extra: number; }' is not assignable to parameter of type 'string'.\nsrc/test/migration-verifier/types/type-parse-inputs.ts(17,40): error TS2345: Argument of type 'object'"
+    },
+    {
+      "testId": "f2p-grammar-types-syntax-error",
+      "name": "f2p-grammar-types-syntax-error",
+      "group": "F2P",
+      "status": "failed",
+      "duration": 0,
+      "message": "tsc failed for src/test/migration-verifier/types/type-syntax-error.ts:\nsrc/test/migration-verifier/types/type-syntax-error.ts(3,46): error TS2339: Property 'SyntaxError' does not exist on type 'typeof import(\"/tmp/jssip-eval/repo/src/Grammar\")'.\nsrc/test/migration-verifier/types/type-syntax-error.ts(3,68): error TS2339: Property 'SyntaxError' does not exist on type 'typeof import(\"/tmp/jssip-eval/repo/src/Grammar\")'.\nsrc/test/migration-verifier/types/type-syntax-error.ts(4,29): error TS2694: Namespace '\"/tmp/jssip-eval/repo/src/Grammar\"' has no exported member 'SyntaxError'.\nsrc/test/migration-verifier/types/type-syntax-error.ts(8,33): error TS2339: Property 'SyntaxError' does not exist on type 'typeof import(\"/tmp/jssip-eval/repo/src/Grammar\")'.\nsrc/test/migration-verifier/types/type-syntax-error.ts(10,33): error TS2339: Property 'SyntaxError' does not exist on type 'typeof import(\"/tmp/jssip-eval/repo/src/Grammar\")'.\nsrc/test/migration-verifier/types/type-syntax-error.ts(11,33): error TS2339: Property 'SyntaxError' does not exist on type 'typeof import(\"/tmp/jssip-eval/repo/src/Grammar\")'.\n\n"
+    },
+    {
+      "testId": "p2p-behavior-uri-sip-basic",
+      "name": "p2p-behavior-uri-sip-basic",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-uri-params-headers",
+      "name": "p2p-behavior-uri-params-headers",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-uri-invalid",
+      "name": "p2p-behavior-uri-invalid",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-grammar-invalid-minus-one",
+      "name": "p2p-behavior-grammar-invalid-minus-one",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-nameaddr-quoted",
+      "name": "p2p-behavior-nameaddr-quoted",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-nameaddr-token",
+      "name": "p2p-behavior-nameaddr-token",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-contact-multiple",
+      "name": "p2p-behavior-contact-multiple",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-record-route-multiple",
+      "name": "p2p-behavior-record-route-multiple",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-via-multiple",
+      "name": "p2p-behavior-via-multiple",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-cseq",
+      "name": "p2p-behavior-cseq",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-from",
+      "name": "p2p-behavior-from",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-to",
+      "name": "p2p-behavior-to",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-content-type",
+      "name": "p2p-behavior-content-type",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-content-length",
+      "name": "p2p-behavior-content-length",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-content-disposition",
+      "name": "p2p-behavior-content-disposition",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-event",
+      "name": "p2p-behavior-event",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-session-expires",
+      "name": "p2p-behavior-session-expires",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-subscription-state",
+      "name": "p2p-behavior-subscription-state",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-reason",
+      "name": "p2p-behavior-reason",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-refer-to",
+      "name": "p2p-behavior-refer-to",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-replaces",
+      "name": "p2p-behavior-replaces",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-status-line",
+      "name": "p2p-behavior-status-line",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-host-types",
+      "name": "p2p-behavior-host-types",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-expires",
+      "name": "p2p-behavior-expires",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-max-forwards",
+      "name": "p2p-behavior-max-forwards",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-call-id",
+      "name": "p2p-behavior-call-id",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-uuid",
+      "name": "p2p-behavior-uuid",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-digest-challenge",
+      "name": "p2p-behavior-digest-challenge",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-parse-message-request",
+      "name": "p2p-behavior-parse-message-request",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-parse-message-response",
+      "name": "p2p-behavior-parse-message-response",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "f2p-grammar-boxed-null-prototype-coercion",
+      "name": "f2p-grammar-boxed-null-prototype-coercion",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "f2p-grammar-types-negative-api",
+      "name": "f2p-grammar-types-negative-api",
+      "group": "P2P",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    },
+    {
+      "testId": "p2p-behavior-differential-fuzz",
+      "name": "p2p-behavior-differential-fuzz",
+      "group": "differential",
+      "status": "passed",
+      "duration": 0,
+      "message": ""
+    }
+  ],
+  "behavior_values": {
+    "p2p-behavior-uri-sip-basic": "{\"__type\":\"Object\",\"aor\":\"sip:alice@example.com\",\"host\":\"example.com\",\"scheme\":\"sip\",\"user\":\"alice\"}",
+    "p2p-behavior-uri-params-headers": "{\"__type\":\"Object\",\"aor\":\"sip:aliCE@versatica.com\",\"baz\":null,\"foo\":\"ABc\",\"host\":\"versatica.com\",\"port\":6060,\"scheme\":\"sip\",\"toString\":\"sip:aliCE@versatica.com:6060;transport=tcp;foo=ABc;baz?X-Header-1=AaA1&X-Header-1=AAA2&X-Header-2=BbB\",\"transport\":\"tcp\",\"user\":\"aliCE\",\"xheader\":[\"AaA1\",\"AAA2\"]}",
+    "p2p-behavior-uri-invalid": "{\"__type\":\"Object\"}",
+    "p2p-behavior-grammar-invalid-minus-one": "{\"__type\":\"Object\",\"host\":-1,\"status\":-1,\"uri\":-1}",
+    "p2p-behavior-nameaddr-quoted": "{\"__type\":\"Object\",\"display\":\"Iñaki\",\"expires\":\"3600\",\"host\":\"example.com\",\"port\":6060,\"tag\":\"abc\",\"toString\":\"\\\"Iñaki\\\" <sip:alice@example.com:6060;transport=tcp>;tag=abc;expires=3600\"}",
+    "p2p-behavior-nameaddr-token": "{\"__type\":\"Object\",\"baz\":null,\"display\":\"Bob\",\"foo\":\"bar\",\"host\":\"example.com\"}",
+    "p2p-behavior-contact-multiple": "[{\"__type\":\"Object\",\"display\":\"A\",\"expires\":\"1\",\"host\":\"b.com\"},{\"__type\":\"Object\",\"display\":\"B\",\"host\":\"c.com\",\"q\":\"0.5\"}]",
+    "p2p-behavior-record-route-multiple": "[{\"__type\":\"Object\",\"host\":\"b.com\"},{\"__type\":\"Object\",\"host\":\"d.com\"}]",
+    "p2p-behavior-via-multiple": "{\"__type\":\"Object\",\"branch\":\"1234\",\"host\":\"[1:ab::FF]\",\"host_type\":\"IPv6\",\"params\":{\"__type\":\"Object\",\"param1\":\"Foo\",\"param3\":\"Bar\"},\"port\":6060,\"protocol\":\"SIP\",\"rport\":1111,\"transport\":\"UDP\"}",
+    "p2p-behavior-cseq": "{\"__type\":\"Object\",\"method\":\"INVITE\",\"value\":1}",
+    "p2p-behavior-from": "{\"__type\":\"Object\",\"display\":\"Alice\",\"host\":\"example.com\",\"tag\":\"1928301774\"}",
+    "p2p-behavior-to": "{\"__type\":\"Object\",\"display\":\"Bob\",\"host\":\"example.com\"}",
+    "p2p-behavior-content-type": "{\"__type\":\"Object\",\"params\":\"text/plain;charset=utf-8\",\"plain\":\"application/sdp\"}",
+    "p2p-behavior-content-length": "{\"__type\":\"Object\",\"n\":123,\"zero\":0}",
+    "p2p-behavior-event": "{\"__type\":\"Object\",\"event\":\"presence\",\"params\":{\"__type\":\"Object\",\"id\":\"1\"}}",
+    "p2p-behavior-session-expires": "{\"__type\":\"Object\",\"basic\":{\"__type\":\"Object\",\"expires\":1800},\"refresher\":{\"__type\":\"Object\",\"expires\":1800,\"refresher\":\"uac\"}}",
+    "p2p-behavior-subscription-state": "{\"__type\":\"Object\",\"basic\":{\"__type\":\"Object\",\"expires\":3600,\"reason\":\"timeout\",\"state\":\"active\"},\"pending\":{\"__type\":\"Object\",\"retry_after\":5,\"state\":\"pending\"}}",
+    "p2p-behavior-reason": "{\"__type\":\"Object\",\"detailed\":{\"__type\":\"Object\",\"cause\":200,\"params\":{\"__type\":\"Object\"},\"protocol\":\"sip\",\"text\":\"Call completed\"},\"simple\":{\"__type\":\"Object\",\"cause\":486,\"params\":{\"__type\":\"Object\"},\"protocol\":\"sip\"}}",
+    "p2p-behavior-refer-to": "{\"__type\":\"Object\",\"host\":\"example.com\",\"user\":\"carol\"}",
+    "p2p-behavior-replaces": "{\"__type\":\"Object\",\"call_id\":\"abc123\",\"early_only\":true,\"from_tag\":\"2\",\"to_tag\":\"1\"}",
+    "p2p-behavior-status-line": "[{\"__type\":\"Object\",\"reason_phrase\":\"OK\",\"sip_version\":\"SIP/2.0\",\"status_code\":200},{\"__type\":\"Object\",\"reason_phrase\":\"Not Found\",\"sip_version\":\"SIP/2.0\",\"status_code\":404}]",
+    "p2p-behavior-host-types": "{\"__type\":\"Object\",\"domain\":{\"__type\":\"Object\",\"host\":\"example.com\",\"host_type\":\"domain\"},\"ipv4\":{\"__type\":\"Object\",\"host\":\"192.168.0.1\",\"host_type\":\"IPv4\"},\"ipv6\":{\"__type\":\"Object\",\"host\":\"[2001:db8::1]\",\"host_type\":\"IPv6\"}}",
+    "p2p-behavior-content-disposition": "{\"__type\":\"Object\",\"render\":{\"__type\":\"Object\"},\"session\":{\"__type\":\"Object\"}}",
+    "p2p-behavior-uuid": "\"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\"",
+    "p2p-behavior-digest-challenge": "{\"__type\":\"Object\",\"nonce\":\"dcd98b7102dd2f0e8b11d0f600bfb0c093\",\"opaque\":\"5ccc069c403ebaf9f0171e9517f40e41\",\"qop\":[\"auth\",\"auth-int\"],\"realm\":\"testrealm@host.com\"}",
+    "p2p-behavior-max-forwards": "{\"__type\":\"Object\",\"value\":70,\"zero\":0}",
+    "p2p-behavior-call-id": "{\"__type\":\"Object\",\"value\":\"a84b4c76e66710@pc33.atlanta.com\"}",
+    "p2p-behavior-expires": "{\"__type\":\"Object\",\"value\":3600}",
+    "p2p-behavior-parse-message-request": "{\"__type\":\"Object\",\"body\":\"v=0\\r\\n\",\"callId\":\"a84b4c76e66710@pc33.atlanta.com\",\"contentType\":\"application/sdp\",\"cseq\":314159,\"fromTag\":\"1928301774\",\"method\":\"INVITE\",\"toHost\":\"biloxi.com\"}",
+    "p2p-behavior-parse-message-response": "{\"__type\":\"Object\",\"callId\":\"a84b4c76e66710@pc33.atlanta.com\",\"cseq\":314159,\"method\":\"INVITE\",\"reason\":\"OK\",\"status\":200,\"toTag\":\"a6c85cf\"}",
+    "p2p-behavior-differential-fuzz": "{\"__type\":\"Object\",\"checked\":4000}",
+    "f2p-grammar-boxed-null-prototype-coercion": "\"boxed-null-prototype-coercion\"",
+    "f2p-grammar-types-negative-api": "\"types-negative-api\""
+  },
+  "image_id": "sha256:ec3c94bfa1038f9ab5f1b270e43431346474864cc7c5c24e0aacfdadabe11374",
+  "base_archive_sha256": "29d9f40880663cd7eb33583bb62736b28a4032cfe6a3603ebb3da8f69c754f46",
+  "base_archive_file_count": 85,
+  "node_results_source": {
+    "description": "independent source baseline run over the frozen base archive, plus a direct incremental source probe for the later-added Symbol.toStringTag node; no production-code change",
+    "test_patch_sha256": "299f0d2d541402bc79e3a17a58910a7e318ec1c2fff88f91f218dad814c2f4a6",
+    "full_baseline_test_patch_sha256": "9b174a05f4ac61c87e44046fd14e192d02412c9ecc4c02dc0d64c277c6628df0",
+    "verifier_result_sha256": "aa6114a3c242419b033ddcb228b30d861cf8f121174ee4a00f21ec81d1b15ff6",
+    "incremental_node_evidence": {
+      "testId": "f2p-grammar-spoofed-to-string-tag-is-options",
+      "base_archive_sha256": "29d9f40880663cd7eb33583bb62736b28a4032cfe6a3603ebb3da8f69c754f46",
+      "runtime": "node v22.23.2",
+      "status": "failed",
+      "message": "spoofed String toStringTag: THROW:TypeError:s.replace is not a function vs VALUE:-1"
+    },
+    "f2p": {
+      "passed": 0,
+      "total": 46
+    },
+    "p2p": {
+      "passed": 33,
+      "total": 33
+    },
+    "source_passed_reclassified_to_p2p": [
+      "f2p-grammar-boxed-null-prototype-coercion",
+      "f2p-grammar-types-negative-api"
+    ]
+  }
+}

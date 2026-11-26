@@ -1,0 +1,337 @@
+{
+  "schema_version": "migration-asset-fixtures:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "description": "Shared fake-model responses and editor snapshots used by the P2P probe suite.",
+  "editor": {
+    "default_content": "<p>hello</p>",
+    "default_snapshot": {
+      "html": "<p>hello</p>",
+      "text": "hello",
+      "selectedText": "",
+      "selection": {
+        "from": 1,
+        "to": 3
+      },
+      "documentVersion": 2
+    }
+  },
+  "fake_responses": {
+    "final_text": {
+      "output_text": "ok",
+      "output_type": "message"
+    },
+    "tool_then_text": {
+      "first_round": {
+        "call_id": "call_1",
+        "name": "search_document",
+        "arguments": "{\"query\":\"x\"}"
+      },
+      "final_text": "done"
+    },
+    "proposal_then_text": {
+      "first_round": {
+        "call_id": "call_1",
+        "name": "replace_selection",
+        "arguments": "{\"text\":\"X\"}",
+        "text": "a"
+      },
+      "final_text": "b"
+    },
+    "abort_reason": "stop"
+  },
+  "expected_projections": {
+    "P2P-045": {
+      "local": "Local",
+      "nullableUndefined": true,
+      "missingUndefined": true,
+      "dependency": "user"
+    },
+    "P2P-046": {
+      "updateCount": 0
+    },
+    "P2P-033": {
+      "openedHidden": false,
+      "closedHidden": true
+    },
+    "P2P-032": {
+      "duplicateMessage": "Duplicate editor tool: replace_selection",
+      "uniqueConstructs": true
+    },
+    "P2P-043": {
+      "names": [
+        "get_editor_context",
+        "search_document",
+        "replace_selection",
+        "insert_content",
+        "apply_formatting",
+        "apply_text_edits"
+      ],
+      "toolNames": [
+        "get_editor_context",
+        "search_document",
+        "replace_selection",
+        "insert_content",
+        "apply_formatting",
+        "apply_text_edits"
+      ]
+    },
+    "P2P-025": {
+      "appliedOk": true,
+      "appliedMessage": "Applied to the document.",
+      "rejectedOk": false,
+      "rejectedHasMessage": true
+    },
+    "P2P-026": {
+      "existingSame": true,
+      "customText": "ok",
+      "openaiIsService": true
+    },
+    "P2P-027": {
+      "constructed": true,
+      "clientReused": true
+    },
+    "P2P-028": {
+      "main": "./dist/index.cjs",
+      "module": "./dist/index.js",
+      "importTypes": "./dist/index.d.ts",
+      "importDefault": "./dist/index.js",
+      "requireTypes": "./dist/index.d.cts",
+      "requireDefault": "./dist/index.cjs"
+    },
+    "P2P-029": {
+      "documentVersion": 3,
+      "_selection_from": 4,
+      "_selection_to": 9,
+      "_insert_position": 9,
+      "_range_from": 4,
+      "_range_to": 9,
+      "edit": {
+        "from": 4,
+        "to": 9
+      }
+    },
+    "P2P-030": {
+      "text": "done",
+      "outputCount": 1,
+      "callIds": [
+        "call_1"
+      ],
+      "outputOk": true
+    },
+    "P2P-031": {
+      "documentInput": "User: u\nAssistant: a\nUser: p\n\nDocument:\ndoc",
+      "selectionInput": "p\n\nSelected text:\nsel",
+      "noneInput": "p",
+      "overrideInput": "CUSTOM"
+    },
+    "P2P-034": {
+      "outputOk": true,
+      "status": "pending_user_approval",
+      "hasProposalId": true,
+      "proposalStatus": "pending",
+      "proposalDocumentVersion": 7
+    },
+    "P2P-035": {
+      "text": "ab",
+      "proposalCount": 1,
+      "proposalTool": "replace_selection",
+      "hasRaw": true,
+      "calls": 2
+    },
+    "P2P-036": {
+      "selectionInput": "go\n\nSelected text:\nori",
+      "documentInput": "go\n\nDocument:\noriginal",
+      "selectionHasSnapshot": true,
+      "documentHasSnapshot": true
+    },
+    "P2P-037": {
+      "configModel": "config-model",
+      "providerModel": "provider-model",
+      "blankError": "OpenAiService requires a model",
+      "blankCalls": 0
+    },
+    "P2P-038": {
+      "ok": false,
+      "message": "The document changed. Ask AI to create a new proposal.",
+      "text": "hello"
+    },
+    "P2P-039": {
+      "preResolved": false,
+      "preMessage": "stop",
+      "inResolved": false,
+      "inMessage": "stop"
+    },
+    "P2P-040": {
+      "aiMissing": [],
+      "rootMissing": [],
+      "rebaseMissingFromAi": false
+    },
+    "P2P-041": {
+      "messages": [
+        "search_document is read-only and cannot be applied.",
+        "get_editor_context is read-only and cannot be applied."
+      ],
+      "text": "hello"
+    },
+    "P2P-042": {
+      "results": [
+        {
+          "ok": false,
+          "message": "This proposal is no longer pending."
+        },
+        {
+          "ok": false,
+          "message": "This proposal is no longer pending."
+        }
+      ],
+      "text": "hello"
+    },
+    "P2P-044": {
+      "definitions": [
+        {
+          "name": "get_editor_context",
+          "description": "Read the current document, selection, active block, formatting marks, outline, and document version.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [],
+          "required": []
+        },
+        {
+          "name": "search_document",
+          "description": "Search the editor document for text and return matching ranges and excerpts.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [
+            "query",
+            "case_sensitive",
+            "max_results"
+          ],
+          "required": [
+            "query"
+          ]
+        },
+        {
+          "name": "replace_selection",
+          "description": "Propose replacing the current text selection. The host applies its configured approval policy.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [
+            "text"
+          ],
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "name": "insert_content",
+          "description": "Propose inserting plain text before or after the current selection, or at the end of the document.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [
+            "position",
+            "content"
+          ],
+          "required": [
+            "position",
+            "content"
+          ]
+        },
+        {
+          "name": "apply_formatting",
+          "description": "Propose formatting a document range. The host applies its configured approval policy.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [
+            "from",
+            "to",
+            "marks",
+            "block_type",
+            "heading_level",
+            "alignment"
+          ],
+          "required": []
+        },
+        {
+          "name": "apply_text_edits",
+          "description": "Propose multiple plain-text replacements as one atomic editor transaction. The host applies its configured approval policy.",
+          "strict": false,
+          "schemaKeys": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "propertyKeys": [
+            "edits"
+          ],
+          "required": [
+            "edits"
+          ]
+        }
+      ],
+      "expectedSchemaKeys": {
+        "get_editor_context": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ],
+        "search_document": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ],
+        "replace_selection": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ],
+        "insert_content": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ],
+        "apply_formatting": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ],
+        "apply_text_edits": [
+          "type",
+          "properties",
+          "required",
+          "additionalProperties"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "description": "releaseCapture path-confinement cases exercised by the Windows (C#) and Android native releaseCapture probes. Deletion is allowed only for a relative leaf inside the capture directory.",
+  "cases": [
+    {
+      "id": "relative-child",
+      "uri": "capture-1234.png",
+      "expect_delete": true,
+      "reason": "a plain relative leaf inside the application capture directory"
+    },
+    {
+      "id": "file-uri-child",
+      "uri": "file:///capture-1234.png",
+      "expect_delete": true,
+      "reason": "file URI resolving to a relative leaf inside the capture directory"
+    },
+    {
+      "id": "empty-uri",
+      "uri": "",
+      "expect_delete": false,
+      "reason": "empty uri must return without deleting anything"
+    },
+    {
+      "id": "dot",
+      "uri": ".",
+      "expect_delete": false,
+      "reason": "the capture directory itself is not a file"
+    },
+    {
+      "id": "parent-escape",
+      "uri": "../../etc/passwd",
+      "expect_delete": false,
+      "reason": "relative path escaping the capture directory must not be deleted"
+    },
+    {
+      "id": "nested-slash",
+      "uri": "sub/capture-1234.png",
+      "expect_delete": false,
+      "reason": "a filename containing a path separator must not be deleted"
+    },
+    {
+      "id": "absolute-path",
+      "uri": "/etc/passwd",
+      "expect_delete": false,
+      "reason": "absolute path outside the application folder must not be deleted"
+    },
+    {
+      "id": "nul-byte",
+      "uri": "capture\u0000.png",
+      "expect_delete": false,
+      "reason": "a filename containing a NUL byte must not be deleted"
+    }
+  ]
+}

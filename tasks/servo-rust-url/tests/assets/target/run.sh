@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+cd /workspace/repo
+go version
+go env GOVERSION
+go build ./...
+go vet ./...
+go test -count=1 ./...
+gotestsum --junitfile=/logs/native-report.xml -- ./...
+set +e
+/assets/target/runner /logs/result.json
+status=$?
+exit $status

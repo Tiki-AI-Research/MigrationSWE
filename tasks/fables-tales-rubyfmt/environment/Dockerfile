@@ -1,0 +1,101 @@
+# Target toolchain stage: the Go 1.24.0 compiler pinned to the exact digest the
+# verifier image uses (tests/Dockerfile + tests/assets/images.manifest.json), so
+# the candidate and the evaluator compile with an identical toolchain.
+FROM golang@sha256:b970e6d47c09fdd34179acef5c4fecaf6410f0b597a759733b3cbea04b4e604a AS gotoolchain
+
+# Generated public source environment pinned to the Task-Pool image.
+# The image already contains the repository at the claimed base commit.
+FROM docker.io/tikiaiteam/migration:fables-tales-rubyfmt-base-image-20261126@sha256:959a8c0a204c68ebb4a81840bfebe5557633b5d330778cafa22faa45f11b2007
+WORKDIR /workspace/repo
+
+# Go 1.24.0 (target toolchain) must be available offline: the agent runtime has
+# no package-manager egress and the migration target is Go 1.24.0.
+COPY --from=gotoolchain /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}" \
+    GOTOOLCHAIN=local \
+    GOPATH="/go" \
+    GOMODCACHE="/go/pkg/mod"
+
+# Expose the Go toolchain to login shells too (mirrors the base image's
+# /etc/profile.d/envpipe-runtime.sh, which exposes the Rust toolchain).
+RUN printf '%s\n' 'case ":${PATH}:" in *:/usr/local/go/bin:*) ;; *) PATH="/usr/local/go/bin:${PATH}" ;; esac' \
+      > /etc/profile.d/go-toolchain.sh \
+    && chmod 0644 /etc/profile.d/go-toolchain.sh
+
+# Migration eval harness: preinstall mini-swe-agent for the agent user so
+# external `harbor run` agent evaluations work without build-time egress.
+RUN (command -v uv >/dev/null 2>&1 || { curl -LsSf https://astral.sh/uv/install.sh | sh; install -m 0755 /root/.local/bin/uv /usr/local/bin/uv; }) \
+ && HOME=/home/agent uv python install 3.12 \
+ && HOME=/home/agent uv tool install --python 3.12 mini-swe-agent --with litellm --with orjson --with fastapi --with mcp \
+ && chown -R agent:agent /home/agent
+
+# Migration eval harness: keep the mcp extra when Harbor reinstalls mini-swe-agent.
+RUN set -eux; \
+    if ! command -v uv >/dev/null 2>&1; then \
+      curl -LsSf https://astral.sh/uv/install.sh | sh; \
+      install -m 0755 /root/.local/bin/uv /usr/local/bin/uv; \
+    fi; \
+    if [ ! -x /usr/local/bin/uv.real ]; then \
+      uv_path="$(command -v uv)"; \
+      if [ "$uv_path" = "/usr/local/bin/uv" ] && grep -q 'Migration eval harness minimal uv wrapper' "$uv_path"; then \
+        echo 'uv wrapper exists without uv.real' >&2; exit 1; \
+      fi; \
+      install -m 0755 "$uv_path" /usr/local/bin/uv.real; \
+    fi; \
+    printf '%s\n' \
+      '#!/bin/sh' \
+      'set -eu' \
+      '# Migration eval harness minimal uv wrapper' \
+      real_uv=/usr/local/bin/uv.real \
+      saw_tool=0 \
+      saw_install=0 \
+      saw_agent=0 \
+      saw_mcp=0 \
+      previous= \
+      'for argument in "$@"; do' \
+      '    case "$argument" in' \
+      '        tool) saw_tool=1 ;;' \
+      '        install) if [ "$saw_tool" -eq 1 ]; then saw_install=1; fi ;;' \
+      '        mini-swe-agent|mini-swe-agent==*|mini-swe-agent@*) saw_agent=1 ;;' \
+      '        --with=mcp) saw_mcp=1 ;;' \
+      '        mcp) if [ "$previous" = "--with" ]; then saw_mcp=1; fi ;;' \
+      '    esac' \
+      '    previous=$argument' \
+      done \
+      'if [ "$saw_tool" -eq 1 ] && [ "$saw_install" -eq 1 ] && [ "$saw_agent" -eq 1 ] && [ "$saw_mcp" -eq 0 ]; then' \
+      '    exec "$real_uv" "$@" --with mcp' \
+      fi \
+      'exec "$real_uv" "$@"' \
+      > /usr/local/bin/uv; \
+    chmod 0755 /usr/local/bin/uv
+
+# Offline dependency prewarm (contract-declared target deps; build-time network).
+RUN set -eux; mkdir -p /opt/offline-deps
+RUN (cargo fetch) || echo 'offline prewarm skipped: cargo' >&2
+RUN cargo --version || echo 'offline verify skipped: cargo' >&2
+
+# Target-side offline prewarm: populate the Go module cache so offline
+# `go mod vendor` / `go build` succeed before the candidate vendors anything.
+RUN set -eux; \
+    mkdir -p /opt/gomod-warm; \
+    cd /opt/gomod-warm; \
+    go mod init warm; \
+    go get github.com/pmezard/go-difflib@v1.0.0; \
+    cd /; rm -rf /opt/gomod-warm; \
+    chmod -R a+rX /go
+# Build-time verification (fail-fast): both sides must be runnable in the image.
+RUN set -eux; \
+    go version; \
+    ruby --version; \
+    cargo --version
+ENV CARGO_NET_OFFLINE='true'
+
+# Preinstall Codex and Claude Code using marwes-combine's pinned Node 22 setup.
+# Keep the project runtime and candidate-only offline settings intact.
+USER root
+COPY install_agents.sh /tmp/install_agents.sh
+RUN candidate_node_before="$(node --version 2>/dev/null || true)" \
+ && bash /tmp/install_agents.sh \
+ && test "$(node --version 2>/dev/null || true)" = "$candidate_node_before" \
+ && rm -f /tmp/install_agents.sh
+

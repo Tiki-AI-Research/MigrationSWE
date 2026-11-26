@@ -1,0 +1,279 @@
+{
+  "schema_version": "labeler-minimatch-contract:v1",
+  "baseline_commit": "98ce1450c7908643084f7487327dfa4f4bf8a367",
+  "cases": [
+    {
+      "id": "parent-file",
+      "pattern": "src/../README.md",
+      "path": "README.md",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "parent-glob",
+      "pattern": "src/../docs/**",
+      "path": "docs/a.md",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "parent-negative",
+      "pattern": "src/../docs/**",
+      "path": "src/a.md",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "parent-nested",
+      "pattern": "a/b/../../docs/*.md",
+      "path": "docs/a.md",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "parent-braces",
+      "pattern": "{src,lib}/../docs/**",
+      "path": "docs/a.md",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "parent-hidden",
+      "pattern": "src/../.github/**",
+      "path": ".github/workflows/test.yml",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "graph-positive",
+      "pattern": "[[:graph:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "graph-negative",
+      "pattern": "[[:graph:]].txt",
+      "path": " .txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "word-positive",
+      "pattern": "[[:word:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "word-negative",
+      "pattern": "[[:word:]].txt",
+      "path": "!.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "alpha-positive",
+      "pattern": "[[:alpha:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "alpha-negative",
+      "pattern": "[[:alpha:]].txt",
+      "path": "1.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "alnum-positive",
+      "pattern": "[[:alnum:]].txt",
+      "path": "\u2163.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "alnum-negative",
+      "pattern": "[[:alnum:]].txt",
+      "path": "!.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "digit-positive",
+      "pattern": "[[:digit:]].txt",
+      "path": "\u0661.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "digit-negative",
+      "pattern": "[[:digit:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "lower-positive",
+      "pattern": "[[:lower:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "lower-negative",
+      "pattern": "[[:lower:]].txt",
+      "path": "\u00c9.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "upper-positive",
+      "pattern": "[[:upper:]].txt",
+      "path": "\u00c9.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "upper-negative",
+      "pattern": "[[:upper:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "blank-positive",
+      "pattern": "[[:blank:]].txt",
+      "path": "\u00a0.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "blank-negative",
+      "pattern": "[[:blank:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "space-positive",
+      "pattern": "[[:space:]].txt",
+      "path": "\u2028.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "space-negative",
+      "pattern": "[[:space:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "punct-positive",
+      "pattern": "[[:punct:]].txt",
+      "path": "\u3002.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "punct-negative",
+      "pattern": "[[:punct:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "cntrl-positive",
+      "pattern": "[[:cntrl:]].txt",
+      "path": "\u0085.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "cntrl-negative",
+      "pattern": "[[:cntrl:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "ascii-positive",
+      "pattern": "[[:ascii:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "ascii-negative",
+      "pattern": "[[:ascii:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "xdigit-positive",
+      "pattern": "[[:xdigit:]].txt",
+      "path": "F.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "xdigit-negative",
+      "pattern": "[[:xdigit:]].txt",
+      "path": "\uff27.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "graph-astral",
+      "pattern": "[[:graph:]].txt",
+      "path": "\ud83d\ude00.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "word-connector",
+      "pattern": "[[:word:]].txt",
+      "path": "\u203f.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "alpha-astral",
+      "pattern": "[[:alpha:]].txt",
+      "path": "\ud801\udc00.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "negated-unicode",
+      "pattern": "[![:alpha:]].txt",
+      "path": "\u00e9.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "negated-nonletter",
+      "pattern": "[![:alpha:]].txt",
+      "path": "1.txt",
+      "dot": true,
+      "matches": true
+    },
+    {
+      "id": "print-baseline-letter",
+      "pattern": "[[:print:]].txt",
+      "path": "a.txt",
+      "dot": true,
+      "matches": false
+    },
+    {
+      "id": "print-baseline-control",
+      "pattern": "[[:print:]].txt",
+      "path": "\u0085.txt",
+      "dot": true,
+      "matches": true
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/alexellis-arkade"
+description = "Migrate the arkade CLI from Cobra 1.10.2 to Kong 1.8.1."
+
+[metadata]
+category = "Framework_migration"
+language = "go"
+repository_id = "72f1fbf8-42f3-42f7-bce5-9f3d798f0ac5"
+task_id = "tp-e66330aee2f762ef25f66773d348b32e"
+repository_url = "https://github.com/alexellis/arkade"
+base_commit_hash = "0a0a800fd7554d4eddb1856f9ef8a21214e95bab"
+
+[metadata.tests]
+fail_to_pass_count = 70
+pass_to_pass_count = 40
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:alexellis-arkade-verifier-image-20261126"
+image_digest = "sha256:12ce20af7da9fb2d4a57fdb83100915aef0c3b410c9670ff70bc8ea9e6a20d66"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 0a0a800fd7554d4eddb1856f9ef8a21214e95bab > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 14400
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:alexellis-arkade-task-image-20261126"
+image_digest = "sha256:d1a1ad7a7c423ce8febbc14606987f81432d832d57d7652aca063c45e3d57f8c"

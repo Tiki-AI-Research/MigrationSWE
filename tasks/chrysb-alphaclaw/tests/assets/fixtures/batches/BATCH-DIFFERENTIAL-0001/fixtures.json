@@ -1,0 +1,89 @@
+{
+  "schema_version": "migration-differential-fixtures:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "setup_password": "fixture-setup-password",
+  "gateway_token": "fixture-gateway-token",
+  "webhook_token": "fixture-webhook-token",
+  "proxy_client_ip": "198.51.100.7",
+  "rotated_proxy_client_ips": ["198.51.100.10", "198.51.100.11"],
+  "alphaclaw_config_enabled": {
+    "features": {
+      "openaiCompatApi": {
+        "enabled": true
+      }
+    }
+  },
+  "alphaclaw_config_disabled": {
+    "features": {
+      "openaiCompatApi": {
+        "enabled": false
+      }
+    }
+  },
+  "oauth_callback": {
+    "id": "cb-diff-028",
+    "hookName": "fixture-hook",
+    "used": false
+  },
+  "operation": {
+    "id": "op-diff-016",
+    "events": [
+      {
+        "type": "started",
+        "data": {
+          "step": 1
+        }
+      },
+      {
+        "type": "finished",
+        "data": {
+          "step": 2
+        }
+      }
+    ]
+  },
+  "raw_json_bytes": {
+    "webhook": "{\"a\":1}",
+    "gmail": "{\"message\":{\"data\":\"eA==\",\"messageId\":\"dup-1\"},\"emailAddress\":\"a@example.com\"}"
+  },
+  "body_limits": {
+    "json_bytes": 5242880,
+    "raw_bytes": 5242880,
+    "v1_json_bytes": 52428800
+  },
+  "gateway_response": {
+    "status": 201,
+    "headers": {
+      "x-test": "yes"
+    },
+    "body": "ok"
+  },
+  "v1_gateway_response": {
+    "status": 200,
+    "headers": {
+      "connection": "keep-alive",
+      "set-cookie": "leak=1",
+      "x-request-id": "req-1"
+    },
+    "body": "data"
+  },
+  "webhook_gateway_response": {
+    "status": 202,
+    "headers": {
+      "x-hook": "yes"
+    },
+    "body": "accepted"
+  },
+  "sse": {
+    "status_initial_within_ms": 2000,
+    "status_repeat_interval_ms": 2000,
+    "keepalive_interval_ms": 15000,
+    "keepalive_comment": ": keepalive"
+  },
+  "server": {
+    "default_port": 3000,
+    "host": "0.0.0.0",
+    "startup_log_port_marker": "4317",
+    "onboarding_waiting_marker": "Awaiting onboarding"
+  }
+}

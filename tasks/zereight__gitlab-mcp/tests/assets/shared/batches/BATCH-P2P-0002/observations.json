@@ -1,0 +1,117 @@
+{
+  "schema_version": "migration-p2p-contract:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "relation": "equal_after_normalization",
+  "sides": ["source", "target"],
+  "normalization": {
+    "description": "Projections contain no volatile fields (timestamps and generated ids are reduced to shape booleans); source and target projections are compared as parsed JSON with object keys order-insensitive.",
+    "drop_keys": ["updated_at", "created_at", "phase_started_at", "completed_at"],
+    "id_shapes": {
+      "story": "^story-[0-9a-f]{8}$",
+      "generated_id_length": 8
+    }
+  },
+  "probes": {
+    "source": "source/batches/BATCH-P2P-0002/probe.mjs",
+    "target": "target/batches/BATCH-P2P-0002/probe.py"
+  },
+  "observations": [
+    {
+      "observation_id": "P2P-035",
+      "probe_key": "test-artifact:test/test-upload-markdown.ts#rejects file_path with \"..\" traversal",
+      "surfaces": ["test:test/test-upload-markdown.ts#rejects file_path with"],
+      "requirement_ids": ["R002"]
+    },
+    {
+      "observation_id": "P2P-025",
+      "probe_key": "omg_select_model agent_type override",
+      "surfaces": ["agent-type override behavior of `omg_select_model`"],
+      "requirement_ids": ["R026"]
+    },
+    {
+      "observation_id": "P2P-026",
+      "probe_key": "MCP CallToolResult envelope",
+      "surfaces": ["MCP CallToolResult envelope of every tool"],
+      "requirement_ids": ["R005"]
+    },
+    {
+      "observation_id": "P2P-027",
+      "probe_key": "omg_write_state merge semantics",
+      "surfaces": ["`omg_write_state` result text and persisted file"],
+      "requirement_ids": ["R010"]
+    },
+    {
+      "observation_id": "P2P-028",
+      "probe_key": "public capability set",
+      "surfaces": ["public capability set"],
+      "requirement_ids": ["R033"]
+    },
+    {
+      "observation_id": "P2P-029",
+      "probe_key": "ported test assertions",
+      "surfaces": ["ported test assertions"],
+      "requirement_ids": ["R038"]
+    },
+    {
+      "observation_id": "P2P-030",
+      "probe_key": "bin:zereight-mcp-gitlab",
+      "surfaces": ["bin:zereight-mcp-gitlab"],
+      "requirement_ids": ["R002"]
+    },
+    {
+      "observation_id": "P2P-031",
+      "probe_key": "mode validation error message",
+      "surfaces": ["mode validation error message"],
+      "requirement_ids": ["R028"]
+    },
+    {
+      "observation_id": "P2P-032",
+      "probe_key": "omg_check_completion result text",
+      "surfaces": ["`omg_check_completion` result text"],
+      "requirement_ids": ["R019"]
+    },
+    {
+      "observation_id": "P2P-033",
+      "probe_key": "omg_create_prd story defaults",
+      "surfaces": ["`omg_create_prd` result text and persisted story defaults"],
+      "requirement_ids": ["R014"]
+    },
+    {
+      "observation_id": "P2P-034",
+      "probe_key": "omg_update_story result text",
+      "surfaces": ["`omg_update_story` result text"],
+      "requirement_ids": ["R015"]
+    },
+    {
+      "observation_id": "P2P-036",
+      "probe_key": "safe_read_file symlink/oversize",
+      "surfaces": ["`safe_read_file` content for symlinks/oversize files"],
+      "requirement_ids": ["R029"]
+    },
+    {
+      "observation_id": "P2P-037",
+      "probe_key": "omg_select_model complexity score/tier",
+      "surfaces": ["complexity score/tier of `omg_select_model`"],
+      "requirement_ids": ["R025"]
+    },
+    {
+      "observation_id": "P2P-038",
+      "probe_key": "safe_write_file symlink refusal",
+      "surfaces": ["`safe_write_file` symlink refusal"],
+      "requirement_ids": ["R030"]
+    },
+    {
+      "observation_id": "P2P-039",
+      "probe_key": "omg_select_model result shape",
+      "surfaces": ["`omg_select_model` result shape"],
+      "requirement_ids": ["R024"]
+    },
+    {
+      "observation_id": "P2P-040",
+      "probe_key": "generate_id output",
+      "surfaces": ["`generate_id` output"],
+      "requirement_ids": ["R032"]
+    }
+  ]
+}

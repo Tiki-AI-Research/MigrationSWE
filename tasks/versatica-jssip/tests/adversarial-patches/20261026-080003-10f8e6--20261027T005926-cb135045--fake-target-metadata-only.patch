@@ -1,0 +1,326 @@
+diff --git a/npm-scripts.mjs b/npm-scripts.mjs
+index a2d3a100e2a5f648432f224eeb23db60fc8b7e62..9448e2c4feb63d4fe6460d2b32902d390612f29b 100644
+--- a/npm-scripts.mjs
++++ b/npm-scripts.mjs
+@@ -3,6 +3,7 @@ import fs from 'fs';
+ import path from 'path';
+ import process from 'process';
+ import { execSync } from 'child_process';
++import peggy from 'peggy';
+ import pkg from './package.json' with { type: 'json' };
+ 
+ const task = process.argv.slice(2).join(' ');
+@@ -17,7 +18,7 @@ const ESLINT_PATHS = [
+ ].join(' ');
+ 
+ // Paths for ESLint to ignore. Converted to string argument for convenience.
+-const ESLINT_IGNORE_PATTERN_ARGS = ['src/Grammar.pegs', 'src/Grammar.js']
++const ESLINT_IGNORE_PATTERN_ARGS = ['src/Grammar.pegjs', 'src/Grammar.js']
+ 	.map(entry => `--ignore-pattern ${entry}`)
+ 	.join(' ');
+ 
+@@ -34,6 +35,12 @@ async function run() {
+ 			break;
+ 		}
+ 
++		case 'grammar:check': {
++			grammarCheck();
++
++			break;
++		}
++
+ 		case 'lint': {
+ 			lint();
+ 
+@@ -138,29 +145,149 @@ function coverage() {
+ function grammar() {
+ 	logInfo('grammar()');
+ 
+-	const local_pegjs = path.resolve('./node_modules/.bin/pegjs');
+ 	const Grammar_pegjs = path.resolve('src/Grammar.pegjs');
+ 	const Grammar_js = path.resolve('src/Grammar.js');
+ 
+ 	logInfo('compiling Grammar.pegjs into Grammar.js...');
+ 
+-	executeCmd(`${local_pegjs} ${Grammar_pegjs} ${Grammar_js}`);
++	fs.writeFileSync(Grammar_js, generateGrammar(Grammar_pegjs));
+ 
+ 	logInfo('grammar compiled');
+ 
+-	// Modify the generated Grammar.js file with custom changes.
+-	logInfo('applying custom changes to Grammar.js...');
++	logInfo('grammar done');
++}
++
++// Verify that the committed parser is exactly what the documented generator
++// plus the two compatibility adapters produce. This is deliberately stricter
++// than "the parser works": a hand-edited generated file is not reproducible.
++function grammarCheck() {
++	logInfo('grammar:check()');
++
++	const Grammar_pegjs = path.resolve('src/Grammar.pegjs');
++	const Grammar_js = path.resolve('src/Grammar.js');
++
++	const expected = generateGrammar(Grammar_pegjs);
++	const actual = fs.readFileSync(Grammar_js, 'utf8');
++
++	if (normalizeGrammar(actual) !== normalizeGrammar(expected)) {
++		throw new Error(
++			'src/Grammar.js is not reproducible from src/Grammar.pegjs; ' +
++				'regenerate it with `node npm-scripts.mjs grammar` and do not edit the generated file'
++		);
++	}
++
++	logInfo('grammar:check passed: src/Grammar.js matches the Peggy output');
++}
++
++function generateGrammar(Grammar_pegjs) {
++	const grammar_source = fs.readFileSync(Grammar_pegjs, 'utf8');
++	const ast = peggy.parser.parse(grammar_source);
++
++	// Peggy inlines alias-only rules into their consumers. They remain valid
++	// internal productions, but the PEG.js 0.7 artifact did not expose them as
++	// independently selectable start rules.
++	const start_rules = ast.rules
++		.filter(rule => rule.expression.type !== 'rule_ref')
++		.map(rule => rule.name);
++
++	const generated_grammar = peggy.generate(grammar_source, {
++		output: 'source',
++		format: 'commonjs',
++		allowedStartRules: start_rules,
++	});
++
++	// Peggy returns the value of the start rule and throws on a syntax error,
++	// while JsSIP's Grammar contract requires the accumulated `data` object and
++	// the historical `-1` failure value for the legacy `parse(input, startRule)`
++	// signature. Keep these adaptations here, never in a hand-edited artifact.
++	logInfo('applying documented compatibility adapters to Grammar.js...');
++
++	return adaptGrammar(generated_grammar);
++}
+ 
+-	const current_grammar = fs.readFileSync('src/Grammar.js').toString();
+-	let modified_grammar = current_grammar.replace(
+-		/throw new this\.SyntaxError\(([\s\S]*?)\);([\s\S]*?)}([\s\S]*?)return result;/,
+-		'new this.SyntaxError($1);\n        return -1;$2}$3return data;'
++function adaptGrammar(source) {
++	let modified_grammar = source.replace(
++		'    return peg$result;\n',
++		'    return data;\n'
+ 	);
+ 
+-	modified_grammar = modified_grammar.replace(/\s+$/gm, '');
+-	fs.writeFileSync('src/Grammar.js', modified_grammar);
++	// The exported `StartRules` array is part of the public surface, but it must
++	// not drive the start-rule membership check: a consumer mutating that array
++	// must not be able to add or remove selectable rules.
++	modified_grammar = modified_grammar.replace(
++		/module\.exports = \{\n  StartRules: (\[[^\n]*\]),/,
++		(_, start_rules) => 'const declaredStartRules = ' + start_rules + ';\n'
++			+ 'module.exports = {\n  StartRules: declaredStartRules.slice(),'
++	);
+ 
+-	logInfo('grammar done');
++	const parse_adapter = String.raw`  parse: function(input, options) {
++    function quoteRuleName(name) {
++      return '"' + name
++        .replace(/\\/g, '\\\\')
++        .replace(/"/g, '\\"')
++        .replace(/\x08/g, '\\b')
++        .replace(/\t/g, '\\t')
++        .replace(/\n/g, '\\n')
++        .replace(/\f/g, '\\f')
++        .replace(/\r/g, '\\r')
++        .replace(/[\x00-\x07\x0B\x0E-\x1F\x80-\uFFFF]/g, escape)
++        + '"';
++    }
++    function isBoxedPrimitive(value) {
++      const tag = Object.prototype.toString.call(value);
++      try {
++        if (tag === '[object String]') {
++          return typeof String.prototype.valueOf.call(value) === 'string';
++        }
++        if (tag === '[object Number]') {
++          return typeof Number.prototype.valueOf.call(value) === 'number';
++        }
++        if (tag === '[object Boolean]') {
++          return typeof Boolean.prototype.valueOf.call(value) === 'boolean';
++        }
++      } catch (error) {
++        return false;
++      }
++      return false;
++    }
++    let startRule;
++    if (options === null || options === undefined) {
++      startRule = undefined;
++    } else if (typeof options === 'object' && !isBoxedPrimitive(options)) {
++      startRule = options.startRule;
++    } else {
++      startRule = options;
++    }
++    const parseOptions = {};
++    if (startRule !== undefined) {
++      const ruleName = String(startRule);
++      if (declaredStartRules.indexOf(ruleName) === -1) {
++        throw new Error('Invalid rule name: ' + quoteRuleName(ruleName) + '.');
++      }
++      parseOptions.startRule = ruleName;
++    }
++    try {
++      return peg$parse(input, parseOptions);
++    } catch (error) {
++      if (error instanceof peg$SyntaxError) {
++        return -1;
++      }
++
++      throw error;
++    }
++  }
++};`;
++
++	modified_grammar = modified_grammar.replace(
++		'  parse: peg$parse\n};',
++		parse_adapter
++	);
++
++	return modified_grammar.replace(/\s+$/gm, '');
++}
++
++function normalizeGrammar(source) {
++	return source.replace(/\s+/g, '');
+ }
+ 
+ // Build sources into a file for publishing.
+diff --git a/package-lock.json b/package-lock.json
+index f9d242b637239c5739bbb7ecb7d1f080d110c44c..f9a30be5dc01ee1cfacef3fcf9b162e7673d7e6d 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -29,7 +29,7 @@
+ 				"globals": "^17.0.0",
+ 				"jest": "^30.2.0",
+ 				"open-cli": "^8.0.0",
+-				"pegjs": "^0.7.0",
++				"peggy": "4.2.0",
+ 				"prettier": "^3.8.1",
+ 				"ts-jest": "^29.4.6",
+ 				"typedoc": "^0.28.16",
+@@ -2031,6 +2031,32 @@
+ 				"@tybys/wasm-util": "^0.10.0"
+ 			}
+ 		},
++		"node_modules/@peggyjs/from-mem": {
++			"version": "1.3.5",
++			"resolved": "https://registry.npmjs.org/@peggyjs/from-mem/-/from-mem-1.3.5.tgz",
++			"integrity": "sha512-oRyzXE7nirAn+5yYjCdWQHg3EG2XXcYRoYNOK8Quqnmm+9FyK/2YWVunwudlYl++M3xY+gIAdf0vAYS+p0nKfQ==",
++			"dev": true,
++			"license": "MIT",
++			"dependencies": {
++				"semver": "7.6.3"
++			},
++			"engines": {
++				"node": ">=18"
++			}
++		},
++		"node_modules/@peggyjs/from-mem/node_modules/semver": {
++			"version": "7.6.3",
++			"resolved": "https://registry.npmjs.org/semver/-/semver-7.6.3.tgz",
++			"integrity": "sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A==",
++			"dev": true,
++			"license": "ISC",
++			"bin": {
++				"semver": "bin/semver.js"
++			},
++			"engines": {
++				"node": ">=10"
++			}
++		},
+ 		"node_modules/@pkgjs/parseargs": {
+ 			"version": "0.11.0",
+ 			"resolved": "https://registry.npmjs.org/@pkgjs/parseargs/-/parseargs-0.11.0.tgz",
+@@ -3649,6 +3675,16 @@
+ 			"dev": true,
+ 			"license": "MIT"
+ 		},
++		"node_modules/commander": {
++			"version": "12.1.0",
++			"resolved": "https://registry.npmjs.org/commander/-/commander-12.1.0.tgz",
++			"integrity": "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==",
++			"dev": true,
++			"license": "MIT",
++			"engines": {
++				"node": ">=18"
++			}
++		},
+ 		"node_modules/component-emitter": {
+ 			"version": "1.3.1",
+ 			"resolved": "https://registry.npmjs.org/component-emitter/-/component-emitter-1.3.1.tgz",
+@@ -7285,16 +7321,22 @@
+ 				"url": "https://github.com/sponsors/Borewit"
+ 			}
+ 		},
+-		"node_modules/pegjs": {
+-			"version": "0.7.0",
+-			"resolved": "https://registry.npmjs.org/pegjs/-/pegjs-0.7.0.tgz",
+-			"integrity": "sha512-LKb5vROzG2N6FVpITS8zy4BSB8M5z8JgiM0LzgvUVRIdScHys8RYlYvHVSL3WeXMLowF9MZj1hPusuVvTgeq4w==",
++		"node_modules/peggy": {
++			"version": "4.2.0",
++			"resolved": "https://registry.npmjs.org/peggy/-/peggy-4.2.0.tgz",
++			"integrity": "sha512-ZjzyJYY8NqW8JOZr2PbS/J0UH/hnfGALxSDsBUVQg5Y/I+ZaPuGeBJ7EclUX2RvWjhlsi4pnuL1C/K/3u+cDeg==",
+ 			"dev": true,
++			"license": "MIT",
++			"dependencies": {
++				"@peggyjs/from-mem": "1.3.5",
++				"commander": "^12.1.0",
++				"source-map-generator": "0.8.0"
++			},
+ 			"bin": {
+-				"pegjs": "bin/pegjs"
++				"peggy": "bin/peggy.js"
+ 			},
+ 			"engines": {
+-				"node": ">= 0.6.6"
++				"node": ">=18"
+ 			}
+ 		},
+ 		"node_modules/picocolors": {
+@@ -8391,6 +8433,16 @@
+ 				"node": ">=0.10.0"
+ 			}
+ 		},
++		"node_modules/source-map-generator": {
++			"version": "0.8.0",
++			"resolved": "https://registry.npmjs.org/source-map-generator/-/source-map-generator-0.8.0.tgz",
++			"integrity": "sha512-psgxdGMwl5MZM9S3FWee4EgsEaIjahYV5AzGnwUvPhWeITz/j6rKpysQHlQ4USdxvINlb8lKfWGIXwfkrgtqkA==",
++			"dev": true,
++			"license": "BSD-3-Clause",
++			"engines": {
++				"node": ">= 10"
++			}
++		},
+ 		"node_modules/source-map-resolve": {
+ 			"version": "0.5.3",
+ 			"resolved": "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.5.3.tgz",
+diff --git a/package.json b/package.json
+index a05557717a9b6efb9a8b9414807fc91f3fffd806..742a52fca0a3e51eaea67e723974e5e585e80838 100644
+--- a/package.json
++++ b/package.json
+@@ -35,6 +35,8 @@
+ 	"scripts": {
+ 		"lint": "node npm-scripts.mjs lint",
+ 		"lint:fix": "node npm-scripts.mjs lint:fix",
++		"grammar": "node npm-scripts.mjs grammar",
++		"grammar:check": "node npm-scripts.mjs grammar:check",
+ 		"test": "node npm-scripts.mjs test",
+ 		"coverage": "node npm-scripts.mjs coverage",
+ 		"build": "node npm-scripts.mjs build",
+@@ -65,7 +67,7 @@
+ 		"globals": "^17.0.0",
+ 		"jest": "^30.2.0",
+ 		"open-cli": "^8.0.0",
+-		"pegjs": "^0.7.0",
++		"peggy": "4.2.0",
+ 		"prettier": "^3.8.1",
+ 		"ts-jest": "^29.4.6",
+ 		"typedoc": "^0.28.16",

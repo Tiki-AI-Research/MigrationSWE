@@ -1,0 +1,146 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Express", "version": "4.17.1" },
+    "target": { "name": "Fastify", "version": "4.28.1" }
+  },
+  "server_module": "server.js",
+  "dependencies": {
+    "target_required": ["fastify@4.28.1", "@fastify/static@7.0.4", "@fastify/multipart@8.3.0"],
+    "source_forbidden_in_target": ["express", "serve-static", "body-parser", "csv-express", "server-sent-events", "multer"]
+  },
+  "predicates": [
+    {
+      "id": "P_BODY_LIMIT",
+      "requirement_ids": ["S001", "R035"],
+      "surface": "Fastify JSON content-type parser body limit",
+      "entry": "POST /ui, POST /counter/areas",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_MALFORMED_JSON",
+      "requirement_ids": ["S002"],
+      "surface": "Malformed JSON error response",
+      "entry": "POST /counter/areas",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_CATCHALL_PRECEDENCE",
+      "requirement_ids": ["S003"],
+      "surface": "Catch-all wildcard syntax and route precedence",
+      "entry": "GET /files vs GET /*",
+      "kind": "hybrid"
+    },
+    {
+      "id": "P_APIDOC",
+      "requirement_ids": ["S004"],
+      "surface": "Static documentation serving under /api/doc",
+      "entry": "GET /api/doc, GET /api/doc/index.html",
+      "kind": "hybrid"
+    },
+    {
+      "id": "P_FILES_MULTIPART",
+      "requirement_ids": ["S005"],
+      "surface": "Multipart upload handling",
+      "entry": "POST /files",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_NEXT_HIJACK",
+      "requirement_ids": ["S008"],
+      "surface": "Next.js catch-all forwarding and request compatibility",
+      "entry": "GET /a-page-that-does-not-exist",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_FASTIFY_OWNS",
+      "requirement_ids": ["R001"],
+      "surface": "Fastify instance ownership of every HTTP concern",
+      "entry": "server.js module load",
+      "kind": "hybrid"
+    },
+    {
+      "id": "P_SIDE_EFFECT_BODY",
+      "requirement_ids": ["S013"],
+      "surface": "200 response body/content-type for side-effect routes",
+      "entry": "GET /start, GET /recording/start, GET /recording/stop, POST /counter/areas, POST /ui",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_COUNTER_404_500",
+      "requirement_ids": ["S014"],
+      "surface": "404/500 responses of GET /recording/:id/counter",
+      "entry": "GET /recording/:id/counter",
+      "kind": "dynamic"
+    },
+    {
+      "id": "P_PLUGINS_REGISTERED",
+      "requirement_ids": ["S011"],
+      "surface": "Fastify plugin dependencies declared and registered",
+      "entry": "server.js, package.json",
+      "kind": "static"
+    },
+    {
+      "id": "P_NO_EXPRESS_IMPORT",
+      "requirement_ids": ["R044"],
+      "surface": "No Express middleware imports for migrated responsibilities",
+      "entry": "server.js module graph",
+      "kind": "static"
+    },
+    {
+      "id": "P_NO_DELEGATION",
+      "requirement_ids": ["R045"],
+      "surface": "No delegation to an out-of-process Express runtime",
+      "entry": "server.js module graph",
+      "kind": "static"
+    },
+    {
+      "id": "P_CHANGE_SCOPE",
+      "requirement_ids": ["R046"],
+      "surface": "Change scope limited to server.js and dependency configuration",
+      "entry": "repository diff",
+      "kind": "static"
+    }
+  ],
+  "observations": [
+    { "id": "F2P-025", "requirement_ids": ["S003"], "predicate_id": "P_CATCHALL_PRECEDENCE" },
+    { "id": "F2P-026", "requirement_ids": ["R046"], "predicate_id": "P_CHANGE_SCOPE" },
+    { "id": "F2P-027", "requirement_ids": ["R035"], "predicate_id": "P_BODY_LIMIT" },
+    { "id": "F2P-028", "requirement_ids": ["S005"], "predicate_id": "P_FILES_MULTIPART" },
+    { "id": "F2P-029", "requirement_ids": ["R001"], "predicate_id": "P_FASTIFY_OWNS" },
+    { "id": "F2P-030", "requirement_ids": ["S014"], "predicate_id": "P_COUNTER_404_500" },
+    { "id": "F2P-031", "requirement_ids": ["R045"], "predicate_id": "P_NO_DELEGATION" },
+    { "id": "F2P-032", "requirement_ids": ["S013"], "predicate_id": "P_SIDE_EFFECT_BODY" },
+    { "id": "F2P-033", "requirement_ids": ["R045"], "predicate_id": "P_NO_DELEGATION" },
+    { "id": "F2P-034", "requirement_ids": ["S004"], "predicate_id": "P_APIDOC" },
+    { "id": "F2P-035", "requirement_ids": ["S004"], "predicate_id": "P_APIDOC" },
+    { "id": "F2P-036", "requirement_ids": ["S013"], "predicate_id": "P_SIDE_EFFECT_BODY" },
+    { "id": "F2P-037", "requirement_ids": ["S011"], "predicate_id": "P_PLUGINS_REGISTERED" },
+    { "id": "F2P-038", "requirement_ids": ["S014"], "predicate_id": "P_COUNTER_404_500" },
+    { "id": "F2P-039", "requirement_ids": ["S001"], "predicate_id": "P_BODY_LIMIT" },
+    { "id": "F2P-040", "requirement_ids": ["R044"], "predicate_id": "P_NO_EXPRESS_IMPORT" },
+    { "id": "F2P-041", "requirement_ids": ["R035"], "predicate_id": "P_BODY_LIMIT" },
+    { "id": "F2P-042", "requirement_ids": ["S005"], "predicate_id": "P_FILES_MULTIPART" },
+    { "id": "F2P-043", "requirement_ids": ["S002"], "predicate_id": "P_MALFORMED_JSON" },
+    { "id": "F2P-044", "requirement_ids": ["R001"], "predicate_id": "P_FASTIFY_OWNS" },
+    { "id": "F2P-045", "requirement_ids": ["S004"], "predicate_id": "P_APIDOC" },
+    { "id": "F2P-046", "requirement_ids": ["S008"], "predicate_id": "P_NEXT_HIJACK" },
+    { "id": "F2P-047", "requirement_ids": ["R035"], "predicate_id": "P_BODY_LIMIT" },
+    { "id": "F2P-048", "requirement_ids": ["S003"], "predicate_id": "P_CATCHALL_PRECEDENCE" }
+  ],
+  "public_surfaces": [
+    { "id": "BATCH-F2P-0002-SURFACE-001", "surface": "server.js HTTP server module (Fastify instance ownership)", "source_path": "server.js", "requirement_ids": ["R001"] },
+    { "id": "BATCH-F2P-0002-SURFACE-002", "surface": "GET /files file-list JSON vs Next.js catch-all page", "source_path": "server.js", "requirement_ids": ["S003"] },
+    { "id": "BATCH-F2P-0002-SURFACE-003", "surface": "GET /api/doc static documentation", "source_path": "server.js", "requirement_ids": ["S004"] },
+    { "id": "BATCH-F2P-0002-SURFACE-004", "surface": "POST /files multipart upload", "source_path": "server.js", "requirement_ids": ["S005"] },
+    { "id": "BATCH-F2P-0002-SURFACE-005", "surface": "Next.js catch-all request/response contract", "source_path": "server.js", "requirement_ids": ["S008"] },
+    { "id": "BATCH-F2P-0002-SURFACE-006", "surface": "Global JSON body parsing semantics", "source_path": "server.js", "requirement_ids": ["S001", "S002", "R035"] },
+    { "id": "BATCH-F2P-0002-SURFACE-007", "surface": "Side-effect route 200 response body and content type", "source_path": "server.js", "requirement_ids": ["S013"] },
+    { "id": "BATCH-F2P-0002-SURFACE-008", "surface": "GET /recording/:id/counter 404 and 500 responses", "source_path": "server.js", "requirement_ids": ["S014"] },
+    { "id": "BATCH-F2P-0002-SURFACE-009", "surface": "Dependency manifest and lockfile resolve Fastify plugins", "source_path": "package.json", "requirement_ids": ["S011", "R044", "R045"] },
+    { "id": "BATCH-F2P-0002-SURFACE-010", "surface": "Repository change scope for the migration", "source_path": "package-lock.json", "requirement_ids": ["R046"] }
+  ]
+}

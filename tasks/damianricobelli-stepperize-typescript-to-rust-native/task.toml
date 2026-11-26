@@ -1,0 +1,70 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/damianricobelli-stepperize-typescript-to-rust-native"
+description = "Migrate stepperize core utilities and types from TypeScript to a native Rust 1.83.0 library."
+
+[metadata]
+category = "Language_migration"
+language = "typescript"
+repository_id = "73486043-eb4e-466c-8fda-75bccd813a99"
+task_id = "tp-9afe260012b97201d9be170a22986a88"
+repository_url = "https://github.com/damianricobelli/stepperize"
+base_commit_hash = "f1b5bfafa5d585de47f6c70eeeb355b76b20ff24"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 38
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:damianricobelli-stepperize-typescript-to-rust-native-verifier-image-20261126"
+image_digest = "sha256:cab65e9ee656cc6b8909bc151b6cff0c57e00cc80b4bebb9c3a805f20fd6ff02"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached f1b5bfafa5d585de47f6c70eeeb355b76b20ff24 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:damianricobelli-stepperize-typescript-to-rust-native-task-image-20261126"
+image_digest = "sha256:2748af7ae2a808a259b9d17280b51a2986eb1bbb820ee7ee7d3c026767feb167"
+[environment.healthcheck]
+command = "runuser -u agent -- env COREPACK_ENABLE_NETWORK=0 COREPACK_DEFAULT_TO_LATEST=0 sh -c 'node -e '\"'\"'const fs=require('\"'\"'\"'\"'\"'\"'\"'\"'fs'\"'\"'\"'\"'\"'\"'\"'\"'),cp=require('\"'\"'\"'\"'\"'\"'\"'\"'child_process'\"'\"'\"'\"'\"'\"'\"'\"');if(!fs.existsSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"'))process.exit(0);const p=JSON.parse(fs.readFileSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"','\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"')).packageManager;if(p===undefined)process.exit(0);const m=/^(npm|pnpm|yarn)@(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)(?:\\+sha(?:224|256|384|512)\\.[0-9a-fA-F]+)?$/.exec(p);if(!m)process.exit(2);const r=cp.spawnSync(m[1],['\"'\"'\"'\"'\"'\"'\"'\"'--version'\"'\"'\"'\"'\"'\"'\"'\"'],{encoding:'\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"',env:{...process.env,COREPACK_ENABLE_NETWORK:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"',COREPACK_DEFAULT_TO_LATEST:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"'}});if(r.error||r.status!==0)process.exit(r.status||3);process.exit((r.stdout||'\"'\"'\"'\"'\"'\"'\"'\"''\"'\"'\"'\"'\"'\"'\"'\"').trim().split(/\\s+/)[0]===m[2]?0:4);'\"'\"''"
+interval_sec = 1.0
+timeout_sec = 30.0
+retries = 1
+

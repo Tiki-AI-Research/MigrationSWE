@@ -1,0 +1,1829 @@
+diff --git a/docs/cli-reference.rst b/docs/cli-reference.rst
+--- a/docs/cli-reference.rst
++++ b/docs/cli-reference.rst
+@@ -25,6 +25,34 @@
+ Additional Hints
+ ================
+ 
++Dependency Sources and Entry Points
++----------------------------------
++
++Shiv uses Click 8.1.7. The ``-h``, ``--help``, and ``--halp`` options are equivalent;
++help and version requests exit without installing dependencies or writing an archive.
++
++Use ``--site-packages PATH`` repeatedly to combine existing directories without
++installing dependencies. Directories are processed in command-line order, followed
++by files installed from any supplied pip arguments. Non-conflicting files and
++package metadata are retained; for the same relative path, the later source supplies
++both the contents and permissions. Each path appears only once in the archive.
++Pip arguments not consumed by shiv are forwarded without reordering or rewriting.
++
++An explicit ``--entry-point`` takes precedence over ``--console-script``.
++Console script names are matched exactly in package metadata, with later sources
++taking precedence. A metadata declaration takes precedence over an executable in
++``bin``; without a declaration, a supported executable with the exact requested
++name is required. Executable launchers receive the application's arguments and
++their exit status is returned to the caller.
++
++Archive creation and extraction stage their work before replacing a previous
++result. Failed operations preserve a complete previous result, and subsequent
++invocations recover interrupted staging work automatically.
++
++``shiv-info`` validates the archive before producing text or JSON output. Both
++formats include the stored environment metadata together with the interpreter
++from the shebang and the archive's compression setting.
++
+ Choosing a Python Interpreter Path
+ ----------------------------------
+ 
+diff --git a/setup.cfg b/setup.cfg
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -47,7 +47,7 @@
+   =src
+ packages = find:
+ install_requires =
+-  click>=6.7,!=7.0
++  click==8.1.7
+   pip>=9.0.3
+   setuptools
+ python_requires = >=3.8
+diff --git a/src/shiv/_click.py b/src/shiv/_click.py
+new file mode 100644
+--- /dev/null
++++ b/src/shiv/_click.py
+@@ -0,0 +1,58 @@
++import os
++
++import click
++
++from click.parser import OptionParser
++
++
++class InputPath(click.Path):
++    def convert(self, value, param, ctx):
++        try:
++            return super().convert(value, param, ctx)
++        except click.BadParameter as error:
++            if os.path.exists(value):
++                raise click.ClickException(error.format_message()) from error
++            raise
++
++
++class PipParser(OptionParser):
++    def _match_short_opt(self, arg, state):
++        if arg[:2] not in self._short_opt:
++            state.largs.append(arg)
++        else:
++            super()._match_short_opt(arg, state)
++
++
++class Command(click.Command):
++    def parse_args(self, ctx, args):
++        # Existing callers and CliRunner can supply pathlib.Path arguments.
++        args = [os.fsdecode(argument) for argument in args]
++        options = {
++            name: parameter
++            for parameter in self.get_params(ctx)
++            if isinstance(parameter, click.Option)
++            for name in parameter.opts + parameter.secondary_opts
++        }
++        for argument in args:
++            if argument == "--":
++                break
++            option = options.get(argument)
++            if option is not None and option.is_eager and option.is_flag:
++                return super().parse_args(ctx, [argument])
++            if argument.startswith("-") and not argument.startswith("--"):
++                for character in argument[1:]:
++                    short_name = "-" + character
++                    option = options.get(short_name)
++                    if option is None or not option.is_flag:
++                        break
++                    if option.is_eager:
++                        return super().parse_args(ctx, [short_name])
++        return super().parse_args(ctx, args)
++
++
++class PipCommand(Command):
++    def make_parser(self, ctx):
++        parser = PipParser(ctx)
++        for parameter in self.get_params(ctx):
++            parameter.add_to_parser(parser, ctx)
++        return parser
+diff --git a/src/shiv/bootstrap/__init__.py b/src/shiv/bootstrap/__init__.py
+--- a/src/shiv/bootstrap/__init__.py
++++ b/src/shiv/bootstrap/__init__.py
+@@ -36,6 +36,25 @@
+         del os.environ[Environment.CONSOLE_SCRIPT]
+ 
+     sys.exit(module())
++
++
++def run_script(script):
++    with script.open("rb") as source:
++        header = source.readline()
++    commands = header[2:].split() if header.startswith(b"#!") else []
++    if commands and Path(os.fsdecode(commands[0])).name == "env":
++        commands = commands[1:]
++    else:
++        commands = commands[:1]
++    python_script = script.suffix.lower() in (".py", ".pyw") or any(
++        Path(os.fsdecode(command)).name.startswith(("python", "pypy")) for command in commands
++    )
++    if python_script:
++        runpy.run_path(str(script), run_name="__main__")
++        return None
++    sys.stdout.flush()
++    sys.stderr.flush()
++    return subprocess.call([str(script), *sys.argv[1:]])
+ 
+ 
+ @contextmanager
+@@ -107,47 +126,79 @@
+     return root / f"{name}_{build_id}"
+ 
+ 
++def _remove_extraction_path(path):
++    if path.is_dir() and not path.is_symlink():
++        shutil.rmtree(path)
++    else:
++        path.unlink(missing_ok=True)
++
++
+ def extract_site_packages(archive, target_path, compile_pyc=False, compile_workers=0, force=False):
+-    """Extract everything in site-packages to a specified path.
+-
+-    :param ZipFile archive: The zipfile object we are bootstrapping from.
+-    :param Path target_path: The path to extract our zip to.
+-    :param bool compile_pyc: A boolean to dictate whether we pre-compile pyc.
+-    :param int compile_workers: An int representing the number of pyc compiler workers.
+-    :param bool force: A boolean to dictate whether or not we force extraction.
++    """Stage and compile a complete tree, then replace it under the cache lock.
++
++    A .bak tree is the previous result of an uncommitted replacement.  Restore
++    it before trusting the target, which could be incomplete after interruption.
++    Moving that backup to .old commits publication; .old is only cleanup state.
+     """
+     parent = target_path.parent
+-    target_path_tmp = Path(parent, target_path.name + ".tmp")
+-    lock = Path(parent, f".{target_path.name}_lock")
+-
+-    # If this is the first time that a pyz is being extracted, we'll need to create the ~/.shiv dir
+-    if not parent.exists():
+-        parent.mkdir(parents=True, exist_ok=True)
+-
+-    with FileLock(lock):
+-
+-        # we acquired a lock, it's possible that prior invocation was holding the lock and has
+-        # completed bootstrapping, so let's check (again) if we need to do any work
+-        if not target_path.exists() or force:
+-
+-            # extract our site-packages
+-            for fileinfo in archive.infolist():
+-
+-                if fileinfo.filename.startswith("site-packages"):
+-                    extracted = archive.extract(fileinfo.filename, target_path_tmp)
+-
+-                    # restore original permissions
+-                    os.chmod(extracted, fileinfo.external_attr >> 16)
+-
+-            if compile_pyc:
+-                compileall.compile_dir(target_path_tmp, quiet=2, workers=compile_workers)
+-
+-            # if using `force` we will need to delete our target path
++    temporary = parent / (target_path.name + ".tmp")
++    backup = parent / (target_path.name + ".bak")
++    obsolete = parent / (target_path.name + ".old")
++    lock = parent / f".{target_path.name}_lock"
++    parent.mkdir(parents=True, exist_ok=True)
++
++    with FileLock(lock, timeout=300):
++        if backup.exists():
++            if (backup / "site-packages").is_dir():
++                _remove_extraction_path(target_path)
++                os.replace(backup, target_path)
++            else:
++                _remove_extraction_path(backup)
++        _remove_extraction_path(temporary)
++        _remove_extraction_path(obsolete)
++        if (target_path / "site-packages").is_dir() and not force:
++            return
++
++        had_target = target_path.exists()
++        try:
++            (temporary / "site-packages").mkdir(parents=True)
++            members = {}
++            for member in archive.infolist():
++                if member.filename.startswith("site-packages/"):
++                    members.pop(member.filename, None)
++                    members[member.filename] = member
++            for member in members.values():
++                extracted = archive.extract(member, temporary)
++                if not member.is_dir():
++                    os.chmod(extracted, member.external_attr >> 16)
++            if compile_pyc and not compileall.compile_dir(
++                temporary, quiet=1, workers=compile_workers
++            ):
++                raise RuntimeError(f"Failed to compile Python source files in {target_path}")
+             if target_path.exists():
+-                shutil.rmtree(str(target_path))
+-
+-            # atomic move
+-            shutil.move(str(target_path_tmp), str(target_path))
++                os.replace(target_path, backup)
++            os.replace(temporary, target_path)
++            if backup.exists():
++                os.replace(backup, obsolete)
++        except BaseException as error:
++            try:
++                previous = backup if backup.exists() else obsolete
++                if previous.exists():
++                    _remove_extraction_path(target_path)
++                    os.replace(previous, target_path)
++                elif not had_target:
++                    _remove_extraction_path(target_path)
++            except OSError as rollback_error:
++                error.rollback_error = rollback_error
++            try:
++                _remove_extraction_path(temporary)
++            except OSError as cleanup_error:
++                error.cleanup_error = cleanup_error
++            raise
++        # Publication is committed.  A leftover obsolete tree is never used as
++        # a cache and is retried under the same lock on the next invocation.
++        with suppress(OSError):
++            _remove_extraction_path(obsolete)
+ 
+ 
+ def get_first_sitedir_index():
+@@ -173,7 +224,9 @@
+ 
+     for path in site_packages.rglob("**/*.py"):
+ 
+-        if hashlib.sha256(path.read_bytes()).hexdigest() != hashes.get(str(path.relative_to(site_packages))):
++        relative = path.relative_to(site_packages)
++        expected = hashes.get(relative.as_posix(), hashes.get(str(relative)))
++        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+             raise RuntimeError(
+                 "A Python source file has been modified! File: {}. "
+                 "Try again with SHIV_FORCE_EXTRACT=1 to overwrite the modified source file(s).".format(str(path))
+@@ -198,15 +251,13 @@
+         # get a site-packages directory (from env var or via build id)
+         site_packages = cache_path(archive, env.root, env.build_id) / "site-packages"
+ 
+-        # determine if first run or forcing extract
+-        if not site_packages.exists() or env.force_extract:
+-            extract_site_packages(
+-                archive,
+-                site_packages.parent,
+-                env.compile_pyc,
+-                env.compile_workers,
+-                env.force_extract,
+-            )
++        extract_site_packages(
++            archive,
++            site_packages.parent,
++            env.compile_pyc,
++            env.compile_workers,
++            env.force_extract,
++        )
+ 
+     # get sys.path's length
+     length = len(sys.path)
+@@ -252,6 +303,8 @@
+             )
+ 
+         else:
++            sys.stdout.flush()
++            sys.stderr.flush()
+             subprocess.run([preamble_bin])
+ 
+     # first check if we should drop into interactive mode
+@@ -262,7 +315,7 @@
+             run(import_string(env.entry_point))
+ 
+         elif env.script is not None:
+-            run(partial(runpy.run_path, str(site_packages / "bin" / env.script), run_name="__main__"))
++            run(partial(run_script, site_packages / "bin" / env.script))
+ 
+     # all other options exhausted, drop into interactive mode
+     execute_interpreter()
+diff --git a/src/shiv/bootstrap/filelock.py b/src/shiv/bootstrap/filelock.py
+--- a/src/shiv/bootstrap/filelock.py
++++ b/src/shiv/bootstrap/filelock.py
+@@ -3,7 +3,9 @@
+ Code is based on github.com/benediktschmitt/py-filelock
+ """
+ 
++import errno
+ import os
++import threading
+ import time
+ 
+ try:
+@@ -16,22 +18,20 @@
+ except ImportError:
+     fcntl = None  # type: ignore
+ 
+-OPEN_MODE = os.O_RDWR | os.O_CREAT | os.O_TRUNC
++OPEN_MODE = os.O_RDWR | os.O_CREAT
+ 
+ 
+ def acquire_win(lock_file):  # pragma: no cover
+     """Acquire a lock file on windows."""
++    fd = os.open(lock_file, OPEN_MODE)
+     try:
+-        fd = os.open(lock_file, OPEN_MODE)
+-    except OSError:
+-        pass
++        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
++    except OSError as error:
++        os.close(fd)
++        if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
++            raise
+     else:
+-        try:
+-            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+-        except (IOError, OSError):
+-            os.close(fd)
+-        else:
+-            return fd
++        return fd
+ 
+ 
+ def acquire_nix(lock_file):  # pragma: no cover
+@@ -40,8 +40,10 @@
+ 
+     try:
+         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+-    except (IOError, OSError):
++    except OSError as error:
+         os.close(fd)
++        if error.errno not in (errno.EACCES, errno.EAGAIN):
++            raise
+     else:
+         return fd
+ 
+@@ -49,41 +51,66 @@
+ class FileLock:
+     """A rudimentary file lock class."""
+ 
+-    def __init__(self, lock_file):
++    def __init__(self, lock_file, timeout=None, poll_interval=0.01):
+         # The path to the lock file.
+         self.lock_file = lock_file
+ 
+         # The file descriptor for the lock file
+         self.lock_file_fd = None
++        self.timeout = timeout
++        self.poll_interval = poll_interval
++        self._thread_lock = threading.Lock()
+ 
+     @property
+     def is_locked(self):
+         """This property signals if we are holding the lock."""
+         return self.lock_file_fd is not None
+ 
+-    def __enter__(self, poll_intervall=0.01):
++    def acquire(self, timeout=None, poll_interval=None):
++        timeout = self.timeout if timeout is None else timeout
++        poll_interval = self.poll_interval if poll_interval is None else poll_interval
++        if poll_interval < 0:
++            raise ValueError("poll_interval must not be negative")
++        started = time.monotonic()
++        while True:
++            if self._thread_lock.acquire(blocking=False):
++                try:
++                    if msvcrt:
++                        self.lock_file_fd = acquire_win(self.lock_file)
++                    elif fcntl:
++                        self.lock_file_fd = acquire_nix(self.lock_file)
++                    else:
++                        raise RuntimeError("File locking is not supported on this platform")
++                except BaseException:
++                    self._thread_lock.release()
++                    raise
++                if self.is_locked:
++                    return self
++                self._thread_lock.release()
++            delay = poll_interval
++            if timeout is not None and timeout >= 0:
++                remaining = timeout - (time.monotonic() - started)
++                if remaining <= 0:
++                    raise TimeoutError(f"Timed out acquiring lock: {self.lock_file}")
++                delay = min(delay, remaining)
++            time.sleep(delay)
+ 
+-        while not self.is_locked:
++    def release(self):
++        if self.is_locked:
++            fd = self.lock_file_fd
++            self.lock_file_fd = None
++            try:
++                if msvcrt:
++                    os.lseek(fd, 0, os.SEEK_SET)
++                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
++                elif fcntl:
++                    fcntl.flock(fd, fcntl.LOCK_UN)
++            finally:
++                os.close(fd)
++                self._thread_lock.release()
+ 
+-            if msvcrt:
+-                self.lock_file_fd = acquire_win(self.lock_file)
+-            elif fcntl:
+-                self.lock_file_fd = acquire_nix(self.lock_file)
+-
+-            time.sleep(poll_intervall)
+-
+-        return self
++    def __enter__(self, poll_intervall=None):
++        return self.acquire(poll_interval=poll_intervall)
+ 
+     def __exit__(self, exc_type, exc_value, traceback):
+-
+-        if self.is_locked:
+-
+-            fd = self.lock_file_fd
+-            self.lock_file_fd = None
+-
+-            if msvcrt:
+-                msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+-            elif fcntl:
+-                fcntl.flock(fd, fcntl.LOCK_UN)
+-
+-            os.close(fd)
++        self.release()
+diff --git a/src/shiv/builder.py b/src/shiv/builder.py
+--- a/src/shiv/builder.py
++++ b/src/shiv/builder.py
+@@ -11,15 +11,17 @@
+ import zipapp
+ import zipfile
+ 
++from contextlib import suppress
+ from datetime import datetime, timezone
+ from itertools import chain
+ from pathlib import Path
+ from stat import S_IFMT, S_IMODE, S_IXGRP, S_IXOTH, S_IXUSR
+ from types import ModuleType
+-from typing import Any, Generator, IO, Iterator, List, Optional, Tuple, Union
++from typing import Any, Dict, Generator, IO, Iterator, List, Optional, Tuple, Union
+ 
+ from . import bootstrap
+ from .bootstrap.environment import Environment
++from .bootstrap.filelock import FileLock
+ from .constants import BINPRM_ERROR, BUILD_AT_TIMESTAMP_FORMAT
+ 
+ try:
+@@ -94,7 +96,38 @@
+             yield p
+ 
+ 
++def source_files(sources: List[Path]) -> Dict[str, Path]:
++    files: Dict[str, Path] = {}
++    for source in sources:
++        for path in sorted(rglob_follow_symlinks(source, "*"), key=str):
++            if path.suffix == ".pyc" or path.is_dir():
++                continue
++            relative_path = path.relative_to(source).as_posix()
++            files.pop(relative_path, None)
++            files[relative_path] = path
++    return files
++
++
+ def create_archive(
++    sources: List[Path], target: Path, interpreter: str, main: str, env: Environment, compressed: bool = True
++) -> None:
++    temporary = target.with_name(f".{target.name}.tmp")
++    lock = target.with_name(f".{target.name}_lock")
++    with FileLock(lock):
++        try:
++            with suppress(FileNotFoundError):
++                temporary.unlink()
++            mode = S_IMODE(target.stat().st_mode) if target.exists() else None
++            _create_archive(sources, temporary, interpreter, main, env, compressed)
++            if mode is not None:
++                temporary.chmod(mode | S_IXUSR | S_IXGRP | S_IXOTH)
++            os.replace(temporary, target)
++        finally:
++            with suppress(FileNotFoundError):
++                temporary.unlink()
++
++
++def _create_archive(
+     sources: List[Path], target: Path, interpreter: str, main: str, env: Environment, compressed: bool = True
+ ) -> None:
+     """Create an application archive from SOURCE.
+@@ -127,34 +160,17 @@
+         # Pack zipapp with dependencies.
+         with zipfile.ZipFile(fd, "w", compression=compression) as archive:
+ 
+-            site_packages = Path("site-packages")
+             contents_hash = hashlib.sha256()
+ 
+-            for source in sources:
+-
+-                # Glob is known to return results in non-deterministic order.
+-                # We need to sort them by in-archive paths to ensure
+-                # that archive contents are reproducible.
+-                #
+-                # NOTE: https://github.com/linkedin/shiv/issues/236
+-                # this special rglob function can be replaced with "rglob('*', follow_symlinks=True)"
+-                # when Python 3.13 becomes the lowest supported version
+-                for path in sorted(rglob_follow_symlinks(source, "*"), key=str):
+-
+-                    # Skip compiled files and directories (as they are not required to be present in the zip).
+-                    if path.suffix == ".pyc" or path.is_dir():
+-                        continue
+-
+-                    data = path.read_bytes()
+-
+-                    # update the contents hash
+-                    contents_hash.update(data)
+-                    # take filenames into account as well - build_id should change if a file is moved or renamed
+-                    contents_hash.update(str(path.relative_to(source)).encode())
+-
+-                    arcname = str(site_packages / path.relative_to(source))
+-
+-                    write_to_zipapp(archive, arcname, data, zipinfo_datetime, compression, stat=path.stat())
++            for relative_path, path in source_files(sources).items():
++                data = path.read_bytes()
++
++                contents_hash.update(data)
++                contents_hash.update(relative_path.encode())
++
++                arcname = "site-packages/" + relative_path
++
++                write_to_zipapp(archive, arcname, data, zipinfo_datetime, compression, stat=path.stat())
+ 
+             if env.build_id is None:
+                 # Now that we have a hash of all the source files, use it as our build id if the user did not
+@@ -169,7 +185,7 @@
+ 
+                 write_to_zipapp(
+                     archive,
+-                    str(bootstrap_target / name),
++                    (bootstrap_target / name).as_posix(),
+                     data,
+                     zipinfo_datetime,
+                     compression,
+diff --git a/src/shiv/cli.py b/src/shiv/cli.py
+--- a/src/shiv/cli.py
++++ b/src/shiv/cli.py
+@@ -1,19 +1,22 @@
+ import hashlib
++import keyword
+ import os
+ import shutil
+ import sys
+ import time
+ 
+-from configparser import ConfigParser
++from configparser import ConfigParser, Error as ConfigError
+ from datetime import datetime
+ from pathlib import Path
+ from tempfile import TemporaryDirectory
+-from typing import List, Optional
++from typing import List, Optional, Tuple
++from zipapp import ZipAppError
+ 
+ import click
+ 
+ from . import __version__
+ from . import builder, pip
++from ._click import InputPath, PipCommand
+ from .bootstrap.environment import Environment
+ from .constants import (
+     BUILD_AT_TIMESTAMP_FORMAT,
+@@ -28,6 +31,11 @@
+ )
+ 
+ 
++class EntryPointParser(ConfigParser):
++    def optionxform(self, optionstr: str) -> str:
++        return optionstr
++
++
+ def find_entry_point(site_packages_dirs: List[Path], console_script: str) -> str:
+     """Find a console_script in a site-packages directory.
+ 
+@@ -39,11 +47,10 @@
+     :param console_script: A console_script string.
+     """
+ 
+-    config_parser = ConfigParser()
+-
+-    for site_packages in site_packages_dirs:
+-        # noinspection PyTypeChecker
+-        config_parser.read(site_packages.rglob("entry_points.txt"))
++    config_parser = EntryPointParser(interpolation=None)
++    config_parser.read(
++        [str(path) for path in builder.source_files(site_packages_dirs).values() if path.name == "entry_points.txt"]
++    )
+ 
+     return config_parser["console_scripts"][console_script]
+ 
+@@ -57,12 +64,50 @@
+     :param console_script: A console script name.
+     """
+ 
+-    for site_packages in site_packages_dirs:
+-
+-        if (site_packages / "bin" / console_script).exists():
+-            return True
++    if not valid_script_name(console_script):
++        return False
++
++    if os.name != "nt" and Path(console_script).suffix.lower() in (".exe", ".cmd", ".bat"):
++        return False
++
++    if os.name == "nt" and Path(console_script).suffix.lower() == ".sh":
++        return False
++
++    for site_packages in reversed(site_packages_dirs):
++
++        launcher = site_packages / "bin" / console_script
++        if launcher.exists():
++            if not launcher.is_file() or (os.name != "nt" and not os.access(launcher, os.X_OK)):
++                return False
++            with launcher.open("rb") as source:
++                header = source.read(4)
++            if os.name == "nt":
++                suffix = launcher.suffix.lower()
++                return suffix in (".py", ".pyw", ".bat", ".cmd") or (
++                    suffix in (".exe", ".com") and header.startswith(b"MZ")
++                )
++            if header.startswith(b"#!"):
++                return True
++            if sys.platform == "darwin":
++                return header in (b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
++                                  b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca")
++            return header == b"\x7fELF"
+ 
+     return False
++
++
++def valid_script_name(name: str) -> bool:
++    return bool(name) and name not in (".", "..") and "/" not in name and "\\" not in name
++
++
++def validate_entry_point(entry_point: str) -> None:
++    parts = entry_point.split(":")
++    if len(parts) > 2 or not all(
++        component.isidentifier() and not keyword.iskeyword(component)
++        for part in parts
++        for component in part.split(".")
++    ):
++        sys.exit("Invalid entry point: " + entry_point)
+ 
+ 
+ def copytree(src: Path, dst: Path) -> None:
+@@ -87,13 +132,25 @@
+             shutil.copy2(str(path), str(dst / path.relative_to(src)))
+ 
+ 
+-@click.command(context_settings=dict(help_option_names=["-h", "--help", "--halp"], ignore_unknown_options=True))
++class BuildCommand(PipCommand):
++    def invoke(self, ctx):
++        try:
++            return super().invoke(ctx)
++        except (OSError, ValueError, ConfigError, ZipAppError) as error:
++            raise click.ClickException(str(error)) from error
++
++
++@click.command(
++    name="shiv",
++    cls=BuildCommand,
++    context_settings=dict(help_option_names=["-h", "--help", "--halp"], ignore_unknown_options=True),
++)
+ @click.version_option(version=__version__, prog_name="shiv")
+ @click.option(
+     "--entry-point", "-e", default=None, help="The entry point to invoke (takes precedence over --console-script)."
+ )
+ @click.option("--console-script", "-c", default=None, help="The console_script to invoke.")
+-@click.option("--output-file", "-o", help="The path to the output file for shiv to create.")
++@click.option("--output-file", "-o", type=InputPath(dir_okay=False), metavar="TEXT", help="The path to the output file for shiv to create.")
+ @click.option(
+     "--python",
+     "-p",
+@@ -105,7 +162,8 @@
+ @click.option(
+     "--site-packages",
+     help="The path to an existing site-packages directory to copy into the zipapp.",
+-    type=click.Path(exists=True),
++    type=InputPath(exists=True, file_okay=False),
++    metavar="PATH",
+     multiple=True,
+ )
+ @click.option(
+@@ -148,20 +206,24 @@
+ )
+ @click.option(
+     "--preamble",
+-    type=click.Path(exists=True),
++    type=InputPath(exists=True, dir_okay=False),
++    metavar="PATH",
+     help=(
+         "Provide a path to a preamble script that is invoked by shiv's runtime after bootstrapping the environment, "
+         "but before invoking your entry point."
+     ),
+ )
+-@click.option("--root", type=click.Path(), help="Override the 'root' path (default is ~/.shiv).")
++@click.option(
++    "--root", type=InputPath(file_okay=False), metavar="PATH", help="Override the 'root' path (default is ~/.shiv)."
++)
+ @click.argument("pip_args", nargs=-1, type=click.UNPROCESSED)
++@click.help_option("-h", "--help", "--halp")
+ def main(
+     output_file: str,
+     entry_point: Optional[str],
+     console_script: Optional[str],
+     python: Optional[str],
+-    site_packages: Optional[str],
++    site_packages: Tuple[str, ...],
+     build_id: Optional[str],
+     compressed: bool,
+     compile_pyc: bool,
+@@ -186,8 +248,17 @@
+     # check for disallowed pip arguments
+     for disallowed in DISALLOWED_ARGS:
+         for supplied_arg in pip_args:
+-            if supplied_arg in disallowed:
++            option = supplied_arg.split("=", 1)[0]
++            if option in disallowed or any(
++                len(alias) == 2 and supplied_arg.startswith(alias) for alias in disallowed
++            ):
+                 sys.exit(DISALLOWED_PIP_ARGS.format(arg=supplied_arg, reason=DISALLOWED_ARGS[disallowed]))
++
++    if entry_point is not None:
++        validate_entry_point(entry_point)
++        console_script = None
++    elif console_script is not None and not valid_script_name(console_script):
++        sys.exit(NO_ENTRY_POINT.format(entry_point=console_script))
+ 
+     if build_id is not None:
+         click.secho(
+@@ -196,18 +267,9 @@
+             fg="yellow",
+         )
+ 
+-    sources: List[Path] = []
++    sources = [Path(source).expanduser() for source in site_packages]
+ 
+     with TemporaryDirectory() as tmp_site_packages:
+-
+-        # If both site_packages and pip_args are present, we need to copy the site_packages
+-        # dir into our staging area (tmp_site_packages) as pip may modify the contents.
+-        if site_packages:
+-            if pip_args:
+-                for sp in site_packages:
+-                    copytree(Path(sp), Path(tmp_site_packages))
+-            else:
+-                sources.extend([Path(p).expanduser() for p in site_packages])
+ 
+         if pip_args:
+             # Install dependencies into staged site-packages.
+@@ -225,9 +287,9 @@
+             # sha256 hashes, to be checked at runtime:
+             hashes = {}
+ 
+-            for source in sources:
+-                for path in source.rglob("**/*.py"):
+-                    hashes[str(path.relative_to(source))] = hashlib.sha256(path.read_bytes()).hexdigest()
++            for relative_path, path in builder.source_files(sources).items():
++                if path.suffix == ".py":
++                    hashes[relative_path] = hashlib.sha256(path.read_bytes()).hexdigest()
+ 
+         # if entry_point is a console script, get the callable and null out the console_script variable
+         # so that we avoid modifying sys.argv in bootstrap.py
+@@ -242,6 +304,7 @@
+ 
+         # Some projects need reproducible artifacts, so they can use SOURCE_DATE_EPOCH
+         # environment variable to specify the timestamps in the zipapp.
++        reproducible = reproducible or SOURCE_DATE_EPOCH_ENV in os.environ
+         timestamp = int(
+             os.environ.get(SOURCE_DATE_EPOCH_ENV, SOURCE_DATE_EPOCH_DEFAULT if reproducible else time.time())
+         )
+@@ -265,14 +328,17 @@
+             env.hashes = hashes
+ 
+         # create the zip
+-        builder.create_archive(
+-            sources,
+-            target=Path(output_file).expanduser(),
+-            interpreter=python or DEFAULT_SHEBANG,
+-            main="_bootstrap:bootstrap",
+-            env=env,
+-            compressed=compressed,
+-        )
++        try:
++            builder.create_archive(
++                sources,
++                target=Path(output_file).expanduser(),
++                interpreter=python or DEFAULT_SHEBANG,
++                main="_bootstrap:bootstrap",
++                env=env,
++                compressed=compressed,
++            )
++        except OSError as error:
++            raise click.ClickException(f"Could not create --output-file {output_file!r}: {error}") from error
+ 
+ 
+ if __name__ == "__main__":  # pragma: no cover
+diff --git a/src/shiv/info.py b/src/shiv/info.py
+--- a/src/shiv/info.py
++++ b/src/shiv/info.py
+@@ -1,17 +1,30 @@
+ import json
++import os
+ import zipfile
+ 
+ import click
+ 
++from ._click import Command
+ 
+-@click.command(context_settings=dict(help_option_names=["-h", "--help", "--halp"]))
++
++@click.command(name="shiv-info", cls=Command, context_settings=dict(help_option_names=["-h", "--help", "--halp"]))
+ @click.option("--json", "-j", "print_as_json", is_flag=True, help="output as plain json")
+ @click.argument("pyz")
++@click.help_option("-h", "--help", "--halp")
+ def main(print_as_json, pyz):
+     """A simple utility to print debugging information about PYZ files created with ``shiv``"""
+ 
+-    zip_file = zipfile.ZipFile(pyz)
+-    data = json.loads(zip_file.read("environment.json"))
++    with open(pyz, "rb") as source:
++        shebang = source.readline()
++        with zipfile.ZipFile(source) as zip_file:
++            corrupt = zip_file.testzip()
++            if corrupt is not None:
++                raise zipfile.BadZipFile(f"Bad CRC-32 for file {corrupt!r}")
++            data = json.loads(zip_file.read("environment.json"))
++            if not isinstance(data, dict):
++                raise ValueError("Invalid environment metadata: expected a JSON object")
++            data["interpreter"] = os.fsdecode(shebang[2:]).rstrip("\r\n") if shebang.startswith(b"#!") else None
++            data["compressed"] = any(member.compress_type != zipfile.ZIP_STORED for member in zip_file.infolist())
+ 
+     if print_as_json:
+         click.echo(json.dumps(data, indent=4, sort_keys=True))
+diff --git a/src/shiv/pip.py b/src/shiv/pip.py
+--- a/src/shiv/pip.py
++++ b/src/shiv/pip.py
+@@ -65,5 +65,5 @@
+         if output:
+             click.echo(output.rstrip())
+ 
+-    if process.wait() > 0:
++    if process.wait() != 0:
+         sys.exit(PIP_INSTALL_ERROR)
+diff --git a/test/test_click_compat.py b/test/test_click_compat.py
+new file mode 100644
+--- /dev/null
++++ b/test/test_click_compat.py
+@@ -0,0 +1,557 @@
++import hashlib
++import json
++import os
++import stat
++import subprocess
++import sys
++import zipfile
++
++from pathlib import Path
++
++import click
++import pytest
++
++from click.testing import CliRunner
++from shiv import builder, pip
++from shiv.cli import find_entry_point, main
++from shiv.constants import DISALLOWED_ARGS, DISALLOWED_PIP_ARGS
++from shiv.info import main as info_main
++
++
++@pytest.fixture
++def application(tmp_path):
++    source = tmp_path / "packages with spaces"
++    source.mkdir()
++    (source / "app.py").write_text(
++        "import json, sys\n"
++        "def main():\n    print('hello world')\n"
++        "def other():\n    print('other declaration')\n"
++        "def arguments():\n    print(json.dumps(sys.argv[1:]))\n    return 7\n"
++    )
++    return source
++
++
++def build(source, target, *args, env=None):
++    return CliRunner().invoke(main, ["--site-packages", str(source), "-o", str(target), *args], env=env)
++
++
++def execute(target, root, *args, **overrides):
++    environ = {key: value for key, value in os.environ.items()
++               if not key.startswith("SHIV_") and key != "PYTHONUNBUFFERED"}
++    environ.update(SHIV_ROOT=str(root), **overrides)
++    return subprocess.run([sys.executable, str(target), *args], env=environ, capture_output=True, text=True)
++
++
++def declare(source, package, name, entry_point):
++    metadata = source / f"{package}.dist-info"
++    metadata.mkdir(exist_ok=True)
++    (metadata / "entry_points.txt").write_text(f"[console_scripts]\n{name} = {entry_point}\n")
++
++
++def test_click_version_and_public_parameters():
++    assert click.__version__ == "8.1.7"
++    options = {
++        name
++        for parameter in main.get_params(click.Context(main))
++        if isinstance(parameter, click.Option)
++        for name in parameter.opts + parameter.secondary_opts
++    }
++    assert options == {
++        "-h", "--help", "--halp", "--version", "-e", "--entry-point", "-c", "--console-script",
++        "-o", "--output-file", "-p", "--python", "--site-packages", "--build-id", "--compressed",
++        "--uncompressed", "--compile-pyc", "-E", "--extend-pythonpath", "--reproducible", "--no-modify",
++        "--preamble", "--root",
++    }
++    info_options = {
++        name
++        for parameter in info_main.get_params(click.Context(info_main))
++        if isinstance(parameter, click.Option)
++        for name in parameter.opts
++    }
++    assert info_options == {"-h", "--help", "--halp", "-j", "--json"}
++
++
++@pytest.mark.parametrize(
++    "command,usage", [(main, "shiv [OPTIONS] [PIP_ARGS]..."), (info_main, "shiv-info [OPTIONS] PYZ")]
++)
++def test_help_aliases(command, usage):
++    results = [CliRunner().invoke(command, [alias]) for alias in ("-h", "--help", "--halp")]
++    assert all(result.exit_code == 0 for result in results)
++    assert len({result.output for result in results}) == 1
++    assert f"Usage: {usage}" in results[0].output
++    assert "-h, --help, --halp" in results[0].output
++
++
++@pytest.mark.parametrize("eager_option", ["-h", "--help", "--halp", "--version"])
++@pytest.mark.parametrize("position", [0, 4, 8])
++def test_eager_requests_never_build(eager_option, position, tmp_path, monkeypatch):
++    target = tmp_path / "existing.pyz"
++    target.write_bytes(b"unchanged")
++    monkeypatch.setattr(pip, "install", lambda args: pytest.fail("pip must not be invoked"))
++    arguments = ["-o", str(target), "--site-packages", str(tmp_path / "missing"),
++                 "--preamble", str(tmp_path / "missing.py"), "--unknown", "a-package"]
++    arguments.insert(position, eager_option)
++    result = CliRunner().invoke(main, arguments)
++    assert result.exit_code == 0, result.output
++    assert result.output.startswith("shiv, version " if eager_option == "--version" else "Usage: shiv ")
++    assert target.read_bytes() == b"unchanged"
++    assert sorted(path.name for path in tmp_path.iterdir()) == [target.name]
++
++
++@pytest.mark.parametrize("alias", ["-h", "--help", "--halp"])
++def test_info_help_ignores_unrelated_arguments(alias):
++    result = CliRunner().invoke(info_main, ["--unknown", "missing.pyz", alias, "extra"])
++    assert result.exit_code == 0
++    assert result.output.startswith("Usage: shiv-info ")
++
++
++def test_pathlike_build_and_info_arguments(application, tmp_path, monkeypatch):
++    monkeypatch.setattr(pip, "install", lambda args: pytest.fail("pip must not be invoked"))
++    target = tmp_path / "pathlike archive.pyz"
++    preamble = tmp_path / "pathlike preamble.py"
++    preamble.write_text("print('preamble')\n")
++    result = CliRunner().invoke(
++        main,
++        ["--site-packages", application, "--preamble", preamble, "-o", target,
++         "-p", sys.executable, "-e", "app:main"],
++    )
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode == 0, process.stderr
++    assert process.stdout.splitlines() == ["preamble", "hello world"]
++    info = CliRunner().invoke(info_main, ["--json", target])
++    assert info.exit_code == 0, info.output
++    assert json.loads(info.output)["entry_point"] == "app:main"
++    text = CliRunner().invoke(info_main, [target])
++    assert text.exit_code == 0, text.output
++    assert f"pyz file: {target}" in text.output
++
++
++def test_pip_arguments_preserve_spelling_and_order(tmp_path, monkeypatch):
++    forwarded = []
++    monkeypatch.setattr(pip, "install", lambda args: forwarded.extend(args))
++    arguments = ["first", "--index-url", "-value", "--index-url=second", "-rrequirements-with-e.txt",
++                 "--config-settings=key=-value", "-ivalue-with-p", "--unknown", "--unknown", "last", "-vvv"]
++    result = CliRunner().invoke(main, ["-o", str(tmp_path / "app.pyz"), *arguments])
++    assert result.exit_code == 0, result.output
++    assert forwarded[0] == "--target"
++    assert forwarded[2:] == arguments
++
++
++@pytest.mark.parametrize(
++    "argument",
++    ["-t", "-ttarget", "-t=target", "--target=target", "--editable=project",
++     "-dtmp", "--download=tmp", "--user=true", "--prefix=tmp"],
++)
++def test_disallowed_equals_and_attached_forms(argument, tmp_path, monkeypatch):
++    monkeypatch.setattr(pip, "install", lambda args: pytest.fail("pip must not be invoked"))
++    result = CliRunner().invoke(main, ["-o", str(tmp_path / "app.pyz"), argument])
++    reason = next(reason for aliases, reason in DISALLOWED_ARGS.items()
++                  if argument.split("=", 1)[0] in aliases or any(
++                      len(alias) == 2 and argument.startswith(alias) for alias in aliases))
++    assert result.exit_code == 1
++    assert DISALLOWED_PIP_ARGS.format(arg=argument, reason=reason) in result.output
++    assert not (tmp_path / "app.pyz").exists()
++
++
++@pytest.mark.parametrize("option", ["--site-packages", "--preamble"])
++@pytest.mark.parametrize("missing", [False, True])
++def test_input_path_errors(option, missing, application, tmp_path, monkeypatch):
++    monkeypatch.setattr(pip, "install", lambda args: pytest.fail("pip must not be invoked"))
++    path = tmp_path / "missing path" if missing else application
++    if not missing and option == "--site-packages":
++        path = application / "app.py"
++    result = build(application, tmp_path / "app.pyz", option, str(path))
++    assert result.exit_code == (2 if missing else 1)
++    assert option in result.output
++    assert str(path) in result.output
++    assert not (tmp_path / "app.pyz").exists()
++
++
++def test_sources_are_merged_without_installation(application, tmp_path, monkeypatch):
++    other = tmp_path / "other source"
++    other.mkdir()
++    (other / "app.py").write_text("def main():\n    print('later source')\n")
++    (other / "app.py").chmod(0o640)
++    (application / "only_first.py").write_text("value = 1\n")
++    (other / "only_second.py").write_text("value = 2\n")
++    declare(application, "first", "choose", "app:main")
++    declare(other, "second", "choose", "app:other")
++    monkeypatch.setattr(pip, "install", lambda args: pytest.fail("pip must not be invoked"))
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "--site-packages", str(other), "-e", "app:main", "--no-modify")
++    assert result.exit_code == 0, result.output
++    with zipfile.ZipFile(target) as archive:
++        assert len(archive.namelist()) == len(set(archive.namelist()))
++        assert all("\\" not in name for name in archive.namelist())
++        assert archive.read("site-packages/app.py") == (other / "app.py").read_bytes()
++        for name in ("only_first.py", "only_second.py", "first.dist-info/entry_points.txt",
++                     "second.dist-info/entry_points.txt"):
++            assert "site-packages/" + name in archive.namelist()
++        if os.name != "nt":
++            assert stat.S_IMODE(archive.getinfo("site-packages/app.py").external_attr >> 16) == 0o640
++        metadata = json.loads(archive.read("environment.json"))
++        assert metadata["hashes"]["app.py"] == hashlib.sha256((other / "app.py").read_bytes()).hexdigest()
++    assert execute(target, tmp_path / "root").stdout == "later source\n"
++    assert find_entry_point([application, other], "choose") == "app:other"
++    assert find_entry_point([other, application], "choose") == "app:main"
++
++
++def test_pip_and_explicit_sources_are_both_retained(application, tmp_path, monkeypatch):
++    def install(args):
++        staged = Path(args[1])
++        (staged / "installed.py").write_text("value = 1\n")
++        (staged / "app.py").write_text("def main():\n    print('installed source')\n")
++        declare(staged, "installed", "installed", "installed:main")
++    monkeypatch.setattr(pip, "install", install)
++    declare(application, "explicit", "explicit", "app:main")
++    original = (application / "app.py").read_bytes()
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "a-dependency", "-e", "app:main")
++    assert result.exit_code == 0, result.output
++    assert (application / "app.py").read_bytes() == original
++    with zipfile.ZipFile(target) as archive:
++        for name in ("app.py", "installed.py", "explicit.dist-info/entry_points.txt",
++                     "installed.dist-info/entry_points.txt"):
++            assert "site-packages/" + name in archive.namelist()
++        assert len(archive.namelist()) == len(set(archive.namelist()))
++    assert execute(target, tmp_path / "root").stdout == "installed source\n"
++
++
++def test_shadowed_metadata_does_not_leave_stale_declarations(application, tmp_path):
++    other = tmp_path / "other"
++    other.mkdir()
++    declare(application, "same", "old", "app:main")
++    declare(other, "same", "new", "app:other")
++    with pytest.raises(KeyError):
++        find_entry_point([application, other], "old")
++    assert find_entry_point([application, other], "new") == "app:other"
++
++
++@pytest.mark.parametrize("entry", ["", "hello:", "hello::main", "hello:main()", "hello..main", "hello:class", "a/b"])
++@pytest.mark.parametrize("existing", [False, True])
++def test_invalid_user_entry_points_are_build_errors(entry, existing, application, tmp_path):
++    target = tmp_path / "app.pyz"
++    if existing:
++        target.write_bytes(b"previous archive")
++    result = build(application, target, "--entry-point", entry)
++    assert result.exit_code == 1
++    assert "Invalid entry point: " in result.output
++    assert target.read_bytes() == b"previous archive" if existing else not target.exists()
++
++
++def test_explicit_entry_point_wins(application, tmp_path):
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-e", "app:main", "-c", "missing")
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode == 0
++    assert process.stdout == "hello world\n"
++    with zipfile.ZipFile(target) as archive:
++        assert json.loads(archive.read("environment.json"))["script"] is None
++
++
++@pytest.mark.parametrize("name", ["missing", "../app.py", "bin/hello", "bin\\hello", "different-case", "foreign.exe"])
++def test_console_names_are_exact_and_platform_specific(name, application, tmp_path):
++    declare(application, "demo", "Different-Case", "app:main")
++    launcher = application / "bin" / "foreign.exe"
++    launcher.parent.mkdir()
++    launcher.write_bytes(b"MZ unsupported launcher")
++    launcher.chmod(0o755)
++    if os.name == "nt" and name == "foreign.exe":
++        pytest.skip("PE launchers are supported on Windows")
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", name)
++    assert result.exit_code == 1
++    assert name in result.output
++    assert not target.exists()
++
++
++@pytest.mark.parametrize("metadata", [False, True])
++def test_console_launchers_preserve_arguments_streams_and_status(metadata, application, tmp_path):
++    name = "launcher.py"
++    launcher = application / "bin" / name
++    launcher.parent.mkdir()
++    launcher.write_text(
++        f"#!{sys.executable}\nimport app, sys\n"
++        "sys.stderr.write('launcher stderr\\n')\nsys.exit(app.arguments())\n"
++    )
++    launcher.chmod(0o755)
++    if metadata:
++        declare(application, "demo", name, "app:arguments")
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", name)
++    assert result.exit_code == 0, result.output
++    arguments = ["one two", "--flag=value", "--", "-x", "last"]
++    process = execute(target, tmp_path / "root", *arguments)
++    assert process.returncode == 7
++    assert json.loads(process.stdout) == arguments
++    assert process.stderr == ("" if metadata else "launcher stderr\n")
++
++
++def test_unresolvable_metadata_remains_a_runtime_error(application, tmp_path):
++    declare(application, "demo", "broken", "missing_package:main")
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", "broken")
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode != 0
++    assert "ModuleNotFoundError" in process.stderr
++
++
++@pytest.mark.parametrize(
++    "flag,compression", [("--compressed", zipfile.ZIP_DEFLATED), ("--uncompressed", zipfile.ZIP_STORED)]
++)
++def test_reproducibility_and_info(application, tmp_path, flag, compression):
++    targets = [tmp_path / "first.pyz", tmp_path / "second.pyz"]
++    for target in targets:
++        result = build(application, target, "-e", "app:main", flag, "--no-modify", "--reproducible",
++                       env={"SOURCE_DATE_EPOCH": "1234567890"})
++        assert result.exit_code == 0, result.output
++    assert targets[0].read_bytes() == targets[1].read_bytes()
++    with zipfile.ZipFile(targets[0]) as archive:
++        stored = json.loads(archive.read("environment.json"))
++        assert all(member.compress_type == compression for member in archive.infolist())
++    result = CliRunner().invoke(info_main, [str(targets[0]), "-j"])
++    assert result.exit_code == 0
++    inspected = json.loads(result.output)
++    assert inspected.pop("interpreter") == "/usr/bin/env python3"
++    assert inspected.pop("compressed") == (compression == zipfile.ZIP_DEFLATED)
++    assert inspected == stored
++    assert stored["built_at"] == "2009-02-13 23:31:30"
++    assert stored["reproducible"] is True
++    text = CliRunner().invoke(info_main, [str(targets[0])])
++    assert text.exit_code == 0
++    assert f"pyz file: {targets[0]}" in text.output
++    for key in stored:
++        assert f"{key}:" in text.output
++    assert "interpreter: /usr/bin/env python3" in text.output
++    assert f"compressed: {compression == zipfile.ZIP_DEFLATED}" in text.output
++
++
++def test_source_date_epoch_implies_reproducibility(application, tmp_path):
++    target = tmp_path / "app.pyz"
++    result = build(application, target, env={"SOURCE_DATE_EPOCH": "1234567890"})
++    assert result.exit_code == 0, result.output
++    with zipfile.ZipFile(target) as archive:
++        assert json.loads(archive.read("environment.json"))["reproducible"] is True
++
++
++@pytest.mark.parametrize("json_mode", [False, True])
++@pytest.mark.parametrize("kind", ["missing", "plain", "corrupt", "bad-crc", "bad-json"])
++def test_info_invalid_inputs_never_emit_success(kind, json_mode, tmp_path):
++    target = tmp_path / "invalid.pyz"
++    if kind in ("plain", "corrupt"):
++        target.write_bytes(b"not a zip" if kind == "plain" else b"PK\x03\x04broken")
++    elif kind in ("bad-crc", "bad-json"):
++        with zipfile.ZipFile(target, "w") as archive:
++            archive.writestr("environment.json", "invalid JSON" if kind == "bad-json" else "{}")
++            archive.writestr("other", b"content")
++        if kind == "bad-crc":
++            content = target.read_bytes().replace(b"content", b"corrupt", 1)
++            target.write_bytes(content)
++    arguments = [str(target), *(["--json"] if json_mode else [])]
++    result = CliRunner().invoke(info_main, arguments)
++    expected = FileNotFoundError if kind == "missing" else (
++        json.JSONDecodeError if kind == "bad-json" else zipfile.BadZipFile)
++    assert result.exit_code == 1
++    assert isinstance(result.exception, expected)
++    assert result.output == ""
++    process = subprocess.run([sys.executable, "-c", "from shiv.info import main; main()", *arguments],
++                             capture_output=True, text=True)
++    assert process.returncode == 1
++    assert process.stdout == ""
++    assert expected.__name__ in process.stderr
++
++
++def test_long_shebang_does_not_replace_output(application, tmp_path):
++    target = tmp_path / "app.pyz"
++    target.write_bytes(b"previous archive")
++    result = build(application, target, "-p", "/" + "x" * 128)
++    assert result.exit_code == 1
++    assert "Shebang is too long, it would exceed BINPRM_BUF_SIZE! Consider /usr/bin/env" in result.output
++    assert target.read_bytes() == b"previous archive"
++    assert not target.with_name(f".{target.name}.tmp").exists()
++
++
++@pytest.mark.parametrize("existing", [False, True])
++def test_dependency_failure_does_not_replace_output(existing, application, tmp_path, monkeypatch):
++    target = tmp_path / "app.pyz"
++    if existing:
++        target.write_bytes(b"previous archive")
++
++    def fail(args):
++        (Path(args[1]) / "partial.py").write_text("partial")
++        sys.exit("\nPip install failed!\n")
++    monkeypatch.setattr(pip, "install", fail)
++    result = build(application, target, "a-dependency")
++    assert result.exit_code == 1
++    assert "Pip install failed!" in result.output
++    assert target.read_bytes() == b"previous archive" if existing else not target.exists()
++
++
++def test_write_failure_is_clear_and_preserves_archive(application, tmp_path, monkeypatch):
++    target = tmp_path / "app.pyz"
++    assert build(application, target, "-e", "app:main").exit_code == 0
++    original = target.read_bytes()
++
++    def fail(*args, **kwargs):
++        raise OSError("injected write failure")
++    monkeypatch.setattr(builder, "write_to_zipapp", fail)
++    result = build(application, target)
++    assert result.exit_code == 1
++    assert "injected write failure" in result.output
++    assert target.read_bytes() == original
++    assert execute(target, tmp_path / "root").stdout == "hello world\n"
++
++
++@pytest.mark.parametrize("eager_option", ["-h", "--help", "--halp", "--version"])
++def test_eager_requests_also_ignore_incomplete_options(eager_option, tmp_path):
++    result = CliRunner().invoke(main, ["-o", str(tmp_path / "app.pyz"), "--site-packages", eager_option])
++    assert result.exit_code == 0, result.output
++    assert not (tmp_path / "app.pyz").exists()
++
++
++@pytest.mark.parametrize("preamble_kind", ["python", "shell"])
++def test_preambles_run_before_startup_without_installing(preamble_kind, application, tmp_path):
++    if preamble_kind == "shell" and os.name == "nt":
++        pytest.skip("POSIX shell preambles")
++    preamble = tmp_path / ("before.py" if preamble_kind == "python" else "before.sh")
++    preamble.write_text("print('preamble')\n" if preamble_kind == "python" else "#!/bin/sh\necho preamble\n")
++    preamble.chmod(0o755)
++    target = tmp_path / "with preamble.pyz"
++    result = build(application, target, "-e", "app:main", "--preamble", str(preamble))
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode == 0, process.stderr
++    assert process.stdout.splitlines() == ["preamble", "hello world"]
++
++
++def test_no_entry_point_supports_stdin_and_interpreter_arguments(application, tmp_path):
++    target = tmp_path / "interactive.pyz"
++    assert build(application, target).exit_code == 0
++    process = execute(target, tmp_path / "root", "-c", "import app; app.main()")
++    assert process.returncode == 0
++    assert process.stdout == "hello world\n"
++    process = subprocess.run([sys.executable, str(target), "-"], input="import app; app.main()\n",
++                             env={**os.environ, "SHIV_ROOT": str(tmp_path / "root")}, capture_output=True, text=True)
++    assert process.returncode == 0
++    assert process.stdout == "hello world\n"
++
++
++@pytest.mark.parametrize("change", ["modified", "added", "missing"])
++def test_no_modify_preserves_its_python_source_scope(change, application, tmp_path):
++    (application / "unused.py").write_text("unused = True\n")
++    target = tmp_path / "app.pyz"
++    root = tmp_path / "root"
++    assert build(application, target, "-e", "app:main", "--no-modify").exit_code == 0
++    assert execute(target, root).returncode == 0
++    extracted = next(path for path in root.iterdir() if path.is_dir())
++    sources = extracted / "site-packages"
++    if change == "modified":
++        (sources / "unused.py").write_text("unused = False\n")
++    elif change == "added":
++        (sources / "extra.py").write_text("extra = True\n")
++    else:
++        (sources / "unused.py").unlink()
++    process = execute(target, root)
++    if change == "missing":
++        assert process.returncode == 0
++        (sources / "app.py").unlink()
++        for bytecode in sources.rglob("*.pyc"):
++            bytecode.unlink()
++        process = execute(target, root)
++        assert process.returncode != 0
++        assert "ModuleNotFoundError" in process.stderr
++        assert "A Python source file has been modified" not in process.stderr
++    else:
++        assert process.returncode != 0
++        assert "RuntimeError: A Python source file has been modified" in process.stderr
++        assert execute(target, root, SHIV_FORCE_EXTRACT="1").stdout == "hello world\n"
++
++
++def test_root_override_and_build_id_select_the_extraction_identity(application, tmp_path):
++    target = tmp_path / "app.pyz"
++    root = tmp_path / "override" / "nested root"
++    default_root = tmp_path / "build root"
++    result = build(application, target, "-e", "app:main", "--root", str(default_root), "--build-id", "custom-id")
++    assert result.exit_code == 0, result.output
++    assert execute(target, root).stdout == "hello world\n"
++    assert (root / "app.pyz_custom-id/site-packages/app.py").exists()
++    assert not default_root.exists()
++
++
++def test_extended_pythonpath_reaches_children_in_order(application, tmp_path):
++    (application / "child.py").write_text(
++        "import os, subprocess, sys\n"
++        "def main():\n"
++        "    print(os.environ['PYTHONPATH'], flush=True)\n"
++        "    subprocess.run([sys.executable, '-c', 'import app; app.main()'], check=True)\n"
++    )
++    target = tmp_path / "app.pyz"
++    root = tmp_path / "root"
++    assert build(application, target, "-e", "child:main", "-E").exit_code == 0
++    initial = os.pathsep.join([str(tmp_path / "first"), str(tmp_path / "second"), str(tmp_path / "first")])
++    process = execute(target, root, PYTHONPATH=initial)
++    assert process.returncode == 0, process.stderr
++    pythonpath, greeting = process.stdout.splitlines()
++    paths = pythonpath.split(os.pathsep)
++    assert paths[:2] == [str(tmp_path / "first"), str(tmp_path / "second")]
++    assert len(paths) == len(set(paths))
++    assert any(str(root) in path for path in paths)
++    assert greeting == "hello world"
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX launcher formats")
++@pytest.mark.parametrize("kind", ["non-executable", "invalid-format", "foreign-binary"])
++def test_invalid_executable_launchers_fail_during_build(kind, application, tmp_path):
++    launcher = application / "bin" / "launcher"
++    launcher.parent.mkdir()
++    launcher.write_bytes(b"#!/bin/sh\nexit 0\n" if kind == "non-executable" else (
++        b"MZ foreign binary" if kind == "foreign-binary" else b"not an executable format"))
++    launcher.chmod(0o644 if kind == "non-executable" else 0o755)
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", "launcher")
++    assert result.exit_code == 1
++    assert "launcher" in result.output
++    assert not target.exists()
++
++
++def test_metadata_selection_is_independent_of_package_version_sorting(application, tmp_path):
++    other = tmp_path / "other source"
++    other.mkdir()
++    declare(application, "z-last-99.0", "choose", "app:other")
++    declare(other, "a-first-0.1", "choose", "app:main")
++    assert find_entry_point([application, other], "choose") == "app:main"
++    (other / "a-first-0.1.dist-info").rename(other / "z-last-999.0.dist-info")
++    assert find_entry_point([application, other], "choose") == "app:main"
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX shell launcher")
++def test_python_preamble_output_precedes_executable_launcher_output(application, tmp_path):
++    preamble = tmp_path / "before.py"
++    preamble.write_text("print('before launcher')\n")
++    launcher = application / "bin" / "launcher"
++    launcher.parent.mkdir()
++    launcher.write_text("#!/bin/sh\necho launcher\n")
++    launcher.chmod(0o755)
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", "launcher", "--preamble", str(preamble))
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode == 0, process.stderr
++    assert process.stdout.splitlines() == ["before launcher", "launcher"]
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX extensionless Python launcher")
++def test_extensionless_python_launcher_imports_bundled_dependencies(application, tmp_path):
++    launcher = application / "bin" / "launcher"
++    launcher.parent.mkdir()
++    launcher.write_text("#!/usr/bin/env python3\nimport app\napp.main()\n")
++    launcher.chmod(0o755)
++    target = tmp_path / "app.pyz"
++    result = build(application, target, "-c", "launcher")
++    assert result.exit_code == 0, result.output
++    process = execute(target, tmp_path / "root")
++    assert process.returncode == 0, process.stderr
++    assert process.stdout == "hello world\n"
+diff --git a/test/test_pip.py b/test/test_pip.py
+--- a/test/test_pip.py
++++ b/test/test_pip.py
+@@ -1,6 +1,11 @@
+ import os
+ 
+-from shiv.constants import PIP_REQUIRE_VIRTUALENV
++from types import SimpleNamespace
++
++import pytest
++
++from shiv import pip
++from shiv.constants import PIP_INSTALL_ERROR, PIP_REQUIRE_VIRTUALENV
+ from shiv.pip import clean_pip_env
+ 
+ 
+@@ -13,3 +18,13 @@
+         assert PIP_REQUIRE_VIRTUALENV not in os.environ
+ 
+     assert os.environ.get(PIP_REQUIRE_VIRTUALENV) == before_env_var
++
++
++@pytest.mark.parametrize("returncode", [1, 2, -9])
++def test_failed_installations_preserve_the_error_and_output(returncode, monkeypatch, capsys):
++    process = SimpleNamespace(stdout=iter(["dependency installation error\n"]), wait=lambda: returncode)
++    monkeypatch.setattr(pip.subprocess, "Popen", lambda *args, **kwargs: process)
++    with pytest.raises(SystemExit) as error:
++        pip.install(["--target", "unused", "a-package"])
++    assert str(error.value) == PIP_INSTALL_ERROR
++    assert capsys.readouterr().out == "dependency installation error\n"
+diff --git a/test/test_transactions.py b/test/test_transactions.py
+new file mode 100644
+--- /dev/null
++++ b/test/test_transactions.py
+@@ -0,0 +1,351 @@
++import os
++import stat
++import subprocess
++import sys
++import threading
++import time
++import zipfile
++
++from concurrent.futures import ThreadPoolExecutor
++from pathlib import Path
++
++import pytest
++
++from shiv import bootstrap, builder
++from shiv.bootstrap.environment import Environment
++from shiv.bootstrap.filelock import FileLock
++
++
++def contents(path):
++    return {str(file.relative_to(path)): (file.read_bytes(), stat.S_IMODE(file.stat().st_mode))
++            for file in path.rglob("*") if file.is_file()}
++
++
++def dependency_archive(path):
++    with zipfile.ZipFile(path, "w") as archive:
++        archive.writestr("site-packages/nested/module.py", "value = 'new'\n")
++        archive.writestr("site-packages/second.py", "value = 2\n")
++    return zipfile.ZipFile(path)
++
++
++@pytest.mark.parametrize("existing", [False, True])
++@pytest.mark.parametrize("failure", ["extract", "compile", "compile-false", "replace", "interrupt"])
++def test_extraction_rolls_back_and_can_retry(existing, failure, tmp_path, monkeypatch):
++    target = tmp_path / "root" / "environment"
++    if existing:
++        (target / "site-packages").mkdir(parents=True)
++        (target / "site-packages" / "old.py").write_text("value = 'old'\n")
++    original = contents(target)
++    with dependency_archive(tmp_path / "app.pyz") as archive:
++        real_extract = archive.extract
++        real_replace = os.replace
++
++        def fail_extract(*args, **kwargs):
++            real_extract(*args, **kwargs)
++            if failure == "interrupt":
++                raise KeyboardInterrupt("injected interruption")
++            raise OSError("injected extraction error")
++
++        def fail_compile(*args, **kwargs):
++            if failure == "compile-false":
++                return False
++            raise ValueError("injected compilation error")
++
++        def fail_replace(source, destination):
++            if Path(source) == target.with_name(target.name + ".tmp"):
++                raise OSError("injected replacement error")
++            return real_replace(source, destination)
++
++        with monkeypatch.context() as patched:
++            if failure in ("extract", "interrupt"):
++                patched.setattr(archive, "extract", fail_extract)
++            elif failure.startswith("compile"):
++                patched.setattr(bootstrap.compileall, "compile_dir", fail_compile)
++            else:
++                patched.setattr(os, "replace", fail_replace)
++            expected = KeyboardInterrupt if failure == "interrupt" else (
++                ValueError if failure == "compile" else RuntimeError if failure == "compile-false" else OSError)
++            with pytest.raises(expected, match="injected|Failed to compile"):
++                bootstrap.extract_site_packages(archive, target, compile_pyc=failure.startswith("compile"), force=True)
++        assert target.exists() == existing
++        assert contents(target) == original
++        assert not target.with_name(target.name + ".tmp").exists()
++        assert not target.with_name(target.name + ".bak").exists()
++        bootstrap.extract_site_packages(archive, target, force=True)
++    assert (target / "site-packages/nested/module.py").read_text() == "value = 'new'\n"
++    assert not (target / "site-packages/old.py").exists()
++
++
++@pytest.mark.parametrize("state", ["temporary", "backup", "backup-and-incomplete-target"])
++def test_interrupted_extraction_recovers_the_previous_result(state, tmp_path):
++    target = tmp_path / "environment"
++    previous = target if state == "temporary" else target.with_name(target.name + ".bak")
++    (previous / "site-packages").mkdir(parents=True)
++    (previous / "site-packages/old.py").write_text("old = True\n")
++    original = contents(previous)
++    temporary = target.with_name(target.name + ".tmp")
++    temporary.mkdir()
++    (temporary / "partial").touch()
++    if state == "backup-and-incomplete-target":
++        target.mkdir()
++        (target / "incomplete").touch()
++    with dependency_archive(tmp_path / "app.pyz") as archive:
++        bootstrap.extract_site_packages(archive, target)
++        assert contents(target) == original
++        assert not temporary.exists()
++        assert not target.with_name(target.name + ".bak").exists()
++        bootstrap.extract_site_packages(archive, target, force=True)
++    assert not (target / "site-packages/old.py").exists()
++    assert (target / "site-packages/nested/module.py").exists()
++
++
++@pytest.mark.parametrize("compile_pyc", [False, True])
++def test_extraction_bytecode_is_opt_in(compile_pyc, tmp_path):
++    target = tmp_path / "environment"
++    with dependency_archive(tmp_path / "app.pyz") as archive:
++        bootstrap.extract_site_packages(archive, target, compile_pyc=compile_pyc)
++    assert bool(list(target.rglob("*.pyc"))) == compile_pyc
++
++
++def test_syntax_errors_during_compilation_are_transactional(tmp_path):
++    target = tmp_path / "environment"
++    with zipfile.ZipFile(tmp_path / "bad.pyz", "w") as archive:
++        archive.writestr("site-packages/invalid.py", "def invalid syntax!")
++    with zipfile.ZipFile(tmp_path / "bad.pyz") as archive:
++        with pytest.raises(RuntimeError, match="Failed to compile"):
++            bootstrap.extract_site_packages(archive, target, compile_pyc=True)
++    assert not target.exists()
++    assert not target.with_name(target.name + ".tmp").exists()
++
++
++def test_duplicate_zip_entries_use_the_last_contents_and_mode(tmp_path):
++    target = tmp_path / "environment"
++    with zipfile.ZipFile(tmp_path / "duplicate.pyz", "w") as archive:
++        first = zipfile.ZipInfo("site-packages/nested/source.py")
++        first.external_attr = 0o100444 << 16
++        archive.writestr(first, "first")
++        last = zipfile.ZipInfo(first.filename)
++        last.external_attr = 0o100755 << 16
++        with pytest.warns(UserWarning, match="Duplicate name"):
++            archive.writestr(last, "last")
++    with zipfile.ZipFile(tmp_path / "duplicate.pyz") as archive:
++        bootstrap.extract_site_packages(archive, target)
++    extracted = target / last.filename
++    assert extracted.read_text() == "last"
++    if os.name != "nt":
++        assert stat.S_IMODE(extracted.stat().st_mode) == 0o755
++
++
++@pytest.mark.parametrize("existing", [False, True])
++@pytest.mark.parametrize("failure", ["write", "chmod", "replace", "interrupt"])
++def test_archive_replacement_is_atomic(existing, failure, tmp_path, monkeypatch):
++    source = tmp_path / "packages"
++    source.mkdir()
++    (source / "app.py").write_text("def main():\n    print('old archive')\n")
++    target = tmp_path / "app.pyz"
++
++    def create():
++        environment = Environment("2020-01-01 00:00:00", "test", entry_point="app:main", compile_pyc=False)
++        builder.create_archive([source], target, sys.executable, "_bootstrap:bootstrap", environment)
++
++    if existing:
++        create()
++    original = target.read_bytes() if existing else None
++    (source / "app.py").write_text("def main():\n    print('new archive')\n")
++    real_write = builder.write_to_zipapp
++    real_chmod = Path.chmod
++    real_replace = os.replace
++
++    def fail_write(*args, **kwargs):
++        real_write(*args, **kwargs)
++        if failure == "interrupt":
++            raise KeyboardInterrupt("injected interruption")
++        raise OSError("injected write error")
++
++    def fail_chmod(path, mode):
++        if path.name == f".{target.name}.tmp":
++            raise OSError("injected chmod error")
++        real_chmod(path, mode)
++
++    def fail_replace(*args, **kwargs):
++        raise OSError("injected replacement error")
++
++    with monkeypatch.context() as patched:
++        if failure in ("write", "interrupt"):
++            patched.setattr(builder, "write_to_zipapp", fail_write)
++        elif failure == "chmod":
++            patched.setattr(Path, "chmod", fail_chmod)
++        else:
++            patched.setattr(os, "replace", fail_replace)
++        with pytest.raises(KeyboardInterrupt if failure == "interrupt" else OSError, match="injected"):
++            create()
++    assert target.exists() == existing
++    if existing:
++        assert target.read_bytes() == original
++        process = subprocess.run([sys.executable, str(target)], capture_output=True, text=True,
++                                 env={**os.environ, "SHIV_ROOT": str(tmp_path / "cache")})
++        assert process.returncode == 0
++        assert process.stdout == "old archive\n"
++    assert not target.with_name(f".{target.name}.tmp").exists()
++    create()
++    assert zipfile.is_zipfile(target)
++    assert os.replace is real_replace
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
++def test_archive_modes_follow_umask_and_preserve_existing_permissions(tmp_path):
++    target = tmp_path / "app.pyz"
++    old_umask = os.umask(0o027)
++    try:
++        builder.create_archive([], target, sys.executable, "code:interact", Environment("2020-01-01 00:00:00", "test"))
++    finally:
++        os.umask(old_umask)
++    assert stat.S_IMODE(target.stat().st_mode) == 0o751
++    target.chmod(0o640)
++    builder.create_archive([], target, sys.executable, "code:interact", Environment("2020-01-01 00:00:00", "test"))
++    assert stat.S_IMODE(target.stat().st_mode) == 0o751
++
++
++def test_stale_build_temporary_file_is_replaced(tmp_path):
++    target = tmp_path / "app.pyz"
++    temporary = target.with_name(f".{target.name}.tmp")
++    temporary.write_bytes(b"incomplete archive")
++    builder.create_archive([], target, sys.executable, "code:interact", Environment("2020-01-01 00:00:00", "test"))
++    assert zipfile.is_zipfile(target)
++    assert not temporary.exists()
++
++
++@pytest.mark.parametrize("shared", [False, True])
++def test_locks_exclude_threads_even_with_one_instance(shared, tmp_path):
++    lock = FileLock(tmp_path / "lock")
++    other = lock if shared else FileLock(lock.lock_file)
++    entered = threading.Event()
++
++    def protected():
++        with other:
++            entered.set()
++
++    lock.acquire()
++    with ThreadPoolExecutor() as executor:
++        future = executor.submit(protected)
++        try:
++            assert not entered.wait(0.05)
++        finally:
++            lock.release()
++        future.result(timeout=5)
++    assert entered.is_set()
++    assert not lock.is_locked
++
++
++def test_lock_timeout_and_subsequent_acquisition(tmp_path):
++    path = tmp_path / "existing-lock"
++    path.write_text("an existing file is not a held lock")
++    held = FileLock(path).acquire()
++    waiting = FileLock(path, timeout=0.05, poll_interval=0.005)
++    started = time.monotonic()
++    try:
++        with pytest.raises(TimeoutError, match=str(path)):
++            with waiting:
++                pytest.fail("a timed out acquisition must never enter")
++        with pytest.raises(TimeoutError, match=str(path)):
++            held.acquire(timeout=0)
++    finally:
++        held.release()
++    assert time.monotonic() - started >= 0.045
++    assert not waiting.is_locked
++    with pytest.raises(ValueError, match="protected error"):
++        with waiting:
++            raise ValueError("protected error")
++    assert not waiting.is_locked
++    waiting.acquire()
++    assert waiting.is_locked
++    waiting.release()
++    waiting.release()
++    assert path.read_text() == "an existing file is not a held lock"
++
++
++def test_locks_exclude_processes_and_recover_after_timeout(tmp_path):
++    path = tmp_path / "process-lock"
++    program = ("import sys; from shiv.bootstrap.filelock import FileLock; "
++               "lock = FileLock(sys.argv[1], timeout=float(sys.argv[2]), poll_interval=0.005); "
++               "lock.acquire(); print('acquired', flush=True); lock.release()")
++    with FileLock(path):
++        timed_out = subprocess.run([sys.executable, "-c", program, str(path), "0.05"],
++                                   capture_output=True, text=True, timeout=5)
++        assert timed_out.returncode != 0
++        assert timed_out.stdout == ""
++        assert "TimeoutError" in timed_out.stderr
++        assert str(path) in timed_out.stderr
++        waiting = subprocess.Popen([sys.executable, "-c", program, str(path), "5"],
++                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
++        time.sleep(0.05)
++        assert waiting.poll() is None
++    stdout, stderr = waiting.communicate(timeout=5)
++    assert waiting.returncode == 0
++    assert stdout == "acquired\n"
++    assert stderr == ""
++
++
++def test_concurrent_builds_produce_one_complete_runnable_result(tmp_path):
++    target = tmp_path / "concurrent.pyz"
++    processes = []
++    for number in range(4):
++        source = tmp_path / f"source-{number}"
++        source.mkdir()
++        (source / "app.py").write_text(f"def main():\n    print('build {number}')\n")
++        processes.append(subprocess.Popen(
++            [sys.executable, "-m", "shiv", "--site-packages", str(source), "-e", "app:main", "-o", str(target)],
++            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
++        ))
++    for process in processes:
++        stdout, stderr = process.communicate(timeout=15)
++        assert process.returncode == 0, stdout + stderr
++    with zipfile.ZipFile(target) as archive:
++        assert archive.testzip() is None
++        assert len(archive.namelist()) == len(set(archive.namelist()))
++    process = subprocess.run([sys.executable, str(target)], capture_output=True, text=True,
++                             env={**os.environ, "SHIV_ROOT": str(tmp_path / "root")})
++    assert process.returncode == 0
++    assert process.stdout in {f"build {number}\n" for number in range(4)}
++    assert not target.with_name(f".{target.name}.tmp").exists()
++
++
++def test_environment_roundtrip_preserves_optional_values_and_override_precedence(monkeypatch):
++    environment = Environment(
++        "2020-01-01 00:00:00", "test", always_write_cache=True, build_id="explicit-id", compile_pyc=False,
++        entry_point="app:main", extend_pythonpath=True, prepend_pythonpath="", hashes={"app.py": "hash"},
++        no_modify=True, reproducible=True, script=None, preamble="before.py", root="build-root",
++    )
++    restored = Environment.from_json(environment.to_json())
++    assert restored.__dict__ == environment.__dict__
++    monkeypatch.setenv(Environment.ROOT, "environment-root")
++    monkeypatch.setenv(Environment.MODULE, "module:main")
++    monkeypatch.setenv(Environment.ENTRY_POINT, "entry:main")
++    monkeypatch.setenv(Environment.COMPILE_PYC, "true")
++    monkeypatch.setenv(Environment.EXTEND_PYTHONPATH, "false")
++    assert restored.root == "environment-root"
++    assert restored.entry_point == "entry:main"
++    assert restored.compile_pyc is True
++    assert restored.extend_pythonpath is False
++    assert restored.build_id == "explicit-id"
++    assert restored.to_json() == environment.to_json()
++
++
++def test_concurrent_extractions_produce_one_complete_tree(tmp_path):
++    archive_path = tmp_path / "app.pyz"
++    with dependency_archive(archive_path):
++        pass
++    target = tmp_path / "extracted"
++    program = (
++        "import sys, zipfile; from pathlib import Path; from shiv.bootstrap import extract_site_packages; "
++        "archive = zipfile.ZipFile(sys.argv[1]); extract_site_packages(archive, Path(sys.argv[2]), force=True)"
++    )
++    processes = [subprocess.Popen([sys.executable, "-c", program, str(archive_path), str(target)],
++                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(4)]
++    for process in processes:
++        stdout, stderr = process.communicate(timeout=15)
++        assert process.returncode == 0, stdout + stderr
++    assert (target / "site-packages/nested/module.py").read_text() == "value = 'new'\n"
++    assert (target / "site-packages/second.py").read_text() == "value = 2\n"
++    assert not target.with_name(target.name + ".tmp").exists()
++    assert not target.with_name(target.name + ".bak").exists()

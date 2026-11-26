@@ -1,0 +1,310 @@
+{
+  "schema_version": "migration-calibration-summary:v5",
+  "status": "PENDING_RECALIBRATION",
+  "dataset_certification": false,
+  "certified_version": {
+    "p2p_nodes": 49,
+    "f2p_nodes": 11,
+    "observations": 60
+  },
+  "image": {
+    "name": "linked-shiv-verifier:build-audit",
+    "reference_run_origin": "jobs/case_oracle_run_2026_10_26_10_13/case__GQmcTXU (Harbor-built verifier image from tests/Dockerfile)",
+    "direct_control_image": "linked-shiv-verifier:build-audit",
+    "digest_location": "Harbor job directory for the reference run; direct controls use the local image tag listed here"
+  },
+  "command": "docker run --rm --cap-add SYS_ADMIN --cap-add NET_ADMIN --security-opt apparmor=unconfined --security-opt seccomp=unconfined -v <verifier-dir>:/logs/verifier -v <artifacts-dir>:/logs/artifacts <image-id> /tests/test.sh",
+  "runs": {
+    "reference": {
+      "verifier_status": "success",
+      "hardgate": "PASS",
+      "cheating": false,
+      "reward": 1.0,
+      "p2p": "49/49",
+      "f2p": "11/11",
+      "test_progress": {
+        "T": 1.0,
+        "passed": 17,
+        "score_components": {
+          "F2P": {
+            "passed": 11,
+            "score": 1.0,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 6,
+            "score": 1.0,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "ctrf": {
+        "failed": 0,
+        "other": 0,
+        "passed": 60,
+        "pending": 0,
+        "skipped": 0,
+        "start": 0,
+        "stop": 0,
+        "tests": 60
+      },
+      "candidate_patch_error": null,
+      "failed_observations": [],
+      "patch": "reference patch",
+      "artifacts": {
+        "verifier_result": {
+          "path": "authoring/acceptance-runs/reference/verifier/verifier-result.json",
+          "sha256": "sha256:f53e675f3ba2e016ce95075a94b9c546eceedc9a6e9b23a4400a60a1b9217a87"
+        },
+        "reward": {
+          "path": "authoring/acceptance-runs/reference/verifier/reward.json",
+          "sha256": "sha256:a152a02b3ba12d86d0b120b13deed54ddaa86af7889da5fc273a20ef46efa6a8"
+        },
+        "ctrf": {
+          "path": "authoring/acceptance-runs/reference/verifier/ctrf.json",
+          "sha256": "sha256:0dc237c670fc24c9dd654f27087355a9f3206ad99761b5c7228585494b0c81ad"
+        },
+        "collected_model_patch": {
+          "path": "authoring/acceptance-runs/reference/collected-model.patch",
+          "sha256": "sha256:59c2cef48760a1c03f3dc49529ede544796f7161856e2f655980a4ed760792e4"
+        }
+      },
+      "source": "harbor-oracle",
+      "job": "Harbor Oracle (archived reference run; final job id recorded in authoring/BUILD-AUDIT-2026-10-26.md)",
+      "collected_patch_sha256": "sha256:59c2cef48760a1c03f3dc49529ede544796f7161856e2f655980a4ed760792e4"
+    },
+    "valid_non_migrating": {
+      "verifier_status": "failed",
+      "hardgate": "PASS",
+      "cheating": false,
+      "reward": 0.0,
+      "p2p": "49/49",
+      "f2p": "0/11",
+      "test_progress": {
+        "T": 0.0,
+        "passed": 0,
+        "score_components": {
+          "F2P": {
+            "passed": 0,
+            "score": 0.0,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 0,
+            "score": 0.0,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "ctrf": {
+        "failed": 11,
+        "other": 0,
+        "passed": 49,
+        "pending": 0,
+        "skipped": 0,
+        "start": 0,
+        "stop": 0,
+        "tests": 60
+      },
+      "candidate_patch_error": null,
+      "failed_observations": [
+        "F2P-001",
+        "F2P-003",
+        "F2P-004",
+        "F2P-007",
+        "F2P-008",
+        "F2P-009",
+        "F2P-010",
+        "F2P-011",
+        "F2P-012",
+        "F2P-013",
+        "F2P-014"
+      ],
+      "patch": "non-empty documentation-only patch: applies cleanly, changes no behaviour",
+      "artifacts": {
+        "verifier_result": {
+          "path": "authoring/acceptance-runs/no-op/verifier/verifier-result.json",
+          "sha256": "sha256:e045f8e57c27b2a42fb73d6c39f0c2799c23bab201ccf14270f656dcb302cec5"
+        },
+        "reward": {
+          "path": "authoring/acceptance-runs/no-op/verifier/reward.json",
+          "sha256": "sha256:76497740d3f6880f79af06c74c00dbb5492d7367588e1dd401d33defa5f98e0c"
+        },
+        "ctrf": {
+          "path": "authoring/acceptance-runs/no-op/verifier/ctrf.json",
+          "sha256": "sha256:8ceacd0c1ebcde94d3299f2b7e4e5713dd44f2839652b9d8397e4844bb983d9c"
+        }
+      },
+      "test_phase": {
+        "observations": 60,
+        "harness_returncode": 1,
+        "target_execution_returncode": 1,
+        "test_progress": {
+          "T": 0.0,
+          "passed": 0,
+          "score_components": {
+            "F2P": {
+              "passed": 0,
+              "score": 0.0,
+              "total": 11
+            },
+            "migration_scope_complete": {
+              "passed": 0,
+              "score": 0.0,
+              "total": 6
+            }
+          },
+          "total": 17
+        },
+        "note": "hard gate PASS; verifier failed on F2P, so T is computed and is 0"
+      },
+      "patch_sha256": "sha256:f65abac987670721a11fd61c43fc0b16fcab7925080ec14b130e1821bafb6296"
+    },
+    "empty_patch_input_rejected": {
+      "verifier_status": "failed",
+      "hardgate": "FAIL",
+      "cheating": false,
+      "reward": 0.0,
+      "p2p": "0/0",
+      "f2p": "0/0",
+      "test_progress": {
+        "T": 0.0
+      },
+      "ctrf": {
+        "failed": 60,
+        "other": 0,
+        "passed": 0,
+        "pending": 0,
+        "skipped": 0,
+        "start": 0,
+        "stop": 0,
+        "tests": 60
+      },
+      "candidate_patch_error": "model patch is empty",
+      "failed_observations": [],
+      "patch": "empty patch: rejected as input, never reaches the test phase",
+      "artifacts": {
+        "verifier_result": {
+          "path": "authoring/acceptance-runs/empty/verifier/verifier-result.json",
+          "sha256": "sha256:84df9b6ba1b11e997ab8cadba63caeeeb457288d475e836bd55537a4a65ed58b"
+        },
+        "reward": {
+          "path": "authoring/acceptance-runs/empty/verifier/reward.json",
+          "sha256": "sha256:4863d924183b590f8f820a1e2342ca872f30c129604286cc264c1c0abc5c85bb"
+        },
+        "ctrf": {
+          "path": "authoring/acceptance-runs/empty/verifier/ctrf.json",
+          "sha256": "sha256:8a8c74d41d0271650908763a6dd2bb5f257a75042491daa3f9795f2ad71224b5"
+        }
+      },
+      "patch_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "partial_migration": {
+      "verifier_status": "failed",
+      "hardgate": "PASS",
+      "cheating": false,
+      "reward": 0.219697,
+      "p2p": "49/49",
+      "f2p": "3/11",
+      "test_progress": {
+        "T": 0.219697,
+        "passed": 4,
+        "score_components": {
+          "F2P": {
+            "passed": 3,
+            "score": 0.2727273,
+            "total": 11
+          },
+          "migration_scope_complete": {
+            "passed": 1,
+            "score": 0.1666667,
+            "total": 6
+          }
+        },
+        "total": 17
+      },
+      "ctrf": {
+        "failed": 8,
+        "other": 0,
+        "passed": 52,
+        "pending": 0,
+        "skipped": 0,
+        "start": 0,
+        "stop": 0,
+        "tests": 60
+      },
+      "candidate_patch_error": null,
+      "failed_observations": [],
+      "patch": "setup.cfg only: click>=6.7,!=7.0 -> click==8.1.7; no other migration change",
+      "patch_sha256": "sha256:58e77a6c2868aaf56914ca57372ff8c3e230043628d7901dad05d1ce3c5cea25",
+      "artifacts": {
+        "verifier_result": {
+          "path": "authoring/acceptance-runs/partial/verifier/verifier-result.json",
+          "sha256": "sha256:4f9faf7fca74d9a46ff9a990727bf2e2259e928ba56f0ac805ac0271c756ef09"
+        },
+        "reward": {
+          "path": "authoring/acceptance-runs/partial/verifier/reward.json",
+          "sha256": "sha256:dcd9fb8ac3acb6058484cd79d6ffea497ff0de7e81e86bd13b529dc2a0679475"
+        },
+        "ctrf": {
+          "path": "authoring/acceptance-runs/partial/verifier/ctrf.json",
+          "sha256": "sha256:4b57e66e1c44437522636acc82699317df325b8a111fc5b2a3a5060ff48b5ae1"
+        }
+      }
+    }
+  },
+  "source_qualification": {
+    "role": "source",
+    "code_state": "unpatched base at the fixed commit, Click 6.7",
+    "runtime_sha256": "sha256:efb508f985b8e27c0beaabcaef5d23ff85c75ee6f03fcb657ea283ebcf0e5981",
+    "p2p": "49/49",
+    "f2p_failing": "11/11",
+    "artifact": "authoring/acceptance-runs/source/logs/source-result.json",
+    "artifact_sha256": "sha256:478b6dfb8dece51a45b409b2202c32a8802342d1f672ee3262ec2a418f655cfa",
+    "stdout": "authoring/acceptance-runs/source/stdout.txt",
+    "stdout_sha256": "sha256:acf5cb6562850def05c06476936e7ab703416d427596d4715cc1e99d631a0978"
+  },
+  "no_op_distinction": "The empty patch is an input check: grader.py rejects it before the patch is applied, so no test runs and the 0 reward says nothing about whether the verifier detects an incomplete migration. The documentation-only patch is the migration no-op: it applies cleanly, the build and native tests run, the migration suite starts, and the run scores 0 because all 11 F2P nodes report the pre-migration behaviour. The two results are reported separately and are not interchangeable.",
+  "node_count_history": {
+    "current": {
+      "observations": 59,
+      "p2p": 48,
+      "f2p": 11
+    },
+    "explanation": "An earlier acceptance record said the empty-patch run had '47 required nodes all failed'. The raw artifact of that run records 55 tests, so the sentence was a documentation error; it is not corrected by rewriting 47 as another number. The 47 figure matches the observation total of the node set before the P2P-005/014/033 retirement (38 P2P + 9 F2P); the raw record of that run shows 55 because the replacement nodes had already been added (46 P2P + 9 F2P). The split changed again in this round: F2P-002/005/006 asserted facts that already hold on the unpatched base, so they became P2P-054/055/056, and the current set is 60 observations (49 P2P + 11 F2P).",
+    "raw_records": {
+      "earlier_empty_patch_run": {
+        "artifact": "C:/Users/Administrator/AppData/Local/Temp/acceptance-history/empty-patch-2026-10-23-ctrf.json",
+        "node_set": "46 P2P + 9 F2P",
+        "ctrf_tests": 55,
+        "available": false,
+        "note": "historical Windows temporary path; not present in this workspace, values retained as documented history only"
+      },
+      "this_round_empty_patch_run": {
+        "artifact": "authoring/acceptance-runs/empty/verifier/ctrf.json",
+        "node_set": "49 P2P + 11 F2P",
+        "ctrf_tests": 60,
+        "available": true
+      }
+    },
+    "retirement": "P2P-053 was retired in the P2P calibration round because the concurrent-reader interleaving was not reliably observable across implementations; the corresponding instruction sentence was removed. The historical raw records below still describe the 49-P2P set."
+  },
+  "scope_note": "Rewards were measured against the archived build's verifier. Coverage limits are recorded in coverage-audit.json under separate headings and are not interchangeable: (1) a node that ran and passed; (2) a platform that was never executed -- the Linux verifier does not run Windows launchers, which is not an observation about Windows; (3) a sub-requirement a passing node deliberately does not assert. The reference row is the real Harbor Oracle run; no-op/partial/empty are direct-container controls from the archived tests tree. The current tree has retired P2P-053 and has not yet been recalibrated.",
+  "revision": {
+    "date": "2026-10-26",
+    "what_changed": "Replaced missing historical references with artifacts produced by this build; re-ran reference, no-op, partial and empty controls against the current verifier. The no-op result now correctly shows hard gate PASS + verifier failed + T=0 after the hard-gate triage fix.",
+    "evidence": "authoring/acceptance-runs/SHA256SUMS",
+    "not_reconstructed": [
+      "reference-source role run",
+      "historical ACCEPTANCE-2026-10-24.md"
+    ]
+  },
+  "pending_version": {
+    "p2p_nodes": 48,
+    "f2p_nodes": 11,
+    "observations": 59
+  },
+  "post_change_note": "P2P-053 was retired and the concurrent-reader sentence was removed from instruction.md. The certified_version and runs below are the archived 49-P2P/60-observation calibration; they are retained as historical evidence and do not certify the current 48-P2P/59-observation tree. A fresh Oracle, source qualification, no-op/partial controls, and model trials are required before this task is certified again."
+}

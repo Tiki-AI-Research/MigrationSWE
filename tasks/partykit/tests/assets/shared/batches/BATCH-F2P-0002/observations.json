@@ -1,0 +1,435 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "observations": [
+    {
+      "id": "F2P-036",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R036"
+      ],
+      "checks": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "Package manifest Elysia declaration and install",
+      "atomic_claim": "Input: parsed target package.json. Expected: both peerDependencies.elysia and devDependencies.elysia use a semver range satisfied by 1.3.0 (for example ^1.3.0); a fresh install with elysia@1.3.0 resolves one copy and new Elysia().use(partyserverMiddleware()).handle(GET /health) returns the downstream 200 response.",
+      "evidence_refs": [
+        "EVIDENCE-00043"
+      ]
+    },
+    {
+      "id": "F2P-046",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R037"
+      ],
+      "checks": [
+        "R037"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "Package manifest partyserver peer range",
+      "atomic_claim": "Input: parsed target package.json. Expected: peerDependencies.partyserver equals the baseline range '>=0.2.0 <1.0.0'; installing partyserver@0.5.10 with elysia@1.3.0 resolves the package and routePartykitRequest remains importable and callable at runtime.",
+      "evidence_refs": [
+        "EVIDENCE-00044"
+      ]
+    },
+    {
+      "id": "F2P-026",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "checks": [
+        "R029",
+        "R001"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Error propagation without ctx.onError",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Error propagation without ctx.onError. Behavior: If processing throws Error('boom') and ctx.onError is absent, app.handle resolves to Elysia's 500 error response for that thrown error and the downstream route is not called.. Required postcondition: Given a fresh Elysia app with partyserverMiddleware({ options: { onBeforeConnect: () => new Response('Unauthorized', { status: 401 }) } }) registered before any route, app.handle(new Request('http://localhost/parties/chat/room', { headers: { Upgrade: 'websocket' } })) resolves to a 401 Response with body 'Unauthorized' and no downstream route runs; the Hono source instead returns null from handleWebSocketUpgrade and falls through because the Response has no webSocket handle.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00475"
+      ]
+    },
+    {
+      "id": "F2P-031",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R012"
+      ],
+      "checks": [
+        "R019",
+        "R012"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Non-upgrade response passthrough",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Non-upgrade response passthrough. Behavior: When routePartykitRequest returns new Response('hello', { status: 201, headers: { 'x-custom': 'v' } }) for a non-upgrade GET, app.handle returns status 201, header x-custom value v, and body 'hello' unchanged.. Required postcondition: With E = { Bindings: { JWT_SECRET: string } }, onBeforeRequest(req, lobby, c) observes c.env.JWT_SECRET === 's3cr3t' from the current Cloudflare environment and c.request.url === 'http://localhost/parties/chat/room' from the current Elysia PreContext; the Hono source exposed hono Context.c.env instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00387"
+      ]
+    },
+    {
+      "id": "F2P-038",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R012"
+      ],
+      "checks": [
+        "R026",
+        "R012"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::onBeforeRequest replacement and mutation forwarding",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: onBeforeRequest replacement and mutation forwarding. Behavior: If onBeforeRequest returns a Request with header x-replaced: yes, routePartykitRequest receives it; if it mutates the original request headers by adding x-mutated: yes and returns undefined, the forwarded request also contains x-mutated: yes.. Required postcondition: With E = { Bindings: { JWT_SECRET: string } }, onBeforeRequest(req, lobby, c) observes c.env.JWT_SECRET === 's3cr3t' from the current Cloudflare environment and c.request.url === 'http://localhost/parties/chat/room' from the current Elysia PreContext; the Hono source exposed hono Context.c.env instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00414"
+      ]
+    },
+    {
+      "id": "F2P-025",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R006"
+      ],
+      "checks": [
+        "R016",
+        "R006"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /parties/chat/room. Behavior: A GET /parties/chat/room carrying Upgrade: websocket with both hooks configured invokes onBeforeConnect exactly once and onBeforeRequest zero times.. Required postcondition: Given app.use(partyserverMiddleware({ options: { onBeforeRequest: () => { hits.push('hook'); } } })).get('/parties/chat/room', () => { hits.push('route'); return 'routed'; }) with routePartykitRequest returning null, app.handle(GET /parties/chat/room) produces hits ['hook','route'] and body 'routed'; a plugin registered after the route would produce ['route'] only.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00439"
+      ]
+    },
+    {
+      "id": "F2P-027",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "checks": [
+        "R024",
+        "R005"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::onBeforeConnect request replacement",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: onBeforeConnect request replacement. Behavior: If onBeforeConnect returns a Request for /parties/other/room, routePartykitRequest receives that replacement; if it returns undefined or void, routePartykitRequest receives the original /parties/chat/room request.. Required postcondition: Given const plugin = partyserverMiddleware(); new Elysia().use(plugin).get('/health', () => 'ok'), app.handle(new Request('http://localhost/health')) returns 200 'ok' without throwing, proving the returned value is accepted by Elysia.use; Hono's app.use('*', middleware) registration form is not available on Elysia.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00496"
+      ]
+    },
+    {
+      "id": "F2P-028",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R022"
+      ],
+      "checks": [
+        "R018",
+        "R022"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Forwarded request fidelity",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Forwarded request fidelity. Behavior: POST https://example.test/parties/chat/room?x=1 with header x-token: t and body 'payload' reaches routePartykitRequest with the same URL, method POST, header x-token value t, and body text 'payload'.. Required postcondition: When routePartykitRequest returns new Response('not found', { status: 404 }) without a webSocket handle for an Upgrade: websocket request, app.handle returns 404 'not found' and a downstream Elysia route is not called; the Hono source returns null and falls through in this case.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00405"
+      ]
+    },
+    {
+      "id": "F2P-029",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "checks": [
+        "R030",
+        "R005"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Hook error handling",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Hook error handling. Behavior: With ctx.onError configured, onBeforeConnect throwing Error('connect') results in onError receiving that same error followed by the downstream 200 response; without ctx.onError, onBeforeRequest throwing Error('request') results in a 500 response and no downstream call.. Required postcondition: Given const plugin = partyserverMiddleware(); new Elysia().use(plugin).get('/health', () => 'ok'), app.handle(new Request('http://localhost/health')) returns 200 'ok' without throwing, proving the returned value is accepted by Elysia.use; Hono's app.use('*', middleware) registration form is not available on Elysia.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00407"
+      ]
+    },
+    {
+      "id": "F2P-030",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "checks": [
+        "R030",
+        "R025"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Hook error handling",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Hook error handling. Behavior: With ctx.onError configured, onBeforeConnect throwing Error('connect') results in onError receiving that same error followed by the downstream 200 response; without ctx.onError, onBeforeRequest throwing Error('request') results in a 500 response and no downstream call.. Required postcondition: If onBeforeConnect returns new Response('forbidden', { status: 403, headers: { 'x-rejected': 'yes' } }) with no webSocket handle for an upgrade request, app.handle returns status 403, header x-rejected yes, and body 'forbidden', and a downstream Elysia route is not called; the Hono source ignores that response and falls through.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00460"
+      ]
+    },
+    {
+      "id": "F2P-032",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R012"
+      ],
+      "checks": [
+        "R003",
+        "R012"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /parties/chat/room. Behavior: For a non-upgrade GET /parties/chat/room, the adapter invokes routePartykitRequest exactly once with that Request, the current environment bindings, and ctx.options, and returns its Response; routing through an Elysia route or a replacement router fails the recorded-call assertion.. Required postcondition: With E = { Bindings: { JWT_SECRET: string } }, onBeforeRequest(req, lobby, c) observes c.env.JWT_SECRET === 's3cr3t' from the current Cloudflare environment and c.request.url === 'http://localhost/parties/chat/room' from the current Elysia PreContext; the Hono source exposed hono Context.c.env instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00445"
+      ]
+    },
+    {
+      "id": "F2P-033",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R006"
+      ],
+      "checks": [
+        "R018",
+        "R006"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Forwarded request fidelity",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Forwarded request fidelity. Behavior: POST https://example.test/parties/chat/room?x=1 with header x-token: t and body 'payload' reaches routePartykitRequest with the same URL, method POST, header x-token value t, and body text 'payload'.. Required postcondition: Given app.use(partyserverMiddleware({ options: { onBeforeRequest: () => { hits.push('hook'); } } })).get('/parties/chat/room', () => { hits.push('route'); return 'routed'; }) with routePartykitRequest returning null, app.handle(GET /parties/chat/room) produces hits ['hook','route'] and body 'routed'; a plugin registered after the route would produce ['route'] only.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00503"
+      ]
+    },
+    {
+      "id": "F2P-034",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R002"
+      ],
+      "checks": [
+        "R018",
+        "R002"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Forwarded request fidelity",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Forwarded request fidelity. Behavior: POST https://example.test/parties/chat/room?x=1 with header x-token: t and body 'payload' reaches routePartykitRequest with the same URL, method POST, header x-token value t, and body text 'payload'.. Required postcondition: Given new Elysia().use(partyserverMiddleware({ options: { onBeforeRequest: () => { throw new Error('boom'); } }, onError: (error) => seen.push(error.message) })).get('/parties/chat/room', () => 'downstream'), app.handle(new Request('http://localhost/parties/chat/room')) returns 200 'downstream' and seen equals ['boom']; a Hono createMiddleware/c.next adapter cannot be registered or propagate this error flow on an Elysia app.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00430"
+      ]
+    },
+    {
+      "id": "F2P-035",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R012"
+      ],
+      "checks": [
+        "R027",
+        "R012"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::onBeforeRequest response takeover",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: onBeforeRequest response takeover. Behavior: If onBeforeRequest returns new Response('blocked', { status: 401 }) for a non-upgrade request, app.handle returns 401 'blocked' and a downstream Elysia route is not called.. Required postcondition: With E = { Bindings: { JWT_SECRET: string } }, onBeforeRequest(req, lobby, c) observes c.env.JWT_SECRET === 's3cr3t' from the current Cloudflare environment and c.request.url === 'http://localhost/parties/chat/room' from the current Elysia PreContext; the Hono source exposed hono Context.c.env instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00508"
+      ]
+    },
+    {
+      "id": "F2P-037",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R022"
+      ],
+      "checks": [
+        "R014",
+        "R022"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /party/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /party/chat/room. Behavior: With options.prefix 'party', GET /other reaches the downstream Elysia handler and invokes neither onBeforeRequest nor onBeforeConnect nor routePartykitRequest, while GET /party/chat/room is intercepted.. Required postcondition: When routePartykitRequest returns new Response('not found', { status: 404 }) without a webSocket handle for an Upgrade: websocket request, app.handle returns 404 'not found' and a downstream Elysia route is not called; the Hono source returns null and falls through in this case.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00464"
+      ]
+    },
+    {
+      "id": "F2P-039",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "checks": [
+        "R028",
+        "R025"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Error handling with ctx.onError",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Error handling with ctx.onError. Behavior: If processing throws Error('boom') and ctx.onError exists, onError receives Error('boom') once and app.handle then returns the downstream Elysia handler's 200 'next' response.. Required postcondition: If onBeforeConnect returns new Response('forbidden', { status: 403, headers: { 'x-rejected': 'yes' } }) with no webSocket handle for an upgrade request, app.handle returns status 403, header x-rejected yes, and body 'forbidden', and a downstream Elysia route is not called; the Hono source ignores that response and falls through.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00424"
+      ]
+    },
+    {
+      "id": "F2P-040",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "checks": [
+        "R029",
+        "R025"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Error propagation without ctx.onError",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Error propagation without ctx.onError. Behavior: If processing throws Error('boom') and ctx.onError is absent, app.handle resolves to Elysia's 500 error response for that thrown error and the downstream route is not called.. Required postcondition: If onBeforeConnect returns new Response('forbidden', { status: 403, headers: { 'x-rejected': 'yes' } }) with no webSocket handle for an upgrade request, app.handle returns status 403, header x-rejected yes, and body 'forbidden', and a downstream Elysia route is not called; the Hono source ignores that response and falls through.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00485"
+      ]
+    },
+    {
+      "id": "F2P-041",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R002"
+      ],
+      "checks": [
+        "R015",
+        "R002"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /parties/chat/room. Behavior: A non-upgrade GET /parties/chat/room with both hooks configured invokes onBeforeRequest exactly once and onBeforeConnect zero times.. Required postcondition: Given new Elysia().use(partyserverMiddleware({ options: { onBeforeRequest: () => { throw new Error('boom'); } }, onError: (error) => seen.push(error.message) })).get('/parties/chat/room', () => 'downstream'), app.handle(new Request('http://localhost/parties/chat/room')) returns 200 'downstream' and seen equals ['boom']; a Hono createMiddleware/c.next adapter cannot be registered or propagate this error flow on an Elysia app.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00423"
+      ]
+    },
+    {
+      "id": "F2P-042",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "checks": [
+        "R018",
+        "R025"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::Forwarded request fidelity",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: Forwarded request fidelity. Behavior: POST https://example.test/parties/chat/room?x=1 with header x-token: t and body 'payload' reaches routePartykitRequest with the same URL, method POST, header x-token value t, and body text 'payload'.. Required postcondition: If onBeforeConnect returns new Response('forbidden', { status: 403, headers: { 'x-rejected': 'yes' } }) with no webSocket handle for an upgrade request, app.handle returns status 403, header x-rejected yes, and body 'forbidden', and a downstream Elysia route is not called; the Hono source ignores that response and falls through.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00463"
+      ]
+    },
+    {
+      "id": "F2P-043",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "checks": [
+        "R014",
+        "R025"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /other",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /other. Behavior: With options.prefix 'party', GET /other reaches the downstream Elysia handler and invokes neither onBeforeRequest nor onBeforeConnect nor routePartykitRequest, while GET /party/chat/room is intercepted.. Required postcondition: If onBeforeConnect returns new Response('forbidden', { status: 403, headers: { 'x-rejected': 'yes' } }) with no webSocket handle for an upgrade request, app.handle returns status 403, header x-rejected yes, and body 'forbidden', and a downstream Elysia route is not called; the Hono source ignores that response and falls through.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00412"
+      ]
+    },
+    {
+      "id": "F2P-044",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R022"
+      ],
+      "checks": [
+        "R003",
+        "R022"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /parties/chat/room. Behavior: For a non-upgrade GET /parties/chat/room, the adapter invokes routePartykitRequest exactly once with that Request, the current environment bindings, and ctx.options, and returns its Response; routing through an Elysia route or a replacement router fails the recorded-call assertion.. Required postcondition: When routePartykitRequest returns new Response('not found', { status: 404 }) without a webSocket handle for an Upgrade: websocket request, app.handle returns 404 'not found' and a downstream Elysia route is not called; the Hono source returns null and falls through in this case.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00471"
+      ]
+    },
+    {
+      "id": "F2P-045",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "checks": [
+        "R015",
+        "R001"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::GET /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: GET /parties/chat/room. Behavior: A non-upgrade GET /parties/chat/room with both hooks configured invokes onBeforeRequest exactly once and onBeforeConnect zero times.. Required postcondition: Given a fresh Elysia app with partyserverMiddleware({ options: { onBeforeConnect: () => new Response('Unauthorized', { status: 401 }) } }) registered before any route, app.handle(new Request('http://localhost/parties/chat/room', { headers: { Upgrade: 'websocket' } })) resolves to a 401 Response with body 'Unauthorized' and no downstream route runs; the Hono source instead returns null from handleWebSocketUpgrade and falls through because the Response has no webSocket handle.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00394"
+      ]
+    },
+    {
+      "id": "F2P-047",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "checks": [
+        "R017",
+        "R005"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::POST /parties/chat/room",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: POST /parties/chat/room. Behavior: For an incoming POST /parties/chat/room with body 'payload', the recorded routePartykitRequest call receives an equivalent Request plus the current environment bindings object and the configured ctx.options; forwarding undefined bindings or omitted options fails.. Required postcondition: Given const plugin = partyserverMiddleware(); new Elysia().use(plugin).get('/health', () => 'ok'), app.handle(new Request('http://localhost/health')) returns 200 'ok' without throwing, proving the returned value is accepted by Elysia.use; Hono's app.use('*', middleware) registration form is not available on Elysia.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00372"
+      ]
+    },
+    {
+      "id": "F2P-048",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R022"
+      ],
+      "checks": [
+        "R026",
+        "R022"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "packages/hono-party/src/index.ts::onBeforeRequest replacement and mutation forwarding",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/hono-party/src/index.ts; surface: onBeforeRequest replacement and mutation forwarding. Behavior: If onBeforeRequest returns a Request with header x-replaced: yes, routePartykitRequest receives it; if it mutates the original request headers by adding x-mutated: yes and returns undefined, the forwarded request also contains x-mutated: yes.. Required postcondition: When routePartykitRequest returns new Response('not found', { status: 404 }) without a webSocket handle for an Upgrade: websocket request, app.handle returns 404 'not found' and a downstream Elysia route is not called; the Hono source returns null and falls through in this case.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00450"
+      ]
+    }
+  ]
+}

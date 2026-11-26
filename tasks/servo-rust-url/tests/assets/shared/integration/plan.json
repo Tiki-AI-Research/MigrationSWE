@@ -1,0 +1,45 @@
+{
+  "schema_version": "migration-asset-integration-plan:v1",
+  "batch_id": "BATCH-INTEGRATION-0001",
+  "kind": "INTEGRATION",
+  "harness_owner": "BATCH-INTEGRATION-0001",
+  "harness_entries": {
+    "source": "source/runner",
+    "target": "target/runner"
+  },
+  "shared_harness": {
+    "module": "shared/integration/harness.py",
+    "inventory": "shared/integration/observations.json",
+    "reference": "shared/integration/expected.json",
+    "probe": "shared/integration/probe/probe.go"
+  },
+  "requirement_ids": [
+    "R001",
+    "R002",
+    "R019",
+    "R020",
+    "R021"
+  ],
+  "p2p_projection_batch": "BATCH-P2P-0001",
+  "dispatch": {
+    "P2P": "shared/integration/probe/probe.go evaluates the BATCH-P2P-0001 projections",
+    "DIFFERENTIAL": "shared/integration/probe/probe.go evaluates the BATCH-DIFFERENTIAL-0001 normalized projections",
+    "F2P": "shared/integration/probe/probe.go evaluates the target postconditions; source side observes FAIL"
+  },
+  "notes": "Only the INTEGRATION batch creates source/runner and target/runner. Runtime assets are self-contained: the harness reads shared/integration only and never reads dependencies/ or fragments/.",
+  "dependency_manifest": {
+    "path": "dependency-manifest.json",
+    "mount": "/assets/dependencies",
+    "mode": "read-only",
+    "schema_version": "migration-asset-dependency-snapshot:v2",
+    "dependency_batches": [
+      "BATCH-AUTHOR-BATCH-DIFFERENTIAL-0001",
+      "BATCH-AUTHOR-BATCH-F2P-0001",
+      "BATCH-AUTHOR-BATCH-F2P-0002",
+      "BATCH-AUTHOR-BATCH-F2P-0003",
+      "BATCH-AUTHOR-BATCH-P2P-0001",
+      "BATCH-AUTHOR-BATCH-SKELETON-0001"
+    ],
+    "merge": "each batch's files are materialised into the published asset root by the pipeline; the harness consumes the merged shared/source/target/fixtures trees and never reads dependencies/ or fragments/ at runtime"
+  }
+}

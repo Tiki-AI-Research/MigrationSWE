@@ -1,0 +1,42 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "probe": {
+    "package": "mime_test",
+    "inject_into": "mime/",
+    "source_path": "source/batches/BATCH-P2P-0001/p2p_probe_test.go",
+    "target_path": "target/batches/BATCH-P2P-0001/p2p_probe_test.go",
+    "run_command": "go test -run '^TestP2P' ./mime",
+    "native_test_command": "go test ./..."
+  },
+  "normalizer": {
+    "name": "status-wrapper",
+    "description": "Both sides run the identical probe; the normalized projection of every observation is the status wrapper {\"result\":\"PASS\"} when the mapped probe or repository test reports success. Source and target therefore normalize to the same value.",
+    "value": {"result": "PASS"}
+  },
+  "observations": [
+    {"id": "P2P-001", "requirement_ids": ["R023"], "probe": "structural:working-tree-patch-collectable", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-002", "requirement_ids": ["R008"], "probe": "TestP2P002DecryptionFailure", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-003", "requirement_ids": ["R016"], "probe": "TestP2P003AndP2P004ExportedAPI", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-004", "requirement_ids": ["R003"], "probe": "TestP2P003AndP2P004ExportedAPI", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-005", "requirement_ids": ["R021"], "probe": "structural:mime-testdata-unchanged", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-006", "requirement_ids": ["R020"], "probe": "go test ./crypto ./armor ./constants ./profile ./mobile", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-007", "requirement_ids": ["R013"], "probe": "TestP2P007OnBodyInvalidUTF8", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-008", "requirement_ids": ["R009"], "probe": "TestP2P008UnreadableMIME", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-009", "requirement_ids": ["R022"], "probe": "go test -run 'TestMessageVerification' ./mime", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-010", "requirement_ids": ["R010"], "probe": "TestP2P010MultipartSignedVerification", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-011", "requirement_ids": ["R005"], "probe": "TestP2P011CallbackOrder", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-012", "requirement_ids": ["R012"], "probe": "TestP2P012VerifyHandleNilBehavior", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-013", "requirement_ids": ["R004"], "probe": "TestP2P013CallbacksInterface", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-014", "requirement_ids": ["R015"], "probe": "TestP2P014EncryptedHeaders", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-015", "requirement_ids": ["R011"], "probe": "TestP2P015DualSignatureFailure", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-016", "requirement_ids": ["R006"], "probe": "TestP2P016OnVerifiedStatuses", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-017", "requirement_ids": ["R019"], "probe": "structural:changed-file-set", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-018", "requirement_ids": ["R007"], "probe": "TestP2P018TypedSignatureErrors", "side": "both", "projection": "status-wrapper"},
+    {"id": "P2P-019", "requirement_ids": ["R014"], "probe": "TestP2P019Attachments", "side": "both", "projection": "status-wrapper"}
+  ],
+  "execution_evidence": {
+    "target": {"repo": "/input/target", "result": "PASS", "detail": "go test -run '^TestP2P' ./mime and go test ./... both PASS"},
+    "source": {"repo": "/input/source", "result": "PASS", "detail": "go test -run '^TestP2P' ./mime and go test ./... both PASS"}
+  }
+}

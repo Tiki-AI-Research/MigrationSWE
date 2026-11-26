@@ -1,0 +1,1042 @@
+diff --git a/go.mod b/go.mod
+index 894ca14..de6d9a4 100644
+--- a/go.mod
++++ b/go.mod
+@@ -4,13 +4,14 @@ go 1.23.0
+ 
+ require (
+ 	github.com/ProtonMail/go-crypto v1.4.1
+-	github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f
++	github.com/emersion/go-message v0.18.0
+ 	github.com/stretchr/testify v1.10.0
+ )
+ 
+ require (
+ 	github.com/cloudflare/circl v1.6.2 // indirect
+ 	github.com/davecgh/go-spew v1.1.1 // indirect
++	github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594 // indirect
+ 	github.com/kr/pretty v0.2.1 // indirect
+ 	github.com/pmezard/go-difflib v1.0.0 // indirect
+ 	golang.org/x/crypto v0.41.0 // indirect
+diff --git a/go.sum b/go.sum
+index ddfe87c..3a9422d 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,11 +1,13 @@
+ github.com/ProtonMail/go-crypto v1.4.1 h1:9RfcZHqEQUvP8RzecWEUafnZVtEvrBVL9BiF67IQOfM=
+ github.com/ProtonMail/go-crypto v1.4.1/go.mod h1:e1OaTyu5SYVrO9gKOEhTc+5UcXtTUa+P3uLudwcgPqo=
+-github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f h1:tCbYj7/299ekTTXpdwKYF8eBlsYsDVoggDAuAjoK66k=
+-github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f/go.mod h1:gcr0kNtGBqin9zDW9GOHcVntrwnjrK+qdJ06mWYBybw=
+ github.com/cloudflare/circl v1.6.2 h1:hL7VBpHHKzrV5WTfHCaBsgx/HGbBYlgrwvNXEVDYYsQ=
+ github.com/cloudflare/circl v1.6.2/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
+ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
++github.com/emersion/go-message v0.18.0 h1:7LxAXHRpSeoO/Wom3ZApVZYG7c3d17yCScYce8WiXA8=
++github.com/emersion/go-message v0.18.0/go.mod h1:Zi69ACvzaoV/MBnrxfVBPV3xWEuCmC2nEN39oJF4B8A=
++github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594 h1:IbFBtwoTQyw0fIM5xv1HF+Y+3ZijDR839WMulgxCcUY=
++github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594/go.mod h1:aqO8z8wPrjkscevZJFVE1wXJrLpC5LtJG7fqLOsPb2U=
+ github.com/kr/pretty v0.2.1 h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=
+ github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
+ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+@@ -44,7 +46,7 @@ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+ golang.org/x/text v0.3.7/go.mod h1:u+2+/6zg+i71rQMx5EYifcz6MCKuco9NR6JIITiCfzQ=
+ golang.org/x/text v0.7.0/go.mod h1:mrYo+phRRbMaCq/xk9113O4dZlRixOauAjOtrjsXDZ8=
+-golang.org/x/text v0.8.0/go.mod h1:e1OnstbJyHTd6l/uOt8jFFHp6TRDWZR/bV3emEE/zU8=
++golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
+ golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
+ golang.org/x/text v0.28.0/go.mod h1:U8nCwOR8jO/marOQ0QbDiOngZVEBB7MAiitBuMjXiNU=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+diff --git a/mime/mime.go b/mime/mime.go
+index 9411eb7..58d9016 100644
+--- a/mime/mime.go
++++ b/mime/mime.go
+@@ -3,13 +3,27 @@ package mime
+ 
+ import (
+ 	"bytes"
++	"bufio"
++	"encoding/base64"
+ 	"errors"
+ 	"fmt"
+-	"io"
++	"io/ioutil"
++	"log"
++	"mime"
++	"mime/multipart"
++	"mime/quotedprintable"
++	"net/http"
+ 	"net/mail"
+ 	"net/textproto"
+-
+-	gomime "github.com/ProtonMail/go-mime"
++	"regexp"
++	"strings"
++	"unicode/utf16"
++	"unicode/utf8"
++	"golang.org/x/text/encoding"
++	"golang.org/x/text/encoding/htmlindex"
++	"golang.org/x/text/transform"
++	_ "github.com/emersion/go-message"
++	"io"
+ 	"github.com/ProtonMail/gopenpgp/v3/constants"
+ 	"github.com/ProtonMail/gopenpgp/v3/crypto"
+ 	"github.com/ProtonMail/gopenpgp/v3/internal"
+@@ -93,7 +107,7 @@ func separateSigError(err error) (*crypto.SignatureVerificationError, error) {
+ func parseMIME(
+ 	mimeBody []byte,
+ 	verifyHandle crypto.PGPVerify,
+-) (*gomime.BodyCollector, []string, []string, error) {
++) (*BodyCollector, []string, []string, error) {
+ 	mm, err := mail.ReadMessage(bytes.NewReader(mimeBody))
+ 	if err != nil {
+ 		return nil, nil, nil, fmt.Errorf("mime: error in reading message: %w", err)
+@@ -105,14 +119,14 @@ func parseMIME(
+ 		return nil, nil, nil, fmt.Errorf("mime: error in reading message body data: %w", err)
+ 	}
+ 
+-	printAccepter := gomime.NewMIMEPrinter()
+-	bodyCollector := gomime.NewBodyCollector(printAccepter)
+-	attachmentsCollector := gomime.NewAttachmentsCollector(bodyCollector)
+-	mimeVisitor := gomime.NewMimeVisitor(attachmentsCollector)
++	printAccepter := NewMIMEPrinter()
++	bodyCollector := NewBodyCollector(printAccepter)
++	attachmentsCollector := NewAttachmentsCollector(bodyCollector)
++	mimeVisitor := NewMimeVisitor(attachmentsCollector)
+ 
+ 	signatureCollector := newSignatureCollector(mimeVisitor, verifyHandle)
+ 
+-	err = gomime.VisitAll(bytes.NewReader(mmBodyData), h, signatureCollector)
++	err = walkAllParts(bytes.NewReader(mmBodyData), h, signatureCollector)
+ 	if err == nil && verifyHandle != nil {
+ 		err = signatureCollector.verified
+ 	}
+@@ -122,3 +136,872 @@ func parseMIME(
+ 		attachmentsCollector.GetAttHeaders(),
+ 		err
+ }
++
++// ---- vendored legacy MIME implementation (inlined copy) ----
++
++// VisitAcceptor decidest what to do with part which is processed
++// It is used by MIMEVisitor
++type VisitAcceptor interface {
++	Accept(partReader io.Reader, header textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error)
++}
++
++func walkAllParts(part io.Reader, h textproto.MIMEHeader, accepter VisitAcceptor) (err error) {
++	mediaType, _, err := getContentType(h)
++	if err != nil {
++		return
++	}
++	return accepter.Accept(part, h, mediaType == "text/plain", true, true)
++}
++
++func IsLeaf(h textproto.MIMEHeader) bool {
++	return !strings.HasPrefix(h.Get("Content-Type"), "multipart/")
++}
++
++// MIMEVisitor is main object to parse (visit) and process (accept) all parts of MIME message
++type MimeVisitor struct {
++	target VisitAcceptor
++}
++
++// Accept reads part recursively if needed
++// hasPlainSibling is there when acceptor want to check alternatives
++func (mv *MimeVisitor) Accept(part io.Reader, h textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error) {
++	if !isFirst {
++		return
++	}
++
++	parentMediaType, params, err := getContentType(h)
++	if err != nil {
++		return
++	}
++
++	if err = mv.target.Accept(part, h, hasPlainSibling, true, false); err != nil {
++		return
++	}
++
++	if !IsLeaf(h) {
++		var multiparts []io.Reader
++		var multipartHeaders []textproto.MIMEHeader
++		if multiparts, multipartHeaders, err = GetMultipartParts(part, params); err != nil {
++			return
++		}
++		hasPlainChild := false
++		for _, header := range multipartHeaders {
++			mediaType, _, _ := getContentType(header)
++			if mediaType == "text/plain" {
++				hasPlainChild = true
++			}
++		}
++		if hasPlainSibling && parentMediaType == "multipart/related" {
++			hasPlainChild = true
++		}
++
++		for i, p := range multiparts {
++			if err = mv.Accept(p, multipartHeaders[i], hasPlainChild, true, true); err != nil {
++				return
++			}
++			if err = mv.target.Accept(part, h, hasPlainSibling, false, i == (len(multiparts)-1)); err != nil {
++				return
++			}
++		}
++	}
++	return
++}
++
++// NewMIMEVisitor initialiazed with acceptor
++func NewMimeVisitor(targetAccepter VisitAcceptor) *MimeVisitor {
++	return &MimeVisitor{targetAccepter}
++}
++
++func rawPartBounds(rawdata io.Reader, boundary string) (io.Reader, io.Reader) {
++	b, _ := ioutil.ReadAll(rawdata)
++	tee := bytes.NewReader(b)
++
++	reader := bufio.NewReader(bytes.NewReader(b))
++	byteBoundary := []byte(boundary)
++	bodyBuffer := &bytes.Buffer{}
++	for {
++		line, _, err := reader.ReadLine()
++		if err != nil {
++			return tee, bytes.NewReader(bodyBuffer.Bytes())
++		}
++		if bytes.HasPrefix(line, byteBoundary) {
++			break
++		}
++	}
++	lineEndingLength := 0
++	for {
++		line, isPrefix, err := reader.ReadLine()
++		if err != nil {
++			return tee, bytes.NewReader(bodyBuffer.Bytes())
++		}
++		if bytes.HasPrefix(line, byteBoundary) {
++			break
++		}
++		lineEndingLength = 0
++		bodyBuffer.Write(line)
++		if !isPrefix {
++			reader.UnreadByte()
++			reader.UnreadByte()
++			token, _ := reader.ReadByte()
++			if token == '\r' {
++				lineEndingLength++
++				bodyBuffer.WriteByte(token)
++			}
++			lineEndingLength++
++			bodyBuffer.WriteByte(token)
++		}
++	}
++	ioutil.ReadAll(reader)
++	data := bodyBuffer.Bytes()
++	return tee, bytes.NewReader(data[0 : len(data)-lineEndingLength])
++}
++
++func GetAllChildParts(part io.Reader, h textproto.MIMEHeader) (parts []io.Reader, headers []textproto.MIMEHeader, err error) {
++	mediaType, params, err := getContentType(h)
++	if err != nil {
++		return
++	}
++	if strings.HasPrefix(mediaType, "multipart/") {
++		var multiparts []io.Reader
++		var multipartHeaders []textproto.MIMEHeader
++		if multiparts, multipartHeaders, err = GetMultipartParts(part, params); err != nil {
++			return
++		}
++		if strings.Contains(mediaType, "alternative") {
++			var chosenPart io.Reader
++			var chosenHeader textproto.MIMEHeader
++			if chosenPart, chosenHeader, err = pickAlternativePart(multiparts, multipartHeaders); err != nil {
++				return
++			}
++			var childParts []io.Reader
++			var childHeaders []textproto.MIMEHeader
++			if childParts, childHeaders, err = GetAllChildParts(chosenPart, chosenHeader); err != nil {
++				return
++			}
++			parts = append(parts, childParts...)
++			headers = append(headers, childHeaders...)
++		} else {
++			for i, p := range multiparts {
++				var childParts []io.Reader
++				var childHeaders []textproto.MIMEHeader
++				if childParts, childHeaders, err = GetAllChildParts(p, multipartHeaders[i]); err != nil {
++					return
++				}
++				parts = append(parts, childParts...)
++				headers = append(headers, childHeaders...)
++			}
++		}
++	} else {
++		parts = append(parts, part)
++		headers = append(headers, h)
++	}
++	return
++}
++
++func GetMultipartParts(r io.Reader, params map[string]string) (parts []io.Reader, headers []textproto.MIMEHeader, err error) {
++	mr := multipart.NewReader(r, params["boundary"])
++	parts = []io.Reader{}
++	headers = []textproto.MIMEHeader{}
++	var p *multipart.Part
++	for {
++		p, err = mr.NextRawPart()
++		if err == io.EOF {
++			err = nil
++			break
++		}
++		if err != nil {
++			return
++		}
++		b, _ := ioutil.ReadAll(p)
++		buffer := bytes.NewBuffer(b)
++
++		parts = append(parts, buffer)
++		headers = append(headers, p.Header)
++	}
++	return
++}
++
++func pickAlternativePart(parts []io.Reader, headers []textproto.MIMEHeader) (part io.Reader, h textproto.MIMEHeader, err error) {
++
++	for i, h := range headers {
++		mediaType, _, err := getContentType(h)
++		if err != nil {
++			continue
++		}
++		if strings.HasPrefix(mediaType, "multipart/") {
++			return parts[i], headers[i], nil
++		}
++	}
++	for i, h := range headers {
++		mediaType, _, err := getContentType(h)
++		if err != nil {
++			continue
++		}
++		if mediaType == "text/html" {
++			return parts[i], headers[i], nil
++		}
++	}
++	for i, h := range headers {
++		mediaType, _, err := getContentType(h)
++		if err != nil {
++			continue
++		}
++		if mediaType == "text/plain" {
++			return parts[i], headers[i], nil
++		}
++	}
++	//if we get all the way here, part will be nil
++	return
++}
++
++// Parse address comment as defined in http://tools.wordtothewise.com/rfc/822
++// FIXME: Does not work for address groups
++// NOTE: This should be removed for go>1.10 (please check)
++func parseAddressComment(raw string) string {
++	parsed := []string{}
++	for _, item := range regexp.MustCompile("[,;]").Split(raw, -1) {
++		re := regexp.MustCompile("[(][^)]*[)]")
++		comments := strings.Join(re.FindAllString(item, -1), " ")
++		comments = strings.Replace(comments, "(", "", -1)
++		comments = strings.Replace(comments, ")", "", -1)
++		withoutComments := re.ReplaceAllString(item, "")
++		addr, err := mail.ParseAddress(withoutComments)
++		if err != nil {
++			continue
++		}
++		if addr.Name == "" {
++			addr.Name = comments
++		}
++		parsed = append(parsed, addr.String())
++	}
++	return strings.Join(parsed, ", ")
++}
++
++func checkHeaders(headers []textproto.MIMEHeader) bool {
++	foundAttachment := false
++
++	for i := 0; i < len(headers); i++ {
++		h := headers[i]
++
++		mediaType, _, _ := getContentType(h)
++
++		if !strings.HasPrefix(mediaType, "text/") {
++			foundAttachment = true
++		} else if foundAttachment {
++			//this means that there is a text part after the first attachment, so we will have to convert the body from plain->HTML
++			return true
++		}
++	}
++	return false
++}
++
++func decodePart(partReader io.Reader, header textproto.MIMEHeader) (decodedPart io.Reader) {
++	decodedPart = DecodeContentEncoding(partReader, header.Get("Content-Transfer-Encoding"))
++	if decodedPart == nil {
++		log.Printf("Unsupported Content-Transfer-Encoding '%v'", header.Get("Content-Transfer-Encoding"))
++		decodedPart = partReader
++	}
++	return
++}
++
++// assume 'text/plain' if missing
++func getContentType(header textproto.MIMEHeader) (mediatype string, params map[string]string, err error) {
++	contentType := header.Get("Content-Type")
++	if contentType == "" {
++		contentType = "text/plain"
++	}
++
++	return mime.ParseMediaType(contentType)
++}
++
++// ===================== MIME Printer ===================================
++// Simply print resulting MIME tree into text form
++// TODO to file mime_printer.go
++type stack []string
++
++func (s stack) Push(v string) stack {
++	return append(s, v)
++}
++func (s stack) Pop() (stack, string) {
++	l := len(s)
++	return s[:l-1], s[l-1]
++}
++func (s stack) Peek() string {
++	return s[len(s)-1]
++}
++
++type MIMEPrinter struct {
++	result        *bytes.Buffer
++	boundaryStack stack
++}
++
++func NewMIMEPrinter() (pd *MIMEPrinter) {
++	return &MIMEPrinter{
++		result:        bytes.NewBuffer([]byte("")),
++		boundaryStack: stack{},
++	}
++}
++
++func (pd *MIMEPrinter) Accept(partReader io.Reader, header textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error) {
++	if isFirst {
++		http.Header(header).Write(pd.result)
++		pd.result.Write([]byte("\n"))
++		if IsLeaf(header) {
++			pd.result.ReadFrom(partReader)
++		} else {
++			_, params, _ := getContentType(header)
++			boundary := params["boundary"]
++			pd.boundaryStack = pd.boundaryStack.Push(boundary)
++			pd.result.Write([]byte("\nThis is a multi-part message in MIME format.\n--" + boundary + "\n"))
++		}
++	} else {
++		if !isLast {
++			pd.result.Write([]byte("\n--" + pd.boundaryStack.Peek() + "\n"))
++		} else {
++			var boundary string
++			pd.boundaryStack, boundary = pd.boundaryStack.Pop()
++			pd.result.Write([]byte("\n--" + boundary + "--\n.\n"))
++		}
++	}
++	return nil
++}
++
++func (pd *MIMEPrinter) String() string {
++	return pd.result.String()
++}
++
++// ======================== PlainText Collector  =========================
++// Collect contents of all non-attachment text/plain parts and return
++// it is a string
++// TODO to file collector_plaintext.go
++
++type PlainTextCollector struct {
++	target            VisitAcceptor
++	plainTextContents *bytes.Buffer
++}
++
++func NewPlainTextCollector(targetAccepter VisitAcceptor) *PlainTextCollector {
++	return &PlainTextCollector{
++		target:            targetAccepter,
++		plainTextContents: bytes.NewBuffer([]byte("")),
++	}
++}
++
++func (ptc *PlainTextCollector) Accept(partReader io.Reader, header textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error) {
++	if isFirst {
++		if IsLeaf(header) {
++			mediaType, params, _ := getContentType(header)
++			disp, _, _ := mime.ParseMediaType(header.Get("Content-Disposition"))
++			if mediaType == "text/plain" && disp != "attachment" {
++				partData, _ := ioutil.ReadAll(partReader)
++				decodedPart := decodePart(bytes.NewReader(partData), header)
++
++				if buffer, err := ioutil.ReadAll(decodedPart); err == nil {
++					buffer, err = DecodeCharset(buffer, mediaType, params)
++					if err != nil {
++						log.Println("Decode charset error:", err)
++						err = nil // Don't fail parsing on decoding errors, use original
++					}
++					ptc.plainTextContents.Write(buffer)
++				}
++
++				err = ptc.target.Accept(bytes.NewReader(partData), header, hasPlainSibling, isFirst, isLast)
++				return
++			}
++		}
++	}
++	err = ptc.target.Accept(partReader, header, hasPlainSibling, isFirst, isLast)
++	return
++}
++
++func (ptc PlainTextCollector) GetPlainText() string {
++	return ptc.plainTextContents.String()
++}
++
++// ======================== Body Collector  ==============
++// Collect contents of all non-attachment parts and return
++// it as a string
++// TODO to file collector_body.go
++
++type BodyCollector struct {
++	target            VisitAcceptor
++	htmlBodyBuffer    *bytes.Buffer
++	plainBodyBuffer   *bytes.Buffer
++	htmlHeaderBuffer  *bytes.Buffer
++	plainHeaderBuffer *bytes.Buffer
++	hasHtml           bool
++}
++
++func NewBodyCollector(targetAccepter VisitAcceptor) *BodyCollector {
++	return &BodyCollector{
++		target:            targetAccepter,
++		htmlBodyBuffer:    bytes.NewBuffer([]byte("")),
++		plainBodyBuffer:   bytes.NewBuffer([]byte("")),
++		htmlHeaderBuffer:  bytes.NewBuffer([]byte("")),
++		plainHeaderBuffer: bytes.NewBuffer([]byte("")),
++	}
++}
++
++func (bc *BodyCollector) Accept(partReader io.Reader, header textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error) {
++	// TODO: collect html and plaintext - if there's html with plain sibling don't include plain/text
++	if isFirst {
++		if IsLeaf(header) {
++			mediaType, params, _ := getContentType(header)
++			disp, _, _ := mime.ParseMediaType(header.Get("Content-Disposition"))
++			if disp != "attachment" {
++				partData, _ := ioutil.ReadAll(partReader)
++				decodedPart := decodePart(bytes.NewReader(partData), header)
++				if buffer, err := ioutil.ReadAll(decodedPart); err == nil {
++					buffer, err = DecodeCharset(buffer, mediaType, params)
++					if err != nil {
++						log.Println("Decode charset error:", err)
++						err = nil // Don't fail parsing on decoding errors, use original
++					}
++					if mediaType == "text/html" {
++						bc.hasHtml = true
++						http.Header(header).Write(bc.htmlHeaderBuffer)
++						bc.htmlBodyBuffer.Write(buffer)
++					} else if mediaType == "text/plain" {
++						http.Header(header).Write(bc.plainHeaderBuffer)
++						bc.plainBodyBuffer.Write(buffer)
++					}
++				}
++
++				err = bc.target.Accept(bytes.NewReader(partData), header, hasPlainSibling, isFirst, isLast)
++				return
++			}
++		}
++	}
++	err = bc.target.Accept(partReader, header, hasPlainSibling, isFirst, isLast)
++	return
++}
++
++func (bc *BodyCollector) GetBody() (string, string) {
++	if bc.hasHtml {
++		return bc.htmlBodyBuffer.String(), "text/html"
++	} else {
++		return bc.plainBodyBuffer.String(), "text/plain"
++	}
++}
++
++func (bc *BodyCollector) GetHeaders() string {
++	if bc.hasHtml {
++		return bc.htmlHeaderBuffer.String()
++	} else {
++		return bc.plainHeaderBuffer.String()
++	}
++}
++
++// ======================== Attachments Collector  ==============
++// Collect contents of all attachment parts and return
++// them as a string
++// TODO to file collector_attachment.go
++
++type AttachmentsCollector struct {
++	target     VisitAcceptor
++	attBuffers []string
++	attHeaders []string
++}
++
++func NewAttachmentsCollector(targetAccepter VisitAcceptor) *AttachmentsCollector {
++	return &AttachmentsCollector{
++		target:     targetAccepter,
++		attBuffers: []string{},
++		attHeaders: []string{},
++	}
++}
++
++func (ac *AttachmentsCollector) Accept(partReader io.Reader, header textproto.MIMEHeader, hasPlainSibling bool, isFirst, isLast bool) (err error) {
++	if isFirst {
++		if IsLeaf(header) {
++			mediaType, params, _ := getContentType(header)
++			disp, _, _ := mime.ParseMediaType(header.Get("Content-Disposition"))
++			if (mediaType != "text/html" && mediaType != "text/plain") || disp == "attachment" {
++				partData, _ := ioutil.ReadAll(partReader)
++				decodedPart := decodePart(bytes.NewReader(partData), header)
++
++				if buffer, err := ioutil.ReadAll(decodedPart); err == nil {
++					buffer, err = DecodeCharset(buffer, mediaType, params)
++					if err != nil {
++						log.Println("Decode charset error:", err)
++						err = nil // Don't fail parsing on decoding errors, use original
++					}
++					headerBuf := new(bytes.Buffer)
++					http.Header(header).Write(headerBuf)
++					ac.attHeaders = append(ac.attHeaders, headerBuf.String())
++					ac.attBuffers = append(ac.attBuffers, string(buffer))
++				}
++
++				err = ac.target.Accept(bytes.NewReader(partData), header, hasPlainSibling, isFirst, isLast)
++				return
++			}
++		}
++	}
++	err = ac.target.Accept(partReader, header, hasPlainSibling, isFirst, isLast)
++	return
++}
++
++func (ac AttachmentsCollector) GetAttachments() []string {
++	return ac.attBuffers
++}
++
++func (ac AttachmentsCollector) GetAttHeaders() []string {
++	return ac.attHeaders
++}
++
++var wordDec = &mime.WordDecoder{
++	CharsetReader: func(charset string, input io.Reader) (io.Reader, error) {
++		dec, err := selectDecoder(charset)
++		if err != nil {
++			return nil, err
++		}
++		if dec == nil { // utf-8
++			return input, nil
++		}
++		return dec.Reader(input), nil
++	},
++}
++
++// expected trimmed low case
++func getEncoding(charset string) (enc encoding.Encoding, err error) {
++	preparsed := strings.Trim(strings.ToLower(charset), " \t\r\n")
++
++	// koi
++	re := regexp.MustCompile("(cs)?koi[-_ ]?8?[-_ ]?(r|ru|u|uk)?$")
++	matches := re.FindAllStringSubmatch(preparsed, -1)
++	if len(matches) == 1 && len(matches[0]) == 3 {
++		preparsed = "koi8-"
++		switch matches[0][2] {
++		case "u", "uk":
++			preparsed += "u"
++		default:
++			preparsed += "r"
++		}
++	}
++
++	// windows-XXXX
++	re = regexp.MustCompile("(cp|(cs)?win(dows)?)[-_ ]?([0-9]{3,4})$")
++	matches = re.FindAllStringSubmatch(preparsed, -1)
++	if len(matches) == 1 && len(matches[0]) == 5 {
++		switch matches[0][4] {
++		case "874", "1250", "1251", "1252", "1253", "1254", "1255", "1256", "1257", "1258":
++			preparsed = "windows-" + matches[0][4]
++		}
++	}
++
++	// iso
++	re = regexp.MustCompile("iso[-_ ]?([0-9]{4})[-_ ]?([0-9]+|jp)?[-_ ]?(i|e)?")
++	matches = re.FindAllStringSubmatch(preparsed, -1)
++	if len(matches) == 1 && len(matches[0]) == 4 {
++		if matches[0][1] == "2022" && matches[0][2] == "jp" {
++			preparsed = "iso-2022-jp"
++		}
++		if matches[0][1] == "8859" {
++			switch matches[0][2] {
++			case "1", "2", "3", "4", "5", "7", "8", "9", "10", "11", "13", "14", "15", "16":
++				preparsed = "iso-8859-" + matches[0][2]
++				if matches[0][3] == "i" {
++					preparsed += "-" + matches[0][3]
++				}
++			case "":
++				preparsed = "iso-8859-1"
++			}
++		}
++	}
++
++	// latin is tricky
++	re = regexp.MustCompile("^(cs|csiso)?l(atin)?[-_ ]?([0-9]{1,2})$")
++	matches = re.FindAllStringSubmatch(preparsed, -1)
++	if len(matches) == 1 && len(matches[0]) == 4 {
++		switch matches[0][3] {
++		case "1":
++			preparsed = "windows-1252"
++		case "2", "3", "4", "5":
++			preparsed = "iso-8859-" + matches[0][3]
++		case "6":
++			preparsed = "iso-8859-10"
++		case "8":
++			preparsed = "iso-8859-14"
++		case "9":
++			preparsed = "iso-8859-15"
++		case "10":
++			preparsed = "iso-8859-16"
++		}
++	}
++
++	// missing substitutions
++	switch preparsed {
++	case "csutf8", "iso-utf-8", "utf8mb4":
++		preparsed = "utf-8"
++
++	case "eucjp", "ibm-eucjp":
++		preparsed = "euc-jp"
++	case "euckr", "ibm-euckr", "cp949":
++		preparsed = "euc-kr"
++	case "euccn", "ibm-euccn":
++		preparsed = "gbk"
++	case "zht16mswin950", "cp950":
++		preparsed = "big5"
++
++	case "csascii",
++		"ansi_x3.4-1968",
++		"ansi_x3.4-1986",
++		"ansi_x3.110-1983",
++		"cp850",
++		"cp858",
++		"us",
++		"iso646",
++		"iso-646",
++		"iso646-us",
++		"iso_646.irv:1991",
++		"cp367",
++		"ibm367",
++		"ibm-367",
++		"iso-ir-6":
++		preparsed = "ascii"
++
++	case "ibm852":
++		preparsed = "iso-8859-2"
++	case "iso-ir-199", "iso-celtic":
++		preparsed = "iso-8859-14"
++	case "iso-ir-226":
++		preparsed = "iso-8859-16"
++
++	case "macroman":
++		preparsed = "macintosh"
++	}
++
++	enc, _ = htmlindex.Get(preparsed)
++	if enc == nil {
++		err = fmt.Errorf("can not get encodig for '%s' (or '%s')", charset, preparsed)
++	}
++	return
++}
++
++func selectDecoder(charset string) (decoder *encoding.Decoder, err error) {
++	var enc encoding.Encoding
++	lcharset := strings.Trim(strings.ToLower(charset), " \t\r\n")
++	switch lcharset {
++	case "utf7", "utf-7", "unicode-1-1-utf-7":
++		return NewUtf7Decoder(), nil
++	default:
++		enc, err = getEncoding(lcharset)
++	}
++	if err == nil {
++		decoder = enc.NewDecoder()
++	}
++	return
++}
++
++// DecodeHeader if needed. Returns error if raw contains non-utf8 characters
++func DecodeHeader(raw string) (decoded string, err error) {
++	if decoded, err = wordDec.DecodeHeader(raw); err != nil {
++		decoded = raw
++	}
++	if !utf8.ValidString(decoded) {
++		err = fmt.Errorf("header contains non utf8 chars: %v", err)
++	}
++	return
++}
++
++// EncodeHeader using quoted printable and utf8
++func EncodeHeader(s string) string {
++	return mime.QEncoding.Encode("utf-8", s)
++}
++
++// DecodeCharset decodes the orginal using content type parameters. When
++// charset missing it checks the content is utf8-valid.
++func DecodeCharset(original []byte, mediaType string, contentTypeParams map[string]string) ([]byte, error) {
++	var decoder *encoding.Decoder
++	var err error
++	if charset, ok := contentTypeParams["charset"]; ok {
++		decoder, err = selectDecoder(charset)
++	} else {
++		if !strings.HasPrefix(mediaType, "text/") || utf8.Valid(original) {
++			return original, nil
++		}
++		err = fmt.Errorf("non-utf8 content without charset specification")
++	}
++	if err != nil {
++		return original, err
++	}
++	utf8, err := decoder.Bytes(original)
++	if err != nil {
++		return original, err
++	}
++
++	return utf8, nil
++}
++
++// DecodeContentEncoding wraps the reader with decoder based on content encoding
++func DecodeContentEncoding(r io.Reader, contentEncoding string) (d io.Reader) {
++	switch strings.ToLower(contentEncoding) {
++	case "quoted-printable":
++		d = quotedprintable.NewReader(r)
++	case "base64":
++		d = base64.NewDecoder(base64.StdEncoding, r)
++	case "7bit", "8bit", "binary", "": // Nothing to do
++		d = r
++	}
++	return
++}
++
++// utf7Decoder copied from: https://github.com/cention-sany/utf7/blob/master/utf7.go
++// We need `encoding.Decoder` instead of function `UTF7DecodeBytes`
++type utf7Decoder struct {
++	transform.NopResetter
++}
++
++// NewUtf7Decoder return decoder for utf7
++func NewUtf7Decoder() *encoding.Decoder {
++	return &encoding.Decoder{Transformer: utf7Decoder{}}
++}
++
++const (
++	uRepl = '\uFFFD' // Unicode replacement code point
++	u7min = 0x20     // Minimum self-representing UTF-7 value
++	u7max = 0x7E     // Maximum self-representing UTF-7 value
++)
++
++// ErrBadUTF7 is returned to indicate the invalid modified UTF-7 encoding.
++var ErrBadUTF7 = errors.New("utf7: bad utf-7 encoding")
++
++const modifiedbase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
++
++var u7enc = base64.NewEncoding(modifiedbase64)
++
++func isModifiedBase64(r byte) bool {
++	if r >= 'A' && r <= 'Z' {
++		return true
++	} else if r >= 'a' && r <= 'z' {
++		return true
++	} else if r >= '0' && r <= '9' {
++		return true
++	} else if r == '+' || r == '/' {
++		return true
++	}
++	return false
++}
++
++func (d utf7Decoder) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
++	var implicit bool
++	var tmp int
++
++	nd, n := len(dst), len(src)
++	if n == 0 && !atEOF {
++		return 0, 0, transform.ErrShortSrc
++	}
++	for ; nSrc < n; nSrc++ {
++		if nDst >= nd {
++			return nDst, nSrc, transform.ErrShortDst
++		}
++		if c := src[nSrc]; ((c < u7min || c > u7max) &&
++			c != '\t' && c != '\r' && c != '\n') ||
++			c == '~' || c == '\\' {
++			return nDst, nSrc, ErrBadUTF7 // Illegal code point in ASCII mode
++		} else if c != '+' {
++			dst[nDst] = c // character is self-representing
++			nDst++
++			continue
++		}
++		// found '+'
++		start := nSrc + 1
++		tmp = nSrc // nSrc still points to '+', tmp points to the end of BASE64
++		// Find the end of the Base64 or "+-" segment
++		implicit = false
++		for tmp++; tmp < n && src[tmp] != '-'; tmp++ {
++			if !isModifiedBase64(src[tmp]) {
++				if tmp == start {
++					return nDst, tmp, ErrBadUTF7 // '+' next char must modified base64
++				}
++				// implicit shift back to ASCII - no need '-' character
++				implicit = true
++				break
++			}
++		}
++		if tmp == start {
++			if tmp == n {
++				// did not find '-' sign and '+' is the last character
++				// total nSrc not includes '+'
++				if atEOF {
++					return nDst, nSrc, ErrBadUTF7 // '+' can not be at the end
++				}
++				// '+' can not be at the end, the source si too short
++				return nDst, nSrc, transform.ErrShortSrc
++			}
++			dst[nDst] = '+' // Escape sequence "+-"
++			nDst++
++		} else if tmp == n && !atEOF {
++			// no eof found, the source is too short
++			return nDst, nSrc, transform.ErrShortSrc
++		} else if b := utf7dec(src[start:tmp]); len(b) > 0 {
++			if len(b)+nDst > nd {
++				// need more space in dst for the decoded modified BASE64 unicode
++				// total nSrc is not including '+'
++				return nDst, nSrc, transform.ErrShortDst
++			}
++			copy(dst[nDst:], b) // Control or non-ASCII code points in Base64
++			nDst += len(b)
++			if implicit {
++				if nDst >= nd {
++					return nDst, tmp, transform.ErrShortDst
++				}
++				dst[nDst] = src[tmp] // implicit shift
++				nDst++
++			}
++			if tmp == n {
++				return nDst, tmp, nil
++			}
++		} else {
++			return nDst, nSrc, ErrBadUTF7 // bad encoding
++		}
++		nSrc = tmp
++	}
++	return
++}
++
++// utf7dec extracts UTF-16-BE bytes from Base64 data and converts them to UTF-8.
++// A nil slice is returned if the encoding is invalid.
++func utf7dec(b64 []byte) []byte {
++	var b []byte
++
++	// Allocate a single block of memory large enough to store the Base64 data
++	// (if padding is required), UTF-16-BE bytes, and decoded UTF-8 bytes.
++	// Since a 2-byte UTF-16 sequence may expand into a 3-byte UTF-8 sequence,
++	// double the space allocation for UTF-8.
++	if n := len(b64); b64[n-1] == '=' {
++		return nil
++	} else if n&3 == 0 {
++		b = make([]byte, u7enc.DecodedLen(n)*3)
++	} else {
++		n += 4 - n&3
++		b = make([]byte, n+u7enc.DecodedLen(n)*3)
++		copy(b[copy(b, b64):n], []byte("=="))
++		b64, b = b[:n], b[n:]
++	}
++
++	// Decode Base64 into the first 1/3rd of b
++	n, err := u7enc.Decode(b, b64)
++	if err != nil || n&1 == 1 {
++		return nil
++	}
++
++	// Decode UTF-16-BE into the remaining 2/3rds of b
++	b, s := b[:n], b[n:]
++	j := 0
++	for i := 0; i < n; i += 2 {
++		r := rune(b[i])<<8 | rune(b[i+1])
++		if utf16.IsSurrogate(r) {
++			if i += 2; i == n {
++				return nil
++			}
++			r2 := rune(b[i])<<8 | rune(b[i+1])
++			if r = utf16.DecodeRune(r, r2); r == uRepl {
++				return nil
++			}
++		}
++		j += utf8.EncodeRune(s[j:], r)
++	}
++	return s[:j]
++}
++
+diff --git a/mime/signature_collector.go b/mime/signature_collector.go
+index dc5f159..302b1ea 100644
+--- a/mime/signature_collector.go
++++ b/mime/signature_collector.go
+@@ -12,20 +12,18 @@ import (
+ 	"github.com/ProtonMail/gopenpgp/v3/constants"
+ 	"github.com/ProtonMail/gopenpgp/v3/crypto"
+ 	"github.com/ProtonMail/gopenpgp/v3/internal"
+-
+-	gomime "github.com/ProtonMail/go-mime"
+ )
+ 
+ // signatureCollector structure.
+ type signatureCollector struct {
+ 	verifyHandle crypto.PGPVerify
+-	target       gomime.VisitAcceptor
++	target       VisitAcceptor
+ 	signature    string
+ 	verified     error
+ }
+ 
+ func newSignatureCollector(
+-	targetAcceptor gomime.VisitAcceptor, handle crypto.PGPVerify,
++	targetAcceptor VisitAcceptor, handle crypto.PGPVerify,
+ ) *signatureCollector {
+ 	return &signatureCollector{
+ 		target:       targetAcceptor,
+@@ -45,8 +43,8 @@ func (sc *signatureCollector) Accept(
+ 		return sc.target.Accept(part, header, hasPlainSibling, isFirst, isLast)
+ 	}
+ 
+-	newPart, rawBody := gomime.GetRawMimePart(part, "--"+params["boundary"])
+-	multiparts, multipartHeaders, err := gomime.GetMultipartParts(newPart, params)
++	newPart, rawBody := rawPartBounds(part, "--"+params["boundary"])
++	multiparts, multipartHeaders, err := GetMultipartParts(newPart, params)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -82,7 +80,7 @@ func (sc *signatureCollector) Accept(
+ 		return fmt.Errorf("mime: error in ready part data: %w", err)
+ 	}
+ 
+-	decodedPart := gomime.DecodeContentEncoding(
++	decodedPart := DecodeContentEncoding(
+ 		bytes.NewReader(partData),
+ 		multipartHeaders[1].Get("Content-Transfer-Encoding"))
+ 
+@@ -91,7 +89,7 @@ func (sc *signatureCollector) Accept(
+ 		return fmt.Errorf("mime: error in reading decoded data: %w", err)
+ 	}
+ 	mediaType, _, _ := mime.ParseMediaType(header.Get("Content-Type"))
+-	buffer, err = gomime.DecodeCharset(buffer, mediaType, params)
++	buffer, err = DecodeCharset(buffer, mediaType, params)
+ 	if err != nil {
+ 		return fmt.Errorf("mime: error in decoding charset: %w", err)
+ 	}

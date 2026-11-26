@@ -1,0 +1,317 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "observations": [
+    {
+      "observation_id": "F2P-032",
+      "requirement_ids": [
+        "R048"
+      ],
+      "source_scope": "Cargo.toml",
+      "surface": "dependency manifest",
+      "behavior": "The Rust workspace manifests are replaced by a Go module named `rubyfmt` declaring Go 1.24.0 and the vendored difflib dependency",
+      "target_postcondition": "`go list -deps ./cmd/rubyfmt` lists `rubyfmt/internal/cli` and `rubyfmt/internal/formatter` but no package from the Rust formatter or a subprocess wrapper; with PATH lacking cargo, rustc, and ruby, `rubyfmt` formats stdin `a 1,2,3` to `a(1, 2, 3)\\n` and exits 0",
+      "probe_check": "dependency_graph",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-039",
+      "requirement_ids": [
+        "R028"
+      ],
+      "source_scope": "librubyfmt/.gitignore",
+      "surface": "Go formatter library and rubyfmt executable",
+      "behavior": "The Go library and rubyfmt executable together replace both Rust workspace components: the executable performs file, directory, @file, and stdin formatting while the library exposes formatting, without requiring the Rust crate or ruby-prism dependency",
+      "target_postcondition": "Running the built executable with PATH containing only that executable formats stdin `a 1,2,3` to `a(1, 2, 3)\\n`, demonstrating that formatting does not subprocess, RPC, FFI, or dynamically load the Rust implementation",
+      "probe_check": "path_only_execution",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-040",
+      "requirement_ids": [
+        "R028"
+      ],
+      "source_scope": "librubyfmt/.gitignore",
+      "surface": "runtime entry",
+      "behavior": "The Rust library crate surface is replaced by the Go package `rubyfmt` exposing FormatBuffer and ExitCode with the documented error-to-exit-code mapping",
+      "target_postcondition": "Running the built executable with PATH containing only that executable formats stdin `a 1,2,3` to `a(1, 2, 3)\\n`, demonstrating that formatting does not subprocess, RPC, FFI, or dynamically load the Rust implementation",
+      "probe_check": "path_only_execution",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "CLI invocation and positional include-paths",
+      "behavior": "The built executable named `rubyfmt` accepts a file path, a directory path, and an `@list.txt` path list; `rubyfmt test.rb` on `a 1,2,3` writes `a(1, 2, 3)\\n` to stdout, and an `@list.txt` containing that file produces the same result",
+      "target_postcondition": "When stdin is `/dev/null`, `rubyfmt` exits 0 without printing `Usage: rubyfmt` and reads empty input; a terminal stdin prints help instead of reading",
+      "probe_check": "stdin_devnull_and_tty",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_scope": "librubyfmt/src/format_prism.rs",
+      "surface": "ci stress-script runtime behavior",
+      "behavior": "For each of `ci/methods_stress_test.rb`, `ci/string_literals_stress_test.rb`, and `ci/array_literals_stress_test.rb`, running the script with Ruby before and after formatting produces identical stdout and a successful exit",
+      "target_postcondition": "The built binary parses Ruby through the vendored Prism C parser via cgo rather than the Rust ruby-prism crate; with no ruby executable and no Rust toolchain on PATH, stdin `a 1,2,3` still emits `a(1, 2, 3)\\n` and exits 0",
+      "probe_check": "vendored_prism_runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": [
+        "R045"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "CLI invocation and positional include-paths",
+      "behavior": "The built executable named `rubyfmt` accepts a file path, a directory path, and an `@list.txt` path list; `rubyfmt test.rb` on `a 1,2,3` writes `a(1, 2, 3)\\n` to stdout, and an `@list.txt` containing that file produces the same result",
+      "target_postcondition": "With `bad.rb` containing `a 1,2,,\\n` and `good.rb` containing `a(1, 2)\\n`, plain mode exits 0 and prints `a(1, 2)\\n`; `--fail-fast` exits 1 at `bad.rb`; `--fail-fast` with a missing named input exits 3",
+      "probe_check": "named_input_errors",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": [
+        "R037"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "check-mode diff and exit status",
+      "behavior": "`rubyfmt --check test.rb` or `rubyfmt -c test.rb` on a file containing `a 1,2,3` writes a unified diff to stdout and exits 5",
+      "target_postcondition": "For a file containing `a 1,2,3\\n`, `rubyfmt --check <file>` exits 5 and stdout equals `--- <path>\\n+++ <path>\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n` produced through the Go difflib path",
+      "probe_check": "check_diff",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": [
+        "R045"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "fail-fast exit codes",
+      "behavior": "With `--fail-fast`, a syntax-error input exits 1, a missing named input exits 3, and a missing `@file` list exits 3 even without other inputs",
+      "target_postcondition": "With `bad.rb` containing `a 1,2,,\\n` and `good.rb` containing `a(1, 2)\\n`, plain mode exits 0 and prints `a(1, 2)\\n`; `--fail-fast` exits 1 at `bad.rb`; `--fail-fast` with a missing named input exits 3",
+      "probe_check": "named_input_errors",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": [
+        "R045"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "header opt-out skipping",
+      "behavior": "With `--header-opt-out`, input `# rubyfmt: false\\na 1,2,3` is emitted unchanged and the process exits 0",
+      "target_postcondition": "With `bad.rb` containing `a 1,2,,\\n` and `good.rb` containing `a(1, 2)\\n`, plain mode exits 0 and prints `a(1, 2)\\n`; `--fail-fast` exits 1 at `bad.rb`; `--fail-fast` with a missing named input exits 3",
+      "probe_check": "named_input_errors",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "adapted test harness behavior",
+      "behavior": "Adapted harnesses still run the formatter and assert the same behavior, including exact fixture bytes, idempotency, stress-script output equality, CLI exit codes, and stdout/stderr expectations",
+      "target_postcondition": "`rubyfmt -i unchanged.rb changed.rb` leaves the mtime of an unchanged file containing `a(1, 2, 3)\\n` equal to its original value while the changed file is rewritten to `a(1, 2, 3)\\n` and its mtime advances",
+      "probe_check": "inplace_mtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-033",
+      "requirement_ids": [
+        "R048"
+      ],
+      "source_scope": "librubyfmt/src/format_prism.rs",
+      "surface": "Go formatter library and rubyfmt executable",
+      "behavior": "The Go library and rubyfmt executable together replace both Rust workspace components: the executable performs file, directory, @file, and stdin formatting while the library exposes formatting, without requiring the Rust crate or ruby-prism dependency",
+      "target_postcondition": "`go list -deps ./cmd/rubyfmt` lists `rubyfmt/internal/cli` and `rubyfmt/internal/formatter` but no package from the Rust formatter or a subprocess wrapper; with PATH lacking cargo, rustc, and ruby, `rubyfmt` formats stdin `a 1,2,3` to `a(1, 2, 3)\\n` and exits 0",
+      "probe_check": "dependency_graph",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-034",
+      "requirement_ids": [
+        "R043"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "header opt-out skipping",
+      "behavior": "With `--header-opt-out`, input `# rubyfmt: false\\na 1,2,3` is emitted unchanged and the process exits 0",
+      "target_postcondition": "`rubyfmt -i test.rake` formats the explicit file to `a(1, 2, 3)\\n`; traversing a directory containing `test.rb` and `test.txt` formats only `test.rb` and leaves `test.txt` containing `a 1,2,3` unchanged",
+      "probe_check": "extension_filtering",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-035",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "check-mode diff headers",
+      "behavior": "Check mode emits `--- <path>`, `+++ <path>`, and the unified hunk for each changed input; with `--stdin-filepath lib/foo.rb` the diff headers use exactly `lib/foo.rb`",
+      "target_postcondition": "With `.rubyfmtignore` containing `ignored.rb`, stdin `a 1,2,3` plus `--stdin-filepath ignored.rb` prints `a 1,2,3` unchanged and exits 0; adding `--check` prints nothing and exits 0",
+      "probe_check": "ignored_stdin_filepath",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-036",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_scope": "librubyfmt/src/intermediary.rs",
+      "surface": "CLI contract and formatting style",
+      "behavior": "Flags `-c`/`--check`, `-i`/`--in-place`, `--stdin-filepath`, `--header-opt-in`, `--header-opt-out`, `--include-gitignored`, `--fail-fast`, and `-V`/`--version` keep their names; exit codes 0, 1, 3, and 5 keep their meanings; formatting style and fixture expectations remain identical",
+      "target_postcondition": "The built binary parses Ruby through the vendored Prism C parser via cgo rather than the Rust ruby-prism crate; with no ruby executable and no Rust toolchain on PATH, stdin `a 1,2,3` still emits `a(1, 2, 3)\\n` and exits 0",
+      "probe_check": "vendored_prism_runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-037",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "check-mode diff and exit status",
+      "behavior": "`rubyfmt --check test.rb` or `rubyfmt -c test.rb` on a file containing `a 1,2,3` writes a unified diff to stdout and exits 5",
+      "target_postcondition": "With `.rubyfmtignore` containing `ignored.rb`, stdin `a 1,2,3` plus `--stdin-filepath ignored.rb` prints `a 1,2,3` unchanged and exits 0; adding `--check` prints nothing and exits 0",
+      "probe_check": "ignored_stdin_filepath",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-038",
+      "requirement_ids": [
+        "R043"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "ignore override behavior",
+      "behavior": "`--include-gitignored` formats a file matched by `.gitignore`, and an explicitly named file is formatted even when its name is matched by `.rubyfmtignore`",
+      "target_postcondition": "`rubyfmt -i test.rake` formats the explicit file to `a(1, 2, 3)\\n`; traversing a directory containing `test.rb` and `test.txt` formats only `test.rb` and leaves `test.txt` containing `a 1,2,3` unchanged",
+      "probe_check": "extension_filtering",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-041",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "version and help identity",
+      "behavior": "`rubyfmt -V` and `rubyfmt --version` print a line beginning with `rubyfmt `; `rubyfmt -h` and `rubyfmt --help` print help containing `Usage: rubyfmt`; none of these outputs contains `rubyfmt-main`",
+      "target_postcondition": "With `.rubyfmtignore` containing `ignored.rb`, stdin `a 1,2,3` plus `--stdin-filepath ignored.rb` prints `a 1,2,3` unchanged and exits 0; adding `--check` prints nothing and exits 0",
+      "probe_check": "ignored_stdin_filepath",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-042",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "header opt-in formatting",
+      "behavior": "With `--header-opt-in`, input `# rubyfmt: true\\na 1,2,3\\n` becomes `# rubyfmt: true\\na(1, 2, 3)\\n`, while input `a 1,2,3` passes through unchanged",
+      "target_postcondition": "`rubyfmt -i unchanged.rb changed.rb` leaves the mtime of an unchanged file containing `a(1, 2, 3)\\n` equal to its original value while the changed file is rewritten to `a(1, 2, 3)\\n` and its mtime advances",
+      "probe_check": "inplace_mtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-043",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_scope": "tests/error_handling_test.rs",
+      "surface": "fail-fast exit codes",
+      "behavior": "With `--fail-fast`, a syntax-error input exits 1, a missing named input exits 3, and a missing `@file` list exits 3 even without other inputs",
+      "target_postcondition": "`rubyfmt.FormatBuffer([]byte(\"a 1,2,3\"))` returns `a(1, 2, 3)\\n` with nil error; `rubyfmt.FormatBuffer([]byte(\"a 1,2,,\"))` returns a non-nil error with Kind `FormatSyntaxError` and `ExitCode()` 1; `rubyfmt.ExitCode(nil)` is 0",
+      "probe_check": "public_go_library",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-044",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_scope": "librubyfmt/src/util.rs",
+      "surface": "cgo Prism runtime without a Ruby or Rust toolchain",
+      "behavior": "The built `rubyfmt` executable parses Ruby through the vendored Prism C parser via cgo instead of the Rust ruby-prism crate: `go list -deps ./cmd/rubyfmt` exposes `rubyfmt/internal/prism` with no Ruby `ruby-prism` reference, and with no `ruby`, `cargo`, or `rustc` on PATH stdin `a 1,2,3` still emits `a(1, 2, 3)\\n` and exits 0",
+      "target_postcondition": "The built binary parses Ruby through the vendored Prism C parser via cgo rather than the Rust ruby-prism crate; with no ruby executable and no Rust toolchain on PATH, stdin `a 1,2,3` still emits `a(1, 2, 3)\\n` and exits 0",
+      "probe_check": "vendored_prism_runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-045",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "ignore override behavior",
+      "behavior": "`--include-gitignored` formats a file matched by `.gitignore`, and an explicitly named file is formatted even when its name is matched by `.rubyfmtignore`",
+      "target_postcondition": "When stdin is `/dev/null`, `rubyfmt` exits 0 without printing `Usage: rubyfmt` and reads empty input; a terminal stdin prints help instead of reading",
+      "probe_check": "stdin_devnull_and_tty",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-046",
+      "requirement_ids": [
+        "R037"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "CLI contract and formatting style",
+      "behavior": "Flags `-c`/`--check`, `-i`/`--in-place`, `--stdin-filepath`, `--header-opt-in`, `--header-opt-out`, `--include-gitignored`, `--fail-fast`, and `-V`/`--version` keep their names; exit codes 0, 1, 3, and 5 keep their meanings; formatting style and fixture expectations remain identical",
+      "target_postcondition": "For a file containing `a 1,2,3\\n`, `rubyfmt --check <file>` exits 5 and stdout equals `--- <path>\\n+++ <path>\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n` produced through the Go difflib path",
+      "probe_check": "check_diff",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-047",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_scope": "tests/cli_interface_test.rs",
+      "surface": "stdin input and terminal help",
+      "behavior": "With no positional paths and piped stdin `a 1,2,3`, rubyfmt reads stdin and writes `a(1, 2, 3)\\n`; when stdin is a terminal, it prints help instead of reading input",
+      "target_postcondition": "`rubyfmt -i unchanged.rb changed.rb` leaves the mtime of an unchanged file containing `a(1, 2, 3)\\n` equal to its original value while the changed file is rewritten to `a(1, 2, 3)\\n` and its mtime advances",
+      "probe_check": "inplace_mtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "F2P-048",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_scope": "src/main.rs",
+      "surface": "extension filtering for explicit paths and traversal",
+      "behavior": "An explicitly named `test.rake` is formatted to `a(1, 2, 3)\\n`; traversing a directory formats `test.rb` and leaves `test.txt` containing Ruby unchanged",
+      "target_postcondition": "`rubyfmt -i unchanged.rb changed.rb` leaves the mtime of an unchanged file containing `a(1, 2, 3)\\n` equal to its original value while the changed file is rewritten to `a(1, 2, 3)\\n` and its mtime advances",
+      "probe_check": "inplace_mtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

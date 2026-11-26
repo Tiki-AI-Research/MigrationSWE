@@ -1,0 +1,196 @@
+{
+  "schema_version": "migration-f2p-fixtures:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "migration": {
+    "category": "language",
+    "source": {"name": "TypeScript", "version": "6.0.3"},
+    "target": {"name": "Go", "version": "1.23.0"}
+  },
+  "observations": {
+    "F2P-001": {
+      "requirement_ids": ["R003"],
+      "check": {"kind": "action_entrypoint_docker"}
+    },
+    "F2P-002": {
+      "requirement_ids": ["R046"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {
+            "parent": "TestAction",
+            "passes": ["TestAction/does_not_generate_notes_on_update_when_omitBodyDuringUpdate"]
+          }
+        ]
+      }
+    },
+    "F2P-003": {
+      "requirement_ids": ["R033"],
+      "check": {"kind": "go_scope_and_tests"}
+    },
+    "F2P-004": {
+      "requirement_ids": ["R037"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestInputsSkipIfReleaseExists", "passes": ["TestInputsSkipIfReleaseExists"]}]
+      }
+    },
+    "F2P-005": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestAction", "passes": ["TestAction/combines_body_and_generated_notes"]}
+        ]
+      }
+    },
+    "F2P-006": {
+      "requirement_ids": ["R029"],
+      "check": {"kind": "go_build"}
+    },
+    "F2P-007": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestArtifactUploader", "passes": ["TestArtifactUploader/does_not_delete_when_replacing_disabled"]}
+        ]
+      }
+    },
+    "F2P-008": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestArtifactGlobber", "passes": ["TestArtifactGlobber/throws_when_no_results_and_errors_should_throw"]}
+        ]
+      }
+    },
+    "F2P-009": {
+      "requirement_ids": ["R038"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestOutputs", "passes": ["TestOutputs"]}]
+      }
+    },
+    "F2P-010": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestInputsArtifacts", "passes": ["TestInputsArtifacts/defaults_content_type_to_raw"]}
+        ]
+      }
+    },
+    "F2P-011": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestInputsCreatedReleaseName", "passes": ["TestInputsCreatedReleaseName"]}]
+      }
+    },
+    "F2P-012": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestOutputs", "passes": ["TestOutputs"]}]
+      }
+    },
+    "F2P-013": {
+      "requirement_ids": ["R047"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestAction", "passes": ["TestAction/omits_body/commit_on_immutable_publish"]}
+        ]
+      }
+    },
+    "F2P-014": {
+      "requirement_ids": ["R030"],
+      "check": {"kind": "go_module_policy"}
+    },
+    "F2P-015": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestInputsCreatedReleaseName", "passes": ["TestInputsCreatedReleaseName/returns_input_name"]}
+        ]
+      }
+    },
+    "F2P-016": {
+      "requirement_ids": ["R033"],
+      "check": {"kind": "workflow_uses_go"}
+    },
+    "F2P-017": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestAction", "passes": ["TestAction/skips_action_and_emits_notice"]}
+        ]
+      }
+    },
+    "F2P-018": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestInputsToken", "passes": ["TestInputsToken"]}]
+      }
+    },
+    "F2P-019": {
+      "requirement_ids": ["R047"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestAction", "passes": ["TestAction/omits_body/commit_on_immutable_publish"]}
+        ]
+      }
+    },
+    "F2P-020": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestGithubErrorDetail", "passes": ["TestGithubErrorDetail"]}]
+      }
+    },
+    "F2P-021": {
+      "requirement_ids": ["R037"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestInputsSkipIfReleaseExists", "passes": ["TestInputsSkipIfReleaseExists"]}]
+      }
+    },
+    "F2P-022": {
+      "requirement_ids": ["R033"],
+      "check": {
+        "kind": "go_test",
+        "units": [{"parent": "TestInputsOwnerRepoAndOptional", "passes": ["TestInputsOwnerRepoAndOptional"]}]
+      }
+    },
+    "F2P-023": {
+      "requirement_ids": ["R049"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {"parent": "TestGithubError", "passes": ["TestGithubError"]},
+          {"parent": "TestGithubErrorDetail", "passes": ["TestGithubErrorDetail"]}
+        ]
+      }
+    },
+    "F2P-024": {
+      "requirement_ids": ["R042"],
+      "check": {
+        "kind": "go_test",
+        "units": [
+          {
+            "parent": "TestAction",
+            "passes": [
+              "TestAction/creates_release_when_get_returns_404_and_no_draft_exists",
+              "TestAction/propagates_non-404_get_error"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

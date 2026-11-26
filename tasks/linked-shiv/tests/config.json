@@ -1,0 +1,4127 @@
+{
+  "assets": {
+    "case_observation_inventory": "case-observation-inventory.json",
+    "differential_corpus": "differential-corpus.json",
+    "grader_spec": "grader-spec.json",
+    "migration_contract": "migration-contract.json",
+    "migration_units": "migration-units.json",
+    "source_test_baseline": "source-test-baseline.json",
+    "test_manifest": "test-integrity-manifest.json"
+  },
+  "base_commit": "ff542cbe75ea832df3a989d07c7fdf5214f727fa",
+  "candidate_root": "/app",
+  "case_observation_inventory": {
+    "coverage_reasons": [
+      {
+        "decision_owner": "review-agent",
+        "enforced_instead": [
+          "a shared path carries at most one member per declared source that provides it",
+          "retained members form an ordered subsequence of declared contributors ending in the final contributor",
+          "retained contributions are matched by exact bytes and POSIX permissions where supported, including equal contributions",
+          "the effective member has the final source bytes and permissions",
+          "non-conflicting files and package metadata remain present exactly once; pip-supplied content is preserved"
+        ],
+        "id": "EXC-P2P-015-PHYSICAL-MEMBER-DUPLICATE",
+        "instruction_lines": [
+          24,
+          26,
+          44
+        ],
+        "observation_ids": [
+          "P2P-015"
+        ],
+        "reason": "One effective member is the deterministic value visible for a path. The instruction permits retained contributing copies in declared order without requiring every earlier copy to remain. Ordered subsequences ending in the last contributor are accepted, while extra copies, reordering, missing files and stale effective bytes or permissions are rejected.",
+        "requirement_ids": [
+          "R001",
+          "R006",
+          "R009",
+          "R010"
+        ],
+        "status": "accepted-contract-interpretation"
+      },
+      {
+        "decision_owner": "review-agent",
+        "enforced_instead": [
+          "helper probes compare both orders between source and target",
+          "each order is built and run end to end with its own archive",
+          "the startup marker changes with the declared order (EP_RUN_2 / EP_RUN_1)"
+        ],
+        "id": "EXC-P2P-013-SOURCE-ORDER-SCOPE",
+        "observation_ids": [
+          "P2P-013"
+        ],
+        "reason": "Both declared orders are compared at helper level and then built and run end to end (P2P-013). The later declared source provides the effective console script for a duplicated name, and the selected marker changes when the order is reversed.",
+        "requirement_ids": [
+          "R001"
+        ],
+        "status": "closed-by-node"
+      },
+      {
+        "decision_owner": "review-agent",
+        "enforced_instead": [
+          "POSIX executable launchers are fully covered by P2P-045 (argv order, stdout/stderr separation, exit 33, success status)",
+          "P2P-052 rejects an .exe shim on POSIX rather than redirecting to it",
+          "on Windows, P2P-045 calls record_unverified_coverage so the run is INCONCLUSIVE, not PASS"
+        ],
+        "id": "EXC-P2P-045-WINDOWS-LAUNCHER",
+        "observation_ids": [
+          "P2P-045",
+          "P2P-052"
+        ],
+        "reason": "Windows console-script launchers are generated .exe shims (distlib ScriptMaker) whose argument, stream and exit-status behaviour cannot be exercised on the Linux verifier. P2P-045 records an unverified-coverage gap instead of a pass on such a platform, and P2P-052 only adds the unsupported-launcher name case on POSIX. A dedicated Windows environment and node are required to close this scope.",
+        "requirement_ids": [
+          "R001",
+          "R008",
+          "R010"
+        ],
+        "status": "declared-uncovered-scope"
+      }
+    ],
+    "groups": {
+      "DIFFERENTIAL": [],
+      "F2P": [
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "setup.cfg declares strictly click==8.1.7 without markers or duplicate entries.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_f2p_001_setup_cfg_declaration"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_f2p_001_setup_cfg_declaration"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-001",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "In isolated target venv, shiv dist-info METADATA Requires-Dist specifies click == 8.1.7.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_f2p_003_metadata_requires_dist"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_f2p_003_metadata_requires_dist"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-003",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "Systematically scan formal project dependency files and metadata, ensuring click 6.7 is rejected and click==8.1.7 is enforced.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_f2p_004_legacy_click_constraint_cleared"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_f2p_004_legacy_click_constraint_cleared"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-004",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "Target rejects equals-form disallowed pip options that the source accepts or forwards to pip.",
+          "contract_requirement_ids": [
+            "R001",
+            "R003"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_007_target_rejects_equals_disallowed_options"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_007_target_rejects_equals_disallowed_options"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-007",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R001",
+            "R003"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "Target gives --entry-point precedence over --console-script, correcting the source behavior.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_008_entry_point_precedence_over_console_script"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_008_entry_point_precedence_over_console_script"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-008",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "Target preserves the required CLI error contract where the source baseline diverges.",
+          "contract_requirement_ids": [
+            "R003"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_009_error_exits"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_009_error_exits"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-009",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R003"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "a pip child terminated by a signal is a failed install: any non-zero Popen status, positive or negative, exits with Pip install failed!, and no archive is published or replaced; the pre-migration implementation compares with > 0 and treats a signalled child as success.",
+          "contract_requirement_ids": [
+            "R003",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_010_signalled_pip_install_fails"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_010_signalled_pip_install_fails"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-010",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R003",
+            "R008"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "archive and extraction publication are all-or-nothing: archive failures preserve the previous result or leave no fresh target, concurrent builds leave one complete member-unique archive, and a corrupt site-packages member leaves no partial extraction or damage to an existing extraction before a later valid retry. An empty --site-packages directory remains valid build input.",
+          "contract_requirement_ids": [
+            "R011"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_011_failed_replacement_preserves_archive"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_011_failed_replacement_preserves_archive"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-011",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R011"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "a bounded lock acquisition honours timeout and poll_interval, raises TimeoutError naming the lock path without holding the lock, and does not block a later acquisition. The pre-migration FileLock accepts neither parameter.",
+          "contract_requirement_ids": [
+            "R012"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_012_filelock_bounded_acquisition"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_012_filelock_bounded_acquisition"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-012",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R012"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "both real shiv-info views express the archive interpreter and compression state, for compressed and uncompressed archives, in either defined representation; omitting either fact from JSON or text, or naming a wrong interpreter or compression, fails. The pre-migration implementation reports neither.",
+          "contract_requirement_ids": [
+            "R013"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_013_info_reports_derived_state"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_013_info_reports_derived_state"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-013",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R013"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "a successful console-script launcher returns its own status 0 with an empty stderr, while a failing launcher still returns 33 with its diagnostic on stderr; the pre-migration bootstrap hands the runpy result to sys.exit(), so success ends 1 and leaks the returned globals.",
+          "contract_requirement_ids": [
+            "R010",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_f2p_014_launcher_returns_script_status"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_f2p_014_launcher_returns_script_status"
+          ],
+          "family": "deterministic-fallback",
+          "id": "F2P-014",
+          "kind": "F2P",
+          "requirement_ids": [
+            "R010",
+            "R008"
+          ],
+          "source_expectation": "FAIL",
+          "target_expectation": "PASS"
+        }
+      ],
+      "P2P": [
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv exposes all public options on the real Click command, and -h/--help/--halp are aliases of exactly one real help option, whether that option is Click's automatic one or an explicitly declared click.help_option.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_001_shiv_cli_option_surface"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_001_shiv_cli_option_surface"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-001",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv-info keeps its real Click surface: the positional PYZ argument, -j/--json, and one real help option owning -h/--help/--halp, whether automatic or explicitly declared.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_002_shiv_info_cli_surface"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_002_shiv_info_cli_surface"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-002",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Building hello package and running outputs 'hello world'.",
+          "contract_requirement_ids": [
+            "R001",
+            "R004"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_004_build_hello_zipapp_and_execute"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_004_build_hello_zipapp_and_execute"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-004",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R004"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Unrecognized pip arguments are forwarded unchanged, with real wheel build and pip failure checks.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_006_unprocessed_pip_tokens_forwarding"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_006_unprocessed_pip_tokens_forwarding"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-006",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Small cross-process smoke of the public CLI contract: both commands are real Click commands, version prefix, missing-input error, and shiv-info text and parseable JSON for a real archive. The command object's internal name is not part of this contract.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_007_public_cli_contract_summary"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_007_public_cli_contract_summary"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-007",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Pip forwarding with space and equal signs, and rejection boundary for disallowed options.",
+          "contract_requirement_ids": [
+            "R003",
+            "R006",
+            "R009"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_008_pip_forwarding_and_disallowed_boundaries"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_008_pip_forwarding_and_disallowed_boundaries"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-008",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R003",
+            "R006",
+            "R009"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Full lifecycle of archive creation, inspection, and execution.",
+          "contract_requirement_ids": [
+            "R001",
+            "R004"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_009_packaging_and_execution_pipeline"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_009_packaging_and_execution_pipeline"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-009",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R004"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "-h, --help and --halp are aliases of one real eager help option (automatic or explicitly declared) returning 0, documenting every public option in the rendered help, and short-circuiting build work; the usage line is validated through the real entry point for its option/argument shape rather than a fixed program name or alias order.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_010_help_entries_and_output"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_010_help_entries_and_output"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-010",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv --version returns 0 and does not trigger build or pip install.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_011_version"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_011_version"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-011",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "entry_points.txt lookup keeps source order, unique and missing names, error type, and one build/run smoke.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_013_entry_points_parsing"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_013_entry_points_parsing"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-013",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Multiple --site-packages merge in command-line order; retained shared members form an ordered contributor subsequence ending in the last source, which supplies exact effective bytes and POSIX permissions; non-conflicting files and package metadata remain present exactly once, and pip-supplied content is preserved.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_015_multiple_site_packages_merge"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_015_multiple_site_packages_merge"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-015",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "When no entry point is provided, pyz drops into bootstrap and accepts code from stdin.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_016_no_entry_point_bootstrap_stdin"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_016_no_entry_point_bootstrap_stdin"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-016",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--compile-pyc verifies pyc compilation cache in runtime directory.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_017_compile_pyc"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_017_compile_pyc"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-017",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--compressed and --uncompressed select the compression type of every archive member while leaving the payload and metadata intact; this node owns the archive's compression state.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_018_compressed_uncompressed"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_018_compressed_uncompressed"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-018",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--extend-pythonpath and -E expose extraction directory to PYTHONPATH, preserving existing path order.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_019_extend_pythonpath"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_019_extend_pythonpath"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-019",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Custom build-id is preserved in environment metadata, and default build-id is stable across output paths.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_020_build_id"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_020_build_id"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-020",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Python preamble runs before entry point, inherits environment, and stops execution on failure.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_021_preamble_python"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_021_preamble_python"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-021",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Shell preamble runs before entry point, inherits environment, and non-zero status does not stop entry point.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_022_preamble_shell"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_022_preamble_shell"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-022",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--root directs archive extraction to explicit directory.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_023_root_explicit_path"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_023_root_explicit_path"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-023",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--root expands environment variables.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_024_root_env_var"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_024_root_env_var"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-024",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Nonexistent paths for --site-packages and --preamble exit with status 2, and existing paths pass.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_025_click_path_parameter_validation"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_025_click_path_parameter_validation"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-025",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Tokens with spaces, equal signs, and flags are passed to pip unchanged, with real wheel build checks.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_026_unprocessed_tokens_ordering"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_026_unprocessed_tokens_ordering"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-026",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Reproducible builds with fixed SOURCE_DATE_EPOCH produce identical byte hashes and entry metadata.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_027_reproducible_build"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_027_reproducible_build"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-027",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "--no-modify triggers RuntimeError on modified/added files, handles deletion per source baseline, and recovers with SHIV_FORCE_EXTRACT.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_028_no_modify"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_028_no_modify"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-028",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "repeated writes to one output path replace the target: a first build, an overwrite, a rejection raised before packaging starts, and a stale temporary file from an earlier attempt all leave a complete, runnable archive. Mid-write replacement and concurrent builds are target requirements (F2P-011, F2P-012), because the pre-migration builder writes through the target.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_029_repeat_target_overwrite"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_029_repeat_target_overwrite"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-029",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Invalid archive entry points raise ZipAppError, leave target uncorrupted, and unimportable modules fail at runtime.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_030_invalid_entry_point"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_030_invalid_entry_point"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-030",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "New archives honor umask, overwritten archives retain read/write permissions, and both run.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_031_executable_permissions"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_031_executable_permissions"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-031",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Python interpreter exceeding BINPRM_BUF_SIZE exits with BINPRM_ERROR, exact boundary passes.",
+          "contract_requirement_ids": [
+            "R001",
+            "R003"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_032_shebang_length"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_032_shebang_length"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-032",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R003"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "cache_path correctly computes paths for regular, $ENV_VAR, ~, empty, spaces, and Windows drive roots.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_034_cache_path"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_034_cache_path"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-034",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "get_first_sitedir_index accurately finds site-packages and dist-packages positions.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_035_first_sitedir_index"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_035_first_sitedir_index"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-035",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "extend_python_path keeps existing entries first, appends without duplicates, and never sorts or folds case.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_037_extend_python_path"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_037_extend_python_path"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-037",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Environment properties properly reflect all 9 environment variable overrides, defaults, and invalid values.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_038_environment_env_var_overrides"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_038_environment_env_var_overrides"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-038",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "Environment JSON serialization and deserialization roundtrip for all fields.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_039_environment_json_roundtrip"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_039_environment_json_roundtrip"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-039",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "FileLock mutual exclusion across instances, release on exit, thread/process isolation, and exception recovery.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_040_filelock"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_040_filelock"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-040",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "ensure_no_modify validates on disk Python files against hashes, detecting modifications and additions per source baseline.",
+          "contract_requirement_ids": [
+            "R001"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_041_ensure_no_modify"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_041_ensure_no_modify"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-041",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv-info --json returns one parseable JSON object that reports every field the archive's own environment.json records, with the recorded value and type, and the requested build id, entry-point mode and reproducible timestamp; a successful inspection raises nothing.",
+          "contract_requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_042_info_json_basic"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_042_info_json_basic"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-042",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "the shiv-info text view identifies the archive path and binds each recorded value to its own label, so a correct value printed under another label does not satisfy the field, and both views report the same build identifier.",
+          "contract_requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_043_info_text_basic"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_043_info_text_basic"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-043",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "a console-script archive built from an executable bin launcher runs it on POSIX, forwards arguments in order and spelling, keeps stdout and stderr separate, and returns the launcher's own status while a successful run stays non-failing.",
+          "contract_requirement_ids": [
+            "R001",
+            "R008",
+            "R010"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_045_posix_launcher_contract"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_045_posix_launcher_contract"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-045",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R008",
+            "R010"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "requesting a console script that is neither declared in metadata nor present as a launcher fails with status 1, names the requested script on stderr, produces no success output, and leaves no archive behind.",
+          "contract_requirement_ids": [
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_046_missing_console_script"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_046_missing_console_script"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-046",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R008"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv-info on a nonexistent archive fails with status 1 and a diagnostic naming the missing path, in both text and JSON modes, with no success header and no success-shaped JSON on stdout.",
+          "contract_requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_047_info_missing_path"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_047_info_missing_path"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-047",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv-info on a zip that has no environment.json fails with status 1 and a diagnostic naming environment.json, in both output modes, without emitting any success output.",
+          "contract_requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_048_info_plain_zip"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_048_info_plain_zip"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-048",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "shiv-info on a corrupt archive fails with status 1 and a diagnostic naming the zip problem, in both output modes; the diagnostic is distinct from the missing-metadata failure so the two inputs cannot collapse into one generic success response.",
+          "contract_requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_049_info_corrupt_zip"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_049_info_corrupt_zip"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-049",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R005",
+            "R008"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "both shiv-info views describe the archive's complete recorded state: every recorded field is present with its recorded value and JSON type (a recorded boolean is not satisfied by 0 or 1), the recorded source hashes are the digests of the packaged bytes item by item (empty, partial and fabricated maps are rejected), extraction, reproducibility and compression settings are reported truthfully for compressed and uncompressed archives, and any derived interpreter/compression state a report does express must name the same archive.",
+          "contract_requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_050_info_complete_state"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_050_info_complete_state"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-050",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R002",
+            "R005"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "when a package declares a console script in metadata and also ships a same-named executable launcher, the built archive runs the metadata entry point and never the launcher.",
+          "contract_requirement_ids": [
+            "R001",
+            "R008",
+            "R010"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_051_metadata_precedes_launcher"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_051_metadata_precedes_launcher"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-051",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R008",
+            "R010"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "equal_after_normalization"
+          },
+          "atomic_claim": "path-like console-script names and launchers for an unsupported platform are rejected with status 1 and a diagnostic naming the requested value; they are never redirected to another entry, never run the real tool, and never produce an archive.",
+          "contract_requirement_ids": [
+            "R001",
+            "R008"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_migration_p2p.py::test_p2p_052_console_script_name_boundaries"
+          },
+          "evidence_refs": [
+            "source/test/test_migration_p2p.py::test_p2p_052_console_script_name_boundaries"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-052",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R001",
+            "R008"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "the harness builds two isolated environments: the fixed base checkout with Click 6.7 and the candidate tree with Click 8.1.7; each environment reports the Click version it was built with, so no comparison runs against a mis-built harness.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_p2p_054_isolated_click_environments"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_p2p_054_isolated_click_environments"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-054",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "in both isolated environments click.__version__, the installed distribution version and the module path describe the same installation.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_p2p_055_imported_click_matches_environment"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_p2p_055_imported_click_matches_environment"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-055",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        },
+        {
+          "assertion": {
+            "relation": "pass"
+          },
+          "atomic_claim": "after the candidate tree is installed into the target environment, pip check reports no broken requirement, so the declared Click constraint stays satisfiable in that environment.",
+          "contract_requirement_ids": [
+            "R007"
+          ],
+          "coverage": {
+            "input_class": "unknown",
+            "projection": "unknown",
+            "scenario": "fallback",
+            "surface": "source/test/test_dependency.py::test_p2p_056_target_pip_check_clean"
+          },
+          "evidence_refs": [
+            "source/test/test_dependency.py::test_p2p_056_target_pip_check_clean"
+          ],
+          "family": "deterministic-fallback",
+          "id": "P2P-056",
+          "kind": "P2P",
+          "requirement_ids": [
+            "R007"
+          ],
+          "source_expectation": "PASS",
+          "target_expectation": "PASS"
+        }
+      ],
+      "STATE": []
+    },
+    "migration_units": [
+      {
+        "observation_ids": [
+          "F2P-001",
+          "F2P-003",
+          "F2P-004",
+          "P2P-054",
+          "P2P-055",
+          "P2P-056"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU001"
+      },
+      {
+        "observation_ids": [
+          "P2P-001",
+          "P2P-004",
+          "P2P-006",
+          "P2P-007",
+          "P2P-009",
+          "F2P-008",
+          "F2P-009"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU002"
+      },
+      {
+        "observation_ids": [
+          "P2P-002",
+          "P2P-042",
+          "P2P-043",
+          "P2P-050",
+          "F2P-013"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU003"
+      },
+      {
+        "observation_ids": [
+          "P2P-006",
+          "P2P-008",
+          "F2P-007",
+          "F2P-010"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU004"
+      },
+      {
+        "observation_ids": [
+          "F2P-009"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU005"
+      },
+      {
+        "observation_ids": [
+          "P2P-001",
+          "P2P-009",
+          "F2P-008"
+        ],
+        "reason": "deterministic-fallback",
+        "unit_id": "MU006"
+      }
+    ],
+    "normalization_policy": {
+      "exceptions": "type-and-message",
+      "floating_point": "exact-unless-contract-declares-tolerance",
+      "ordering": "declared-order",
+      "platform_paths": "posix-normalized",
+      "python_repr_addresses": "stable-placeholder",
+      "timestamps": "exact"
+    },
+    "p2p_policy": "maximum-justified-deduplicated-case-coverage",
+    "schema_version": "migration-case-observation-inventory:v2"
+  },
+  "case_observation_inventory_sha256": "sha256:e9fc2f4ee54861a1ea6d799b0d121be8c8040e5255647181b4e5ed0e43501e49",
+  "diagnostics": {
+    "hard_gate": "/logs/verifier/hard-gate.json",
+    "node_report": "/logs/verifier/reports/nodes.json",
+    "verifier": "/logs/verifier/verifier-result.json"
+  },
+  "duplicate_is_failure": true,
+  "execution_backend": "docker",
+  "execution_scripts": {
+    "source": "source/run.sh",
+    "target": "target/run.sh"
+  },
+  "executor": {
+    "id": "command",
+    "version": "1"
+  },
+  "f2p": [
+    "F2P-001",
+    "F2P-003",
+    "F2P-004",
+    "F2P-007",
+    "F2P-008",
+    "F2P-009",
+    "F2P-010",
+    "F2P-011",
+    "F2P-012",
+    "F2P-013",
+    "F2P-014"
+  ],
+  "graded": {
+    "judge": {
+      "config_path": null,
+      "enabled": false
+    },
+    "objective": {
+      "enabled": false,
+      "entrypoint": null
+    },
+    "rubric": {
+      "enabled": false,
+      "entrypoint": null
+    }
+  },
+  "group_applicability": {
+    "DIFFERENTIAL": {
+      "reason": "force-publish fallback",
+      "status": "na"
+    },
+    "F2P": {
+      "reason": "force-publish fallback",
+      "status": "required"
+    },
+    "P2P": {
+      "reason": "force-publish fallback",
+      "status": "required"
+    },
+    "STATE": {
+      "reason": "force-publish fallback",
+      "status": "na"
+    }
+  },
+  "hard_gate": {
+    "cheat_nodes": [],
+    "cheat_penalty": -1.0,
+    "compile_paths": [],
+    "p2p_requires_all": true
+  },
+  "migration": {
+    "category": "version_upgrade",
+    "source": {
+      "language_name": "Python",
+      "language_version": "unknown",
+      "name": "click",
+      "version": "6.7"
+    },
+    "target": {
+      "language_name": "Python",
+      "language_version": "unknown",
+      "name": "click",
+      "version": "8.1.7"
+    }
+  },
+  "migration_config_schema": "migration-grader-config:v6",
+  "migration_unit_checks": {
+    "MU001": {
+      "observation_ids": [
+        "F2P-001",
+        "F2P-003",
+        "F2P-004",
+        "P2P-054",
+        "P2P-055",
+        "P2P-056"
+      ]
+    },
+    "MU002": {
+      "observation_ids": [
+        "P2P-001",
+        "P2P-004",
+        "P2P-006",
+        "P2P-007",
+        "P2P-009",
+        "F2P-008",
+        "F2P-009"
+      ]
+    },
+    "MU003": {
+      "observation_ids": [
+        "P2P-002",
+        "P2P-042",
+        "P2P-043",
+        "P2P-050",
+        "F2P-013"
+      ]
+    },
+    "MU004": {
+      "observation_ids": [
+        "P2P-006",
+        "P2P-008",
+        "F2P-007",
+        "F2P-010"
+      ]
+    },
+    "MU005": {
+      "observation_ids": [
+        "F2P-009"
+      ]
+    },
+    "MU006": {
+      "observation_ids": [
+        "P2P-001",
+        "P2P-009",
+        "F2P-008"
+      ]
+    }
+  },
+  "migration_units": [
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU001",
+      "kind": "dependency",
+      "requirement_ids": [
+        "R007",
+        "R008"
+      ],
+      "source_locators": [
+        {
+          "path": "setup.cfg",
+          "type": "manifest"
+        }
+      ],
+      "target_condition": "setup.cfg install_requires declares click==8.1.7 and no longer permits click 6.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU002",
+      "kind": "api",
+      "requirement_ids": [
+        "R001",
+        "R003",
+        "R004",
+        "R006",
+        "R008",
+        "R010"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/cli.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "shiv.cli.main defines every preserved option and exit path and runs under click 8.1.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU003",
+      "kind": "api",
+      "requirement_ids": [
+        "R002",
+        "R005"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/info.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "shiv.info.main keeps the positional pyz argument, the -j/--json flag, and its textual and JSON output under click 8.1.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU004",
+      "kind": "file",
+      "requirement_ids": [
+        "R003",
+        "R006",
+        "R009"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/pip.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "pip.install forwards unrecognized arguments unchanged and exits with PIP_INSTALL_ERROR when pip fails.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU005",
+      "kind": "file",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/constants.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Error text constants and their exit code values remain byte-identical.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU006",
+      "kind": "entrypoint",
+      "requirement_ids": [
+        "R001",
+        "R010"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/__main__.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "python -m shiv still invokes the shiv CLI entry point, and an explicit --entry-point still determines startup precedence.",
+      "validation_methods": [
+        "runtime"
+      ]
+    }
+  ],
+  "missing_is_failure": true,
+  "model_patch": "/logs/artifacts/model.patch",
+  "normalization_policy": {
+    "exceptions": "type-and-message",
+    "floating_point": "exact-unless-contract-declares-tolerance",
+    "ordering": "declared-order",
+    "platform_paths": "posix-normalized",
+    "python_repr_addresses": "stable-placeholder",
+    "timestamps": "exact"
+  },
+  "observation_inventory": {
+    "DIFFERENTIAL": [],
+    "F2P": [
+      "F2P-001",
+      "F2P-003",
+      "F2P-004",
+      "F2P-007",
+      "F2P-008",
+      "F2P-009",
+      "F2P-010",
+      "F2P-011",
+      "F2P-012",
+      "F2P-013",
+      "F2P-014"
+    ],
+    "P2P": [
+      "P2P-001",
+      "P2P-002",
+      "P2P-004",
+      "P2P-006",
+      "P2P-007",
+      "P2P-008",
+      "P2P-009",
+      "P2P-010",
+      "P2P-011",
+      "P2P-013",
+      "P2P-015",
+      "P2P-016",
+      "P2P-017",
+      "P2P-018",
+      "P2P-019",
+      "P2P-020",
+      "P2P-021",
+      "P2P-022",
+      "P2P-023",
+      "P2P-024",
+      "P2P-025",
+      "P2P-026",
+      "P2P-027",
+      "P2P-028",
+      "P2P-029",
+      "P2P-030",
+      "P2P-031",
+      "P2P-032",
+      "P2P-034",
+      "P2P-035",
+      "P2P-037",
+      "P2P-038",
+      "P2P-039",
+      "P2P-040",
+      "P2P-041",
+      "P2P-042",
+      "P2P-043",
+      "P2P-045",
+      "P2P-046",
+      "P2P-047",
+      "P2P-048",
+      "P2P-049",
+      "P2P-050",
+      "P2P-051",
+      "P2P-052",
+      "P2P-054",
+      "P2P-055",
+      "P2P-056"
+    ],
+    "STATE": []
+  },
+  "output_root": "/logs/verifier",
+  "p2p": [
+    "P2P-001",
+    "P2P-002",
+    "P2P-004",
+    "P2P-006",
+    "P2P-007",
+    "P2P-008",
+    "P2P-009",
+    "P2P-010",
+    "P2P-011",
+    "P2P-013",
+    "P2P-015",
+    "P2P-016",
+    "P2P-017",
+    "P2P-018",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-028",
+    "P2P-029",
+    "P2P-030",
+    "P2P-031",
+    "P2P-032",
+    "P2P-034",
+    "P2P-035",
+    "P2P-037",
+    "P2P-038",
+    "P2P-039",
+    "P2P-040",
+    "P2P-041",
+    "P2P-042",
+    "P2P-043",
+    "P2P-045",
+    "P2P-046",
+    "P2P-047",
+    "P2P-048",
+    "P2P-049",
+    "P2P-050",
+    "P2P-051",
+    "P2P-052",
+    "P2P-054",
+    "P2P-055",
+    "P2P-056"
+  ],
+  "policy": {
+    "allowed_equivalent_test_paths": [],
+    "deceptive_fallback_not_applicable": null,
+    "deceptive_fallback_rules": [
+      {
+        "id": "legacy-click-version-literal",
+        "kind": "literal",
+        "paths": [
+          "src/**/*.py",
+          "*.py"
+        ],
+        "target": "click-6.7"
+      },
+      {
+        "id": "legacy-click-pin-literal",
+        "kind": "literal",
+        "paths": [
+          "src/**/*.py",
+          "*.py"
+        ],
+        "target": "click==6.7"
+      },
+      {
+        "id": "legacy-wheelhouse-reference",
+        "kind": "literal",
+        "paths": [
+          "src/**/*.py",
+          "*.py"
+        ],
+        "target": "/opt/migration/wheels"
+      },
+      {
+        "id": "legacy-bridge-switch",
+        "kind": "literal",
+        "paths": [
+          "src/**/*.py",
+          "*.py"
+        ],
+        "target": "SHIV_LEGACY_CLICK_BRIDGE"
+      },
+      {
+        "id": "legacy-runtime-module",
+        "kind": "file",
+        "paths": [
+          "src/**/*legacy*.py"
+        ],
+        "target": "*legacy*"
+      },
+      {
+        "id": "packaged-old-runtime",
+        "kind": "archive",
+        "paths": [
+          "src/**/*.whl",
+          "src/**/*.zip",
+          "src/**/*.egg"
+        ],
+        "target": "click-6.7"
+      },
+      {
+        "id": "old-runtime-wheel-name",
+        "kind": "file",
+        "paths": [
+          "src/**/*.whl"
+        ],
+        "target": "*click*6.7*"
+      }
+    ],
+    "deceptive_fallback_semantics": {
+      "legacy_tokens": [
+        "/opt/migration",
+        "click-6",
+        "click_6",
+        "source_click",
+        "source-click",
+        "old_click",
+        "old-click",
+        "click_source",
+        "click-source",
+        "click_bridge",
+        "click-bridge",
+        "legacy_click",
+        "legacy-click",
+        "legacy_runtime",
+        "legacy-runtime",
+        "source_runtime",
+        "source-runtime"
+      ],
+      "mechanism_tokens": [
+        "subprocess",
+        "os.system",
+        "popen",
+        "ctypes",
+        "cffi",
+        "dlopen",
+        "socket",
+        "requests",
+        "urllib",
+        "http.client",
+        "zipimport",
+        "importlib",
+        "pkgutil",
+        "__import__",
+        "exec("
+      ],
+      "source_patterns": [
+        "src/**/*.py",
+        "*.py",
+        "scripts/**/*.py"
+      ]
+    },
+    "forbidden_report_markers": [
+      "HARDCODED_VERIFIER_PASS"
+    ],
+    "protected_paths": [
+      ".migration_eval",
+      ".harbor_eval",
+      "grader-output.json"
+    ],
+    "semantic_rules": [
+      {
+        "id": "legacy-click-lower-bound",
+        "kind": "literal",
+        "paths": [
+          "setup.cfg",
+          "pyproject.toml",
+          "tox.ini",
+          "requirements*.txt"
+        ],
+        "target": "click>=6.7"
+      },
+      {
+        "id": "legacy-click-pin",
+        "kind": "literal",
+        "paths": [
+          "setup.cfg",
+          "pyproject.toml",
+          "tox.ini",
+          "requirements*.txt"
+        ],
+        "target": "click==6.7"
+      }
+    ],
+    "state_applicable": false
+  },
+  "protected_paths": [
+    "verifier",
+    "assets",
+    "environment",
+    "config.json",
+    "runtime-manifest.json",
+    "delivery-provenance.json"
+  ],
+  "reports": {
+    "ctrf": "/logs/verifier/ctrf.json",
+    "verifier": "/logs/verifier/verifier-result.json",
+    "verifier_component": "/logs/verifier/verifier-component.json"
+  },
+  "result_owner": "harbor",
+  "reward_mode": "VERIFIER_ONLY",
+  "schema_version": "deepswe-verifier-config/v3",
+  "skip_is_failure": true,
+  "source_runtime_sha256": "sha256:efb508f985b8e27c0beaabcaef5d23ff85c75ee6f03fcb657ea283ebcf0e5981",
+  "source_technology": {
+    "language_name": "Python",
+    "language_version": "unknown",
+    "name": "click",
+    "version": "6.7"
+  },
+  "suite": "linkedin-shiv-20260920060119-ce8b29",
+  "target_environment": {
+    "dockerfile_sha256": "sha256:4311a631d9953b3d9ee0192c13906eab8cd8a0a9c6f964a48a8517804619dc02",
+    "path": "environment",
+    "runtime": {
+      "build_commands": [
+        [
+          ".venv/bin/python",
+          "-m",
+          "pip",
+          "install",
+          "--no-index",
+          "--no-build-isolation",
+          "--no-deps",
+          "-e",
+          "."
+        ]
+      ],
+      "environment": {
+        "PIP_FIND_LINKS": "/opt/migration/wheels",
+        "PIP_NO_BUILD_ISOLATION": "1",
+        "PIP_NO_INDEX": "1"
+      },
+      "executor": {
+        "id": "command",
+        "version": "1"
+      },
+      "harness_command": [
+        ".venv/bin/python",
+        "{assets}/target/runner.py",
+        "{report}"
+      ],
+      "native_test_commands": [
+        [
+          ".venv/bin/python",
+          "-m",
+          "coverage",
+          "run",
+          "-m",
+          "pytest",
+          "-o",
+          "addopts=",
+          "test/test_bootstrap.py",
+          "test/test_builder.py",
+          "test/test_cli.py",
+          "test/test_pip.py",
+          "--ignore=test/test_dependency.py",
+          "--ignore=test/test_migration_p2p.py",
+          "--ignore=test/test_migration_support.py"
+        ]
+      ],
+      "preflight_commands": [
+        [
+          "python",
+          "--version"
+        ],
+        [
+          ".venv/bin/python",
+          "-m",
+          "pip",
+          "--version"
+        ],
+        [
+          ".venv/bin/python",
+          "-c",
+          "import click, coverage, pytest, setuptools"
+        ]
+      ],
+      "schema_version": "migration-environment-runtime:v3",
+      "technology": {
+        "framework": {
+          "name": "click",
+          "version": "8.1.7"
+        },
+        "language": {
+          "name": "Python",
+          "version": "3.11"
+        },
+        "toolchain": {
+          "name": "pip",
+          "version": "24.0"
+        }
+      },
+      "timeout_seconds": 1800.0,
+      "version_probe": [
+        ".venv/bin/python",
+        "-c",
+        "import click, sys; v=getattr(click, '__version__', ''); print(v); sys.exit(0 if v == '8.1.7' else 3)"
+      ],
+      "workdir": "/workspace/repo",
+      "workspace_materializations": [
+        {
+          "mode": "copy",
+          "source": "/opt/migration/dependencies/venv",
+          "target": ".venv"
+        }
+      ],
+      "writable_storage": [
+        {
+          "executable": true,
+          "id": "venv",
+          "initialization": "seed",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": "venv",
+          "target": ".venv"
+        },
+        {
+          "executable": true,
+          "id": "build",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": "build"
+        },
+        {
+          "executable": true,
+          "id": "egg-info",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": "src/shiv.egg-info"
+        },
+        {
+          "executable": true,
+          "id": "fixture-package-build",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": "test/package/build"
+        },
+        {
+          "executable": true,
+          "id": "fixture-package-egg-info",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": "test/package/hello.egg-info"
+        },
+        {
+          "executable": true,
+          "id": "pytest-cache",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": ".pytest_cache"
+        },
+        {
+          "executable": true,
+          "id": "mypy-cache",
+          "initialization": "empty",
+          "lifecycle": "attempt",
+          "network": "disabled",
+          "size_limit": null,
+          "source": null,
+          "target": ".mypy_cache"
+        }
+      ]
+    },
+    "runtime_config_sha256": "sha256:29899d9b7eb8a55248fcb43608f246bcf189eb8410b5f4f5dab85ac4fbbc9fe4",
+    "tree_sha256": "sha256:bcee0c8c2b93473a0145763af039ba1c580c80f1bd0f64a2e7f9ceafd89b4e52"
+  },
+  "target_runtime_sha256": "sha256:f7aa685c766437c5726e2b1abc8d7f2db4518f87983c2ec702c3ca8fc5ac42fa",
+  "target_technology": {
+    "language_name": "Python",
+    "language_version": "unknown",
+    "name": "click",
+    "version": "8.1.7"
+  },
+  "task_id": "linkedin-shiv-20260920060119-ce8b29",
+  "tests": {
+    "differential": [],
+    "f2p": [
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "setup.cfg declares strictly click==8.1.7 without markers or duplicate entries.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_f2p_001_setup_cfg_declaration"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_f2p_001_setup_cfg_declaration"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-001",
+        "id": "F2P-001",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "In isolated target venv, shiv dist-info METADATA Requires-Dist specifies click == 8.1.7.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_f2p_003_metadata_requires_dist"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_f2p_003_metadata_requires_dist"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-003",
+        "id": "F2P-003",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "Systematically scan formal project dependency files and metadata, ensuring click 6.7 is rejected and click==8.1.7 is enforced.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_f2p_004_legacy_click_constraint_cleared"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_f2p_004_legacy_click_constraint_cleared"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-004",
+        "id": "F2P-004",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "Target rejects equals-form disallowed pip options that the source accepts or forwards to pip.",
+        "contract_requirement_ids": [
+          "R001",
+          "R003"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_007_target_rejects_equals_disallowed_options"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_007_target_rejects_equals_disallowed_options"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-007",
+        "id": "F2P-007",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R001",
+          "R003"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "Target gives --entry-point precedence over --console-script, correcting the source behavior.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_008_entry_point_precedence_over_console_script"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_008_entry_point_precedence_over_console_script"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-008",
+        "id": "F2P-008",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "Target preserves the required CLI error contract where the source baseline diverges.",
+        "contract_requirement_ids": [
+          "R003"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_009_error_exits"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_009_error_exits"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-009",
+        "id": "F2P-009",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R003"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "a pip child terminated by a signal is a failed install: any non-zero Popen status, positive or negative, exits with Pip install failed!, and no archive is published or replaced; the pre-migration implementation compares with > 0 and treats a signalled child as success.",
+        "contract_requirement_ids": [
+          "R003",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_010_signalled_pip_install_fails"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_010_signalled_pip_install_fails"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-010",
+        "id": "F2P-010",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R003",
+          "R008"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "archive and extraction publication are all-or-nothing: archive failures preserve the previous result or leave no fresh target, concurrent builds leave one complete member-unique archive, and a corrupt site-packages member leaves no partial extraction or damage to an existing extraction before a later valid retry. An empty --site-packages directory remains valid build input.",
+        "contract_requirement_ids": [
+          "R011"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_011_failed_replacement_preserves_archive"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_011_failed_replacement_preserves_archive"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-011",
+        "id": "F2P-011",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R011"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "a bounded lock acquisition honours timeout and poll_interval, raises TimeoutError naming the lock path without holding the lock, and does not block a later acquisition. The pre-migration FileLock accepts neither parameter.",
+        "contract_requirement_ids": [
+          "R012"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_012_filelock_bounded_acquisition"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_012_filelock_bounded_acquisition"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-012",
+        "id": "F2P-012",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R012"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "both real shiv-info views express the archive interpreter and compression state, for compressed and uncompressed archives, in either defined representation; omitting either fact from JSON or text, or naming a wrong interpreter or compression, fails. The pre-migration implementation reports neither.",
+        "contract_requirement_ids": [
+          "R013"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_013_info_reports_derived_state"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_013_info_reports_derived_state"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-013",
+        "id": "F2P-013",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R013"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "a successful console-script launcher returns its own status 0 with an empty stderr, while a failing launcher still returns 33 with its diagnostic on stderr; the pre-migration bootstrap hands the runpy result to sys.exit(), so success ends 1 and leaks the returned globals.",
+        "contract_requirement_ids": [
+          "R010",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_f2p_014_launcher_returns_script_status"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_f2p_014_launcher_returns_script_status"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "F2P-014",
+        "id": "F2P-014",
+        "kind": "F2P",
+        "requirement_ids": [
+          "R010",
+          "R008"
+        ],
+        "source_expectation": "FAIL",
+        "target_expectation": "PASS"
+      }
+    ],
+    "p2p": [
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv exposes all public options on the real Click command, and -h/--help/--halp are aliases of exactly one real help option, whether that option is Click's automatic one or an explicitly declared click.help_option.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_001_shiv_cli_option_surface"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_001_shiv_cli_option_surface"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-001",
+        "id": "P2P-001",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv-info keeps its real Click surface: the positional PYZ argument, -j/--json, and one real help option owning -h/--help/--halp, whether automatic or explicitly declared.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_002_shiv_info_cli_surface"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_002_shiv_info_cli_surface"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-002",
+        "id": "P2P-002",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Building hello package and running outputs 'hello world'.",
+        "contract_requirement_ids": [
+          "R001",
+          "R004"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_004_build_hello_zipapp_and_execute"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_004_build_hello_zipapp_and_execute"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-004",
+        "id": "P2P-004",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R004"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Unrecognized pip arguments are forwarded unchanged, with real wheel build and pip failure checks.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_006_unprocessed_pip_tokens_forwarding"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_006_unprocessed_pip_tokens_forwarding"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-006",
+        "id": "P2P-006",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Small cross-process smoke of the public CLI contract: both commands are real Click commands, version prefix, missing-input error, and shiv-info text and parseable JSON for a real archive. The command object's internal name is not part of this contract.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_007_public_cli_contract_summary"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_007_public_cli_contract_summary"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-007",
+        "id": "P2P-007",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Pip forwarding with space and equal signs, and rejection boundary for disallowed options.",
+        "contract_requirement_ids": [
+          "R003",
+          "R006",
+          "R009"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_008_pip_forwarding_and_disallowed_boundaries"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_008_pip_forwarding_and_disallowed_boundaries"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-008",
+        "id": "P2P-008",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R003",
+          "R006",
+          "R009"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Full lifecycle of archive creation, inspection, and execution.",
+        "contract_requirement_ids": [
+          "R001",
+          "R004"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_009_packaging_and_execution_pipeline"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_009_packaging_and_execution_pipeline"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-009",
+        "id": "P2P-009",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R004"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "-h, --help and --halp are aliases of one real eager help option (automatic or explicitly declared) returning 0, documenting every public option in the rendered help, and short-circuiting build work; the usage line is validated through the real entry point for its option/argument shape rather than a fixed program name or alias order.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_010_help_entries_and_output"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_010_help_entries_and_output"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-010",
+        "id": "P2P-010",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv --version returns 0 and does not trigger build or pip install.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_011_version"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_011_version"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-011",
+        "id": "P2P-011",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "entry_points.txt lookup keeps source order, unique and missing names, error type, and one build/run smoke.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_013_entry_points_parsing"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_013_entry_points_parsing"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-013",
+        "id": "P2P-013",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Multiple --site-packages merge in command-line order; retained shared members form an ordered contributor subsequence ending in the last source, which supplies exact effective bytes and POSIX permissions; non-conflicting files and package metadata remain present exactly once, and pip-supplied content is preserved.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_015_multiple_site_packages_merge"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_015_multiple_site_packages_merge"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-015",
+        "id": "P2P-015",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "When no entry point is provided, pyz drops into bootstrap and accepts code from stdin.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_016_no_entry_point_bootstrap_stdin"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_016_no_entry_point_bootstrap_stdin"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-016",
+        "id": "P2P-016",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--compile-pyc verifies pyc compilation cache in runtime directory.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_017_compile_pyc"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_017_compile_pyc"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-017",
+        "id": "P2P-017",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--compressed and --uncompressed select the compression type of every archive member while leaving the payload and metadata intact; this node owns the archive's compression state.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_018_compressed_uncompressed"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_018_compressed_uncompressed"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-018",
+        "id": "P2P-018",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--extend-pythonpath and -E expose extraction directory to PYTHONPATH, preserving existing path order.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_019_extend_pythonpath"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_019_extend_pythonpath"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-019",
+        "id": "P2P-019",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Custom build-id is preserved in environment metadata, and default build-id is stable across output paths.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_020_build_id"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_020_build_id"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-020",
+        "id": "P2P-020",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Python preamble runs before entry point, inherits environment, and stops execution on failure.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_021_preamble_python"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_021_preamble_python"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-021",
+        "id": "P2P-021",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Shell preamble runs before entry point, inherits environment, and non-zero status does not stop entry point.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_022_preamble_shell"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_022_preamble_shell"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-022",
+        "id": "P2P-022",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--root directs archive extraction to explicit directory.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_023_root_explicit_path"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_023_root_explicit_path"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-023",
+        "id": "P2P-023",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--root expands environment variables.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_024_root_env_var"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_024_root_env_var"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-024",
+        "id": "P2P-024",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Nonexistent paths for --site-packages and --preamble exit with status 2, and existing paths pass.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_025_click_path_parameter_validation"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_025_click_path_parameter_validation"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-025",
+        "id": "P2P-025",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Tokens with spaces, equal signs, and flags are passed to pip unchanged, with real wheel build checks.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_026_unprocessed_tokens_ordering"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_026_unprocessed_tokens_ordering"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-026",
+        "id": "P2P-026",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Reproducible builds with fixed SOURCE_DATE_EPOCH produce identical byte hashes and entry metadata.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_027_reproducible_build"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_027_reproducible_build"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-027",
+        "id": "P2P-027",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "--no-modify triggers RuntimeError on modified/added files, handles deletion per source baseline, and recovers with SHIV_FORCE_EXTRACT.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_028_no_modify"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_028_no_modify"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-028",
+        "id": "P2P-028",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "repeated writes to one output path replace the target: a first build, an overwrite, a rejection raised before packaging starts, and a stale temporary file from an earlier attempt all leave a complete, runnable archive. Mid-write replacement and concurrent builds are target requirements (F2P-011, F2P-012), because the pre-migration builder writes through the target.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_029_repeat_target_overwrite"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_029_repeat_target_overwrite"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-029",
+        "id": "P2P-029",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Invalid archive entry points raise ZipAppError, leave target uncorrupted, and unimportable modules fail at runtime.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_030_invalid_entry_point"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_030_invalid_entry_point"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-030",
+        "id": "P2P-030",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "New archives honor umask, overwritten archives retain read/write permissions, and both run.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_031_executable_permissions"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_031_executable_permissions"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-031",
+        "id": "P2P-031",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Python interpreter exceeding BINPRM_BUF_SIZE exits with BINPRM_ERROR, exact boundary passes.",
+        "contract_requirement_ids": [
+          "R001",
+          "R003"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_032_shebang_length"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_032_shebang_length"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-032",
+        "id": "P2P-032",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R003"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "cache_path correctly computes paths for regular, $ENV_VAR, ~, empty, spaces, and Windows drive roots.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_034_cache_path"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_034_cache_path"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-034",
+        "id": "P2P-034",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "get_first_sitedir_index accurately finds site-packages and dist-packages positions.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_035_first_sitedir_index"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_035_first_sitedir_index"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-035",
+        "id": "P2P-035",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "extend_python_path keeps existing entries first, appends without duplicates, and never sorts or folds case.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_037_extend_python_path"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_037_extend_python_path"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-037",
+        "id": "P2P-037",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Environment properties properly reflect all 9 environment variable overrides, defaults, and invalid values.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_038_environment_env_var_overrides"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_038_environment_env_var_overrides"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-038",
+        "id": "P2P-038",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "Environment JSON serialization and deserialization roundtrip for all fields.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_039_environment_json_roundtrip"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_039_environment_json_roundtrip"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-039",
+        "id": "P2P-039",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "FileLock mutual exclusion across instances, release on exit, thread/process isolation, and exception recovery.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_040_filelock"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_040_filelock"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-040",
+        "id": "P2P-040",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "ensure_no_modify validates on disk Python files against hashes, detecting modifications and additions per source baseline.",
+        "contract_requirement_ids": [
+          "R001"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_041_ensure_no_modify"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_041_ensure_no_modify"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-041",
+        "id": "P2P-041",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv-info --json returns one parseable JSON object that reports every field the archive's own environment.json records, with the recorded value and type, and the requested build id, entry-point mode and reproducible timestamp; a successful inspection raises nothing.",
+        "contract_requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_042_info_json_basic"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_042_info_json_basic"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-042",
+        "id": "P2P-042",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "the shiv-info text view identifies the archive path and binds each recorded value to its own label, so a correct value printed under another label does not satisfy the field, and both views report the same build identifier.",
+        "contract_requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_043_info_text_basic"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_043_info_text_basic"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-043",
+        "id": "P2P-043",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "a console-script archive built from an executable bin launcher runs it on POSIX, forwards arguments in order and spelling, keeps stdout and stderr separate, and returns the launcher's own status while a successful run stays non-failing.",
+        "contract_requirement_ids": [
+          "R001",
+          "R008",
+          "R010"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_045_posix_launcher_contract"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_045_posix_launcher_contract"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-045",
+        "id": "P2P-045",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R008",
+          "R010"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "requesting a console script that is neither declared in metadata nor present as a launcher fails with status 1, names the requested script on stderr, produces no success output, and leaves no archive behind.",
+        "contract_requirement_ids": [
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_046_missing_console_script"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_046_missing_console_script"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-046",
+        "id": "P2P-046",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R008"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv-info on a nonexistent archive fails with status 1 and a diagnostic naming the missing path, in both text and JSON modes, with no success header and no success-shaped JSON on stdout.",
+        "contract_requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_047_info_missing_path"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_047_info_missing_path"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-047",
+        "id": "P2P-047",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv-info on a zip that has no environment.json fails with status 1 and a diagnostic naming environment.json, in both output modes, without emitting any success output.",
+        "contract_requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_048_info_plain_zip"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_048_info_plain_zip"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-048",
+        "id": "P2P-048",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "shiv-info on a corrupt archive fails with status 1 and a diagnostic naming the zip problem, in both output modes; the diagnostic is distinct from the missing-metadata failure so the two inputs cannot collapse into one generic success response.",
+        "contract_requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_049_info_corrupt_zip"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_049_info_corrupt_zip"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-049",
+        "id": "P2P-049",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R005",
+          "R008"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "both shiv-info views describe the archive's complete recorded state: every recorded field is present with its recorded value and JSON type (a recorded boolean is not satisfied by 0 or 1), the recorded source hashes are the digests of the packaged bytes item by item (empty, partial and fabricated maps are rejected), extraction, reproducibility and compression settings are reported truthfully for compressed and uncompressed archives, and any derived interpreter/compression state a report does express must name the same archive.",
+        "contract_requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_050_info_complete_state"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_050_info_complete_state"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-050",
+        "id": "P2P-050",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R002",
+          "R005"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "when a package declares a console script in metadata and also ships a same-named executable launcher, the built archive runs the metadata entry point and never the launcher.",
+        "contract_requirement_ids": [
+          "R001",
+          "R008",
+          "R010"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_051_metadata_precedes_launcher"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_051_metadata_precedes_launcher"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-051",
+        "id": "P2P-051",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R008",
+          "R010"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "equal_after_normalization"
+        },
+        "atomic_claim": "path-like console-script names and launchers for an unsupported platform are rejected with status 1 and a diagnostic naming the requested value; they are never redirected to another entry, never run the real tool, and never produce an archive.",
+        "contract_requirement_ids": [
+          "R001",
+          "R008"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_migration_p2p.py::test_p2p_052_console_script_name_boundaries"
+        },
+        "evidence_refs": [
+          "source/test/test_migration_p2p.py::test_p2p_052_console_script_name_boundaries"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-052",
+        "id": "P2P-052",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R001",
+          "R008"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "the harness builds two isolated environments: the fixed base checkout with Click 6.7 and the candidate tree with Click 8.1.7; each environment reports the Click version it was built with, so no comparison runs against a mis-built harness.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_p2p_054_isolated_click_environments"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_p2p_054_isolated_click_environments"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-054",
+        "id": "P2P-054",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "in both isolated environments click.__version__, the installed distribution version and the module path describe the same installation.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_p2p_055_imported_click_matches_environment"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_p2p_055_imported_click_matches_environment"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-055",
+        "id": "P2P-055",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      },
+      {
+        "assertion": {
+          "relation": "pass"
+        },
+        "atomic_claim": "after the candidate tree is installed into the target environment, pip check reports no broken requirement, so the declared Click constraint stays satisfiable in that environment.",
+        "contract_requirement_ids": [
+          "R007"
+        ],
+        "coverage": {
+          "input_class": "unknown",
+          "projection": "unknown",
+          "scenario": "fallback",
+          "surface": "source/test/test_dependency.py::test_p2p_056_target_pip_check_clean"
+        },
+        "evidence_refs": [
+          "source/test/test_dependency.py::test_p2p_056_target_pip_check_clean"
+        ],
+        "family": "deterministic-fallback",
+        "gate_id": "P2P-056",
+        "id": "P2P-056",
+        "kind": "P2P",
+        "requirement_ids": [
+          "R007"
+        ],
+        "source_expectation": "PASS",
+        "target_expectation": "PASS"
+      }
+    ],
+    "state": []
+  },
+  "weights": {
+    "test": 1.0
+  }
+}

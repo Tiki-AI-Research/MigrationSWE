@@ -1,0 +1,25 @@
+#!/bin/sh
+# INTEGRATION target-side harness entry point.
+#
+# Dispatches the executable projection of every dependency batch for the Go
+# target side and writes the normalized `migration-observations:v6` report.
+# Every long-running command inside the dispatched probes is wrapped in an
+# explicit `timeout`; the outer `timeout` is a final backstop so the harness can
+# never wait indefinitely.
+#
+# Usage: runner [report_path]   (default: $FT_REPORT or /logs/result.json)
+set -eu
+
+SELF=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ASSETS=$(CDPATH= cd -- "${SELF}/.." && pwd)
+REPORT="${1:-${FT_REPORT:-/logs/result.json}}"
+mkdir -p "$(dirname -- "${REPORT}")" 2>/dev/null || true
+
+HARNESS="${ASSETS}/shared/integration/harness.py"
+TOTAL="${FT_INTEGRATION_TOTAL_TIMEOUT:-2000}"
+
+if command -v python3 >/dev/null 2>&1; then
+  exec timeout -k 5 "${TOTAL}" python3 "${HARNESS}" target "${REPORT}"
+fi
+
+exec timeout -k 5 "${TOTAL}" sh "${ASSETS}/shared/integration/emit_inconclusive.sh" "${REPORT}"

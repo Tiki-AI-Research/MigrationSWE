@@ -1,0 +1,61 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/thomas-mauran__chess-tui"
+description = "Migrate chess-tui core, networking, and configuration from Rust to Go 1.25.0."
+
+[metadata]
+category = "Language_migration"
+language = "rust"
+repository_id = "74b0d994-e648-4d98-a01e-142e53b5aa6e"
+task_id = "tp-7fd46a0b96d15641a8307a47d63a90fe"
+repository_url = "https://github.com/thomas-mauran/chess-tui"
+base_commit_hash = "3317da44aa2e7e08fb5bff2cc2e430ab7d64523f"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 33
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:thomas-mauran__chess-tui-verifier-image-20261126"
+image_digest = "sha256:29f0c0eab4984a014bc75c62a18b6fbc221b7524b2fbb2429445e536ac2d157d"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 3317da44aa2e7e08fb5bff2cc2e430ab7d64523f > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:thomas-mauran__chess-tui-task-image-20261126"
+image_digest = "sha256:ad4df26b36ec348b0d4afe7be1197e903ab3bc53afd521bac1e357fe9d91a914"

@@ -1,0 +1,13 @@
+# Namespace isolation is intentionally granted to the Harbor main service only.
+# SYS_ADMIN creates the network/PID/mount namespaces and remounts /proc;
+# NET_ADMIN enables loopback inside the otherwise disconnected network.
+# AppArmor and seccomp are relaxed because unshare --mount-proc and the
+# evaluator's nested command sandbox need those mount/pivot operations.
+services:
+  main:
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined

@@ -1,0 +1,231 @@
+{
+  "schema": "migration-side-probes:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "side": "target",
+  "language": "Go",
+  "language_version": "1.24.0",
+  "probe_root": "/input/target",
+  "expectation": "PASS",
+  "entrypoint": {
+    "runner": "target/runner",
+    "created_by": "INTEGRATION",
+    "status": "pending"
+  },
+  "harness_commands": [
+    [
+      "timeout",
+      "300",
+      "go",
+      "build",
+      "./..."
+    ],
+    [
+      "timeout",
+      "600",
+      "go",
+      "test",
+      "./..."
+    ]
+  ],
+  "observations": [
+    {
+      "id": "F2P-035",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R045"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "source-limits"
+      ],
+      "behavior_case": "source-limits",
+      "surface": "src/labeler.ts::max-files-changed gating"
+    },
+    {
+      "id": "F2P-025",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R044"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "source-skips"
+      ],
+      "behavior_case": "source-skips",
+      "surface": "src/api/get-label-configs.ts::unfetchable or empty pull requests"
+    },
+    {
+      "id": "F2P-028",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "runtime-inputs"
+      ],
+      "behavior_case": "runtime-inputs",
+      "surface": "src/api/get-content.ts::action.yml input definitions"
+    },
+    {
+      "id": "F2P-029",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "config-file-structure"
+      ],
+      "behavior_case": "config-file-structure",
+      "surface": "changed-files container validation"
+    },
+    {
+      "id": "F2P-030",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "config-loading"
+      ],
+      "behavior_case": "config-loading",
+      "surface": "src/api/get-changed-pull-requests.ts::configuration loading path"
+    },
+    {
+      "id": "F2P-032",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "config-glob-types"
+      ],
+      "behavior_case": "config-glob-types",
+      "surface": "glob pattern value validation"
+    },
+    {
+      "id": "F2P-033",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "permission-errors"
+      ],
+      "behavior_case": "permission-errors",
+      "surface": "src/api/types.ts::action failure and warning behavior"
+    },
+    {
+      "id": "F2P-034",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "config-missing"
+      ],
+      "behavior_case": "config-missing",
+      "surface": "src/api/add-labels.ts::configuration fetch failure"
+    },
+    {
+      "id": "F2P-039",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "source-outputs"
+      ],
+      "behavior_case": "source-outputs",
+      "surface": "src/api/get-content.ts::action.yml output definitions"
+    },
+    {
+      "id": "F2P-040",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "source-aggregation"
+      ],
+      "behavior_case": "source-aggregation",
+      "surface": "src/branch.ts::any/all rule aggregation"
+    },
+    {
+      "id": "F2P-041",
+      "expectation": "PASS",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "probe": [
+        "timeout",
+        "300",
+        "python3",
+        "blackbox/labeler_blackbox.py",
+        "--case",
+        "config-limit-validation"
+      ],
+      "behavior_case": "config-limit-validation",
+      "surface": "limit value validation"
+    }
+  ],
+  "behavior_contract_revision": "labeler-behavior-v4"
+}

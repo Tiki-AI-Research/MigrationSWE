@@ -1,0 +1,458 @@
+{
+  "schema_version": "differential-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Fastify", "version": "5.12.1", "language": "typescript" },
+    "target": { "name": "Express", "version": "5.1.0", "language": "typescript" }
+  },
+  "entrypoints": {
+    "source": "source/runner",
+    "target": "harness.mjs",
+    "target_module": "javascript-app/src/server.ts#createServer",
+    "source_module": "javascript-app/src/server.ts#createServer"
+  },
+  "normalization": {
+    "projection": "normalized-result",
+    "drop_response_headers": [
+      "date",
+      "etag",
+      "content-length",
+      "connection",
+      "keep-alive",
+      "transfer-encoding"
+    ],
+    "sort_json_keys": true,
+    "volatile_fields": [
+      "instanceId",
+      "runId",
+      "eventStreamUrl",
+      "replayUrl",
+      "cancelledRunId",
+      "startedAt",
+      "completedAt",
+      "updatedAt"
+    ],
+    "notes": "Volatile fields are replaced by their declared type before comparison; header names are lowercased and sorted; SSE frames are parsed into JSON arrays ordered by sequence."
+  },
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R001"],
+      "kind": "http",
+      "request": {
+        "method": "POST",
+        "path": "/api/runs",
+        "headers": { "content-type": "application/json" },
+        "body": { "scenarioId": "fixture-scenario", "prompt": "Complete fixture." }
+      },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "routing, JSON body parsing, CORS headers, the four-argument error middleware and SSE content type are all provided by the target framework middleware"
+      }
+    },
+    {
+      "id": "DIFF-002",
+      "observation_id": "DIFF-002",
+      "requirement_ids": ["R002"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/health" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "body": { "status": "ok", "service": "runner" }
+      }
+    },
+    {
+      "id": "DIFF-003",
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R003"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/capabilities" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "schema": "backendCapabilitiesSchema",
+        "fields": {
+          "backendId": "javascript",
+          "codeTool": "exec_js",
+          "browserModes": ["headless", "headful"],
+          "defaults": { "browserMode": "headless", "maxResponseTurns": 24, "model": "<DEFAULT_MODEL>" },
+          "instanceId": "<CUA_INSTANCE_ID|random>"
+        }
+      }
+    },
+    {
+      "id": "DIFF-004",
+      "observation_id": "DIFF-004",
+      "requirement_ids": ["R004"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/scenarios" },
+      "expect": { "source": "PASS", "target": "PASS", "status": 200, "schema": "scenariosResponseSchema" }
+    },
+    {
+      "id": "DIFF-005",
+      "observation_id": "DIFF-005",
+      "requirement_ids": ["R005"],
+      "kind": "http",
+      "request": { "method": "POST", "path": "/api/scenarios/fixture-scenario/reset" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "schema": "scenarioResetResponseSchema",
+        "required_keys": ["scenarioId", "cancelledRunId"]
+      }
+    },
+    {
+      "id": "DIFF-006",
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R006"],
+      "kind": "http",
+      "request": {
+        "method": "POST",
+        "path": "/api/runs",
+        "headers": { "content-type": "application/json" },
+        "body": { "scenarioId": "fixture-scenario", "prompt": "Complete fixture." }
+      },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 202,
+        "schema": "startRunResponseSchema",
+        "invariant": "runId equals detail.run.id"
+      }
+    },
+    {
+      "id": "DIFF-007",
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R007"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/active" },
+      "expect": { "source": "PASS", "target": "PASS", "status": 200, "body_when_idle": null }
+    },
+    {
+      "id": "DIFF-008",
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R008"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/<runId>" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "schema": "runDetailSchema",
+        "invariant": "run.id equals requested id"
+      }
+    },
+    {
+      "id": "DIFF-009",
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R009"],
+      "kind": "http",
+      "request": { "method": "POST", "path": "/api/runs/<runId>/stop" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "schema": "runDetailSchema",
+        "invariant": "run.status === 'cancelled'"
+      }
+    },
+    {
+      "id": "DIFF-010",
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R010"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/replay" },
+      "expect": { "source": "PASS", "target": "PASS", "status": 200, "schema": "replayBundleSchema", "version": 3 }
+    },
+    {
+      "id": "DIFF-011",
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R011"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/artifacts/screenshots/<name>" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "present": { "status": 200, "content_type": "image/png" },
+        "absent": { "status": 404, "code": "artifact_not_found" }
+      }
+    },
+    {
+      "id": "DIFF-012",
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R012"],
+      "kind": "http-sse",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/events" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 200,
+        "content_type": "text/event-stream",
+        "frames": "data: <RunEvent>"
+      }
+    },
+    {
+      "id": "DIFF-013",
+      "observation_id": "DIFF-013",
+      "requirement_ids": ["R013"],
+      "kind": "http",
+      "request": { "method": "*", "path": "<error>", "description": "aggregate over every error response" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "schema": "runnerErrorResponseSchema",
+        "required_keys": ["code", "error"],
+        "optional_keys": ["hint"]
+      }
+    },
+    {
+      "id": "DIFF-014",
+      "observation_id": "DIFF-014",
+      "requirement_ids": ["R014"],
+      "kind": "module",
+      "request": { "method": "import", "path": "javascript-app/src/server.ts" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "export": "createServer(options?)",
+        "options": ["dataRoot", "allowedOrigins", "manager"],
+        "methods": ["inject", "listen", "close"]
+      }
+    },
+    {
+      "id": "DIFF-015",
+      "observation_id": "DIFF-015",
+      "requirement_ids": ["R015"],
+      "kind": "process",
+      "request": { "method": "spawn", "path": "javascript-app/src/index.ts" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "lease": "shared backend lease",
+        "default_host": "127.0.0.1",
+        "default_port": 4001,
+        "stdout": "Runner listening on http://<host>:<port>"
+      }
+    },
+    {
+      "id": "DIFF-016",
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R016"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/health", "headers": { "origin": "http://evil.example" } },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 403,
+        "code": "origin_not_allowed",
+        "allowed_origin_echo": { "access-control-allow-origin": "<origin>", "vary": "Origin" }
+      }
+    },
+    {
+      "id": "DIFF-017",
+      "observation_id": "DIFF-017",
+      "requirement_ids": ["R017"],
+      "kind": "http",
+      "request": {
+        "method": "POST",
+        "path": "/api/runs",
+        "cases": [
+          { "body": { "scenarioId": "fixture-scenario", "prompt": "p", "unknown": 1 } },
+          { "body": { "prompt": "p" } },
+          { "body": { "scenarioId": "", "prompt": "p" } },
+          { "raw": "{" }
+        ]
+      },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 400,
+        "code": "invalid_request",
+        "invariant": "manager.startRun is never invoked"
+      }
+    },
+    {
+      "id": "DIFF-018",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R018"],
+      "kind": "http-state",
+      "request": {
+        "setup": "write javascript-app dataRoot runs/<id>/replay.json with version != 3",
+        "paths": [
+          "GET /api/runs/<id>",
+          "GET /api/runs/<id>/replay",
+          "GET /api/runs/<id>/events",
+          "POST /api/runs/<id>/stop"
+        ]
+      },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "status": 409,
+        "code": "unsupported_replay_version",
+        "invariant": "replay.json bytes unchanged"
+      }
+    },
+    {
+      "id": "DIFF-019",
+      "observation_id": "DIFF-019",
+      "requirement_ids": ["R019"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/artifacts/screenshots/<name>" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "present": { "status": 200, "content_type": "image/png" },
+        "absent": { "status": 404, "code": "artifact_not_found" }
+      }
+    },
+    {
+      "id": "DIFF-020",
+      "observation_id": "DIFF-020",
+      "requirement_ids": ["R020"],
+      "kind": "http-sse",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/events" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "persisted snapshot precedes live events; sequences strictly increase; stream ends after run_completed|run_failed|run_cancelled"
+      }
+    },
+    {
+      "id": "DIFF-021",
+      "observation_id": "DIFF-021",
+      "requirement_ids": ["R021"],
+      "kind": "http-sse",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/events", "scenario": "emit events between snapshot read and subscription" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "exactly one frame per sequence, no duplicates"
+      }
+    },
+    {
+      "id": "DIFF-022",
+      "observation_id": "DIFF-022",
+      "requirement_ids": ["R022"],
+      "kind": "http",
+      "request": { "method": "GET", "path": "/api/runs/<runId>/events", "scenario": "stored running replay without a live subscription" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "content_type": "application/json",
+        "code": "run_not_active"
+      }
+    },
+    {
+      "id": "DIFF-023",
+      "observation_id": "DIFF-023",
+      "requirement_ids": ["R023"],
+      "kind": "lifecycle",
+      "request": { "method": "close", "path": "javascript-app/src/server.ts#createServer" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "waits for executor teardown; manager.shutdown called exactly once; live SSE streams ended"
+      }
+    },
+    {
+      "id": "DIFF-024",
+      "observation_id": "DIFF-024",
+      "requirement_ids": ["R024"],
+      "kind": "process",
+      "request": { "method": "signal", "signals": ["SIGINT", "SIGTERM", "SIGHUP"] },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "exit_codes": { "SIGINT": 130, "SIGTERM": 143, "SIGHUP": 129 },
+        "managed_launch_exit": 0
+      }
+    },
+    {
+      "id": "DIFF-025",
+      "observation_id": "DIFF-025",
+      "requirement_ids": ["R025"],
+      "kind": "process",
+      "request": { "method": "start", "scenario": "coordination port 4050 already held" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "single-backend constraint error instead of listening"
+      }
+    },
+    {
+      "id": "DIFF-026",
+      "observation_id": "DIFF-026",
+      "requirement_ids": ["R026"],
+      "kind": "static",
+      "request": { "method": "inspect", "path": "public route/status/schema/error-code surface" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "no public route, status code, response schema or error code removed or renamed"
+      }
+    },
+    {
+      "id": "DIFF-027",
+      "observation_id": "DIFF-027",
+      "requirement_ids": ["R029"],
+      "kind": "static",
+      "request": { "method": "inspect", "path": "repository change set" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "allowed_paths": [
+          "javascript-app/src/server.ts",
+          "javascript-app/src/index.ts",
+          "javascript-app/tests/server.test.ts",
+          "javascript-app/package.json",
+          "pnpm-lock.yaml"
+        ]
+      }
+    },
+    {
+      "id": "DIFF-028",
+      "observation_id": "DIFF-028",
+      "requirement_ids": ["R031"],
+      "kind": "static",
+      "request": { "method": "inspect", "path": "contracts/, console/, labs/, python-app/, version-3 replay format" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "unmodified by the migration"
+      }
+    },
+    {
+      "id": "DIFF-029",
+      "observation_id": "DIFF-029",
+      "requirement_ids": ["R032"],
+      "kind": "static",
+      "request": { "method": "inspect", "path": "test assertions and evaluation inputs" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "no skipped checks, removed assertions, weakened comparisons or hardcoded evaluation inputs"
+      }
+    },
+    {
+      "id": "DIFF-030",
+      "observation_id": "DIFF-030",
+      "requirement_ids": ["R033"],
+      "kind": "test-harness",
+      "request": { "method": "run", "path": "javascript-app/tests/server.test.ts" },
+      "expect": {
+        "source": "PASS",
+        "target": "PASS",
+        "invariant": "harness adapted to Express while retaining every behavioral assertion"
+      }
+    }
+  ]
+}

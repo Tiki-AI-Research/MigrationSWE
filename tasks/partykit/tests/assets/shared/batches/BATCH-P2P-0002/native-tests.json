@@ -1,0 +1,89 @@
+{
+  "batch_id": "BATCH-P2P-0002",
+  "observations": {
+    "P2P-030": {
+      "test_file": "packages/partyserver/src/tests/index.test.ts",
+      "test_name": "encodes non-ASCII props as an ASCII-safe header value",
+      "full_test_name": "Props via x-partykit-props header > encodes non-ASCII props as an ASCII-safe header value",
+      "commands": {
+        "source": [
+          "npm",
+          "run",
+          "check:test",
+          "-w",
+          "partyserver"
+        ],
+        "target": [
+          "npm",
+          "run",
+          "check:test",
+          "-w",
+          "partyserver"
+        ]
+      },
+      "junit_commands": {
+        "source": [
+          "node_modules/.bin/vitest",
+          "-r",
+          "packages/partyserver/src/tests",
+          "--watch",
+          "false",
+          "--reporter=junit",
+          "--outputFile={report}"
+        ],
+        "target": [
+          "node_modules/.bin/vitest",
+          "-r",
+          "packages/partyserver/src/tests",
+          "--watch",
+          "false",
+          "--reporter=junit",
+          "--outputFile={report}"
+        ]
+      },
+      "projection": {
+        "status": 200,
+        "name": "room-unicode",
+        "props": {
+          "secret": "Usuário 日本語 🎉"
+        },
+        "rawPropsHeader": "eyJzZWNyZXQiOiJVc3XDoXJpbyDml6XmnKzoqp4g8J+OiSJ9"
+      },
+      "observation_id": "P2P-030",
+      "surface": "test:packages/partyserver/src/tests/index.test.ts#encodes non-ASCII props as an ASCII-safe header value"
+    }
+  },
+  "tests": [
+    {
+      "observation_id": "P2P-030",
+      "test_file": "packages/partyserver/src/tests/index.test.ts",
+      "test_name": "encodes non-ASCII props as an ASCII-safe header value",
+      "full_test_name": "Props via x-partykit-props header > encodes non-ASCII props as an ASCII-safe header value",
+      "commands": {
+        "source": [
+          "npm",
+          "run",
+          "check:test",
+          "-w",
+          "partyserver"
+        ],
+        "target": [
+          "npm",
+          "run",
+          "check:test",
+          "-w",
+          "partyserver"
+        ]
+      },
+      "projection": {
+        "status": 200,
+        "name": "room-unicode",
+        "props": {
+          "secret": "Usuário 日本語 🎉"
+        },
+        "rawPropsHeader": "eyJzZWNyZXQiOiJVc3XDoXJpbyDml6XmnKzoqp4g8J+OiSJ9"
+      },
+      "surface": "test:packages/partyserver/src/tests/index.test.ts#encodes non-ASCII props as an ASCII-safe header value"
+    }
+  ]
+}

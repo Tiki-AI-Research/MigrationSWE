@@ -1,0 +1,36 @@
+{
+  "schema_version": "migration-fixtures:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "description": "Normalized common projections for the executable state-preservation observations. The Rust source and Go target expose the same OAuth2 protocol behavior but different concrete type/value representations, so each observation is projected onto the stable status wrapper {\"result\": \"PASS\"}. Source and target wrappers are byte-identical after normalization and therefore compare equal under the equal_after_normalization gate.",
+  "normalization": {
+    "id": "status-wrapper",
+    "success_value": {"result": "PASS"},
+    "failure_value": {"result": "FAIL"},
+    "note": "A side emits {\"result\": \"PASS\"} only if every bound case passes; any failing or skipped case yields {\"result\": \"FAIL\"}."
+  },
+  "observations": [
+    {"observation_id": "P2P-001", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-002", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-003", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-004", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-005", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-006", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-007", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-008", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-009", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-010", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-011", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-012", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-013", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-014", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-015", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-016", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-017", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-018", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-019", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-020", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-021", "projection_id": "status-wrapper"},
+    {"observation_id": "P2P-022", "projection_id": "status-wrapper"}
+  ]
+}

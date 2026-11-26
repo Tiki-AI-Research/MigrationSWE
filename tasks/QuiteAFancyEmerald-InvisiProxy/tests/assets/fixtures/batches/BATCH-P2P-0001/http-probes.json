@@ -1,0 +1,259 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "server_entry": "src/server.mjs",
+  "listen": {
+    "host_key": "config.host",
+    "port_key": "ecosystem:env.PORT"
+  },
+  "projection": "equal_after_normalization",
+  "stable_fields": [
+    "status",
+    "content-type-family",
+    "location",
+    "service-worker-allowed",
+    "access-control-allow-origin",
+    "x-content-type-options",
+    "content-security-policy",
+    "x-powered-by",
+    "body-empty"
+  ],
+  "probes": [
+    {
+      "id": "P2P-001",
+      "requirement_ids": ["R021"],
+      "request": { "method": "GET", "path": "/proxy/" },
+      "project": ["status", "content-type-family", "body-empty"]
+    },
+    {
+      "id": "P2P-002",
+      "requirement_ids": ["R009"],
+      "request": {
+        "method": "GET",
+        "paths": [
+          "/assets/js/card.js",
+          "/uv/uv.sw.js",
+          "/scram/",
+          "/epoxy/",
+          "/libcurl/",
+          "/baremux/"
+        ]
+      },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-003",
+      "requirement_ids": ["R003"],
+      "request": {
+        "method": "HASH",
+        "paths": [
+          "views/sw.js",
+          "views/sw-blacklist.js",
+          "views/uv",
+          "views/scram",
+          "src/templates.mjs",
+          "src/source-rewrites.mjs",
+          "run-command.mjs",
+          "config.json",
+          "ecosystem.config.js"
+        ]
+      },
+      "project": ["sha256"]
+    },
+    {
+      "id": "P2P-004",
+      "requirement_ids": ["R012"],
+      "request": {
+        "method": "GET",
+        "path": "/test-shutdown",
+        "setup": "create src/.shutdown"
+      },
+      "project": ["shutdown-file-removed"]
+    },
+    {
+      "id": "P2P-005",
+      "requirement_ids": ["R005"],
+      "request": {
+        "method": "GET",
+        "paths": ["/documentation", "/robots.txt", "/manifest.json"]
+      },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-006",
+      "requirement_ids": ["R029"],
+      "request": { "method": "NATIVE", "command": "git diff --exit-code" },
+      "project": ["scripts"]
+    },
+    {
+      "id": "P2P-007",
+      "requirement_ids": ["R018"],
+      "request": { "method": "GET", "path": "/documentation.ico" },
+      "project": [
+        "status",
+        "content-type-family",
+        "access-control-allow-origin"
+      ]
+    },
+    {
+      "id": "P2P-008",
+      "requirement_ids": ["R010"],
+      "request": {
+        "method": "GET",
+        "paths": ["/service.js", "/service-blacklist.js"]
+      },
+      "project": ["status", "content-type-family", "service-worker-allowed"]
+    },
+    {
+      "id": "P2P-009",
+      "requirement_ids": ["R025"],
+      "request": { "method": "NATIVE", "command": "git diff --name-only" },
+      "project": ["stable-hashes", "mutable-present"]
+    },
+    {
+      "id": "P2P-010",
+      "requirement_ids": ["R006"],
+      "request": {
+        "method": "GET",
+        "paths": ["/documentation", "/", "/not-a-real-page"]
+      },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-011",
+      "requirement_ids": ["R017"],
+      "request": {
+        "method": "GET",
+        "paths": ["/robots.txt", "/assets/js/card.js", "/login", "/github"]
+      },
+      "project": ["status", "content-type-family", "location"]
+    },
+    {
+      "id": "P2P-012",
+      "requirement_ids": ["R020"],
+      "request": { "method": "GET", "path": "/github.ico" },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-013",
+      "requirement_ids": ["R015"],
+      "request": { "method": "GET", "path": "/favicon.ico" },
+      "project": ["status", "body-empty"]
+    },
+    {
+      "id": "P2P-014",
+      "requirement_ids": ["R028"],
+      "request": {
+        "method": "HASH",
+        "paths": [
+          "views/sw.js",
+          "views/sw-blacklist.js",
+          "views/uv",
+          "views/scram",
+          "src/templates.mjs",
+          "src/source-rewrites.mjs",
+          "config.json",
+          "ecosystem.config.js"
+        ]
+      },
+      "project": ["sha256"]
+    },
+    {
+      "id": "P2P-015",
+      "requirement_ids": ["R004"],
+      "request": { "method": "GET", "path": "/" },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-016",
+      "requirement_ids": ["R019"],
+      "request": {
+        "method": "GET",
+        "path": "/documentation",
+        "headers": {
+          "sec-fetch-dest": "document",
+          "cookie": "HistoryHide=true"
+        }
+      },
+      "project": ["status"]
+    },
+    {
+      "id": "P2P-017",
+      "requirement_ids": ["R007"],
+      "request": { "method": "GET", "path": "/not-a-real-page" },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-018",
+      "requirement_ids": ["R026"],
+      "request": { "method": "MODULE", "target": "src/server.mjs" },
+      "project": ["routes-imports", "templates-imports"]
+    },
+    {
+      "id": "P2P-019",
+      "requirement_ids": ["R008"],
+      "request": {
+        "method": "GET",
+        "paths": ["/github/wisp", "/github/does-not-exist"]
+      },
+      "project": ["status", "location"]
+    },
+    {
+      "id": "P2P-020",
+      "requirement_ids": ["R013"],
+      "request": { "method": "GET", "path": "/" },
+      "project": [
+        "status",
+        "x-content-type-options",
+        "content-security-policy",
+        "x-powered-by"
+      ]
+    },
+    {
+      "id": "P2P-021",
+      "requirement_ids": ["R011"],
+      "request": { "method": "UPGRADE", "path": "/wisp/" },
+      "project": ["upgrade"]
+    },
+    {
+      "id": "P2P-022",
+      "requirement_ids": ["R014"],
+      "request": {
+        "method": "GET",
+        "paths": ["//documentation//", "/documentation/", "/documentation"]
+      },
+      "project": ["status", "body-empty"]
+    },
+    {
+      "id": "P2P-023",
+      "requirement_ids": ["R022"],
+      "request": {
+        "method": "GET",
+        "paths": [
+          "/",
+          "/documentation",
+          "/browsing",
+          "/robots.txt",
+          "/sw.js",
+          "/assets/js/card.js"
+        ]
+      },
+      "project": ["status", "content-type-family"]
+    },
+    {
+      "id": "P2P-024",
+      "requirement_ids": ["R002"],
+      "request": {
+        "method": "MIXED",
+        "http_path": "/",
+        "upgrade_path": "/wisp/"
+      },
+      "project": ["http-status", "upgrade"]
+    },
+    {
+      "id": "P2P-025",
+      "requirement_ids": ["R016"],
+      "request": { "method": "GET", "path": "/documentation" },
+      "project": ["status", "content-type-family"]
+    }
+  ]
+}

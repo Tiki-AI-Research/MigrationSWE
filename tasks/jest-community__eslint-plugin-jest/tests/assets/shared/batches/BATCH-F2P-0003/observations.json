@@ -1,0 +1,790 @@
+{
+  "schema_version": "migration-batch-observations:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "source_probe": "source/batches/BATCH-F2P-0003/probe.js",
+  "target_probe": "target/batches/BATCH-F2P-0003/probe.js",
+  "shared_probe_library": "shared/batches/BATCH-F2P-0003/probe-lib.js",
+  "expected_fixture": "shared/batches/BATCH-F2P-0003/expected.json",
+  "observations": [
+    {
+      "observation_id": "F2P-056",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R013"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "configuration TypeScript types"
+      },
+      "checks": [
+        "declarations"
+      ],
+      "atomic_claim": "`yarn typecheck` succeeds with `index.d.ts` declaring all six configs using an ESLint 10 bundled flat-config type (`Linter.Config` or the still-exported `Linter.FlatConfig` alias), directly or through a derived type alias, and `types.d.ts` doing the same for ambient plugin configs; a consumer assigning `plugin.configs.recommended` to the removed `Linter.LegacyConfig` type fails under ESLint 10, whereas the source declarations use `Linter.LegacyConfig`."
+    },
+    {
+      "observation_id": "F2P-049",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R016"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/rules.test.ts::src/__tests__/rules.test.ts#test:rules"
+      },
+      "checks": [
+        "globals"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/rules.test.ts; surface: src/__tests__/rules.test.ts#test:rules. Behavior: Run src/__tests__/rules.test.ts#test:rules. Required postcondition: With only `plugin.configs['flat/recommended']` in the ESLint 10.5.0 configuration, linting `describe('d', () => { it('i', () => { expect(1).toBe(1); }); });` with `no-undef` as `error` yields zero diagnostics for `describe`, `it`, and `expect`; without the flat config globals the same input reports those names as undefined, and the source legacy config cannot inject them through ESLint 10 flat loading.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-050",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "interop",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/__tests__/prefer-importing-jest-globals.test.ts::src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:something"
+      },
+      "checks": [
+        "preferImporting"
+      ],
+      "atomic_claim": "Exercise this module/type interop path (ESM/CJS, dynamic import, type erasure) on the migrated code and verify the required target behavior. Scope: src/rules/__tests__/prefer-importing-jest-globals.test.ts; surface: src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:something. Behavior: Run src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:something. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-055",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/prefer-importing-jest-globals.ts::all rule IDs, semantics, messages, schemas, fixes, and suggestions"
+      },
+      "checks": [
+        "preferImporting"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/rules/prefer-importing-jest-globals.ts; surface: all rule IDs, semantics, messages, schemas, fixes, and suggestions. Behavior: For a representative invalid case per rule, such as `test.only('x', () => {})` for `no-focused-tests`, ESLint 10.5.0 produces the same ruleId, messageId, message text, line, column, fixer output, and suggestion output as the source rule; every rule schema and option name is unchanged.. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-063",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "interop",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/__tests__/prefer-importing-jest-globals.test.ts::src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:should pass"
+      },
+      "checks": [
+        "preferImporting"
+      ],
+      "atomic_claim": "Exercise this module/type interop path (ESM/CJS, dynamic import, type erasure) on the migrated code and verify the required target behavior. Scope: src/rules/__tests__/prefer-importing-jest-globals.test.ts; surface: src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:should pass. Behavior: Run src/rules/__tests__/prefer-importing-jest-globals.test.ts#test:should pass. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-064",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": ".github/workflows/nodejs.yml::public validation commands"
+      },
+      "checks": [
+        "ci"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: .github/workflows/nodejs.yml; surface: public validation commands. Behavior: Running `yarn test`, `yarn typecheck`, `yarn lint`, and `yarn prettier:check` in `/workspace/repo` after installing the migrated dependencies each exits 0; these commands exercise the visible test, type, lint, and formatting surfaces with ESLint 10.5.0 installed.. Required postcondition: Expanding the `.github/workflows/nodejs.yml` matrix produces an `eslint-version: 10.5.0` job that installs `eslint@10.5.0` and runs the test/typecheck/lint commands with the flat-only plugin configs; the source matrix entry `10` only names a floating major and does not pin 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-065",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/__snapshots__/rules.test.ts.snap::same-named configuration rule tables"
+      },
+      "checks": [
+        "flatShape",
+        "configTables",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/__snapshots__/rules.test.ts.snap; surface: same-named configuration rule tables. Behavior: For each of the six names, `Object.keys(plugin.configs[name].rules)` and the rule severities equal the source tables: `all` contains all 71 rules at `error`, `recommended` contains the 19 fixed recommended rules with their source severities, and `style` contains `jest/prefer-to-be`, `jest/prefer-to-contain`, and `jest/prefer-to-have-length` at `error`.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-066",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/__tests__/prefer-importing-jest-globals.test.ts::prefer-importing-jest-globals rule"
+      },
+      "checks": [
+        "preferImporting"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/rules/__tests__/prefer-importing-jest-globals.test.ts; surface: prefer-importing-jest-globals rule. Behavior: For `test('x', () => {});` linted with `prefer-importing-jest-globals`, `languageOptions.sourceType: 'module'` reports messageId `preferImportingJestGlobal` with data `jestFunctions: 'test'` and fixes to `import { test } from '@jest/globals';`, while `sourceType: 'script'` fixes to `const { test } = require('@jest/globals');`, with the source message text unchanged.. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-068",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/__snapshots__/rules.test.ts.snap::recommended and style fixed rule tables"
+      },
+      "checks": [
+        "flatShape",
+        "configTables"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/__snapshots__/rules.test.ts.snap; surface: recommended and style fixed rule tables. Behavior: `plugin.configs.recommended.rules` deep-equals the source 19-key recommended table and `plugin.configs.style.rules` deep-equals the source three-key style table, including `warn` for `jest/expect-expect`, `jest/no-commented-out-tests`, and `jest/no-disabled-tests`.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-069",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R028"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "index.d.ts::TypeScript declaration entry point"
+      },
+      "checks": [
+        "noLegacy",
+        "declarations"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: index.d.ts; surface: TypeScript declaration entry point. Behavior: A TypeScript consumer can write `import plugin = require('eslint-plugin-jest'); const n: keyof typeof plugin.configs = 'flat/style'; plugin.rules['no-focused-tests'];` and typecheck; `index.d.ts` still declares `meta`, `environments.globals`, the six config keys, and the rule index signature.. Required postcondition: Searching `src`, `index.d.ts`, and `types.d.ts` for `Linter.LegacyConfig` or `LegacyConfig` returns no matches, and `yarn typecheck` succeeds against ESLint 10.5.0; a consumer assigning a plugin config to `Linter.LegacyConfig` fails because that type is removed under ESLint 10, unlike the source declaration.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-070",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/prefer-importing-jest-globals.ts::import/require merging and use-strict fix output"
+      },
+      "checks": [
+        "mergeImportRequire"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/rules/prefer-importing-jest-globals.ts; surface: import/require merging and use-strict fix output. Behavior: For `'use strict'; import { expect } from '@jest/globals'; test('x', () => { expect(1).toBe(1); });` with module sourceType, the autofix inserts `import { expect, test } from '@jest/globals';` after the `'use strict'` directive; for the analogous require input it produces `const { expect, test } = require('@jest/globals');`, matching the source fix output.. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-071",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/rules.test.ts::recommended versus flat/recommended diagnostics"
+      },
+      "checks": [
+        "recommendedDiagnostics"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/rules.test.ts; surface: recommended versus flat/recommended diagnostics. Behavior: `plugin.configs.recommended.rules` deep-equals `plugin.configs['flat/recommended'].rules`, and linting `test.only('focused', () => { expect(true).toBe(true); });` with either config under ESLint 10.5.0 returns identical message arrays including the same ruleId, severity, line, and column.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-072",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/rules/__tests__/prefer-importing-jest-globals.test.ts::in-scope behavioral test assertions"
+      },
+      "checks": [
+        "preferImporting"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/rules/__tests__/prefer-importing-jest-globals.test.ts; surface: in-scope behavioral test assertions. Behavior: `src/__tests__/rules.test.ts` still checks six config names, each config has `plugins.jest`, `languageOptions.globals`, and `rules`, no config has `env`, and recommended diagnostics deep-equal flat/recommended diagnostics; no in-scope test replaces assertions with `it.skip`, `describe.skip`, or hardcoded evaluation inputs.. Required postcondition: Linting `test('x', () => {});` with `prefer-importing-jest-globals` and `languageOptions.sourceType: 'module'` produces an `import { test } from '@jest/globals';` fix; setting only `parserOptions.sourceType: 'module'` while `languageOptions.sourceType` remains `script` produces the require form in the target, whereas the ESLint 9 source used the parserOptions fallback to choose the import form.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-051",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::CommonJS plugin export"
+      },
+      "checks": [
+        "pluginSurface",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: CommonJS plugin export. Behavior: `require('eslint-plugin-jest')` returns an object whose `meta.name` is `eslint-plugin-jest`, `meta.version` is a non-empty semver string, `configs` has six entries, `environments.globals` contains `describe`, `it`, and `expect`, and `rules` contains 71 rule modules.. Required postcondition: Loading `plugin.configs['flat/all']` inside `new ESLint({ overrideConfigFile: true, overrideConfig: [plugin.configs['flat/all']] })` and linting `test('x', () => { expect(1).toBe(1); });` completes with no legacy-config or `env` error and returns a messages array; the source `all` entry with `env` and `plugins: ['jest']` raises such an error under ESLint 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-052",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R016"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/rules.test.ts::src/__tests__/rules.test.ts#test:should export configs that refer to actual rules"
+      },
+      "checks": [
+        "globals"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/rules.test.ts; surface: src/__tests__/rules.test.ts#test:should export configs that refer to actual rules. Behavior: Run src/__tests__/rules.test.ts#test:should export configs that refer to actual rules. Required postcondition: With only `plugin.configs['flat/recommended']` in the ESLint 10.5.0 configuration, linting `describe('d', () => { it('i', () => { expect(1).toBe(1); }); });` with `no-undef` as `error` yields zero diagnostics for `describe`, `it`, and `expect`; without the flat config globals the same input reports those names as undefined, and the source legacy config cannot inject them through ESLint 10 flat loading.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-053",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::repository change set and protected files"
+      },
+      "checks": [
+        "flatShape",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: repository change set and protected files. Behavior: `git diff --name-only` against the provided starting commit lists only `package.json`, `yarn.lock`, `eslint.config.js`, `index.d.ts`, `types.d.ts`, `src/index.ts`, `src/rules/prefer-importing-jest-globals.ts`, `src/rules/__tests__/prefer-importing-jest-globals.test.ts`, `src/rules/__tests__/test-utils.ts`, `src/__tests__/rules.test.ts`, `src/__tests__/__snapshots__/rules.test.ts.snap`, `README.md`, and `.github/workflows/nodejs.yml`; no other rule implementation, `docs/rules/` page, or unlisted test is modified.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-054",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::configs map keys"
+      },
+      "checks": [
+        "configKeys",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: configs map keys. Behavior: `Object.keys(require('eslint-plugin-jest').configs)` equals exactly `['all', 'recommended', 'style', 'flat/all', 'flat/recommended', 'flat/style']` in that order.. Required postcondition: Loading `plugin.configs['flat/all']` inside `new ESLint({ overrideConfigFile: true, overrideConfig: [plugin.configs['flat/all']] })` and linting `test('x', () => { expect(1).toBe(1); });` completes with no legacy-config or `env` error and returns a messages array; the source `all` entry with `env` and `plugins: ['jest']` raises such an error under ESLint 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-057",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::recommended and style fixed rule tables"
+      },
+      "checks": [
+        "configTables",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: recommended and style fixed rule tables. Behavior: `plugin.configs.recommended.rules` deep-equals the source 19-key recommended table and `plugin.configs.style.rules` deep-equals the source three-key style table, including `warn` for `jest/expect-expect`, `jest/no-commented-out-tests`, and `jest/no-disabled-tests`.. Required postcondition: Loading `plugin.configs['flat/all']` inside `new ESLint({ overrideConfigFile: true, overrideConfig: [plugin.configs['flat/all']] })` and linting `test('x', () => { expect(1).toBe(1); });` completes with no legacy-config or `env` error and returns a messages array; the source `all` entry with `env` and `plugins: ['jest']` raises such an error under ESLint 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-058",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/rules.test.ts::src/__tests__/rules.test.ts#test:rules"
+      },
+      "checks": [
+        "flatShape"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/rules.test.ts; surface: src/__tests__/rules.test.ts#test:rules. Behavior: Run src/__tests__/rules.test.ts#test:rules. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-059",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::Jest rule inventory and shared rule sets"
+      },
+      "checks": [
+        "ruleInventory",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: Jest rule inventory and shared rule sets. Behavior: `plugin.rules` has exactly the same 71 keys as the source version, and `plugin.configs.all`, `plugin.configs.recommended`, and `plugin.configs.style` have byte-identical rule-key sets and severities to the source version with no rule added or removed.. Required postcondition: Loading `plugin.configs['flat/all']` inside `new ESLint({ overrideConfigFile: true, overrideConfig: [plugin.configs['flat/all']] })` and linting `test('x', () => { expect(1).toBe(1); });` completes with no legacy-config or `env` error and returns a messages array; the source `all` entry with `env` and `plugins: ['jest']` raises such an error under ESLint 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-060",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::recommended and style fixed rule tables"
+      },
+      "checks": [
+        "configTables",
+        "flatShape"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: recommended and style fixed rule tables. Behavior: `plugin.configs.recommended.rules` deep-equals the source 19-key recommended table and `plugin.configs.style.rules` deep-equals the source three-key style table, including `warn` for `jest/expect-expect`, `jest/no-commented-out-tests`, and `jest/no-disabled-tests`.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-061",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::all and flat/all exact rule set"
+      },
+      "checks": [
+        "allRuleSet",
+        "loadAll"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: all and flat/all exact rule set. Behavior: `Object.keys(plugin.configs.all.rules)` deep-equals `Object.keys(plugin.configs['flat/all'].rules)` and equals exactly the 71 `jest/`-prefixed rule names whose modules have no truthy `meta.deprecated`, with no extra or missing keys.. Required postcondition: Loading `plugin.configs['flat/all']` inside `new ESLint({ overrideConfigFile: true, overrideConfig: [plugin.configs['flat/all']] })` and linting `test('x', () => { expect(1).toBe(1); });` completes with no legacy-config or `env` error and returns a messages array; the source `all` entry with `env` and `plugins: ['jest']` raises such an error under ESLint 10.5.0.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-062",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R005"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/__tests__/rules.test.ts::public validation commands"
+      },
+      "checks": [
+        "flatShape"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/__tests__/rules.test.ts; surface: public validation commands. Behavior: Running `yarn test`, `yarn typecheck`, `yarn lint`, and `yarn prettier:check` in `/workspace/repo` after installing the migrated dependencies each exits 0; these commands exercise the visible test, type, lint, and formatting surfaces with ESLint 10.5.0 installed.. Required postcondition: For each of the six config names, the exported object has own properties `plugins.jest`, `languageOptions.globals`, and `rules`, and ESLint 10.5.0 can load it from `overrideConfig` and lint `test.only('x', () => expect(1).toBe(1));` without error; the source `all`, `recommended`, and `style` objects instead expose `env` and `plugins: ['jest']` and cannot be loaded that way.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    },
+    {
+      "observation_id": "F2P-067",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R006"
+      ],
+      "family": "target-runtime",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "10.5.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "5.9.3",
+          "name": "ESLint",
+          "version": "9.39.5"
+        },
+        "surface": "src/index.ts::configs map keys"
+      },
+      "checks": [
+        "legacyShape"
+      ],
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/index.ts; surface: configs map keys. Behavior: `Object.keys(require('eslint-plugin-jest').configs)` equals exactly `['all', 'recommended', 'style', 'flat/all', 'flat/recommended', 'flat/style']` in that order.. Required postcondition: `plugin.configs.all`, `plugin.configs.recommended`, and `plugin.configs.style` have no own `env` property, their `plugins` is the object `{ jest: plugin }` rather than the array `['jest']`, and each is accepted in an ESLint 10.5.0 flat config array without an `env` key error; the source versions have the removed `env` and array `plugins` shape.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+    }
+  ]
+}

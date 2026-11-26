@@ -1,0 +1,128 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "binary": "/tmp/rubyfmt-probe-8ttbvu02/rubyfmt",
+  "build_error": "",
+  "observations": {
+    "F2P-025": {
+      "check": "stdin_devnull_and_tty",
+      "detail": "{\"devnull_exit\": 0, \"devnull_stdout\": \"\\n\", \"tty_exit\": 0, \"tty_stdout\": \"rubyfmt 0.14.1\\n\\nUsage: rubyfmt [OPTIONS] [include-paths]...\\n\\nRubyfmt is an opinionated Ruby source formatter.\\n\\nOptions:\\n  -c, --check                 Print unif\"}",
+      "status": "PASS"
+    },
+    "F2P-026": {
+      "check": "vendored_prism_runtime",
+      "detail": "{\"prism_package\": true, \"rust_prism_reference\": false, \"PATH\": \"/nonexistent\", \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-027": {
+      "check": "named_input_errors",
+      "detail": "{\"plain_exit\": 0, \"plain_stdout\": \"a(1, 2)\\n\", \"fail_fast_exit\": 1, \"missing_exit\": 3}",
+      "status": "PASS"
+    },
+    "F2P-028": {
+      "check": "check_diff",
+      "detail": "{\"exit\": 5, \"stdout\": \"--- test.rb\\n+++ test.rb\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n\", \"expected_stdout\": \"--- test.rb\\n+++ test.rb\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-029": {
+      "check": "named_input_errors",
+      "detail": "{\"plain_exit\": 0, \"plain_stdout\": \"a(1, 2)\\n\", \"fail_fast_exit\": 1, \"missing_exit\": 3}",
+      "status": "PASS"
+    },
+    "F2P-030": {
+      "check": "named_input_errors",
+      "detail": "{\"plain_exit\": 0, \"plain_stdout\": \"a(1, 2)\\n\", \"fail_fast_exit\": 1, \"missing_exit\": 3}",
+      "status": "PASS"
+    },
+    "F2P-031": {
+      "check": "inplace_mtime",
+      "detail": "{\"exit\": 0, \"unchanged_mtime_preserved\": true, \"changed_mtime_advanced\": true, \"changed_bytes\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-032": {
+      "check": "dependency_graph",
+      "detail": "{\"missing_packages\": [], \"forbidden_packages\": [], \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-033": {
+      "check": "dependency_graph",
+      "detail": "{\"missing_packages\": [], \"forbidden_packages\": [], \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-034": {
+      "check": "extension_filtering",
+      "detail": "{\"explicit_exit\": 0, \"explicit_bytes\": \"a(1, 2, 3)\\n\", \"tree_exit\": 0, \"rb_bytes\": \"a(1, 2, 3)\\n\", \"txt_bytes\": \"a 1,2,3\"}",
+      "status": "PASS"
+    },
+    "F2P-035": {
+      "check": "ignored_stdin_filepath",
+      "detail": "{\"normal_exit\": 0, \"normal_stdout\": \"a 1,2,3\", \"check_exit\": 0, \"check_stdout\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-036": {
+      "check": "vendored_prism_runtime",
+      "detail": "{\"prism_package\": true, \"rust_prism_reference\": false, \"PATH\": \"/nonexistent\", \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-037": {
+      "check": "ignored_stdin_filepath",
+      "detail": "{\"normal_exit\": 0, \"normal_stdout\": \"a 1,2,3\", \"check_exit\": 0, \"check_stdout\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-038": {
+      "check": "extension_filtering",
+      "detail": "{\"explicit_exit\": 0, \"explicit_bytes\": \"a(1, 2, 3)\\n\", \"tree_exit\": 0, \"rb_bytes\": \"a(1, 2, 3)\\n\", \"txt_bytes\": \"a 1,2,3\"}",
+      "status": "PASS"
+    },
+    "F2P-039": {
+      "check": "path_only_execution",
+      "detail": "{\"path\": \"/tmp/rubyfmt-path-5r6ezklk\", \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\", \"stderr\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-040": {
+      "check": "path_only_execution",
+      "detail": "{\"path\": \"/tmp/rubyfmt-path-5r6ezklk\", \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\", \"stderr\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-041": {
+      "check": "ignored_stdin_filepath",
+      "detail": "{\"normal_exit\": 0, \"normal_stdout\": \"a 1,2,3\", \"check_exit\": 0, \"check_stdout\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-042": {
+      "check": "inplace_mtime",
+      "detail": "{\"exit\": 0, \"unchanged_mtime_preserved\": true, \"changed_mtime_advanced\": true, \"changed_bytes\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-043": {
+      "check": "public_go_library",
+      "detail": "{\"exit\": 0, \"stdout\": \"ok  \\trubyfmt\\t(cached)\\n\", \"stderr\": \"\"}",
+      "status": "PASS"
+    },
+    "F2P-044": {
+      "check": "vendored_prism_runtime",
+      "detail": "{\"prism_package\": true, \"rust_prism_reference\": false, \"PATH\": \"/nonexistent\", \"exit\": 0, \"stdout\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-045": {
+      "check": "stdin_devnull_and_tty",
+      "detail": "{\"devnull_exit\": 0, \"devnull_stdout\": \"\\n\", \"tty_exit\": 0, \"tty_stdout\": \"rubyfmt 0.14.1\\n\\nUsage: rubyfmt [OPTIONS] [include-paths]...\\n\\nRubyfmt is an opinionated Ruby source formatter.\\n\\nOptions:\\n  -c, --check                 Print unif\"}",
+      "status": "PASS"
+    },
+    "F2P-046": {
+      "check": "check_diff",
+      "detail": "{\"exit\": 5, \"stdout\": \"--- test.rb\\n+++ test.rb\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n\", \"expected_stdout\": \"--- test.rb\\n+++ test.rb\\n@@ -1 +1 @@\\n-a 1,2,3\\n+a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-047": {
+      "check": "inplace_mtime",
+      "detail": "{\"exit\": 0, \"unchanged_mtime_preserved\": true, \"changed_mtime_advanced\": true, \"changed_bytes\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    },
+    "F2P-048": {
+      "check": "inplace_mtime",
+      "detail": "{\"exit\": 0, \"unchanged_mtime_preserved\": true, \"changed_mtime_advanced\": true, \"changed_bytes\": \"a(1, 2, 3)\\n\"}",
+      "status": "PASS"
+    }
+  },
+  "repo_root": "/input/target"
+}

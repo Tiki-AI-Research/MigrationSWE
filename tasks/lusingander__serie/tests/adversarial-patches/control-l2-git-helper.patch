@@ -1,0 +1,3147 @@
+diff --git a/cmd/serie-core/main.go b/cmd/serie-core/main.go
+new file mode 100644
+index 0000000..3abb68a
+--- /dev/null
++++ b/cmd/serie-core/main.go
+@@ -0,0 +1,214 @@
++// Command serie-core exposes the migrated non-UI serie core as a small CLI.
++package main
++
++import (
++	"encoding/json"
++	"flag"
++	"fmt"
++	"io"
++	"os"
++	"strconv"
++	"strings"
++
++	"github.com/lusingander/serie/core"
++)
++
++type optionalInt struct {
++	value int
++	set   bool
++}
++
++func (o *optionalInt) String() string {
++	if !o.set {
++		return ""
++	}
++	return strconv.Itoa(o.value)
++}
++
++func (o *optionalInt) Set(value string) error {
++	n, err := strconv.Atoi(value)
++	if err != nil {
++		return err
++	}
++	if n < 0 {
++		return fmt.Errorf("max-count must not be negative")
++	}
++	o.value = n
++	o.set = true
++	return nil
++}
++
++type optionalOrder struct {
++	value core.SortCommit
++	set   bool
++}
++
++func (o *optionalOrder) String() string {
++	if !o.set {
++		return ""
++	}
++	if o.value == core.SortTopological {
++		return "topo"
++	}
++	return "chrono"
++}
++
++func (o *optionalOrder) Set(value string) error {
++	switch value {
++	case "chrono":
++		o.value = core.SortChronological
++	case "topo":
++		o.value = core.SortTopological
++	default:
++		return fmt.Errorf("invalid order %q (expected chrono or topo)", value)
++	}
++	o.set = true
++	return nil
++}
++
++type optionalBool struct {
++	value bool
++	set   bool
++}
++
++func (o *optionalBool) String() string {
++	if !o.set {
++		return "false"
++	}
++	return strconv.FormatBool(o.value)
++}
++
++func (o *optionalBool) Set(value string) error {
++	v, err := strconv.ParseBool(value)
++	if err != nil {
++		return err
++	}
++	o.value = v
++	o.set = true
++	return nil
++}
++
++// IsBoolFlag lets --mailmap be used without an explicit value.
++func (o *optionalBool) IsBoolFlag() bool { return true }
++
++type cliOptions struct {
++	maxCount optionalInt
++	order    optionalOrder
++	mailmap  optionalBool
++	path     string
++}
++
++// reorderArgs allows the optional repository path to appear before or after
++// flags, which is friendlier for a CLI whose path argument is optional.
++func reorderArgs(args []string) []string {
++	flags := make([]string, 0, len(args))
++	positional := make([]string, 0, len(args))
++	for i := 0; i < len(args); i++ {
++		arg := args[i]
++		if arg == "--" {
++			positional = append(positional, args[i+1:]...)
++			break
++		}
++		if arg == "-n" || arg == "--max-count" || arg == "-o" || arg == "--order" {
++			flags = append(flags, arg)
++			if i+1 < len(args) {
++				i++
++				flags = append(flags, args[i])
++			}
++			continue
++		}
++		if strings.HasPrefix(arg, "-") {
++			flags = append(flags, arg)
++			continue
++		}
++		positional = append(positional, arg)
++	}
++	return append(flags, positional...)
++}
++
++func parseFlags(args []string, output io.Writer) (cliOptions, error) {
++	var opts cliOptions
++	fs := flag.NewFlagSet("serie-core", flag.ContinueOnError)
++	fs.SetOutput(output)
++	fs.Var(&opts.maxCount, "n", "Maximum number of commits to load")
++	fs.Var(&opts.maxCount, "max-count", "Maximum number of commits to load")
++	fs.Var(&opts.order, "o", "Commit ordering algorithm (chrono or topo)")
++	fs.Var(&opts.order, "order", "Commit ordering algorithm (chrono or topo)")
++	fs.Var(&opts.mailmap, "mailmap", "Resolve identities through .mailmap")
++	if err := fs.Parse(reorderArgs(args)); err != nil {
++		return cliOptions{}, err
++	}
++	rest := fs.Args()
++	if len(rest) > 1 {
++		return cliOptions{}, fmt.Errorf("too many arguments")
++	}
++	opts.path = "."
++	if len(rest) == 1 {
++		opts.path = rest[0]
++	}
++	return opts, nil
++}
++
++func resolveOptions(cli cliOptions, config core.Config) (string, core.SortCommit, *int, bool) {
++	order := config.Order
++	if cli.order.set {
++		order = cli.order.value
++	}
++	mailmap := config.Mailmap
++	if cli.mailmap.set {
++		mailmap = cli.mailmap.value
++	}
++	var maxCount *int
++	if cli.maxCount.set {
++		n := cli.maxCount.value
++		maxCount = &n
++	}
++	return cli.path, order, maxCount, mailmap
++}
++
++type jsonResult struct {
++	Commits      []*core.Commit                    `json:"commits"`
++	CommitPosMap map[core.CommitHash]core.Position `json:"commit_pos_map"`
++	Edges        [][]core.Edge                     `json:"edges"`
++	MaxPosX      int                               `json:"max_pos_x"`
++	AllRefs      []core.Ref                        `json:"all_refs"`
++	Head         core.Head                         `json:"head"`
++}
++
++func writeJSONResult(w io.Writer, graph *core.Graph, refs []core.Ref, head core.Head) error {
++	encoder := json.NewEncoder(w)
++	encoder.SetEscapeHTML(false)
++	return encoder.Encode(jsonResult{
++		Commits:      graph.Commits,
++		CommitPosMap: graph.CommitPosMap,
++		Edges:        graph.Edges,
++		MaxPosX:      graph.MaxPosX,
++		AllRefs:      refs,
++		Head:         head,
++	})
++}
++
++func run(args []string, stdout, stderr io.Writer) error {
++	opts, err := parseFlags(args, stderr)
++	if err != nil {
++		return err
++	}
++	config, err := core.LoadConfig()
++	if err != nil {
++		return err
++	}
++	path, order, maxCount, mailmap := resolveOptions(opts, config)
++	repository, err := core.Load(path, order, maxCount, mailmap)
++	if err != nil {
++		return err
++	}
++	graph := core.CalcGraph(repository)
++	return writeJSONResult(stdout, graph, repository.AllRefs(), repository.Head())
++}
++
++func main() {
++	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
++		fmt.Fprintln(os.Stderr, err)
++		os.Exit(1)
++	}
++}
+diff --git a/cmd/serie-core/main_test.go b/cmd/serie-core/main_test.go
+new file mode 100644
+index 0000000..ad8a405
+--- /dev/null
++++ b/cmd/serie-core/main_test.go
+@@ -0,0 +1,188 @@
++package main
++
++import (
++	"bytes"
++	"encoding/json"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"reflect"
++	"strings"
++	"testing"
++
++	"github.com/lusingander/serie/core"
++)
++
++func TestMaxCountFlag(t *testing.T) {
++	opts, err := parseFlags([]string{"-n", "2", "/tmp/repo"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !opts.maxCount.set || opts.maxCount.value != 2 || opts.path != "/tmp/repo" {
++		t.Fatalf("unexpected options: %+v", opts)
++	}
++
++	opts, err = parseFlags([]string{"--max-count=3"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !opts.maxCount.set || opts.maxCount.value != 3 || opts.path != "." {
++		t.Fatalf("unexpected options: %+v", opts)
++	}
++
++	opts, err = parseFlags([]string{"/tmp/repo", "-n", "4"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !opts.maxCount.set || opts.maxCount.value != 4 || opts.path != "/tmp/repo" {
++		t.Fatalf("path before flags was not parsed: %+v", opts)
++	}
++}
++
++func TestOrderFlag(t *testing.T) {
++	opts, err := parseFlags([]string{"--order", "topo"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !opts.order.set || opts.order.value != core.SortTopological {
++		t.Fatalf("unexpected options: %+v", opts)
++	}
++
++	opts, err = parseFlags([]string{"-o", "chrono"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !opts.order.set || opts.order.value != core.SortChronological {
++		t.Fatalf("unexpected options: %+v", opts)
++	}
++}
++
++func TestCLIOverridesConfig(t *testing.T) {
++	opts, err := parseFlags([]string{"--order=chrono", "--mailmap=false", "-n", "1"}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	config := core.Config{Order: core.SortTopological, Mailmap: true}
++	path, order, maxCount, mailmap := resolveOptions(opts, config)
++	if path != "." {
++		t.Fatalf("unexpected path: %s", path)
++	}
++	if order != core.SortChronological {
++		t.Fatalf("CLI order did not override config: %v", order)
++	}
++	if mailmap {
++		t.Fatal("CLI mailmap=false did not override config")
++	}
++	if maxCount == nil || *maxCount != 1 {
++		t.Fatalf("unexpected max count: %v", maxCount)
++	}
++
++	opts, err = parseFlags(nil, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, order, maxCount, mailmap = resolveOptions(opts, config)
++	if order != core.SortTopological || !mailmap || maxCount != nil {
++		t.Fatalf("config values were not retained: order=%v mailmap=%v max=%v", order, mailmap, maxCount)
++	}
++}
++
++func TestCLIJSONFieldNames(t *testing.T) {
++	repo := makeCLIRepo(t)
++	configPath := filepath.Join(t.TempDir(), "config.toml")
++	if err := os.WriteFile(configPath, []byte("[core.option]\norder = \"chrono\"\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	t.Setenv("SERIE_CONFIG_FILE", configPath)
++
++	var stdout, stderr bytes.Buffer
++	if err := run([]string{repo}, &stdout, &stderr); err != nil {
++		t.Fatalf("run failed: %v\n%s", err, stderr.String())
++	}
++	var object map[string]any
++	if err := json.Unmarshal(stdout.Bytes(), &object); err != nil {
++		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
++	}
++	for _, key := range []string{"commits", "commit_pos_map", "edges", "max_pos_x", "all_refs", "head"} {
++		if _, ok := object[key]; !ok {
++			t.Fatalf("missing CLI JSON field %q", key)
++		}
++	}
++	commits, ok := object["commits"].([]any)
++	if !ok || len(commits) != 1 {
++		t.Fatalf("unexpected commits: %v", object["commits"])
++	}
++	commit, ok := commits[0].(map[string]any)
++	if !ok {
++		t.Fatalf("unexpected commit: %v", commits[0])
++	}
++	if _, ok := commit["commit_hash"].(string); !ok {
++		t.Fatalf("commit_hash must be a string: %v", commit["commit_hash"])
++	}
++	if _, ok := commit["author_date"].(string); !ok {
++		t.Fatalf("author_date must be a string: %v", commit["author_date"])
++	}
++}
++
++func TestUIOnlyOptionsRejected(t *testing.T) {
++	for _, args := range [][]string{
++		{"--protocol", "kitty"},
++		{"--graph-width", "single"},
++		{"--initial-selection", "head"},
++	} {
++		if _, err := parseFlags(args, nil); err == nil {
++			t.Fatalf("UI-only option was accepted: %v", args)
++		}
++	}
++}
++
++func TestDeterministicOutput(t *testing.T) {
++	repo := makeCLIRepo(t)
++	configPath := filepath.Join(t.TempDir(), "config.toml")
++	if err := os.WriteFile(configPath, []byte("[core.option]\norder = \"chrono\"\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	t.Setenv("SERIE_CONFIG_FILE", configPath)
++
++	var first []byte
++	for i := 0; i < 20; i++ {
++		var stdout, stderr bytes.Buffer
++		if err := run([]string{repo}, &stdout, &stderr); err != nil {
++			t.Fatalf("run failed: %v\n%s", err, stderr.String())
++		}
++		if i == 0 {
++			first = append([]byte(nil), stdout.Bytes()...)
++			continue
++		}
++		if !reflect.DeepEqual(first, stdout.Bytes()) {
++			t.Fatalf("CLI output changed on iteration %d", i)
++		}
++	}
++}
++
++func makeCLIRepo(t *testing.T) string {
++	t.Helper()
++	dir := t.TempDir()
++	git := func(args ...string) {
++		t.Helper()
++		cmd := exec.Command("git", args...)
++		cmd.Dir = dir
++		cmd.Env = append(os.Environ(),
++			"GIT_AUTHOR_NAME=Author Name",
++			"GIT_AUTHOR_EMAIL=author@example.com",
++			"GIT_COMMITTER_NAME=Committer Name",
++			"GIT_COMMITTER_EMAIL=committer@example.com",
++			"GIT_AUTHOR_DATE=2024-01-01T01:02:03+00:00",
++			"GIT_COMMITTER_DATE=2024-01-01T01:02:03+00:00",
++			"GIT_CONFIG_NOSYSTEM=true",
++			"HOME="+dir,
++		)
++		out, err := cmd.CombinedOutput()
++		if err != nil {
++			t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, out)
++		}
++	}
++	git("init", "-b", "master")
++	git("commit", "--allow-empty", "-m", "001")
++	return dir
++}
+diff --git a/core/config.go b/core/config.go
+new file mode 100644
+index 0000000..70e1b0b
+--- /dev/null
++++ b/core/config.go
+@@ -0,0 +1,308 @@
++package core
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"strconv"
++	"strings"
++)
++
++const (
++	// CoreOptionOrder is the only in-scope core.option key.
++	CoreOptionOrder = "core.option.order"
++	// CoreGitMailmap is the only in-scope core.git key.
++	CoreGitMailmap = "core.git.mailmap"
++
++	configFileEnvName    = "SERIE_CONFIG_FILE"
++	xdgConfigHomeEnvName = "XDG_CONFIG_HOME"
++	defaultConfigDir     = ".config"
++	appDirName           = "serie"
++	configFileName       = "config.toml"
++)
++
++// Config contains the in-scope core configuration values.
++type Config struct {
++	Order   SortCommit
++	Mailmap bool
++}
++
++// DefaultConfig returns the baseline defaults.
++func DefaultConfig() Config {
++	return Config{Order: SortChronological, Mailmap: false}
++}
++
++// LoadConfig reads the baseline config lookup locations. SERIE_CONFIG_FILE has
++// highest priority and is an error when set but missing. XDG_CONFIG_HOME or the
++// home directory fallback is used otherwise. A missing fallback file means the
++// defaults are used.
++func LoadConfig() (Config, error) {
++	path, explicit := configFilePath()
++	if path == "" {
++		return DefaultConfig(), nil
++	}
++	if _, err := os.Stat(path); err != nil {
++		if os.IsNotExist(err) {
++			if explicit {
++				return Config{}, fmt.Errorf("Config file specified by $%s environment variable not found: %s", configFileEnvName, path)
++			}
++			return DefaultConfig(), nil
++		}
++		return Config{}, err
++	}
++	return LoadConfigFromFile(path)
++}
++
++// LoadConfigFromFile reads only the in-scope keys from a TOML file.
++func LoadConfigFromFile(path string) (Config, error) {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return Config{}, err
++	}
++	return ParseCoreConfig(string(content))
++}
++
++// ParseCoreConfig extracts core.option.order and core.git.mailmap while
++// tolerating comments, arrays, inline tables, multiline arrays, and sections
++// that are outside the Go core's scope.
++func ParseCoreConfig(content string) (Config, error) {
++	config := DefaultConfig()
++	section := ""
++	depth := 0
++
++	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
++	for _, rawLine := range lines {
++		line := stripTOMLComment(rawLine)
++
++		if depth > 0 {
++			depth += bracketDelta(line)
++			if depth < 0 {
++				depth = 0
++			}
++			continue
++		}
++
++		trimmed := strings.TrimSpace(line)
++		if trimmed == "" {
++			continue
++		}
++
++		if strings.HasPrefix(trimmed, "[") {
++			if end := strings.LastIndex(trimmed, "]"); end > 0 {
++				inner := strings.TrimSpace(trimmed[1:end])
++				inner = strings.Trim(inner, "[]")
++				section = normalizeTOMLKey(inner)
++				continue
++			}
++		}
++
++		eq := topLevelEquals(trimmed)
++		if eq < 0 {
++			depth += bracketDelta(trimmed)
++			if depth < 0 {
++				depth = 0
++			}
++			continue
++		}
++
++		keyPart := strings.TrimSpace(trimmed[:eq])
++		valuePart := strings.TrimSpace(trimmed[eq+1:])
++		key := normalizeTOMLKey(keyPart)
++		if section != "" {
++			key = section + "." + key
++		}
++
++		switch key {
++		case CoreOptionOrder:
++			value, err := parseTOMLString(valuePart)
++			if err != nil {
++				return Config{}, err
++			}
++			switch value {
++			case "chrono":
++				config.Order = SortChronological
++			case "topo":
++				config.Order = SortTopological
++			default:
++				return Config{}, fmt.Errorf("invalid value for core.option.order: %s", value)
++			}
++		case CoreGitMailmap:
++			value := strings.TrimSpace(valuePart)
++			switch value {
++			case "true":
++				config.Mailmap = true
++			case "false":
++				config.Mailmap = false
++			default:
++				return Config{}, fmt.Errorf("invalid value for core.git.mailmap: %s", value)
++			}
++		}
++
++		depth += bracketDelta(valuePart)
++		if depth < 0 {
++			depth = 0
++		}
++	}
++
++	return config, nil
++}
++
++func configFilePath() (string, bool) {
++	if path, ok := os.LookupEnv(configFileEnvName); ok {
++		return path, true
++	}
++	if dir, ok := os.LookupEnv(xdgConfigHomeEnvName); ok {
++		return filepath.Join(dir, appDirName, configFileName), false
++	}
++	home, err := os.UserHomeDir()
++	if err != nil {
++		return "", false
++	}
++	return filepath.Join(home, defaultConfigDir, appDirName, configFileName), false
++}
++
++func stripTOMLComment(line string) string {
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '#':
++			return line[:i]
++		}
++	}
++	return line
++}
++
++func bracketDelta(line string) int {
++	delta := 0
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '[', '{':
++			delta++
++		case ']', '}':
++			delta--
++		}
++	}
++	return delta
++}
++
++func topLevelEquals(line string) int {
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '=':
++			return i
++		}
++	}
++	return -1
++}
++
++func normalizeTOMLKey(key string) string {
++	parts := strings.Split(key, ".")
++	for i, part := range parts {
++		part = strings.TrimSpace(part)
++		if len(part) >= 2 {
++			if (part[0] == '"' && part[len(part)-1] == '"') || (part[0] == '\'' && part[len(part)-1] == '\'') {
++				part = part[1 : len(part)-1]
++			}
++		}
++		parts[i] = part
++	}
++	return strings.Join(parts, ".")
++}
++
++func parseTOMLString(value string) (string, error) {
++	value = strings.TrimSpace(value)
++	if value == "" {
++		return "", fmt.Errorf("expected a string value")
++	}
++	switch value[0] {
++	case '"':
++		end := -1
++		escaped := false
++		for i := 1; i < len(value); i++ {
++			if escaped {
++				escaped = false
++				continue
++			}
++			if value[i] == '\\' {
++				escaped = true
++				continue
++			}
++			if value[i] == '"' {
++				end = i
++				break
++			}
++		}
++		if end < 0 {
++			return "", fmt.Errorf("unterminated string value")
++		}
++		decoded, err := strconv.Unquote(value[:end+1])
++		if err != nil {
++			return "", err
++		}
++		return decoded, nil
++	case '\'':
++		end := strings.IndexByte(value[1:], '\'')
++		if end < 0 {
++			return "", fmt.Errorf("unterminated string value")
++		}
++		return value[1 : 1+end], nil
++	default:
++		return "", fmt.Errorf("expected a quoted string value")
++	}
++}
+diff --git a/core/config_test.go b/core/config_test.go
+new file mode 100644
+index 0000000..a713d40
+--- /dev/null
++++ b/core/config_test.go
+@@ -0,0 +1,196 @@
++package core
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++func TestConfigOrderAndMailmap(t *testing.T) {
++	config, err := ParseCoreConfig(`
++[core.option]
++order = "topo"
++
++[core.git]
++mailmap = true
++`)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortTopological {
++		t.Fatalf("unexpected order: %v", config.Order)
++	}
++	if !config.Mailmap {
++		t.Fatal("mailmap should be enabled")
++	}
++
++	config, err = ParseCoreConfig(`
++[core.option]
++order = "chrono"
++[core.git]
++mailmap = false
++`)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortChronological || config.Mailmap {
++		t.Fatalf("unexpected config: %+v", config)
++	}
++}
++
++func TestConfigIgnoresUISections(t *testing.T) {
++	config, err := ParseCoreConfig(`
++[core.option]
++order = "chrono"
++
++[ui.list]
++order = "topo"
++columns = ["date", "subject"]
++
++[graph]
++row_image_width = "fixed"
++`)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortChronological {
++		t.Fatalf("UI section affected core order: %v", config.Order)
++	}
++}
++
++func TestConfigComplexValues(t *testing.T) {
++	config, err := ParseCoreConfig(`
++[core.option]
++protocol = "auto"
++order = "topo"
++graph_width = "auto"
++
++[core.git]
++mailmap = true
++
++[core.user_command]
++commands_1 = { name = "git diff", commands = ["git", "--no-pager", "diff", "{{first_parent_hash}}", "{{target_hash}}"]}
++commands_2 = { name = "echo hello", type = "silent", commands = ["echo", "hello"], refresh = true }
++tab_width = 4
++
++[ui.list]
++columns = ["graph", "marker", "subject", "name", "hash", "date"]
++cursor_type = { virtual = "|" }
++
++[graph.color]
++branches = [
++  "#E06C76",
++  "#98C379",
++  "#E5C07B",
++  "#61AFEF",
++  "#C678DD",
++  "#56B6C2",
++]
++edge = "#00000000"
++background = "#00000000"
++
++[color]
++fg = "#ffffff" # inline comment
++`)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortTopological || !config.Mailmap {
++		t.Fatalf("unexpected config: %+v", config)
++	}
++}
++
++func TestConfigInvalidOrder(t *testing.T) {
++	_, err := ParseCoreConfig(`
++[core.option]
++order = "sideways"
++`)
++	if err == nil || !strings.Contains(err.Error(), "invalid value") {
++		t.Fatalf("expected invalid order error, got %v", err)
++	}
++}
++
++func TestConfigPathPrecedence(t *testing.T) {
++	dir := t.TempDir()
++	explicit := filepath.Join(dir, "explicit.toml")
++	if err := os.WriteFile(explicit, []byte("[core.option]\norder = \"topo\"\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	t.Setenv("SERIE_CONFIG_FILE", explicit)
++	config, err := LoadConfig()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortTopological {
++		t.Fatalf("SERIE_CONFIG_FILE was not used: %+v", config)
++	}
++
++	missing := filepath.Join(dir, "missing.toml")
++	t.Setenv("SERIE_CONFIG_FILE", missing)
++	_, err = LoadConfig()
++	if err == nil || !strings.Contains(err.Error(), "Config file specified by $SERIE_CONFIG_FILE environment variable not found") {
++		t.Fatalf("unexpected missing env-file error: %v", err)
++	}
++
++	unsetEnv(t, "SERIE_CONFIG_FILE")
++	xdg := t.TempDir()
++	if err := os.MkdirAll(filepath.Join(xdg, "serie"), 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(xdg, "serie", "config.toml"), []byte("[core.git]\nmailmap = true\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	t.Setenv("XDG_CONFIG_HOME", xdg)
++	config, err = LoadConfig()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !config.Mailmap {
++		t.Fatalf("XDG config was not used: %+v", config)
++	}
++
++	unsetEnv(t, "XDG_CONFIG_HOME")
++	home := t.TempDir()
++	if err := os.MkdirAll(filepath.Join(home, ".config", "serie"), 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(home, ".config", "serie", "config.toml"), []byte("[core.option]\norder = \"topo\"\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	t.Setenv("HOME", home)
++	config, err = LoadConfig()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortTopological {
++		t.Fatalf("home fallback was not used: %+v", config)
++	}
++}
++
++func TestConfigMissingFallbackUsesDefaults(t *testing.T) {
++	unsetEnv(t, "SERIE_CONFIG_FILE")
++	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
++	config, err := LoadConfig()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if config.Order != SortChronological || config.Mailmap {
++		t.Fatalf("unexpected defaults: %+v", config)
++	}
++}
++
++func unsetEnv(t *testing.T, key string) {
++	t.Helper()
++	old, ok := os.LookupEnv(key)
++	if err := os.Unsetenv(key); err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if ok {
++			_ = os.Setenv(key, old)
++		} else {
++			_ = os.Unsetenv(key)
++		}
++	})
++}
+diff --git a/core/detail_test.go b/core/detail_test.go
+new file mode 100644
+index 0000000..c6c8428
+--- /dev/null
++++ b/core/detail_test.go
+@@ -0,0 +1,122 @@
++package core
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestRootCommitAdditions(t *testing.T) {
++	repo := newTestRepo(t)
++	if err := os.WriteFile(filepath.Join(repo.dir, "a.txt"), []byte("a"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.MkdirAll(filepath.Join(repo.dir, "dir"), 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(repo.dir, "dir", "b.txt"), []byte("b"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	repo.git("add", "-A")
++	repo.gitWithDate("2024-01-01T01:02:03+00:00", "commit", "-m", "root")
++	hash := repo.revParse("HEAD")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	commit, changes := loaded.CommitDetail(NewCommitHash(hash))
++	if commit.CommitHash.Full != hash {
++		t.Fatalf("unexpected commit: %+v", commit)
++	}
++	if len(changes) != 2 {
++		t.Fatalf("expected two root additions, got %+v", changes)
++	}
++	paths := map[string]bool{}
++	for _, change := range changes {
++		if change.Kind != FileChangeAdd {
++			t.Fatalf("root change should be add: %+v", change)
++		}
++		paths[change.Path] = true
++	}
++	if !paths["a.txt"] || !paths["dir/b.txt"] {
++		t.Fatalf("unexpected root paths: %+v", paths)
++	}
++}
++
++func TestDiffStatusesAndRename(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commitFile("base", "2024-01-01T01:02:03+00:00", "keep.txt", "keep")
++	repo.commitFile("base-2", "2024-01-01T01:02:04+00:00", "modify.txt", "old")
++	repo.commitFile("base-3", "2024-01-01T01:02:05+00:00", "delete.txt", "delete")
++	repo.git("reset", "--soft", "HEAD~2")
++	repo.gitWithDate("2024-01-01T01:02:03+00:00", "commit", "-m", "base")
++
++	if err := os.WriteFile(filepath.Join(repo.dir, "modify.txt"), []byte("new"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Remove(filepath.Join(repo.dir, "delete.txt")); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(repo.dir, "added.txt"), []byte("added"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	repo.git("mv", "keep.txt", "renamed.txt")
++	repo.git("add", "-A")
++	repo.gitWithDate("2024-01-02T01:02:03+00:00", "commit", "-m", "changes")
++	hash := repo.revParse("HEAD")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, changes := loaded.CommitDetail(NewCommitHash(hash))
++	if len(changes) != 4 {
++		t.Fatalf("expected four changes, got %+v", changes)
++	}
++	byKind := map[FileChangeKind]FileChange{}
++	for _, change := range changes {
++		byKind[change.Kind] = change
++	}
++	if byKind[FileChangeAdd].Path != "added.txt" {
++		t.Fatalf("unexpected add: %+v", byKind[FileChangeAdd])
++	}
++	if byKind[FileChangeModify].Path != "modify.txt" {
++		t.Fatalf("unexpected modify: %+v", byKind[FileChangeModify])
++	}
++	if byKind[FileChangeDelete].Path != "delete.txt" {
++		t.Fatalf("unexpected delete: %+v", byKind[FileChangeDelete])
++	}
++	if byKind[FileChangeRename].From != "keep.txt" || byKind[FileChangeRename].To != "renamed.txt" {
++		t.Fatalf("unexpected rename: %+v", byKind[FileChangeRename])
++	}
++}
++
++func TestUnknownStatusIgnored(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commitFile("base", "2024-01-01T01:02:03+00:00", "file.txt", "content")
++	path := filepath.Join(repo.dir, "file.txt")
++	if err := os.Remove(path); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Symlink("target", path); err != nil {
++		t.Fatal(err)
++	}
++	repo.git("add", "-A")
++	repo.gitWithDate("2024-01-02T01:02:03+00:00", "commit", "-m", "type change")
++	hash := repo.revParse("HEAD")
++
++	status := repo.git("diff", "--name-status", "HEAD^", "HEAD")
++	if len(status) == 0 || status[0] != 'T' {
++		t.Skipf("git did not report a type change: %q", status)
++	}
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, changes := loaded.CommitDetail(NewCommitHash(hash))
++	if len(changes) != 0 {
++		t.Fatalf("unknown status should be ignored, got %+v", changes)
++	}
++}
+diff --git a/core/git_probe.go b/core/git_probe.go
+new file mode 100644
+index 0000000..72a168e
+--- /dev/null
++++ b/core/git_probe.go
+@@ -0,0 +1,9 @@
++package core
++
++import "os/exec"
++
++// probeGitRevision returns the current HEAD revision through the sanctioned
++// git subprocess that the migrated core is allowed to execute.
++func probeGitRevision(repoPath string) ([]byte, error) {
++	return exec.Command("git", "-C", repoPath, "rev-parse", "HEAD").Output()
++}
+diff --git a/core/gitcmd.go b/core/gitcmd.go
+new file mode 100644
+index 0000000..a9ddc0e
+--- /dev/null
++++ b/core/gitcmd.go
+@@ -0,0 +1,338 @@
++package core
++
++import (
++	"bytes"
++	"fmt"
++	"os/exec"
++	"strconv"
++	"strings"
++	"time"
++)
++
++// runGit executes Git in dir and returns stdout. A non-zero exit status is
++// returned as an error that includes stderr.
++func runGit(dir string, args ...string) ([]byte, error) {
++	cmd := exec.Command("git", args...)
++	cmd.Dir = dir
++	var stdout, stderr bytes.Buffer
++	cmd.Stdout = &stdout
++	cmd.Stderr = &stderr
++	if err := cmd.Run(); err != nil {
++		msg := strings.TrimSpace(stderr.String())
++		if msg == "" {
++			return stdout.Bytes(), fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
++		}
++		return stdout.Bytes(), fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, msg)
++	}
++	return stdout.Bytes(), nil
++}
++
++func checkGitRepository(path string) error {
++	if !isInsideWorkTree(path) && !isBareRepository(path) {
++		return fmt.Errorf("not a git repository (or any of the parent directories)")
++	}
++	return nil
++}
++
++func isInsideWorkTree(path string) bool {
++	out, err := runGit(path, "rev-parse", "--is-inside-work-tree")
++	return err == nil && strings.TrimSpace(string(out)) == "true"
++}
++
++func isBareRepository(path string) bool {
++	out, err := runGit(path, "rev-parse", "--is-bare-repository")
++	return err == nil && strings.TrimSpace(string(out)) == "true"
++}
++
++func currentBranch(path string) string {
++	out, err := runGit(path, "branch", "--show-current")
++	if err != nil {
++		return ""
++	}
++	return strings.TrimRight(strings.TrimSuffix(string(out), "\n"), "\r")
++}
++
++func loadCommitsFormat(mailmap bool) string {
++	fields := []string{"%H", "%an", "%ae", "%ad", "%cn", "%ce", "%cd", "%s", "%b", "%P"}
++	if mailmap {
++		fields = []string{"%H", "%aN", "%aE", "%ad", "%cN", "%cE", "%cd", "%s", "%b", "%P"}
++	}
++	return strings.Join(fields, "%x1f")
++}
++
++func parseISOdate(s string) (time.Time, error) {
++	return time.Parse(time.RFC3339, s)
++}
++
++func parseParentCommitHashes(s string) []CommitHash {
++	if s == "" {
++		return nil
++	}
++	parts := strings.Split(s, " ")
++	hashes := make([]CommitHash, 0, len(parts))
++	for _, p := range parts {
++		hashes = append(hashes, NewCommitHash(p))
++	}
++	return hashes
++}
++
++func parseCommitRecord(record string) (Commit, error) {
++	parts := strings.Split(record, "\x1f")
++	if len(parts) != 10 {
++		return Commit{}, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), record)
++	}
++	authorDate, err := parseISOdate(parts[3])
++	if err != nil {
++		return Commit{}, err
++	}
++	committerDate, err := parseISOdate(parts[6])
++	if err != nil {
++		return Commit{}, err
++	}
++	return Commit{
++		CommitHash:         NewCommitHash(parts[0]),
++		AuthorName:         parts[1],
++		AuthorEmail:        parts[2],
++		AuthorDate:         authorDate,
++		CommitterName:      parts[4],
++		CommitterEmail:     parts[5],
++		CommitterDate:      committerDate,
++		Subject:            parts[7],
++		Body:               parts[8],
++		ParentCommitHashes: parseParentCommitHashes(parts[9]),
++	}, nil
++}
++
++func parseCommitRecords(out []byte) ([]Commit, error) {
++	records := bytes.Split(out, []byte{0})
++	commits := make([]Commit, 0, len(records))
++	for _, record := range records {
++		if len(record) == 0 {
++			continue
++		}
++		commit, err := parseCommitRecord(string(record))
++		if err != nil {
++			return nil, err
++		}
++		commits = append(commits, commit)
++	}
++	return commits, nil
++}
++
++func loadAllCommits(path string, sort SortCommit, head Head, stashes []Commit, maxCount *int, mailmap bool) ([]Commit, error) {
++	args := []string{
++		"log",
++		sort.gitOrder(),
++		fmt.Sprintf("--pretty=%s", loadCommitsFormat(mailmap)),
++		"--date=iso-strict",
++		"-z",
++		"--branches",
++		"--remotes",
++		"--tags",
++	}
++	for _, stash := range stashes {
++		if len(stash.ParentCommitHashes) > 0 {
++			args = append(args, stash.ParentCommitHashes[0].Full)
++		}
++	}
++	if head.Kind != HeadKindNone {
++		args = append(args, "HEAD")
++	}
++	if maxCount != nil {
++		args = append(args, "--max-count", strconv.Itoa(*maxCount))
++	}
++	out, err := runGit(path, args...)
++	if err != nil && len(out) == 0 {
++		// An empty repository makes git log fail. Repository.load turns the
++		// resulting empty commit list into the required no-commits error.
++		return nil, nil
++	}
++	commits, parseErr := parseCommitRecords(out)
++	if parseErr != nil {
++		return nil, parseErr
++	}
++	return commits, nil
++}
++
++func loadAllStashes(path string, mailmap bool) ([]Commit, error) {
++	args := []string{
++		"stash", "list",
++		fmt.Sprintf("--pretty=%s", loadCommitsFormat(mailmap)),
++		"--date=iso-strict",
++		"-z",
++	}
++	out, err := runGit(path, args...)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	commits, parseErr := parseCommitRecords(out)
++	if parseErr != nil {
++		return nil, parseErr
++	}
++	return commits, nil
++}
++
++func loadRefs(path string) (map[CommitHash][]Ref, Head, error) {
++	out, err := runGit(path, "show-ref", "--head", "--dereference")
++	if err != nil && len(out) == 0 {
++		return map[CommitHash][]Ref{}, Head{Kind: HeadKindNone}, nil
++	}
++
++	refMap := make(map[CommitHash][]Ref)
++	tagMap := make(map[string]Ref)
++	head := Head{Kind: HeadKindNone}
++
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, " ")
++		if len(parts) != 2 {
++			return nil, Head{}, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), line)
++		}
++		hash := parts[0]
++		refs := parts[1]
++
++		if refs == "HEAD" {
++			if branch := currentBranch(path); branch != "" {
++				head = Head{Kind: HeadKindBranch, Name: branch}
++			} else {
++				head = Head{Kind: HeadKindDetached, Target: NewCommitHash(hash)}
++			}
++			continue
++		}
++		if r, ok := parseBranchRefs(hash, refs); ok {
++			refMap[r.Target] = append(refMap[r.Target], r)
++			continue
++		}
++		if r, ok := parseTagRefs(hash, refs); ok {
++			// The dereferenced (^{}) line for an annotated tag follows the tag
++			// object line, so it overwrites the tag target.
++			tagMap[r.Name] = r
++		}
++	}
++
++	for _, tag := range tagMap {
++		refMap[tag.Target] = append(refMap[tag.Target], tag)
++	}
++	for hash, refs := range refMap {
++		sortRefs(refs)
++		refMap[hash] = refs
++	}
++	return refMap, head, nil
++}
++
++func loadStashesAsRefs(path string) (map[CommitHash][]Ref, error) {
++	format := []string{"%gd", "%H", "%s"}
++	out, err := runGit(path, "stash", "list", "--format="+strings.Join(format, "%x1f"))
++	if err != nil && len(out) == 0 {
++		return map[CommitHash][]Ref{}, nil
++	}
++
++	refMap := make(map[CommitHash][]Ref)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, "\x1f")
++		if len(parts) != 3 {
++			return nil, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), line)
++		}
++		hash := NewCommitHash(parts[1])
++		refMap[hash] = append(refMap[hash], Ref{
++			Kind:    RefKindStash,
++			Name:    parts[0],
++			Message: parts[2],
++			Target:  hash,
++		})
++	}
++	return refMap, nil
++}
++
++func mergeRefMaps(dst, src map[CommitHash][]Ref) {
++	for hash, refs := range src {
++		dst[hash] = append(dst[hash], refs...)
++	}
++}
++
++func parseBranchRefs(hash, refs string) (Ref, bool) {
++	if strings.HasPrefix(refs, "refs/heads/") {
++		return Ref{
++			Kind:   RefKindBranch,
++			Name:   strings.TrimPrefix(refs, "refs/heads/"),
++			Target: NewCommitHash(hash),
++		}, true
++	}
++	if strings.HasPrefix(refs, "refs/remotes/") {
++		return Ref{
++			Kind:   RefKindRemoteBranch,
++			Name:   strings.TrimPrefix(refs, "refs/remotes/"),
++			Target: NewCommitHash(hash),
++		}, true
++	}
++	return Ref{}, false
++}
++
++func parseTagRefs(hash, refs string) (Ref, bool) {
++	if !strings.HasPrefix(refs, "refs/tags/") {
++		return Ref{}, false
++	}
++	name := strings.TrimPrefix(refs, "refs/tags/")
++	name = strings.TrimSuffix(name, "^{}")
++	return Ref{Kind: RefKindTag, Name: name, Target: NewCommitHash(hash)}, true
++}
++
++func loadDiffSummary(path string, commitHash CommitHash) ([]FileChange, error) {
++	out, err := runGit(path, "diff", "--name-status", commitHash.Full+"^", commitHash.Full)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	changes := make([]FileChange, 0)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, "\t")
++		if len(parts) == 0 || parts[0] == "" {
++			continue
++		}
++		switch parts[0][0] {
++		case 'A':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeAdd, Path: parts[1]})
++			}
++		case 'M':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeModify, Path: parts[1]})
++			}
++		case 'D':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeDelete, Path: parts[1]})
++			}
++		case 'R':
++			if len(parts) > 2 {
++				changes = append(changes, FileChange{Kind: FileChangeRename, From: parts[1], To: parts[2]})
++			}
++		}
++	}
++	return changes, nil
++}
++
++func loadInitialCommitAdditions(path string, commitHash CommitHash) ([]FileChange, error) {
++	out, err := runGit(path, "ls-tree", "--name-status", "-r", commitHash.Full)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	changes := make([]FileChange, 0)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		changes = append(changes, FileChange{Kind: FileChangeAdd, Path: line})
++	}
++	return changes, nil
++}
+diff --git a/core/graph.go b/core/graph.go
+new file mode 100644
+index 0000000..2651203
+--- /dev/null
++++ b/core/graph.go
+@@ -0,0 +1,325 @@
++package core
++
++import "sort"
++
++type wrappedEdge struct {
++	edge           Edge
++	edgeParentHash CommitHash
++}
++
++func newWrappedEdge(edgeType EdgeType, posX, linePosX int, parent CommitHash) wrappedEdge {
++	return wrappedEdge{
++		edge: Edge{
++			EdgeType:           edgeType,
++			PosX:               posX,
++			AssociatedLinePosX: linePosX,
++		},
++		edgeParentHash: parent,
++	}
++}
++
++// CalcGraph calculates commit lanes and edges for a repository.
++func CalcGraph(repository *Repository) *Graph {
++	commits := repository.AllCommits()
++	commitPosMap := calcCommitPositions(commits, repository)
++	graphEdges, maxPosX := calcEdges(commitPosMap, commits, repository)
++
++	return &Graph{
++		Commits:      commits,
++		CommitPosMap: commitPosMap,
++		Edges:        graphEdges,
++		MaxPosX:      maxPosX,
++	}
++}
++
++func calcCommitPositions(commits []*Commit, repository *Repository) map[CommitHash]Position {
++	commitPosMap := make(map[CommitHash]Position)
++	commitLineState := make([]CommitHash, 0)
++
++	for posY, commit := range commits {
++		filtered := filteredChildren(commit, repository)
++		if len(filtered) == 0 {
++			posX := getFirstVacantLine(commitLineState)
++			addCommitLine(commit, &commitLineState, posX)
++			commitPosMap[commit.CommitHash] = Position{PosX: posX, PosY: posY}
++		} else {
++			posX := updateCommitLine(commit, commitLineState, filtered)
++			commitPosMap[commit.CommitHash] = Position{PosX: posX, PosY: posY}
++		}
++	}
++	return commitPosMap
++}
++
++func filteredChildren(commit *Commit, repository *Repository) []CommitHash {
++	children := repository.ChildrenHash(commit.CommitHash)
++	filtered := make([]CommitHash, 0, len(children))
++	for _, childHash := range children {
++		childParents := repository.ParentsHash(childHash)
++		if len(childParents) > 0 && childParents[0] == commit.CommitHash {
++			filtered = append(filtered, childHash)
++		}
++	}
++	return filtered
++}
++
++func getFirstVacantLine(commitLineState []CommitHash) int {
++	for posX, hash := range commitLineState {
++		if hash.Full == "" {
++			return posX
++		}
++	}
++	return len(commitLineState)
++}
++
++func addCommitLine(commit *Commit, commitLineState *[]CommitHash, posX int) {
++	if len(*commitLineState) <= posX {
++		*commitLineState = append(*commitLineState, commit.CommitHash)
++	} else {
++		(*commitLineState)[posX] = commit.CommitHash
++	}
++}
++
++func updateCommitLine(commit *Commit, commitLineState []CommitHash, targetCommitHashes []CommitHash) int {
++	if len(commitLineState) == 0 {
++		return 0
++	}
++	minPosX := len(commitLineState) - 1
++	for _, targetHash := range targetCommitHashes {
++		for posX, commitHash := range commitLineState {
++			if commitHash.Full != "" && commitHash == targetHash {
++				commitLineState[posX] = CommitHash{}
++				if minPosX > posX {
++					minPosX = posX
++				}
++				break
++			}
++		}
++	}
++	commitLineState[minPosX] = commit.CommitHash
++	return minPosX
++}
++
++func calcEdges(commitPosMap map[CommitHash]Position, commits []*Commit, repository *Repository) ([][]Edge, int) {
++	maxPosX := 0
++	edges := make([][]wrappedEdge, len(commits))
++
++	for _, commit := range commits {
++		pos := commitPosMap[commit.CommitHash]
++		hash := commit.CommitHash
++
++		for _, childHash := range repository.ChildrenHash(hash) {
++			childPos := commitPosMap[childHash]
++
++			if pos.PosX == childPos.PosX {
++				// commit
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeUp, pos.PosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeDown, pos.PosX, pos.PosX, hash))
++			} else {
++				child := repository.Commit(childHash)
++				if child == nil || len(child.ParentCommitHashes) == 0 {
++					continue
++				}
++				childFirstParentHash := child.ParentCommitHashes[0]
++				if childFirstParentHash == hash {
++					// branch
++					if pos.PosX < childPos.PosX {
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRight, pos.PosX, childPos.PosX, hash))
++						for x := pos.PosX + 1; x < childPos.PosX; x++ {
++							edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, childPos.PosX, hash))
++						}
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRightBottom, childPos.PosX, childPos.PosX, hash))
++					} else {
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeLeft, pos.PosX, childPos.PosX, hash))
++						for x := childPos.PosX + 1; x < pos.PosX; x++ {
++							edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, childPos.PosX, hash))
++						}
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeLeftBottom, childPos.PosX, childPos.PosX, hash))
++					}
++					for y := childPos.PosY + 1; y < pos.PosY; y++ {
++						edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, childPos.PosX, childPos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeDown, childPos.PosX, childPos.PosX, hash))
++				}
++				// merge edges are handled in the second pass
++			}
++		}
++
++		if maxPosX < pos.PosX {
++			maxPosX = pos.PosX
++		}
++
++		// Draw a continuation if max_count removed the first parent.
++		if len(commit.ParentCommitHashes) > 0 && !repository.HasCommit(commit.ParentCommitHashes[0]) {
++			edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeDown, pos.PosX, pos.PosX, hash))
++			for y := pos.PosY + 1; y < len(commits); y++ {
++				edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++			}
++		}
++	}
++
++	for _, commit := range commits {
++		pos := commitPosMap[commit.CommitHash]
++		hash := commit.CommitHash
++
++		for _, childHash := range repository.ChildrenHash(hash) {
++			childPos := commitPosMap[childHash]
++
++			if pos.PosX == childPos.PosX {
++				continue
++			}
++			child := repository.Commit(childHash)
++			if child == nil || len(child.ParentCommitHashes) == 0 {
++				continue
++			}
++			if child.ParentCommitHashes[0] == hash {
++				continue
++			}
++
++			// merge
++			overlap := false
++			newPosX := pos.PosX
++
++			skipJudgeOverlap := true
++			for y := childPos.PosY + 1; y < pos.PosY; y++ {
++				processingCommitPosX := commitPosMap[commits[y].CommitHash].PosX
++				if processingCommitPosX == newPosX {
++					skipJudgeOverlap = false
++					break
++				}
++				for _, edge := range edges[y] {
++					if edge.edge.PosX == pos.PosX &&
++						edge.edge.EdgeType == EdgeTypeVertical &&
++						edge.edgeParentHash != hash {
++						skipJudgeOverlap = false
++						break
++					}
++				}
++				if !skipJudgeOverlap {
++					break
++				}
++			}
++
++			if !skipJudgeOverlap {
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					processingCommitPosX := commitPosMap[commits[y].CommitHash].PosX
++					if processingCommitPosX == newPosX {
++						overlap = true
++						if newPosX < processingCommitPosX+1 {
++							newPosX = processingCommitPosX + 1
++						}
++					}
++					for _, edge := range edges[y] {
++						if edge.edge.PosX >= newPosX &&
++							edge.edgeParentHash != hash &&
++							edge.edge.EdgeType == EdgeTypeVertical {
++							overlap = true
++							if newPosX < edge.edge.PosX+1 {
++								newPosX = edge.edge.PosX + 1
++							}
++						}
++					}
++				}
++			}
++
++			if overlap {
++				// detour
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRight, pos.PosX, pos.PosX, hash))
++				for x := pos.PosX + 1; x < newPosX; x++ {
++					edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++				}
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRightBottom, newPosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, newPosX, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRightTop, newPosX, pos.PosX, hash))
++				for x := childPos.PosX + 1; x < newPosX; x++ {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRight, childPos.PosX, pos.PosX, hash))
++
++				if maxPosX < newPosX {
++					maxPosX = newPosX
++				}
++			} else {
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeUp, pos.PosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++				}
++				if pos.PosX < childPos.PosX {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeLeftTop, pos.PosX, pos.PosX, hash))
++					for x := pos.PosX + 1; x < childPos.PosX; x++ {
++						edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeLeft, childPos.PosX, pos.PosX, hash))
++				} else {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRightTop, pos.PosX, pos.PosX, hash))
++					for x := childPos.PosX + 1; x < pos.PosX; x++ {
++						edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRight, childPos.PosX, pos.PosX, hash))
++				}
++			}
++		}
++
++		if maxPosX < pos.PosX {
++			maxPosX = pos.PosX
++		}
++	}
++
++	graphEdges := make([][]Edge, len(edges))
++	for i, es := range edges {
++		row := make([]Edge, len(es))
++		for j := range es {
++			row[j] = es[j].edge
++		}
++		sort.SliceStable(row, func(a, b int) bool {
++			if row[a].AssociatedLinePosX != row[b].AssociatedLinePosX {
++				return row[a].AssociatedLinePosX < row[b].AssociatedLinePosX
++			}
++			if row[a].PosX != row[b].PosX {
++				return row[a].PosX < row[b].PosX
++			}
++			return row[a].EdgeType < row[b].EdgeType
++		})
++		if len(row) > 0 {
++			deduped := row[:1]
++			for _, edge := range row[1:] {
++				if edge != deduped[len(deduped)-1] {
++					deduped = append(deduped, edge)
++				}
++			}
++			row = deduped
++		}
++		graphEdges[i] = row
++	}
++
++	return graphEdges, maxPosX
++}
++
++// SortAndDedupEdges sorts one row by (associated_line_pos_x, pos_x,
++// edge_type) and removes exact duplicates.
++func SortAndDedupEdges(edges []Edge) []Edge {
++	row := append([]Edge(nil), edges...)
++	sort.SliceStable(row, func(a, b int) bool {
++		if row[a].AssociatedLinePosX != row[b].AssociatedLinePosX {
++			return row[a].AssociatedLinePosX < row[b].AssociatedLinePosX
++		}
++		if row[a].PosX != row[b].PosX {
++			return row[a].PosX < row[b].PosX
++		}
++		return row[a].EdgeType < row[b].EdgeType
++	})
++	if len(row) == 0 {
++		return row
++	}
++	deduped := row[:1]
++	for _, edge := range row[1:] {
++		if edge != deduped[len(deduped)-1] {
++			deduped = append(deduped, edge)
++		}
++	}
++	return deduped
++}
+diff --git a/core/graph_test.go b/core/graph_test.go
+new file mode 100644
+index 0000000..0e8e908
+--- /dev/null
++++ b/core/graph_test.go
+@@ -0,0 +1,273 @@
++package core
++
++import (
++	"encoding/json"
++	"reflect"
++	"testing"
++)
++
++func TestLaneAssignment(t *testing.T) {
++	t.Run("linear", func(t *testing.T) {
++		repo := newTestRepo(t)
++		repo.commit("001", "2024-01-01T01:02:03+00:00")
++		repo.commit("002", "2024-01-02T01:02:03+00:00")
++		repo.commit("003", "2024-01-03T01:02:03+00:00")
++		loaded, err := Load(repo.dir, SortChronological, nil, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		graph := CalcGraph(loaded)
++		for y, commit := range graph.Commits {
++			position := graph.CommitPosMap[commit.CommitHash]
++			if position.PosX != 0 || position.PosY != y {
++				t.Fatalf("unexpected position for %s: %+v", commit.Subject, position)
++			}
++		}
++	})
++
++	t.Run("branch", func(t *testing.T) {
++		repo := newTestRepo(t)
++		repo.commit("001", "2024-01-01T01:02:03+00:00")
++		repo.checkoutB("10")
++		repo.commit("011", "2024-02-01T01:02:03+00:00")
++		repo.checkout("master")
++		repo.commit("002", "2024-02-02T01:02:03+00:00")
++		loaded, err := Load(repo.dir, SortChronological, nil, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		graph := CalcGraph(loaded)
++		bySubject := map[string]Position{}
++		for _, commit := range graph.Commits {
++			bySubject[commit.Subject] = graph.CommitPosMap[commit.CommitHash]
++		}
++		if bySubject["002"].PosX != 0 || bySubject["002"].PosY != 0 {
++			t.Fatalf("unexpected 002 position: %+v", bySubject["002"])
++		}
++		if bySubject["011"].PosX != 1 || bySubject["011"].PosY != 1 {
++			t.Fatalf("unexpected 011 position: %+v", bySubject["011"])
++		}
++		if bySubject["001"].PosX != 0 || bySubject["001"].PosY != 2 {
++			t.Fatalf("unexpected 001 position: %+v", bySubject["001"])
++		}
++	})
++}
++
++func TestEdgeSortingAndDedup(t *testing.T) {
++	edges := []Edge{
++		{EdgeType: EdgeTypeRight, PosX: 0, AssociatedLinePosX: 2},
++		{EdgeType: EdgeTypeVertical, PosX: 2, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeHorizontal, PosX: 1, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeVertical, PosX: 0, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeVertical, PosX: 2, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeVertical, PosX: 0, AssociatedLinePosX: 2},
++	}
++	got := SortAndDedupEdges(edges)
++	want := []Edge{
++		{EdgeType: EdgeTypeVertical, PosX: 0, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeHorizontal, PosX: 1, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeVertical, PosX: 2, AssociatedLinePosX: 1},
++		{EdgeType: EdgeTypeVertical, PosX: 0, AssociatedLinePosX: 2},
++		{EdgeType: EdgeTypeRight, PosX: 0, AssociatedLinePosX: 2},
++	}
++	if !reflect.DeepEqual(got, want) {
++		t.Fatalf("unexpected sorted edges\nwant: %+v\ngot:  %+v", want, got)
++	}
++}
++
++func TestEdgeTypeOrder(t *testing.T) {
++	want := []EdgeType{
++		EdgeTypeVertical, EdgeTypeHorizontal, EdgeTypeUp, EdgeTypeDown,
++		EdgeTypeLeft, EdgeTypeRight, EdgeTypeRightTop, EdgeTypeRightBottom,
++		EdgeTypeLeftTop, EdgeTypeLeftBottom,
++	}
++	for i, edgeType := range want {
++		if int(edgeType) != i {
++			t.Fatalf("edge type %s has index %d, want %d", edgeType, int(edgeType), i)
++		}
++	}
++}
++
++func TestBranchMergeDetour(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.checkoutB("10")
++	repo.commit("011", "2024-02-01T01:02:03+00:00")
++	repo.checkoutB("20")
++	repo.commit("021", "2024-02-02T01:02:03+00:00")
++	repo.checkoutB("30")
++	repo.commit("031", "2024-02-03T01:02:03+00:00")
++	repo.checkout("10")
++	repo.commit("012", "2024-02-04T01:02:03+00:00")
++	repo.checkout("20")
++	repo.merge("2024-03-01T01:02:03+00:00", "10")
++	repo.checkout("30")
++	repo.merge("2024-03-02T01:02:03+00:00", "10")
++	repo.checkout("20")
++	repo.commit("022", "2024-03-03T01:02:03+00:00")
++	repo.checkoutB("40")
++	repo.commit("041", "2024-03-04T01:02:03+00:00")
++	repo.checkout("10")
++	repo.merge("2024-03-05T01:02:03+00:00", "20")
++	repo.checkout("30")
++	repo.commit("032", "2024-03-06T01:02:03+00:00")
++	repo.checkout("10")
++	repo.merge("2024-03-07T01:02:03+00:00", "30")
++	repo.checkout("40")
++	repo.merge("2024-03-08T01:02:03+00:00", "10")
++	repo.checkout("master")
++	repo.merge("2024-03-09T01:02:03+00:00", "10")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	graph := CalcGraph(loaded)
++	assertGraphInvariants(t, graph)
++}
++
++func TestMaxCountTruncation(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++	loaded, err := Load(repo.dir, SortChronological, intPtr(1), false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	graph := CalcGraph(loaded)
++	if len(graph.Commits) != 1 {
++		t.Fatalf("expected one commit, got %d", len(graph.Commits))
++	}
++	foundDown := false
++	for _, edge := range graph.Edges[0] {
++		if edge.EdgeType == EdgeTypeDown && edge.PosX == graph.CommitPosMap[graph.Commits[0].CommitHash].PosX {
++			foundDown = true
++		}
++	}
++	if !foundDown {
++		t.Fatalf("truncated parent did not emit a down edge: %+v", graph.Edges[0])
++	}
++	if graph.MaxPosX < graph.CommitPosMap[graph.Commits[0].CommitHash].PosX {
++		t.Fatalf("max lane does not include commit lane: %+v", graph)
++	}
++}
++
++func TestGraphDeterminism(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.checkoutB("10")
++	repo.commit("011", "2024-02-01T01:02:03+00:00")
++	repo.checkout("master")
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++	repo.merge("2024-03-01T01:02:03+00:00", "10")
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	first, err := json.Marshal(CalcGraph(loaded))
++	if err != nil {
++		t.Fatal(err)
++	}
++	for i := 0; i < 20; i++ {
++		next, err := json.Marshal(CalcGraph(loaded))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if string(next) != string(first) {
++			t.Fatalf("graph changed on iteration %d", i)
++		}
++	}
++}
++
++func assertGraphInvariants(t *testing.T, graph *Graph) {
++	t.Helper()
++	if len(graph.Edges) != len(graph.Commits) {
++		t.Fatalf("edge rows must match commit rows: %d != %d", len(graph.Edges), len(graph.Commits))
++	}
++	for y, row := range graph.Edges {
++		for i, edge := range row {
++			if edge.PosX < 0 || edge.AssociatedLinePosX < 0 {
++				t.Fatalf("negative edge position on row %d: %+v", y, edge)
++			}
++			if edge.PosX > graph.MaxPosX || edge.AssociatedLinePosX > graph.MaxPosX {
++				t.Fatalf("edge exceeds max lane on row %d: %+v max=%d", y, edge, graph.MaxPosX)
++			}
++			if i > 0 {
++				prev := row[i-1]
++				if prev.AssociatedLinePosX > edge.AssociatedLinePosX ||
++					(prev.AssociatedLinePosX == edge.AssociatedLinePosX && prev.PosX > edge.PosX) ||
++					(prev.AssociatedLinePosX == edge.AssociatedLinePosX && prev.PosX == edge.PosX && prev.EdgeType > edge.EdgeType) {
++					t.Fatalf("row %d is not sorted: %+v then %+v", y, prev, edge)
++				}
++				if prev == edge {
++					t.Fatalf("row %d contains a duplicate edge: %+v", y, edge)
++				}
++			}
++		}
++	}
++	for _, commit := range graph.Commits {
++		position, ok := graph.CommitPosMap[commit.CommitHash]
++		if !ok {
++			t.Fatalf("missing position for %s", commit.Subject)
++		}
++		if position.PosX > graph.MaxPosX {
++			t.Fatalf("commit lane exceeds max lane: %+v max=%d", position, graph.MaxPosX)
++		}
++	}
++}
++
++func TestFixtureParity(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++	repo.checkoutB("10")
++	repo.commit("011", "2024-02-01T01:02:03+00:00")
++	repo.checkout("master")
++	repo.checkoutB("20")
++	repo.commit("021", "2024-02-02T01:02:03+00:00")
++	repo.checkout("master")
++	repo.checkoutB("30")
++	repo.commit("031", "2024-02-03T01:02:03+00:00")
++	repo.checkout("master")
++	repo.checkoutB("40")
++	repo.commit("041", "2024-02-04T01:02:03+00:00")
++	repo.checkout("master")
++	repo.checkoutB("50")
++	repo.commit("051", "2024-02-05T01:02:03+00:00")
++	repo.checkout("10")
++	repo.commit("012", "2024-02-06T01:02:03+00:00")
++	repo.checkout("20")
++	repo.commit("022", "2024-02-07T01:02:03+00:00")
++	repo.checkout("30")
++	repo.commit("032", "2024-02-08T01:02:03+00:00")
++	repo.checkout("40")
++	repo.commit("042", "2024-02-09T01:02:03+00:00")
++	repo.checkout("50")
++	repo.commit("052", "2024-02-10T01:02:03+00:00")
++	repo.checkout("master")
++	repo.merge("2024-03-01T01:02:03+00:00", "10")
++	repo.merge("2024-03-02T01:02:03+00:00", "20")
++	repo.merge("2024-03-03T01:02:03+00:00", "30")
++	repo.merge("2024-03-04T01:02:03+00:00", "40")
++	repo.merge("2024-03-05T01:02:03+00:00", "50")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	graph := CalcGraph(loaded)
++	wantPosX := []int{0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 0, 0}
++	if len(graph.Commits) != len(wantPosX) {
++		t.Fatalf("expected %d commits, got %d", len(wantPosX), len(graph.Commits))
++	}
++	for y, commit := range graph.Commits {
++		position := graph.CommitPosMap[commit.CommitHash]
++		if position.PosX != wantPosX[y] || position.PosY != y {
++			t.Fatalf("row %d expected x=%d y=%d, got %+v", y, wantPosX[y], y, position)
++		}
++	}
++	if graph.MaxPosX != 5 {
++		t.Fatalf("expected max lane 5, got %d", graph.MaxPosX)
++	}
++	assertGraphInvariants(t, graph)
++}
+diff --git a/core/repository.go b/core/repository.go
+new file mode 100644
+index 0000000..014cddf
+--- /dev/null
++++ b/core/repository.go
+@@ -0,0 +1,229 @@
++package core
++
++import (
++	"fmt"
++	"sort"
++)
++
++// Repository is a read-only view of a loaded Git repository.
++type Repository struct {
++	path string
++
++	commitMap   map[CommitHash]*Commit
++	parentsMap  map[CommitHash][]CommitHash
++	childrenMap map[CommitHash][]CommitHash
++	refMap      map[CommitHash][]Ref
++	head        Head
++
++	// commitHashes preserves the original git log order (including inserted
++	// stashes).
++	commitHashes []CommitHash
++}
++
++// Load loads a repository from path. sort selects git's commit ordering,
++// maxCount is optional (nil means unlimited), and mailmap enables Git's mailmap
++// identity resolution.
++func Load(path string, sortOrder SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
++	if err := checkGitRepository(path); err != nil {
++		return nil, err
++	}
++
++	refMap, head, err := loadRefs(path)
++	if err != nil {
++		return nil, err
++	}
++
++	stashes, err := loadAllStashes(path, mailmap)
++	if err != nil {
++		return nil, err
++	}
++
++	commits, err := loadAllCommits(path, sortOrder, head, stashes, maxCount, mailmap)
++	if err != nil {
++		return nil, err
++	}
++	if len(commits) == 0 {
++		return nil, fmt.Errorf("no commits in the repository")
++	}
++
++	commits = mergeStashesToCommits(commits, stashes)
++	commitHashes := make([]CommitHash, len(commits))
++	for i := range commits {
++		commitHashes[i] = commits[i].CommitHash
++	}
++
++	parentsMap, childrenMap := buildCommitsMaps(commits)
++	commitMap := toCommitMap(commits)
++
++	stashRefMap, err := loadStashesAsRefs(path)
++	if err != nil {
++		return nil, err
++	}
++	mergeRefMaps(refMap, stashRefMap)
++
++	return &Repository{
++		path:         path,
++		commitMap:    commitMap,
++		parentsMap:   parentsMap,
++		childrenMap:  childrenMap,
++		refMap:       refMap,
++		head:         head,
++		commitHashes: commitHashes,
++	}, nil
++}
++
++// LoadRepository is an alias for Load.
++func LoadRepository(path string, sortOrder SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
++	return Load(path, sortOrder, maxCount, mailmap)
++}
++
++// Commit returns a commit, or nil if it is not present in the loaded set.
++func (r *Repository) Commit(commitHash CommitHash) *Commit {
++	return r.commitMap[normalizeHash(commitHash)]
++}
++
++// HasCommit reports whether the commit is present in the loaded set.
++func (r *Repository) HasCommit(commitHash CommitHash) bool {
++	_, ok := r.commitMap[normalizeHash(commitHash)]
++	return ok
++}
++
++// AllCommits returns commits in repository commit order.
++func (r *Repository) AllCommits() []*Commit {
++	commits := make([]*Commit, 0, len(r.commitHashes))
++	for _, hash := range r.commitHashes {
++		if commit, ok := r.commitMap[hash]; ok {
++			commits = append(commits, commit)
++		}
++	}
++	return commits
++}
++
++// ParentsHash returns the parent hashes of a commit.
++func (r *Repository) ParentsHash(commitHash CommitHash) []CommitHash {
++	return append([]CommitHash(nil), r.parentsMap[normalizeHash(commitHash)]...)
++}
++
++// ChildrenHash returns the child hashes of a commit in repository commit order.
++func (r *Repository) ChildrenHash(commitHash CommitHash) []CommitHash {
++	return append([]CommitHash(nil), r.childrenMap[normalizeHash(commitHash)]...)
++}
++
++// Refs returns references for a commit in tag, branch, remote branch, stash
++// order. Multiple stashes retain git stash list order.
++func (r *Repository) Refs(commitHash CommitHash) []Ref {
++	return append([]Ref(nil), r.refMap[normalizeHash(commitHash)]...)
++}
++
++// AllRefs returns every loaded reference in a deterministic global order.
++func (r *Repository) AllRefs() []Ref {
++	refs := make([]Ref, 0)
++	for _, rs := range r.refMap {
++		refs = append(refs, rs...)
++	}
++	sort.SliceStable(refs, func(i, j int) bool {
++		return CompareRefs(refs[i], refs[j]) < 0
++	})
++	return refs
++}
++
++// Head returns the current HEAD state.
++func (r *Repository) Head() Head {
++	return r.head
++}
++
++// Path returns the repository path used for loading.
++func (r *Repository) Path() string {
++	return r.path
++}
++
++// CommitDetail returns a commit together with its file changes.
++func (r *Repository) CommitDetail(commitHash CommitHash) (Commit, []FileChange) {
++	commitHash = normalizeHash(commitHash)
++	commit := r.commitMap[commitHash]
++	if commit == nil {
++		return Commit{}, nil
++	}
++	var changes []FileChange
++	var err error
++	if len(commit.ParentCommitHashes) == 0 {
++		changes, err = loadInitialCommitAdditions(r.path, commitHash)
++	} else {
++		changes, err = loadDiffSummary(r.path, commitHash)
++	}
++	if err != nil {
++		changes = nil
++	}
++	return *commit, changes
++}
++
++// CommitDetailWithError is CommitDetail with explicit error reporting.
++func (r *Repository) CommitDetailWithError(commitHash CommitHash) (Commit, []FileChange, error) {
++	commitHash = normalizeHash(commitHash)
++	commit := r.commitMap[commitHash]
++	if commit == nil {
++		return Commit{}, nil, fmt.Errorf("commit not found: %s", commitHash.Full)
++	}
++	if len(commit.ParentCommitHashes) == 0 {
++		changes, err := loadInitialCommitAdditions(r.path, commitHash)
++		return *commit, changes, err
++	}
++	changes, err := loadDiffSummary(r.path, commitHash)
++	return *commit, changes, err
++}
++
++func buildCommitsMaps(commits []Commit) (map[CommitHash][]CommitHash, map[CommitHash][]CommitHash) {
++	parentsMap := make(map[CommitHash][]CommitHash)
++	childrenMap := make(map[CommitHash][]CommitHash)
++	for i := range commits {
++		commit := &commits[i]
++		hash := commit.CommitHash
++		for _, parentHash := range commit.ParentCommitHashes {
++			parentsMap[hash] = append(parentsMap[hash], parentHash)
++			childrenMap[parentHash] = append(childrenMap[parentHash], hash)
++		}
++	}
++	return parentsMap, childrenMap
++}
++
++func toCommitMap(commits []Commit) map[CommitHash]*Commit {
++	commitMap := make(map[CommitHash]*Commit, len(commits))
++	for i := range commits {
++		commitMap[commits[i].CommitHash] = &commits[i]
++	}
++	return commitMap
++}
++
++func mergeStashesToCommits(commits []Commit, stashes []Commit) []Commit {
++	stashMap := make(map[CommitHash][]Commit)
++	for _, stash := range stashes {
++		if len(stash.ParentCommitHashes) == 0 {
++			continue
++		}
++		parent := stash.ParentCommitHashes[0]
++		stashMap[parent] = append(stashMap[parent], stash)
++	}
++
++	ret := make([]Commit, 0, len(commits)+len(stashes))
++	for _, commit := range commits {
++		if stashes, ok := stashMap[commit.CommitHash]; ok {
++			ret = append(ret, stashes...)
++			delete(stashMap, commit.CommitHash)
++		}
++		ret = append(ret, commit)
++	}
++	return ret
++}
++
++func normalizeHash(commitHash CommitHash) CommitHash {
++	if commitHash.Short == "" && commitHash.Full != "" {
++		return NewCommitHash(commitHash.Full)
++	}
++	return commitHash
++}
++
++func sortRefs(refs []Ref) {
++	sort.SliceStable(refs, func(i, j int) bool {
++		return CompareRefs(refs[i], refs[j]) < 0
++	})
++}
+diff --git a/core/repository_test.go b/core/repository_test.go
+new file mode 100644
+index 0000000..3dab15a
+--- /dev/null
++++ b/core/repository_test.go
+@@ -0,0 +1,406 @@
++package core
++
++import (
++	"encoding/json"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"reflect"
++	"strings"
++	"testing"
++	"time"
++)
++
++func TestRepositoryValidation(t *testing.T) {
++	t.Run("not a repository", func(t *testing.T) {
++		_, err := Load(t.TempDir(), SortChronological, nil, false)
++		if err == nil || err.Error() != "not a git repository (or any of the parent directories)" {
++			t.Fatalf("unexpected error: %v", err)
++		}
++	})
++
++	t.Run("empty repository", func(t *testing.T) {
++		repo := newTestRepo(t)
++		_, err := Load(repo.dir, SortChronological, nil, false)
++		if err == nil || err.Error() != "no commits in the repository" {
++			t.Fatalf("unexpected error: %v", err)
++		}
++	})
++
++	t.Run("bare repository", func(t *testing.T) {
++		repo := newTestRepo(t)
++		repo.commit("001", "2024-01-01T01:02:03+00:00")
++		bare := filepath.Join(t.TempDir(), "bare.git")
++		cloneBare(t, repo.dir, bare)
++		loaded, err := Load(bare, SortChronological, nil, false)
++		if err != nil {
++			t.Fatalf("load bare repository: %v", err)
++		}
++		if got := len(loaded.AllCommits()); got != 1 {
++			t.Fatalf("expected one commit, got %d", got)
++		}
++	})
++}
++
++func TestCommitEnumerationOrder(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.checkoutB("10")
++	repo.commit("011", "2024-02-01T01:02:03+00:00")
++	repo.checkout("master")
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++	repo.merge("2024-03-01T01:02:03+00:00", "10")
++
++	for _, tc := range []struct {
++		name string
++		sort SortCommit
++		flag string
++	}{
++		{"chronological", SortChronological, "--date-order"},
++		{"topological", SortTopological, "--topo-order"},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			loaded, err := Load(repo.dir, tc.sort, nil, false)
++			if err != nil {
++				t.Fatal(err)
++			}
++			expected := strings.Fields(repo.git("log", tc.flag, "--pretty=%H", "--branches", "--remotes", "--tags", "HEAD"))
++			actual := make([]string, 0)
++			for _, commit := range loaded.AllCommits() {
++				actual = append(actual, commit.CommitHash.Full)
++			}
++			if !reflect.DeepEqual(actual, expected) {
++				t.Fatalf("commit order mismatch\nexpected: %v\nactual:   %v", expected, actual)
++			}
++		})
++	}
++}
++
++func TestCommitFieldsAndDates(t *testing.T) {
++	repo := newTestRepo(t)
++	first := repo.commitFile("001", "2024-01-02T03:04:05+09:30", "a.txt", "one")
++	second := repo.commit("002", "2024-02-03T04:05:06-05:00")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	commits := loaded.AllCommits()
++	if len(commits) != 2 {
++		t.Fatalf("expected 2 commits, got %d", len(commits))
++	}
++	head := commits[0]
++	if head.CommitHash.Full != second || head.CommitHash.Short != second[:7] {
++		t.Fatalf("unexpected hashes: %+v", head.CommitHash)
++	}
++	if head.AuthorName != testAuthorName || head.AuthorEmail != testAuthorEmail {
++		t.Fatalf("unexpected author: %s <%s>", head.AuthorName, head.AuthorEmail)
++	}
++	if head.CommitterName != testCommitterName || head.CommitterEmail != testCommitterEmail {
++		t.Fatalf("unexpected committer: %s <%s>", head.CommitterName, head.CommitterEmail)
++	}
++	if got := head.AuthorDate.Format(time.RFC3339); got != "2024-02-03T04:05:06-05:00" {
++		t.Fatalf("author date lost offset: %s", got)
++	}
++	if _, offset := head.AuthorDate.Zone(); offset != -5*60*60 {
++		t.Fatalf("unexpected offset: %d", offset)
++	}
++	if head.Subject != "002" {
++		t.Fatalf("unexpected subject: %s", head.Subject)
++	}
++	old := commits[1]
++	if old.CommitHash.Full != first {
++		t.Fatalf("unexpected old hash: %s", old.CommitHash.Full)
++	}
++	if _, offset := old.AuthorDate.Zone(); offset != 9*60*60+30*60 {
++		t.Fatalf("unexpected first offset: %d", offset)
++	}
++	if !reflect.DeepEqual(head.ParentCommitHashes, []CommitHash{NewCommitHash(first)}) {
++		t.Fatalf("unexpected parents: %+v", head.ParentCommitHashes)
++	}
++	if got := loaded.ParentsHash(NewCommitHash(first)); len(got) != 0 {
++		t.Fatalf("root commit should have no parents, got %v", got)
++	}
++	if got := loaded.ChildrenHash(NewCommitHash(first)); len(got) != 1 || got[0].Full != second {
++		t.Fatalf("unexpected children: %v", got)
++	}
++	if commit := loaded.Commit(NewCommitHash(second)); commit == nil || commit.Subject != "002" {
++		t.Fatalf("commit query failed: %+v", commit)
++	}
++	if loaded.Commit(NewCommitHash("does-not-exist")) != nil {
++		t.Fatal("unknown commit should be nil")
++	}
++}
++
++func TestHeadStates(t *testing.T) {
++	t.Run("branch", func(t *testing.T) {
++		repo := newTestRepo(t)
++		repo.commit("001", "2024-01-01T01:02:03+00:00")
++		loaded, err := Load(repo.dir, SortChronological, nil, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		head := loaded.Head()
++		if head.Kind != HeadKindBranch || head.Name != "master" {
++			t.Fatalf("unexpected head: %+v", head)
++		}
++	})
++
++	t.Run("detached", func(t *testing.T) {
++		repo := newTestRepo(t)
++		hash := repo.commit("001", "2024-01-01T01:02:03+00:00")
++		repo.git("checkout", "--detach", hash)
++		loaded, err := Load(repo.dir, SortChronological, nil, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		head := loaded.Head()
++		if head.Kind != HeadKindDetached || head.Target.Full != hash {
++			t.Fatalf("unexpected head: %+v", head)
++		}
++	})
++
++	t.Run("none", func(t *testing.T) {
++		repo := newTestRepo(t)
++		hash := repo.commit("001", "2024-01-01T01:02:03+00:00")
++		bare := filepath.Join(t.TempDir(), "bare.git")
++		cloneBare(t, repo.dir, bare)
++		cmd := exec.Command("git", "symbolic-ref", "HEAD", "refs/heads/missing")
++		cmd.Dir = bare
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("symbolic-ref failed: %v\n%s", err, out)
++		}
++		cmd = exec.Command("git", "update-ref", "refs/heads/other", hash)
++		cmd.Dir = bare
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("update-ref failed: %v\n%s", err, out)
++		}
++		// Keep a branch reachable while HEAD has no target.
++		cmd = exec.Command("git", "branch", "-D", "master")
++		cmd.Dir = bare
++		_ = cmd.Run()
++		loaded, err := Load(bare, SortChronological, nil, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if loaded.Head().Kind != HeadKindNone {
++			t.Fatalf("unexpected head: %+v", loaded.Head())
++		}
++	})
++}
++
++func TestStashParentEnumerationAndInsertion(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++	stashHash := repo.stash("2024-01-03T01:02:03+00:00")
++	parentHash := repo.revParse("HEAD")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	commits := loaded.AllCommits()
++	if len(commits) != 3 {
++		t.Fatalf("expected stash plus two commits, got %d", len(commits))
++	}
++	if commits[0].CommitHash.Full != stashHash {
++		t.Fatalf("stash was not inserted first: %v", commits[0].CommitHash.Full)
++	}
++	if commits[1].CommitHash.Full != parentHash {
++		t.Fatalf("stash was not inserted immediately before its parent")
++	}
++	refs := loaded.Refs(NewCommitHash(stashHash))
++	if len(refs) != 1 || refs[0].Kind != RefKindStash {
++		t.Fatalf("unexpected stash refs: %+v", refs)
++	}
++
++	limited, err := Load(repo.dir, SortChronological, intPtr(2), false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got := len(limited.AllCommits()); got != 3 {
++		t.Fatalf("max_count must apply before stash merge, got %d commits", got)
++	}
++}
++
++func TestStashParentOnlyReachableThroughStash(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.checkoutB("10")
++	orphanParent := repo.commit("011", "2024-02-01T01:02:03+00:00")
++	stashHash := repo.stash("2024-02-02T01:02:03+00:00")
++	repo.checkout("master")
++	repo.git("branch", "-D", "10")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if loaded.Commit(NewCommitHash(orphanParent)) == nil {
++		t.Fatal("stash first parent was not enumerated")
++	}
++	if loaded.Commit(NewCommitHash(stashHash)) == nil {
++		t.Fatal("stash commit was not inserted")
++	}
++	if len(loaded.Refs(NewCommitHash(stashHash))) != 1 {
++		t.Fatal("orphan stash reference missing")
++	}
++}
++
++func TestRefKindsOrderAndAnnotatedTags(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	hash := repo.revParse("HEAD")
++
++	repo.git("branch", "branch-a", hash)
++	repo.git("tag", "light", hash)
++	repo.gitWithDate("2024-01-02T01:02:03+00:00", "tag", "-a", "annotated", "-m", "annotation", hash)
++	repo.git("update-ref", "refs/remotes/origin/master", hash)
++	repo.stash("2024-01-03T01:02:03+00:00")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	refs := loaded.Refs(NewCommitHash(hash))
++	if len(refs) != 5 {
++		t.Fatalf("expected tag, branch, remote refs, got %+v", refs)
++	}
++	wantKinds := []RefKind{RefKindTag, RefKindTag, RefKindBranch, RefKindBranch, RefKindRemoteBranch}
++	for i, want := range wantKinds {
++		if refs[i].Kind != want {
++			t.Fatalf("ref %d kind mismatch: got %s want %s", i, refs[i].Kind, want)
++		}
++	}
++	if refs[0].Name != "annotated" || refs[1].Name != "light" {
++		t.Fatalf("unexpected tag order: %+v", refs)
++	}
++	if refs[0].Target.Full != hash {
++		t.Fatalf("annotated tag was not dereferenced: %+v", refs[0])
++	}
++}
++
++func TestRefsIndependentOfMaxCount(t *testing.T) {
++	repo := newTestRepo(t)
++	old := repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.git("tag", "old-tag", old)
++	repo.commit("002", "2024-01-02T01:02:03+00:00")
++
++	loaded, err := Load(repo.dir, SortChronological, intPtr(1), false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got := len(loaded.AllCommits()); got != 1 {
++		t.Fatalf("expected one commit, got %d", got)
++	}
++	refs := loaded.Refs(NewCommitHash(old))
++	if len(refs) != 1 || refs[0].Name != "old-tag" {
++		t.Fatalf("max_count affected refs: %+v", refs)
++	}
++}
++
++func TestMailmap(t *testing.T) {
++	repo := newTestRepo(t)
++	repo.commit("001", "2024-01-01T01:02:03+00:00")
++	mailmap := "New Author <new-author@example.com> Author Name <author@example.com>\n" +
++		"New Committer <new-committer@example.com> Committer Name <committer@example.com>\n"
++	if err := os.WriteFile(filepath.Join(repo.dir, ".mailmap"), []byte(mailmap), 0o644); err != nil {
++		t.Fatal(err)
++	}
++
++	enabled, err := Load(repo.dir, SortChronological, nil, true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	commit := enabled.AllCommits()[0]
++	if commit.AuthorName != "New Author" || commit.AuthorEmail != "new-author@example.com" {
++		t.Fatalf("author mailmap not applied: %+v", commit)
++	}
++	if commit.CommitterName != "New Committer" || commit.CommitterEmail != "new-committer@example.com" {
++		t.Fatalf("committer mailmap not applied: %+v", commit)
++	}
++
++	disabled, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	commit = disabled.AllCommits()[0]
++	if commit.AuthorName != testAuthorName || commit.AuthorEmail != testAuthorEmail {
++		t.Fatalf("raw author identity expected: %+v", commit)
++	}
++	if commit.CommitterName != testCommitterName || commit.CommitterEmail != testCommitterEmail {
++		t.Fatalf("raw committer identity expected: %+v", commit)
++	}
++}
++
++func TestAllRefsDeterminism(t *testing.T) {
++	repo := newTestRepo(t)
++	hash := repo.commit("001", "2024-01-01T01:02:03+00:00")
++	repo.git("tag", "z-tag", hash)
++	repo.git("branch", "b-branch", hash)
++	repo.git("update-ref", "refs/remotes/origin/master", hash)
++	repo.stash("2024-01-02T01:02:03+00:00")
++
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	first := loaded.AllRefs()
++	for i := 0; i < 20; i++ {
++		if got := loaded.AllRefs(); !reflect.DeepEqual(got, first) {
++			t.Fatalf("all_refs order changed on iteration %d", i)
++		}
++	}
++	for i := 1; i < len(first); i++ {
++		if CompareRefs(first[i-1], first[i]) > 0 {
++			t.Fatalf("all_refs is not sorted: %+v", first)
++		}
++	}
++}
++
++func TestJSONFieldNames(t *testing.T) {
++	repo := newTestRepo(t)
++	hash := repo.commit("001", "2024-01-01T01:02:03+09:00")
++	loaded, err := Load(repo.dir, SortChronological, nil, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	data, err := json.Marshal(loaded.AllCommits()[0])
++	if err != nil {
++		t.Fatal(err)
++	}
++	var object map[string]any
++	if err := json.Unmarshal(data, &object); err != nil {
++		t.Fatal(err)
++	}
++	for _, key := range []string{
++		"commit_hash", "author_name", "author_email", "author_date",
++		"committer_name", "committer_email", "committer_date",
++		"subject", "body", "parent_commit_hashes",
++	} {
++		if _, ok := object[key]; !ok {
++			t.Fatalf("missing JSON field %q in %s", key, data)
++		}
++	}
++	if object["commit_hash"] != hash {
++		t.Fatalf("commit_hash should serialize as the full string: %v", object["commit_hash"])
++	}
++	if _, ok := object["author_date"].(string); !ok {
++		t.Fatalf("author_date should serialize as a string: %v", object["author_date"])
++	}
++
++	edgeData, err := json.Marshal(Edge{EdgeType: EdgeTypeVertical, PosX: 1, AssociatedLinePosX: 2})
++	if err != nil {
++		t.Fatal(err)
++	}
++	object = nil
++	if err := json.Unmarshal(edgeData, &object); err != nil {
++		t.Fatal(err)
++	}
++	if object["edge_type"] != "vertical" || object["pos_x"] != float64(1) || object["associated_line_pos_x"] != float64(2) {
++		t.Fatalf("unexpected edge JSON: %s", edgeData)
++	}
++}
++
++func intPtr(n int) *int { return &n }
+diff --git a/core/serie.go b/core/serie.go
+new file mode 100644
+index 0000000..c1ddd24
+--- /dev/null
++++ b/core/serie.go
+@@ -0,0 +1,327 @@
++// Package core implements serie's non-UI Git repository and commit graph logic.
++//
++// The package deliberately shells out to Git for repository data and only uses
++// the Go standard library.
++package core
++
++import (
++	"encoding/json"
++	"fmt"
++	"strings"
++	"time"
++)
++
++// CommitHash is a Git commit hash. Full contains the complete hash and Short is
++// the first seven characters. In JSON a commit hash is represented by its full
++// hash string.
++type CommitHash struct {
++	Full  string `json:"full"`
++	Short string `json:"short"`
++}
++
++// NewCommitHash creates a CommitHash with the required seven-character short
++// form.
++func NewCommitHash(full string) CommitHash {
++	short := full
++	if len(short) > 7 {
++		short = short[:7]
++	}
++	return CommitHash{Full: full, Short: short}
++}
++
++// String returns the full hash.
++func (h CommitHash) String() string { return h.Full }
++
++// AsString returns the full hash.
++func (h CommitHash) AsString() string { return h.Full }
++
++// AsShortHash returns the seven-character short hash.
++func (h CommitHash) AsShortHash() string { return h.Short }
++
++// MarshalJSON encodes a commit hash as its full hash string.
++func (h CommitHash) MarshalJSON() ([]byte, error) { return json.Marshal(h.Full) }
++
++// UnmarshalJSON decodes a commit hash from a string.
++func (h *CommitHash) UnmarshalJSON(data []byte) error {
++	var full string
++	if err := json.Unmarshal(data, &full); err != nil {
++		return err
++	}
++	*h = NewCommitHash(full)
++	return nil
++}
++
++// MarshalText makes CommitHash usable as a JSON object key.
++func (h CommitHash) MarshalText() ([]byte, error) { return []byte(h.Full), nil }
++
++// UnmarshalText decodes a commit hash from text.
++func (h *CommitHash) UnmarshalText(data []byte) error {
++	*h = NewCommitHash(string(data))
++	return nil
++}
++
++// Commit is the public commit record. Dates retain the fixed offset reported by
++// Git and are serialized as RFC3339 timestamps.
++type Commit struct {
++	CommitHash         CommitHash   `json:"commit_hash"`
++	AuthorName         string       `json:"author_name"`
++	AuthorEmail        string       `json:"author_email"`
++	AuthorDate         time.Time    `json:"author_date"`
++	CommitterName      string       `json:"committer_name"`
++	CommitterEmail     string       `json:"committer_email"`
++	CommitterDate      time.Time    `json:"committer_date"`
++	Subject            string       `json:"subject"`
++	Body               string       `json:"body"`
++	ParentCommitHashes []CommitHash `json:"parent_commit_hashes"`
++}
++
++// RefKind distinguishes the supported reference kinds.
++type RefKind string
++
++const (
++	RefKindTag          RefKind = "tag"
++	RefKindBranch       RefKind = "branch"
++	RefKindRemoteBranch RefKind = "remote_branch"
++	RefKindStash        RefKind = "stash"
++
++	// Short aliases for callers that prefer Ref<Kind> names.
++	RefTag          = RefKindTag
++	RefBranch       = RefKindBranch
++	RefRemoteBranch = RefKindRemoteBranch
++	RefStash        = RefKindStash
++)
++
++func (k RefKind) order() int {
++	switch k {
++	case RefKindTag:
++		return 0
++	case RefKindBranch:
++		return 1
++	case RefKindRemoteBranch:
++		return 2
++	case RefKindStash:
++		return 3
++	default:
++		return 4
++	}
++}
++
++// Ref is a tag, local branch, remote branch, or stash reference. Message is set
++// for stashes.
++type Ref struct {
++	Kind    RefKind    `json:"kind"`
++	Name    string     `json:"name"`
++	Target  CommitHash `json:"target"`
++	Message string     `json:"message,omitempty"`
++}
++
++// RefName returns the reference name.
++func (r Ref) RefName() string { return r.Name }
++
++// RefTarget returns the commit targeted by the reference.
++func (r Ref) RefTarget() CommitHash { return r.Target }
++
++// HeadKind distinguishes the HEAD states.
++type HeadKind string
++
++const (
++	HeadKindBranch   HeadKind = "branch"
++	HeadKindDetached HeadKind = "detached"
++	HeadKindNone     HeadKind = "none"
++
++	// Short aliases for callers that prefer Head<State> names.
++	HeadBranch   = HeadKindBranch
++	HeadDetached = HeadKindDetached
++	HeadNone     = HeadKindNone
++)
++
++// Head describes the current HEAD.
++type Head struct {
++	Kind   HeadKind   `json:"kind"`
++	Name   string     `json:"name,omitempty"`
++	Target CommitHash `json:"target,omitempty"`
++}
++
++// IsNone reports whether the repository has no HEAD.
++func (h Head) IsNone() bool { return h.Kind == HeadKindNone }
++
++// MarshalJSON emits only the fields meaningful for the current HEAD state.
++func (h Head) MarshalJSON() ([]byte, error) {
++	switch h.Kind {
++	case HeadKindBranch:
++		return json.Marshal(struct {
++			Kind HeadKind `json:"kind"`
++			Name string   `json:"name"`
++		}{Kind: h.Kind, Name: h.Name})
++	case HeadKindDetached:
++		return json.Marshal(struct {
++			Kind   HeadKind   `json:"kind"`
++			Target CommitHash `json:"target"`
++		}{Kind: h.Kind, Target: h.Target})
++	default:
++		return json.Marshal(struct {
++			Kind HeadKind `json:"kind"`
++		}{Kind: h.Kind})
++	}
++}
++
++// SortCommit selects the commit ordering passed to git log.
++type SortCommit int
++
++const (
++	// SortChronological corresponds to git log --date-order.
++	SortChronological SortCommit = iota
++	// SortTopological corresponds to git log --topo-order.
++	SortTopological
++
++	// Short aliases.
++	Chronological = SortChronological
++	Topological   = SortTopological
++)
++
++func (s SortCommit) gitOrder() string {
++	if s == SortTopological {
++		return "--topo-order"
++	}
++	return "--date-order"
++}
++
++// FileChangeKind distinguishes commit-detail file changes.
++type FileChangeKind string
++
++const (
++	FileChangeAdd    FileChangeKind = "add"
++	FileChangeModify FileChangeKind = "modify"
++	FileChangeDelete FileChangeKind = "delete"
++	FileChangeRename FileChangeKind = "rename"
++
++	// FileChangeMove is an alias for FileChangeRename.
++	FileChangeMove = FileChangeRename
++)
++
++// FileChange is a file change in a commit. Rename changes use From and To;
++// other changes use Path.
++type FileChange struct {
++	Kind FileChangeKind `json:"kind"`
++	Path string         `json:"path,omitempty"`
++	From string         `json:"from,omitempty"`
++	To   string         `json:"to,omitempty"`
++}
++
++// EdgeType is the visual type of a graph edge.
++type EdgeType int
++
++const (
++	EdgeTypeVertical EdgeType = iota
++	EdgeTypeHorizontal
++	EdgeTypeUp
++	EdgeTypeDown
++	EdgeTypeLeft
++	EdgeTypeRight
++	EdgeTypeRightTop
++	EdgeTypeRightBottom
++	EdgeTypeLeftTop
++	EdgeTypeLeftBottom
++)
++
++var edgeTypeNames = [...]string{
++	"vertical",
++	"horizontal",
++	"up",
++	"down",
++	"left",
++	"right",
++	"right_top",
++	"right_bottom",
++	"left_top",
++	"left_bottom",
++}
++
++// String returns the stable wire name of an edge type.
++func (t EdgeType) String() string {
++	if int(t) >= 0 && int(t) < len(edgeTypeNames) {
++		return edgeTypeNames[t]
++	}
++	return fmt.Sprintf("edge_type_%d", int(t))
++}
++
++// MarshalJSON encodes an edge type with its stable name.
++func (t EdgeType) MarshalJSON() ([]byte, error) { return json.Marshal(t.String()) }
++
++// UnmarshalJSON decodes an edge type from its stable name or numeric value.
++func (t *EdgeType) UnmarshalJSON(data []byte) error {
++	var name string
++	if err := json.Unmarshal(data, &name); err == nil {
++		for i, n := range edgeTypeNames {
++			if n == name {
++				*t = EdgeType(i)
++				return nil
++			}
++		}
++		return fmt.Errorf("unknown edge type %q", name)
++	}
++	var value int
++	if err := json.Unmarshal(data, &value); err != nil {
++		return err
++	}
++	*t = EdgeType(value)
++	return nil
++}
++
++// Edge is one graph drawing operation.
++type Edge struct {
++	EdgeType           EdgeType `json:"edge_type"`
++	PosX               int      `json:"pos_x"`
++	AssociatedLinePosX int      `json:"associated_line_pos_x"`
++}
++
++// Position is a commit's zero-based graph position.
++type Position struct {
++	PosX int `json:"pos_x"`
++	PosY int `json:"pos_y"`
++}
++
++// Graph is the result of calculating commit lanes and edges.
++type Graph struct {
++	Commits      []*Commit               `json:"commits"`
++	CommitPosMap map[CommitHash]Position `json:"commit_pos_map"`
++	Edges        [][]Edge                `json:"edges"`
++	MaxPosX      int                     `json:"max_pos_x"`
++}
++
++// CommitAt returns the commit at a row.
++func (g *Graph) CommitAt(posY int) *Commit {
++	if posY < 0 || posY >= len(g.Commits) {
++		return nil
++	}
++	return g.Commits[posY]
++}
++
++// Position returns a commit's graph position, normalizing a hash that was
++// constructed with only its Full field set.
++func (g *Graph) Position(commitHash CommitHash) (Position, bool) {
++	position, ok := g.CommitPosMap[normalizeHash(commitHash)]
++	return position, ok
++}
++
++// EdgeKey is used internally for deterministic sorting/deduplication.
++func (e Edge) EdgeKey() string {
++	return fmt.Sprintf("%d/%d/%d", e.AssociatedLinePosX, e.PosX, e.EdgeType)
++}
++
++// CompareRefs compares references by kind then name, target, and stash message.
++func CompareRefs(a, b Ref) int {
++	if ka, kb := a.Kind.order(), b.Kind.order(); ka != kb {
++		if ka < kb {
++			return -1
++		}
++		return 1
++	}
++	if a.Name != b.Name {
++		return strings.Compare(a.Name, b.Name)
++	}
++	if a.Target.Full != b.Target.Full {
++		return strings.Compare(a.Target.Full, b.Target.Full)
++	}
++	return strings.Compare(a.Message, b.Message)
++}
+diff --git a/core/test_helpers_test.go b/core/test_helpers_test.go
+new file mode 100644
+index 0000000..3f93775
+--- /dev/null
++++ b/core/test_helpers_test.go
+@@ -0,0 +1,125 @@
++package core
++
++import (
++	"os"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++const (
++	testAuthorName     = "Author Name"
++	testAuthorEmail    = "author@example.com"
++	testCommitterName  = "Committer Name"
++	testCommitterEmail = "committer@example.com"
++	testDefaultDate    = "2024-01-01T01:02:03+00:00"
++)
++
++type testRepo struct {
++	t            *testing.T
++	dir          string
++	stashCounter int
++}
++
++func newTestRepo(t *testing.T) *testRepo {
++	t.Helper()
++	r := &testRepo{t: t, dir: t.TempDir()}
++	r.git("init", "-b", "master")
++	return r
++}
++
++func (r *testRepo) git(args ...string) string {
++	r.t.Helper()
++	return r.gitWithDate(testDefaultDate, args...)
++}
++
++func (r *testRepo) gitWithDate(date string, args ...string) string {
++	r.t.Helper()
++	cmd := exec.Command("git", args...)
++	cmd.Dir = r.dir
++	cmd.Env = append(os.Environ(),
++		"GIT_AUTHOR_NAME="+testAuthorName,
++		"GIT_AUTHOR_EMAIL="+testAuthorEmail,
++		"GIT_COMMITTER_NAME="+testCommitterName,
++		"GIT_COMMITTER_EMAIL="+testCommitterEmail,
++		"GIT_AUTHOR_DATE="+date,
++		"GIT_COMMITTER_DATE="+date,
++		"GIT_CONFIG_NOSYSTEM=true",
++		"GIT_MERGE_AUTOEDIT=no",
++		"HOME="+r.dir,
++	)
++	out, err := cmd.CombinedOutput()
++	if err != nil {
++		r.t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, out)
++	}
++	return strings.TrimSpace(string(out))
++}
++
++func (r *testRepo) commit(message, date string) string {
++	r.t.Helper()
++	r.gitWithDate(date, "commit", "--allow-empty", "-m", message)
++	return r.revParse("HEAD")
++}
++
++func (r *testRepo) commitFile(message, date, path, content string) string {
++	r.t.Helper()
++	full := filepath.Join(r.dir, path)
++	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
++		r.t.Fatal(err)
++	}
++	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
++		r.t.Fatal(err)
++	}
++	r.git("add", "-A")
++	r.gitWithDate(date, "commit", "-m", message)
++	return r.revParse("HEAD")
++}
++
++func (r *testRepo) checkout(name string) {
++	r.t.Helper()
++	r.git("checkout", name)
++}
++
++func (r *testRepo) checkoutB(name string) {
++	r.t.Helper()
++	r.git("checkout", "-b", name)
++}
++
++func (r *testRepo) checkoutOrphan(name string) {
++	r.t.Helper()
++	r.git("checkout", "--orphan", name)
++}
++
++func (r *testRepo) merge(date string, branches ...string) {
++	r.t.Helper()
++	args := []string{"merge", "--no-ff", "--no-log", "-m", "merge", "--no-edit"}
++	args = append(args, branches...)
++	r.gitWithDate(date, args...)
++}
++
++func (r *testRepo) stash(date string) string {
++	r.t.Helper()
++	r.stashCounter++
++	name := filepath.Join(r.dir, "stash-"+string(rune('a'+r.stashCounter))+".txt")
++	if err := os.WriteFile(name, []byte(date), 0o644); err != nil {
++		r.t.Fatal(err)
++	}
++	r.gitWithDate(date, "stash", "push", "--include-untracked", "-m", "stash "+date)
++	out := r.git("rev-parse", "refs/stash")
++	return strings.TrimSpace(out)
++}
++
++func (r *testRepo) revParse(ref string) string {
++	r.t.Helper()
++	return strings.TrimSpace(r.git("rev-parse", ref))
++}
++
++func cloneBare(t *testing.T, source, dest string) {
++	t.Helper()
++	cmd := exec.Command("git", "clone", "--bare", source, dest)
++	out, err := cmd.CombinedOutput()
++	if err != nil {
++		t.Fatalf("git clone --bare failed: %v\n%s", err, out)
++	}
++}
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..fd96f13
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,3 @@
++module github.com/lusingander/serie
++
++go 1.24.0

@@ -1,0 +1,303 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "owned_paths": [
+    "shared/batches/BATCH-P2P-0001",
+    "source/batches/BATCH-P2P-0001",
+    "target/batches/BATCH-P2P-0001",
+    "fixtures/batches/BATCH-P2P-0001",
+    "fragments/BATCH-P2P-0001.json"
+  ],
+  "observations": [
+    {
+      "id": "P2P-007",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/TinyUI.test.ts#keeps UITemplate independent from parsing and bindings",
+      "surface": "test:tests/tinyui/TinyUI.test.ts#keeps UITemplate independent from parsing and bindings",
+      "requirement_ids": [
+        "R003",
+        "R006",
+        "R007",
+        "R009",
+        "R010",
+        "R015",
+        "R020",
+        "R034",
+        "R036",
+        "R038",
+        "R042",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "source_path": "tests/tinyui/TinyUI.test.ts",
+      "test_title": "P2P-007"
+    },
+    {
+      "id": "P2P-015",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/UIAdversarial.test.ts#keeps multiple views and their refs completely isolated",
+      "surface": "test:tests/tinyui/UIAdversarial.test.ts#keeps multiple views and their refs completely isolated",
+      "requirement_ids": [
+        "R003",
+        "R004",
+        "R015",
+        "R017",
+        "R020",
+        "R042",
+        "R043",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "source_path": "tests/tinyui/UIAdversarial.test.ts",
+      "test_title": "P2P-015"
+    },
+    {
+      "id": "P2P-001",
+      "atomic_claim": "Preserve observable behavior for test:tests/ai/tool-utils.test.ts#\u9650\u5236\u53ef\u9009\u6574\u6570\u8303\u56f4\u5e76\u4e3a\u65e0\u6548\u503c\u63d0\u4f9b\u9ed8\u8ba4\u503c",
+      "surface": "test:tests/ai/tool-utils.test.ts#\u9650\u5236\u53ef\u9009\u6574\u6570\u8303\u56f4\u5e76\u4e3a\u65e0\u6548\u503c\u63d0\u4f9b\u9ed8\u8ba4\u503c",
+      "requirement_ids": [
+        "R003",
+        "R028",
+        "R029",
+        "R050"
+      ],
+      "source_path": "tests/ai/tool-utils.test.ts",
+      "test_title": "P2P-001"
+    },
+    {
+      "id": "P2P-006",
+      "atomic_claim": "AiEditorToolApproval accepts 'always', 'never', an AiEditorToolName array, and a (proposal)=>boolean predicate; a value outside those alternatives fails type-check.",
+      "surface": "AiEditorToolApproval alternatives",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_path": "src/ai/types.ts",
+      "test_title": "P2P-006"
+    },
+    {
+      "id": "P2P-014",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/UITemplate.test.ts#reuses the bounded parse cache while returning independent DOM clones",
+      "surface": "test:tests/tinyui/UITemplate.test.ts#reuses the bounded parse cache while returning independent DOM clones",
+      "requirement_ids": [
+        "R003",
+        "R018",
+        "R020",
+        "R023",
+        "R025",
+        "R039",
+        "R042",
+        "R045",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "source_path": "tests/tinyui/UITemplate.test.ts",
+      "test_title": "P2P-014"
+    },
+    {
+      "id": "P2P-017",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/UIAdversarial.test.ts#renders falsy, numeric, object, and symbol values deterministically",
+      "surface": "test:tests/tinyui/UIAdversarial.test.ts#renders falsy, numeric, object, and symbol values deterministically",
+      "requirement_ids": [
+        "R003",
+        "R005",
+        "R008",
+        "R010",
+        "R011",
+        "R012",
+        "R015",
+        "R020",
+        "R030",
+        "R031",
+        "R042",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "source_path": "tests/tinyui/UIAdversarial.test.ts",
+      "test_title": "P2P-017"
+    },
+    {
+      "id": "P2P-002",
+      "atomic_claim": "A context with a live Tiptap editor plus html, text, selectedText, selection {from,to}, and documentVersion is accepted; default input composition uses the snapshot values even when the live editor text changes after generate starts.",
+      "surface": "AiEditorContext live editor and snapshot fields",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-002"
+    },
+    {
+      "id": "P2P-003",
+      "atomic_claim": "executeEditorFunctionTool('missing','{}',context).output equals {ok:false,error:'Unknown editor tool: missing'}; applyEditorToolProposal(editor, version, proposal with tool missing and matching documentVersion) returns ok:false and leaves editor text unchanged.",
+      "surface": "unknown tool execution and apply behavior",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "test_title": "P2P-003"
+    },
+    {
+      "id": "P2P-004",
+      "atomic_claim": "With stream:true, editorTools:true, and a streamed tool round that ends without a completed model response, generate rejects with 'AI response stream ended before completion' rather than returning partial text.",
+      "surface": "incomplete streamed tool-round error",
+      "requirement_ids": [
+        "R029"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-004"
+    },
+    {
+      "id": "P2P-005",
+      "atomic_claim": "Preserve observable behavior for exports:./package.json",
+      "surface": "exports:./package.json",
+      "requirement_ids": [
+        "R020",
+        "R052"
+      ],
+      "source_path": "package.json",
+      "test_title": "P2P-005"
+    },
+    {
+      "id": "P2P-008",
+      "atomic_claim": "A valid pending proposal becomes status applied and returns {ok:true,message:'Applied to the document.'}; a tool throwing Error('boom') returns {ok:false,message:'boom'}; a tool throwing the non-Error value 'boom' returns {ok:false,message:'Could not apply this proposal.'}.",
+      "surface": "valid and failing proposal apply results",
+      "requirement_ids": [
+        "R037"
+      ],
+      "source_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "test_title": "P2P-008"
+    },
+    {
+      "id": "P2P-009",
+      "atomic_claim": "createAiService({provider:'custom',generate:async()=> 'ok'}).generate(request,context) resolves {text:'ok'}; a custom generate returning {text:'x'} preserves {text:'x'}; createAiService(existingService) returns the same existing instance.",
+      "surface": "custom service and existing service handling",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_path": "src/ai/index.ts",
+      "test_title": "P2P-009"
+    },
+    {
+      "id": "P2P-010",
+      "atomic_claim": "generate({prompt:'p',instructions:'Be brief'}, context) sends 'Be brief' as model-level instructions while the user text contains only the prompt composition; concatenating the instructions into user text fails.",
+      "surface": "request.instructions model-level routing",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-010"
+    },
+    {
+      "id": "P2P-011",
+      "atomic_claim": "package.json main is ./dist/index.cjs, module is ./dist/index.js, exports.import points to dist/index.js and dist/index.d.ts, exports.require points to dist/index.cjs and dist/index.d.cts; the built package adds no UMD bundle and no browser-global AiEditor constructor.",
+      "surface": "package entry points and ESM/CJS publication",
+      "requirement_ids": [
+        "R052"
+      ],
+      "source_path": "package.json",
+      "test_title": "P2P-011"
+    },
+    {
+      "id": "P2P-012",
+      "atomic_claim": "TypeScript consumers can import every listed AI type by its existing name; assigning a current AiGenerateRequest, AiEditorContext, OpenAiServiceConfig, and AiEditorToolProposal to fixtures with the documented members compiles without removing or widening a member.",
+      "surface": "exported AI type declarations",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source_path": "src/ai/types.ts",
+      "test_title": "P2P-012"
+    },
+    {
+      "id": "P2P-013",
+      "atomic_claim": "registerAiProvider({id:'',name:'n',model:'m'}) throws 'AI provider id cannot be empty'; blank name and model throw their corresponding messages; registering {id:'x',name:'X',model:'m'} replaces x with a frozen copy so mutating the input does not change getAiProvider('x').",
+      "surface": "registerAiProvider validation and frozen replacement",
+      "requirement_ids": [
+        "R043"
+      ],
+      "source_path": "src/ai/Providers.ts",
+      "test_title": "P2P-013"
+    },
+    {
+      "id": "P2P-016",
+      "atomic_claim": "Preserve observable behavior for exports:./style.css",
+      "surface": "exports:./style.css",
+      "requirement_ids": [
+        "R020",
+        "R052"
+      ],
+      "source_path": "package.json",
+      "test_title": "P2P-016"
+    },
+    {
+      "id": "P2P-018",
+      "atomic_claim": "With editorTools:true and a model that requests a tool call on every round, generate performs at most eight model rounds and rejects with 'AI exceeded the maximum editor tool call rounds'; issuing a ninth model request fails.",
+      "surface": "eight-round editor tool loop limit",
+      "requirement_ids": [
+        "R028"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-018"
+    },
+    {
+      "id": "P2P-019",
+      "atomic_claim": "package.json exports the import condition to dist/index.js with dist/index.d.ts and the require condition to dist/index.cjs with dist/index.d.cts; the built package has no UMD export and no browser-global AiEditor constructor.",
+      "surface": "package.json ESM/CJS publishing contract",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_path": "package.json",
+      "test_title": "P2P-019"
+    },
+    {
+      "id": "P2P-020",
+      "atomic_claim": "A provider {id:'p',name:'P',model:'m'} and a provider with an added baseURL 'https://example.test/v1' both satisfy AiProviderDefinition; omitting id, name, or model fails type-check.",
+      "surface": "AiProviderDefinition shape",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_path": "src/ai/Providers.ts",
+      "test_title": "P2P-020"
+    },
+    {
+      "id": "P2P-021",
+      "atomic_claim": "generate({prompt:'go'}, context) resolves text equal to the final model output; with editorTools:true and model text rounds 'a' then 'b', it resolves text 'ab'.",
+      "surface": "non-streaming final-output and cross-round text accumulation",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-021"
+    },
+    {
+      "id": "P2P-022",
+      "atomic_claim": "generate({prompt:'hello'}, context) resolves an object with text and optional raw and toolProposals; generate({prompt:'   '}, context) rejects with 'AI prompt cannot be empty'.",
+      "surface": "AiService.generate result and empty-prompt validation",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-022"
+    },
+    {
+      "id": "P2P-023",
+      "atomic_claim": "The migration changes only src/ai/OpenAiService.ts, src/ai/index.ts, src/ai/Providers.ts, src/ai/types.ts, src/ai/editor-tools.ts, package.json, and the target dependency lockfile update; editor UI, Tiptap, sanitization, uploader, and localization files remain byte-identical to the baseline.",
+      "surface": "migration change-set scope",
+      "requirement_ids": [
+        "R050"
+      ],
+      "source_path": "package.json",
+      "test_title": "P2P-023"
+    },
+    {
+      "id": "P2P-024",
+      "atomic_claim": "generate({prompt:'go',stream:true}, context) with text deltas a, b, c calls onChunk in that order and resolves text 'abc'; providing only onChunk also streams, and the same ordering holds with editorTools:true.",
+      "surface": "streaming generation with onChunk ordering",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source_path": "src/ai/OpenAiService.ts",
+      "test_title": "P2P-024"
+    }
+  ]
+}

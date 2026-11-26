@@ -1,0 +1,56 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/servo-rust-url"
+description = "Migrate rust-url URL, IDNA, and encoding libraries from Rust to Go 1.23.0."
+
+[metadata]
+category = "Language_migration"
+language = "rust"
+repository_id = "d4d171f2-c7ee-4e17-aa63-76930ee98650"
+task_id = "tp-7d52820caf08b6aa1f31239a38ada021"
+repository_url = "https://github.com/servo/rust-url"
+base_commit_hash = "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 16
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:servo-rust-url-verifier-image-20261126"
+image_digest = "sha256:c9dbc9c0c55fb4eb503bf2ee7a99b47e8ee3603a1540cf2a65c308d683031190"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:servo-rust-url-task-image-20261126"
+image_digest = "sha256:3a08e1adc4743d33e7c4678e024a0361e6979d9c42504403a717fc29fbcb6811"

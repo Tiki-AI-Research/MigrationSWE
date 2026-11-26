@@ -1,0 +1,225 @@
+{
+  "schema_version": "migration-asset-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "scope": "shared",
+  "migration": {
+    "category": "language",
+    "source": {"name": "Rust", "language_name": "Rust", "version": "2018", "language_version": "2018"},
+    "target": {"name": "Go", "language_name": "Go", "version": "1.23.0", "language_version": "1.23.0"}
+  },
+  "shared_corpus_required": true,
+  "projection": "normalized-result",
+  "normalization": "component-wise structural comparison after stripping host/scheme case and IPv6 canonical form; booleans kept as (value, present) pairs",
+  "harness_owner": "INTEGRATION",
+  "notes": "Shared case corpus for BATCH-DIFFERENTIAL-0001. Each case is executed identically against the source (Rust) and target (Go) runtimes owned by the INTEGRATION batch. This batch authors neither source/runner nor target/runner.",
+  "cases": [
+    {
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R003"],
+      "family": "shared-case-corpus",
+      "surface": "url.Parse and URL component accessors (AsStr, Scheme, Username, Password, HostStr, Host, Port, Path, PathSegments, Query, Fragment, CannotBeABase)",
+      "input": "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+      "expected": {
+        "AsStr": "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+        "Scheme": "https",
+        "Username": "",
+        "Password": {"value": "", "present": false},
+        "HostStr": {"value": "github.com", "present": true},
+        "HostKind": "HostDomain",
+        "Port": {"value": 0, "present": false},
+        "Path": "/rust-lang/rust/issues",
+        "PathSegments": {"value": ["rust-lang", "rust", "issues"], "ok": true},
+        "Query": {"value": "labels=E-easy&state=open", "present": true},
+        "Fragment": {"value": "", "present": false},
+        "CannotBeABase": false
+      }
+    },
+    {
+      "observation_id": "DIFF-002",
+      "requirement_ids": ["R004"],
+      "family": "shared-case-corpus",
+      "surface": "url.Parse and URL accessors for cannot-be-a-base schemes",
+      "input": "data:text/plain,Hello?World#",
+      "expected": {
+        "CannotBeABase": true,
+        "Scheme": "data",
+        "Path": "text/plain,Hello",
+        "PathSegments": {"ok": false},
+        "HasHost": false,
+        "Query": {"value": "World", "present": true},
+        "Fragment": {"value": "", "present": true},
+        "AsStr": "data:text/plain,Hello?World#"
+      }
+    },
+    {
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R005"],
+      "family": "shared-case-corpus",
+      "surface": "url.Parse invalid-IPv6 error identity",
+      "input": "http://[:::1]",
+      "expected": {
+        "ParseError": true,
+        "ErrorsIsErrInvalidIPv6Address": true,
+        "ErrorsIsErrInvalidPort": false
+      }
+    },
+    {
+      "observation_id": "DIFF-004",
+      "requirement_ids": ["R006"],
+      "family": "shared-case-corpus",
+      "surface": "url.Parse relative-reference error and URL.Join resolution",
+      "input": "../a",
+      "base": "http://servo.github.io/rust-url/url/index.html",
+      "expected": {
+        "ParseError": true,
+        "ErrorsIsErrRelativeURLWithoutBase": true,
+        "Join": {"input": "../main.css", "AsStr": "http://servo.github.io/rust-url/main.css"}
+      }
+    },
+    {
+      "observation_id": "DIFF-005",
+      "requirement_ids": ["R007"],
+      "family": "shared-case-corpus",
+      "surface": "url.ParseHost IPv6 serialization and errors",
+      "input": "[2001:0db8:0000:0000:0000:ff00:0042:8329]",
+      "expected": {
+        "HostKind": "HostIPv6",
+        "String": "[2001:db8::ff00:42:8329]",
+        "Invalid": {"input": "[:::1]", "ErrorsIsErrInvalidIPv6Address": true}
+      }
+    },
+    {
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R008"],
+      "family": "shared-case-corpus",
+      "surface": "url.URL.Port, PortOrKnownDefault, SetPort, and AsStr",
+      "expected": {
+        "http://example.com/": {"PortOrKnownDefault": {"value": 80, "present": true}, "Port": {"value": 0, "present": false}},
+        "https://x/": {"PortOrKnownDefault": {"value": 443, "present": true}},
+        "ftp://x/": {"PortOrKnownDefault": {"value": 21, "present": true}},
+        "https://x:8443/": {"Port": {"value": 8443, "present": true}},
+        "SetPortDefaultElision": {"input": "http://example.com/", "setPort": 80, "Port": {"value": 0, "present": false}, "AsStr": "http://example.com/"}
+      }
+    },
+    {
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R009"],
+      "family": "shared-case-corpus",
+      "surface": "url.URL.SetPath percent-encoding",
+      "input": "http://a/",
+      "expected": {
+        "SetPath(\"api/some comments\")": "/api/some%20comments",
+        "SetPath(\"api/some%20comments\")": "/api/some%20comments"
+      }
+    },
+    {
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R010"],
+      "family": "shared-case-corpus",
+      "surface": "url.URL.PathSegmentsMut (Clear, Pop, Push, Extend)",
+      "input": "http://a/b/c?q#frag",
+      "operation": "PathSegmentsMut().Pop().Push(\"2/100%.png\")",
+      "expected": {
+        "Path": "/b/2%2F100%25.png",
+        "Query": {"value": "q", "present": true},
+        "Fragment": {"value": "frag", "present": true}
+      }
+    },
+    {
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R011"],
+      "family": "shared-case-corpus",
+      "surface": "url.URL.QueryPairsMut (AppendPair, Clear, Finish) and fragment preservation",
+      "input": "http://a/?x=1#frag",
+      "expected": {
+        "AppendPair(y,2)": "http://a/?x=1&y=2#frag",
+        "Clear().AppendPair(a,b)": "http://a/?a=b#frag"
+      }
+    },
+    {
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R012"],
+      "family": "shared-case-corpus",
+      "surface": "formurlencoded.Parser.Next and url.URL.QueryPairs",
+      "expected": {
+        "foo=bar&baz": [["foo", "bar", true], ["baz", "", true], ["", "", false]],
+        "%23first=%25try%25": [["#first", "%try%", true]],
+        "a=1+2": [["a", "1 2", true]]
+      }
+    },
+    {
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R013"],
+      "family": "shared-case-corpus",
+      "surface": "percentencoding.PercentEncode, UTF8PercentEncode, PercentEncodeByte, ASCIIStringSet.Add",
+      "expected": {
+        "PercentEncode(foo bar?, NonAlphanumeric)": "foo%20bar%3F",
+        "PercentEncodeByte(0x3F)": "%3F",
+        "AddValueSemantics": {"base": "a", "withAdd": "%61"}
+      }
+    },
+    {
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R014"],
+      "family": "shared-case-corpus",
+      "surface": "percentencoding.PercentDecode.DecodeUTF8, DecodeUTF8Lossy, UTF8Error",
+      "input": "%00%9F%92%96",
+      "expected": {
+        "DecodeUTF8IsUTF8Error": true,
+        "ValidUpTo": 1,
+        "ErrorLen": {"value": 1, "present": true},
+        "DecodeUTF8Lossy": "\u0000\uFFFD\uFFFD\uFFFD"
+      }
+    },
+    {
+      "observation_id": "DIFF-013",
+      "requirement_ids": ["R015"],
+      "family": "shared-case-corpus",
+      "surface": "idna.DomainToASCII, DomainToASCIIStrict, DomainToUnicode, ErrInvalidDomain",
+      "expected": {
+        "DomainToASCII(EXAMPLE.COM)": "example.com",
+        "DomainToASCII(faß.de)": "xn--fa-hia.de",
+        "DomainToASCIIStrict(foo_bar.example)": {"ErrorsIsErrInvalidDomain": true},
+        "DomainToUnicode(xn--fa-hia.de)": "faß.de"
+      }
+    },
+    {
+      "observation_id": "DIFF-014",
+      "requirement_ids": ["R016"],
+      "family": "shared-case-corpus",
+      "surface": "idna/punycode.Encode, EncodeString, Decode, DecodeToString",
+      "expected": {
+        "EncodeString(bücher)": {"value": "bcher-kva", "ok": true},
+        "DecodeToString(bcher-kva)": {"value": "bücher", "ok": true},
+        "Decode(<<>>)": {"ok": false}
+      }
+    },
+    {
+      "observation_id": "DIFF-015",
+      "requirement_ids": ["R017"],
+      "family": "shared-case-corpus",
+      "surface": "url.URL.Origin, Origin.ASCIISerialization, IsTuple",
+      "expected": {
+        "https://example.com:443/": {"IsTuple": true, "ASCIISerialization": "https://example.com"},
+        "file:///etc": {"IsTuple": false, "ASCIISerialization": "null"},
+        "blob:https://example.com/uuid": {"IsTuple": true, "ASCIISerialization": "https://example.com"}
+      }
+    },
+    {
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R018"],
+      "family": "shared-case-corpus",
+      "surface": "Public packages and signatures of url, idna, idna/punycode, percentencoding, formurlencoded",
+      "expected": {
+        "compile_unchanged": true,
+        "packages": [
+          "github.com/servo/rust-url/url",
+          "github.com/servo/rust-url/idna",
+          "github.com/servo/rust-url/idna/punycode",
+          "github.com/servo/rust-url/percentencoding",
+          "github.com/servo/rust-url/formurlencoded"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "batch_id": "BATCH-STATE-0001",
+  "expected_medialibrary_migrations": [
+    "0001_initial"
+  ],
+  "expected_page_migrations": [
+    "0001_initial",
+    "0002_alter_applicationcontent_parent_and_more"
+  ],
+  "migration_modules": {
+    "medialibrary": "testapp.migrate.medialibrary",
+    "page": "testapp.migrate.page"
+  },
+  "observation_ids": [
+    "STATE-001",
+    "STATE-002"
+  ],
+  "projections": {
+    "STATE-001": {
+      "entrypoint": "project",
+      "module": "state_probe",
+      "projection": "critical_data"
+    },
+    "STATE-002": {
+      "entrypoint": "project",
+      "module": "state_probe",
+      "projection": "required_state"
+    }
+  },
+  "requirement_ids": [
+    "R020"
+  ],
+  "schema_version": "batch-state-fixture:v1",
+  "seed": {
+    "mediafile": {
+      "expected_type": "txt",
+      "file": "state.txt"
+    },
+    "page": {
+      "slug": "state-page",
+      "title": "State Page"
+    }
+  }
+}

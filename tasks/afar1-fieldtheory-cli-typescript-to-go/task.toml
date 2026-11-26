@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/afar1-fieldtheory-cli-typescript-to-go"
+description = "Migrate the Field Theory CLI from TypeScript to Go 1.23.0."
+
+[metadata]
+category = "Language_migration"
+language = "typescript"
+repository_id = "3db5d3d6-7ecc-4c9a-a2de-273c7359d03a"
+task_id = "tp-77e2636995be2c199c600c4b224153b3"
+repository_url = "https://github.com/afar1/fieldtheory-cli"
+base_commit_hash = "542c1167c127a788940731a2ef60493f0f522533"
+
+[metadata.tests]
+fail_to_pass_count = 48
+pass_to_pass_count = 16
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:afar1-fieldtheory-cli-typescript-to-go-verifier-image-20261126"
+image_digest = "sha256:c11c826000aaa425f97a4fd393981eda721ac1c38fbcafb2ced24ed7387375dc"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 542c1167c127a788940731a2ef60493f0f522533 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:afar1-fieldtheory-cli-typescript-to-go-task-image-20261126"
+image_digest = "sha256:7ac34ddf2a6066b6591c39236eb7b24d2a4f043be99430cc2945a60ed5282f5e"

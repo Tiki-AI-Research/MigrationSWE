@@ -1,0 +1,20 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'web/**'
+          - '*.html'
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'api/**'
+          - '!api/**/*_test.go'
+
+release:
+  - head-branch:
+      - '^release/[0-9]+\.[0-9]+$'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'

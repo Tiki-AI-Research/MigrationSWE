@@ -1,0 +1,2219 @@
+{
+  "f2p_rejected": true,
+  "observations": [
+    {
+      "id": "CONTRACT-001",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-002",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": [
+          "first",
+          "second",
+          "third"
+        ]
+      }
+    },
+    {
+      "id": "CONTRACT-003",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "get(missing)": null,
+          "get(second)": {
+            "id": "second",
+            "label": "Step 2"
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-004",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "at(0)": {
+            "id": "first",
+            "label": "Step 1"
+          },
+          "at(9)": null
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-005",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "indexOf(missing)": -1,
+          "indexOf(third)": 2
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-006",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "has(missing)": false,
+          "has(second)": true
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-007",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first()": {
+            "id": "first",
+            "label": "Step 1"
+          },
+          "first(empty)": null,
+          "last()": {
+            "id": "third",
+            "label": "Step 3"
+          },
+          "last(empty)": null
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-008",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "neighbors(first)": {
+            "next": {
+              "id": "second",
+              "label": "Step 2"
+            },
+            "prev": null
+          },
+          "neighbors(second)": {
+            "next": {
+              "id": "third",
+              "label": "Step 3"
+            },
+            "prev": {
+              "id": "first",
+              "label": "Step 1"
+            }
+          },
+          "next(first)": {
+            "id": "second",
+            "label": "Step 2"
+          },
+          "next(missing)": null,
+          "prev(missing)": null,
+          "prev(third)": {
+            "id": "second",
+            "label": "Step 2"
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-009",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "getInitialStepIndex(missing)": 0,
+          "getInitialStepIndex(none)": 0,
+          "getInitialStepIndex(second)": 1
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-010",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "null": null,
+          "number": null,
+          "parseStep(second)": "second",
+          "undefined": null,
+          "unknown": null
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-011",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "absent": {},
+          "distinct_instance": true,
+          "equal_to_input": true
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-012",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "data": {
+            "anything": true
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-013",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "data": "Ada",
+          "success": true
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-014",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first_issue_message": "Required",
+          "success": false
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-015",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "error": {
+            "type": "not_found",
+            "wording": "Step \"missing\" not found."
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-016",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "async": {
+            "data": "Ada",
+            "success": true
+          },
+          "sync": {
+            "data": "Ada",
+            "success": true
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-017",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first": "previous",
+          "second": "active",
+          "third": "upcoming"
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-018",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first": "previous",
+          "second": "active",
+          "third": "upcoming"
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-019",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": "Step 2"
+      }
+    },
+    {
+      "id": "CONTRACT-020",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "error": {
+            "type": "not_found",
+            "wording": "Step \"missing\" not found."
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-021",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "error": {
+            "type": "no_handler",
+            "wording": "No match handler found for step \"third\"."
+          }
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-022",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operations_present": [
+            "createStepMap",
+            "getInitialStepIndex",
+            "parseStep",
+            "getInitialData",
+            "validateStep",
+            "getStepStatus",
+            "getStepStatuses",
+            "matchStep"
+          ]
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-023",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "error_wording": true,
+          "named_exports": true,
+          "reference_test_unmodified": true,
+          "standard_schema_boundary": true
+        }
+      }
+    },
+    {
+      "id": "CONTRACT-024",
+      "kind": "CONTRACT",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "assertions_removed": 0,
+          "comparisons_weakened": 0,
+          "hardcoded_inputs": 0
+        }
+      }
+    },
+    {
+      "id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            "every case below yields a source result equal to the target result after normalization"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "expected": [
+            "first",
+            "second",
+            "third"
+          ],
+          "input": {
+            "steps": [
+              "first",
+              "second",
+              "third"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "id": "second",
+                "label": "Step 2"
+              },
+              "input": "second"
+            },
+            {
+              "expected": null,
+              "input": "missing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "id": "first",
+                "label": "Step 1"
+              },
+              "input": 0
+            },
+            {
+              "expected": null,
+              "input": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": 2,
+              "input": "third"
+            },
+            {
+              "expected": -1,
+              "input": "missing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": true,
+              "input": "second"
+            },
+            {
+              "expected": false,
+              "input": "missing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "id": "first",
+                "label": "Step 1"
+              },
+              "operation": "first"
+            },
+            {
+              "expected": {
+                "id": "third",
+                "label": "Step 3"
+              },
+              "operation": "last"
+            },
+            {
+              "expected": null,
+              "operation": "first(empty)"
+            },
+            {
+              "expected": null,
+              "operation": "last(empty)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "id": "second",
+                "label": "Step 2"
+              },
+              "operation": "next(first)"
+            },
+            {
+              "expected": {
+                "id": "second",
+                "label": "Step 2"
+              },
+              "operation": "prev(third)"
+            },
+            {
+              "expected": {
+                "next": {
+                  "id": "third",
+                  "label": "Step 3"
+                },
+                "prev": {
+                  "id": "first",
+                  "label": "Step 1"
+                }
+              },
+              "operation": "neighbors(second)"
+            },
+            {
+              "expected": {
+                "next": {
+                  "id": "second",
+                  "label": "Step 2"
+                },
+                "prev": null
+              },
+              "operation": "neighbors(first)"
+            },
+            {
+              "expected": null,
+              "operation": "next(missing)"
+            },
+            {
+              "expected": null,
+              "operation": "prev(missing)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": 1,
+              "input": "second"
+            },
+            {
+              "expected": 0,
+              "input": null
+            },
+            {
+              "expected": 0,
+              "input": "missing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": "second",
+              "input": "second"
+            },
+            {
+              "expected": null,
+              "input": "missing"
+            },
+            {
+              "expected": null,
+              "input": null
+            },
+            {
+              "expected": null,
+              "input": 42
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected_equal": {
+                "first": {
+                  "saved": true
+                }
+              },
+              "input": {
+                "first": {
+                  "saved": true
+                }
+              }
+            },
+            {
+              "assertion": "returned map is a distinct object; mutating it does not change the input"
+            },
+            {
+              "expected": {},
+              "input": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "data": {
+                  "anything": true
+                },
+                "success": true
+              },
+              "id": "done",
+              "value": {
+                "anything": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "data": "Ada",
+                "success": true
+              },
+              "id": "name",
+              "value": "Ada"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "issues": [
+                  {
+                    "message": "Required"
+                  }
+                ],
+                "success": false
+              },
+              "id": "name",
+              "value": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected_error": "Step \"missing\" not found.",
+              "id": "missing",
+              "value": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": {
+                "data": "Ada",
+                "success": true
+              },
+              "id": "name",
+              "schema": "string-nonempty-direct",
+              "value": "Ada"
+            },
+            {
+              "expected": {
+                "data": "Ada",
+                "success": true
+              },
+              "id": "name",
+              "schema": "string-nonempty-async-yield-once",
+              "value": "Ada"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "current_index": 1,
+              "expected": "previous",
+              "id": "first"
+            },
+            {
+              "current_index": 1,
+              "expected": "active",
+              "id": "second"
+            },
+            {
+              "current_index": 1,
+              "expected": "upcoming",
+              "id": "third"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "assertion": "one status per step id; iteration order unspecified",
+              "current_index": 1,
+              "lookup": {
+                "first": "previous",
+                "second": "active",
+                "third": "upcoming"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected": "Step 2",
+              "handlers": [
+                "first",
+                "second",
+                "third"
+              ],
+              "id": "second"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-020",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected_error": "Step \"missing\" not found.",
+              "id": "missing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-021",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            {
+              "expected_error": "No match handler found for step \"third\".",
+              "handlers": [
+                "first"
+              ],
+              "id": "third"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-022",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            "every exported operation, StepMap query, and error contract remains available with unchanged semantics"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-023",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            "named exports, the exact error wording, and the Standard Schema boundary are preserved"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DIFF-024",
+      "kind": "DIFFERENTIAL",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "checks": [
+            "checks and comparisons use real inputs; no assertion is removed or weakened and no input is hardcoded"
+          ]
+        }
+      }
+    },
+    {
+      "id": "F2P-001",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-002",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-003",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-004",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-005",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-006",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-007",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-008",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-009",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-010",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-011",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-012",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-013",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-014",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-015",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-016",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-017",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-018",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-019",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-020",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-021",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-022",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-023",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-024",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-025",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-026",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-027",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-028",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-029",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-030",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-031",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-032",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-033",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-034",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-035",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-036",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-037",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-038",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-039",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-040",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-041",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-042",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-043",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-044",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-045",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-046",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-047",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-048",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-049",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-050",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-051",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-052",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-053",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-054",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-055",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-056",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-057",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-058",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-059",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-060",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-061",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-062",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-063",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-064",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-065",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-066",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-067",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-068",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-069",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-070",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-071",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "F2P-072",
+      "kind": "F2P",
+      "status": "FAIL",
+      "value": {
+        "type": "json",
+        "value": {
+          "satisfied": false
+        }
+      }
+    },
+    {
+      "id": "P2P-001",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-002",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-003",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "has_missing": false,
+          "has_second": true
+        }
+      }
+    },
+    {
+      "id": "P2P-004",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-005",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-006",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "display": "No match handler found for step \"third\".",
+          "error": "no_handler"
+        }
+      }
+    },
+    {
+      "id": "P2P-007",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-008",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-009",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "ids": [
+            "first",
+            "second",
+            "third"
+          ]
+        }
+      }
+    },
+    {
+      "id": "P2P-010",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "null": null,
+          "number": null,
+          "undefined": null,
+          "unknown": null
+        }
+      }
+    },
+    {
+      "id": "P2P-011",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "absent_empty": true,
+          "copy_equal": true,
+          "input_unchanged": true
+        }
+      }
+    },
+    {
+      "id": "P2P-012",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "neighbors_first": {
+            "next": "second",
+            "prev": null
+          },
+          "neighbors_second": {
+            "next": "third",
+            "prev": "first"
+          },
+          "next_first": "second",
+          "prev_third": "second",
+          "unknown": null
+        }
+      }
+    },
+    {
+      "id": "P2P-013",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first": "previous",
+          "second": "active",
+          "third": "upcoming"
+        }
+      }
+    },
+    {
+      "id": "P2P-014",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "Step 2"
+        }
+      }
+    },
+    {
+      "id": "P2P-015",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-016",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "exports": [
+            "createStepMap",
+            "getInitialStepIndex",
+            "parseStep",
+            "getInitialData",
+            "validateStep",
+            "getStepStatus",
+            "getStepStatuses",
+            "matchStep"
+          ]
+        }
+      }
+    },
+    {
+      "id": "P2P-017",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "ids": [
+            "first",
+            "second",
+            "third"
+          ]
+        }
+      }
+    },
+    {
+      "id": "P2P-018",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "data": "Ada",
+          "success": true
+        }
+      }
+    },
+    {
+      "id": "P2P-019",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "display": "Step \"missing\" not found.",
+          "error": "not_found"
+        }
+      }
+    },
+    {
+      "id": "P2P-020",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-021",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-022",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "async": "Ada",
+          "sync": "Ada"
+        }
+      }
+    },
+    {
+      "id": "P2P-023",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "id": "P2P-024",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "at0": "first",
+          "at9": null
+        }
+      }
+    },
+    {
+      "id": "P2P-025",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "current_index": 1,
+          "operation": "getStepStatus",
+          "statuses": {
+            "first": "previous",
+            "second": "active",
+            "third": "upcoming"
+          }
+        }
+      }
+    },
+    {
+      "id": "P2P-026",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "export": "./primitives",
+          "package": "@stepperize/react",
+          "present": true
+        }
+      }
+    },
+    {
+      "id": "P2P-027",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operation": "parseStep",
+          "results": {
+            "42": null,
+            "missing": null,
+            "null": null,
+            "second": "second",
+            "undefined": null
+          }
+        }
+      }
+    },
+    {
+      "id": "P2P-028",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operation": "getInitialStepIndex",
+          "results": {
+            "absent": 0,
+            "missing": 0,
+            "second": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "P2P-029",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "all_have_inline_content": true,
+          "all_have_stepperize_dependency": true,
+          "all_items_present": true,
+          "block_count": 28,
+          "operation": "docs.registry.blocks",
+          "orphan_registry_items": [],
+          "registry_item_count": 28
+        }
+      }
+    },
+    {
+      "id": "P2P-030",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operation": "StepMap.get",
+          "results": {
+            "missing": null,
+            "second": "second"
+          }
+        }
+      }
+    },
+    {
+      "id": "P2P-031",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "result": "PASS",
+          "surface": "runtime scenarios documented by packages/core/src/tests/utils.test.ts"
+        }
+      }
+    },
+    {
+      "id": "P2P-032",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operation": "StepMap.first/last",
+          "results": {
+            "empty_first": null,
+            "empty_last": null,
+            "first": "first",
+            "last": "third"
+          }
+        }
+      }
+    },
+    {
+      "id": "P2P-033",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "error": "Step \"missing\" not found.",
+          "operation": "matchStep unknown id"
+        }
+      }
+    },
+    {
+      "id": "P2P-034",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "first_issue_message": "Required",
+          "operation": "validateStep rejected value",
+          "success": false
+        }
+      }
+    },
+    {
+      "id": "P2P-035",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "data_preserved": true,
+          "operation": "validateStep without schema",
+          "success": true
+        }
+      }
+    },
+    {
+      "id": "P2P-036",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "export": ".",
+          "package": "@stepperize/react",
+          "present": true
+        }
+      }
+    },
+    {
+      "id": "P2P-037",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "named_exports_present": true,
+          "operation": "protected.artifacts",
+          "protected_error_wording_present": true,
+          "reference_test_present": true,
+          "standard_schema_boundary_present": true
+        }
+      }
+    },
+    {
+      "id": "P2P-038",
+      "kind": "P2P",
+      "status": "PASS",
+      "value": {
+        "type": "json",
+        "value": {
+          "operation": "StepMap.indexOf",
+          "results": {
+            "missing": -1,
+            "third": 2
+          }
+        }
+      }
+    }
+  ],
+  "p2p_all_pass": true,
+  "schema_version": "migration-source-baseline:v4",
+  "status": "PASS"
+}

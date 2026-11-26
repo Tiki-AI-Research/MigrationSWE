@@ -1,0 +1,109 @@
+{
+  "schema_version": "migration-units/v1",
+  "task_id": "richardgirg-express-fileupload-20260909092636-c2cf52-r2",
+  "base_commit": "20269154bb9aab9672e7ff7ca500349e5d23fb5c",
+  "description": "Migration units of the express-fileupload -> Koa 2 middleware task. Each unit maps one migration capability to the frozen F2P nodes that prove it; a unit passes only when all of its required nodes pass.",
+  "instruction": {
+    "file": "instruction.md",
+    "sha256": "35aded9f1d8d39635c39581d9448ff5d97408e650c92e6cee1935da432844230",
+    "anchors": [
+      "Migrate the middleware factory so it runs natively on Koa 2.16.4",
+      "The middleware MUST skip multipart processing and call `await next()`",
+      "When `parseNested` is `true`, keys such as",
+      "Temporary files created for a request MUST be removed before the middleware resolves",
+      "When `abortOnLimit` is `true`, parsing MUST stop",
+      "If an upload exceeds `uploadTimeout`"
+    ]
+  },
+  "units": [
+    {
+      "id": "koa_entry_and_context",
+      "description": "Dual-signature factory exposes Koa mode and maps parsed fields/files onto ctx.request with ctx.req aliases.",
+      "instruction_anchor": "Migrate the middleware factory so it runs natively on Koa 2.16.4",
+      "source_paths": [
+        "lib/index.js",
+        "lib/processMultipart.js"
+      ],
+      "required_nodes": [
+        "koa_single_memory",
+        "koa_repeated_values",
+        "koa_no_files",
+        "koa_empty_and_zero_byte"
+      ]
+    },
+    {
+      "id": "koa_bypass_rules",
+      "description": "Ineligible methods and content-length rules bypass multipart parsing and continue the Koa pipeline.",
+      "instruction_anchor": "The middleware MUST skip multipart processing and call `await next()`",
+      "source_paths": [
+        "lib/index.js",
+        "lib/isEligibleRequest.js"
+      ],
+      "required_nodes": [
+        "koa_bypass",
+        "koa_bypass_methods",
+        "koa_missing_content_length"
+      ]
+    },
+    {
+      "id": "koa_nested_and_safety",
+      "description": "parseNested builds nested body/file trees in Koa mode while prototype-pollution keys stay rejected.",
+      "instruction_anchor": "When `parseNested` is `true`, keys such as",
+      "source_paths": [
+        "lib/processMultipart.js",
+        "lib/processNested.js",
+        "lib/utilities.js"
+      ],
+      "required_nodes": [
+        "koa_nested",
+        "koa_malformed"
+      ]
+    },
+    {
+      "id": "koa_temp_file_lifecycle",
+      "description": "Temporary-file mode writes, moves and removes files, including abort and limit cleanup.",
+      "instruction_anchor": "Temporary files created for a request MUST be removed before the middleware resolves",
+      "source_paths": [
+        "lib/tempFileHandler.js",
+        "lib/processMultipart.js"
+      ],
+      "required_nodes": [
+        "koa_temporary_move",
+        "koa_limit_cleanup",
+        "koa_abort_cleanup"
+      ]
+    },
+    {
+      "id": "koa_limit_semantics",
+      "description": "Limit handling: abort, continue/truncate, Koa and legacy limitHandler forms, committed-response safety.",
+      "instruction_anchor": "When `abortOnLimit` is `true`, parsing MUST stop",
+      "source_paths": [
+        "lib/processMultipart.js",
+        "lib/uploadtimer.js"
+      ],
+      "required_nodes": [
+        "koa_limit_abort",
+        "koa_limit_continue",
+        "koa_limit_handler",
+        "koa_legacy_limit_handler",
+        "koa_limit_handler_sent_headers"
+      ]
+    },
+    {
+      "id": "koa_error_propagation",
+      "description": "Timeouts, write failures, limitHandler errors and downstream errors surface and clean up correctly.",
+      "instruction_anchor": "If an upload exceeds `uploadTimeout`",
+      "source_paths": [
+        "lib/processMultipart.js",
+        "lib/tempFileHandler.js",
+        "lib/uploadtimer.js"
+      ],
+      "required_nodes": [
+        "koa_timeout",
+        "koa_write_failure",
+        "koa_limit_handler_throws",
+        "koa_downstream_next_throws"
+      ]
+    }
+  ]
+}

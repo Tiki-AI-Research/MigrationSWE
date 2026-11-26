@@ -1,0 +1,44 @@
+{
+  "id": "BATCH-DIFFERENTIAL-0001-NORM-001",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "relation": "equal_after_normalization",
+  "description": "Normalize source and target observations before comparing them.",
+  "rules": [
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R01",
+      "applies_to": "process_output",
+      "operation": "strip_trailing_whitespace_per_line",
+      "note": "Trailing spaces/tabs are not part of the contract."
+    },
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R02",
+      "applies_to": "process_output",
+      "operation": "collapse_blank_lines",
+      "note": "Repeated blank lines collapse to a single blank line."
+    },
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R03",
+      "applies_to": "message_text",
+      "operation": "collapse_whitespace",
+      "note": "Human-readable message comparisons collapse runs of whitespace and newlines; messages are never matched whole."
+    },
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R04",
+      "applies_to": "numbers",
+      "operation": "numeric_normalize",
+      "note": "Integers and floats that denote the same value compare equal (50 == 50.0)."
+    },
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R05",
+      "applies_to": "completion_scripts",
+      "operation": "existence_only",
+      "note": "Shell completion script bodies are compared for existence and shell markers only, never character-for-character."
+    },
+    {
+      "id": "BATCH-DIFFERENTIAL-0001-NORM-001-R06",
+      "applies_to": "errors",
+      "operation": "prefer_code_over_message",
+      "note": "Errors compare by exit code / error kind first; message text only after whitespace normalization and containment."
+    }
+  ]
+}

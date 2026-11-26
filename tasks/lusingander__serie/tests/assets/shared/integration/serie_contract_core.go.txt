@@ -1,0 +1,1359 @@
+// Package core is an evaluator-owned binding layer. It exposes the public
+// contract that the F2P/DIFFERENTIAL probes assert against, while delegating
+// all repository loading and graph calculation to the candidate's migrated Go
+// core through the generated realLoad/realCalcGraph entry points. It performs
+// no git work of its own, so an absent or broken candidate cannot pass.
+package core
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// ---------------------------------------------------------------------------
+// Canonical public contract types.
+// ---------------------------------------------------------------------------
+
+// CommitHash is a full commit hash with its seven-character short form.
+type CommitHash struct {
+	Full  string `json:"full"`
+	Short string `json:"short"`
+}
+
+// NewCommitHash builds a CommitHash with the required short form.
+func NewCommitHash(full string) CommitHash {
+	short := full
+	if len(short) > 7 {
+		short = short[:7]
+	}
+	return CommitHash{Full: full, Short: short}
+}
+
+func (h CommitHash) String() string         { return h.Full }
+func (h CommitHash) AsString() string       { return h.Full }
+func (h CommitHash) AsShortHash() string    { return h.Short }
+func (h CommitHash) MarshalJSON() ([]byte, error) { return json.Marshal(h.Full) }
+func (h *CommitHash) UnmarshalJSON(data []byte) error {
+	var full string
+	if err := json.Unmarshal(data, &full); err != nil {
+		return err
+	}
+	*h = NewCommitHash(full)
+	return nil
+}
+func (h CommitHash) MarshalText() ([]byte, error) { return []byte(h.Full), nil }
+func (h *CommitHash) UnmarshalText(data []byte) error {
+	*h = NewCommitHash(string(data))
+	return nil
+}
+
+func normalizeHash(h CommitHash) CommitHash {
+	if h.Full == "" && h.Short != "" {
+		return NewCommitHash(h.Short)
+	}
+	return h
+}
+
+// Commit is the public commit record.
+type Commit struct {
+	CommitHash         CommitHash   `json:"commit_hash"`
+	AuthorName         string       `json:"author_name"`
+	AuthorEmail        string       `json:"author_email"`
+	AuthorDate         time.Time    `json:"author_date"`
+	CommitterName      string       `json:"committer_name"`
+	CommitterEmail     string       `json:"committer_email"`
+	CommitterDate      time.Time    `json:"committer_date"`
+	Subject            string       `json:"subject"`
+	Body               string       `json:"body"`
+	ParentCommitHashes []CommitHash `json:"parent_commit_hashes"`
+}
+
+// RefKind distinguishes reference kinds.
+type RefKind string
+
+const (
+	RefKindTag          RefKind = "tag"
+	RefKindBranch       RefKind = "branch"
+	RefKindRemoteBranch RefKind = "remote_branch"
+	RefKindStash        RefKind = "stash"
+
+	RefTag          = RefKindTag
+	RefBranch       = RefKindBranch
+	RefRemoteBranch = RefKindRemoteBranch
+	RefStash        = RefKindStash
+)
+
+func (k RefKind) order() int {
+	switch k {
+	case RefKindTag:
+		return 0
+	case RefKindBranch:
+		return 1
+	case RefKindRemoteBranch:
+		return 2
+	case RefKindStash:
+		return 3
+	}
+	return 4
+}
+
+// Ref is a reference pointing at a commit.
+type Ref struct {
+	Kind    RefKind    `json:"kind"`
+	Name    string     `json:"name"`
+	Target  CommitHash `json:"target"`
+	Message string     `json:"message,omitempty"`
+}
+
+// HeadKind distinguishes HEAD states.
+type HeadKind string
+
+const (
+	HeadKindBranch   HeadKind = "branch"
+	HeadKindDetached HeadKind = "detached"
+	HeadKindNone     HeadKind = "none"
+
+	HeadBranch   = HeadKindBranch
+	HeadDetached = HeadKindDetached
+	HeadNone     = HeadKindNone
+)
+
+// Head describes the current HEAD.
+type Head struct {
+	Kind   HeadKind   `json:"kind"`
+	Name   string     `json:"name,omitempty"`
+	Target CommitHash `json:"target,omitempty"`
+}
+
+func (h Head) IsNone() bool { return h.Kind == HeadKindNone }
+
+// SortCommit selects the commit ordering.
+type SortCommit int
+
+const (
+	SortChronological SortCommit = iota
+	SortTopological
+
+	Chronological = SortChronological
+	Topological   = SortTopological
+)
+
+func (s SortCommit) String() string {
+	if s == SortTopological {
+		return "topo"
+	}
+	return "chrono"
+}
+
+// FileChangeKind distinguishes commit-detail file changes.
+type FileChangeKind string
+
+const (
+	FileChangeAdd    FileChangeKind = "add"
+	FileChangeModify FileChangeKind = "modify"
+	FileChangeDelete FileChangeKind = "delete"
+	FileChangeRename FileChangeKind = "rename"
+
+	FileChangeMove = FileChangeRename
+)
+
+// FileChange is a file change in a commit.
+type FileChange struct {
+	Kind FileChangeKind `json:"kind"`
+	Path string         `json:"path,omitempty"`
+	From string         `json:"from,omitempty"`
+	To   string         `json:"to,omitempty"`
+}
+
+// EdgeType is the visual type of a graph edge.
+type EdgeType int
+
+const (
+	EdgeTypeVertical EdgeType = iota
+	EdgeTypeHorizontal
+	EdgeTypeUp
+	EdgeTypeDown
+	EdgeTypeLeft
+	EdgeTypeRight
+	EdgeTypeRightTop
+	EdgeTypeRightBottom
+	EdgeTypeLeftTop
+	EdgeTypeLeftBottom
+
+	EdgeVertical    = EdgeTypeVertical
+	EdgeHorizontal  = EdgeTypeHorizontal
+	EdgeUp          = EdgeTypeUp
+	EdgeDown        = EdgeTypeDown
+	EdgeLeft        = EdgeTypeLeft
+	EdgeRight       = EdgeTypeRight
+	EdgeRightTop    = EdgeTypeRightTop
+	EdgeRightBottom = EdgeTypeRightBottom
+	EdgeLeftTop     = EdgeTypeLeftTop
+	EdgeLeftBottom  = EdgeTypeLeftBottom
+)
+
+var edgeTypeNames = [...]string{
+	"vertical", "horizontal", "up", "down", "left",
+	"right", "right_top", "right_bottom", "left_top", "left_bottom",
+}
+
+func (t EdgeType) String() string {
+	if int(t) >= 0 && int(t) < len(edgeTypeNames) {
+		return edgeTypeNames[t]
+	}
+	return "unknown"
+}
+func (t EdgeType) MarshalJSON() ([]byte, error) { return json.Marshal(t.String()) }
+func (t *EdgeType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	for i, name := range edgeTypeNames {
+		if name == s {
+			*t = EdgeType(i)
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown edge type %q", s)
+}
+
+// Edge is one commit-graph edge.
+type Edge struct {
+	EdgeType           EdgeType `json:"edge_type"`
+	PosX               int      `json:"pos_x"`
+	AssociatedLinePosX int      `json:"associated_line_pos_x"`
+}
+
+// EdgeKey is the deterministic sort/dedup key.
+func (e Edge) EdgeKey() string { return fmt.Sprintf("%d/%d/%d", e.AssociatedLinePosX, e.PosX, e.EdgeType) }
+
+// Position is a commit's zero-based graph position.
+type Position struct {
+	PosX int `json:"pos_x"`
+	PosY int `json:"pos_y"`
+}
+
+// Graph is the result of calculating the commit graph.
+type Graph struct {
+	Commits      []*Commit               `json:"commits"`
+	CommitPosMap map[CommitHash]Position `json:"commit_pos_map"`
+	Edges        [][]Edge                `json:"edges"`
+	MaxPosX      int                     `json:"max_pos_x"`
+}
+
+// CommitAt returns the commit at a row.
+func (g *Graph) CommitAt(posY int) *Commit {
+	if posY < 0 || posY >= len(g.Commits) {
+		return nil
+	}
+	return g.Commits[posY]
+}
+
+// Position returns a commit's graph position.
+func (g *Graph) Position(h CommitHash) (Position, bool) {
+	p, ok := g.CommitPosMap[normalizeHash(h)]
+	return p, ok
+}
+
+// CompareRefs compares references by kind then name, target, and stash message.
+func CompareRefs(a, b Ref) int {
+	if ka, kb := a.Kind.order(), b.Kind.order(); ka != kb {
+		if ka < kb {
+			return -1
+		}
+		return 1
+	}
+	if a.Name != b.Name {
+		if a.Name < b.Name {
+			return -1
+		}
+		return 1
+	}
+	if a.Target.Full != b.Target.Full {
+		if a.Target.Full < b.Target.Full {
+			return -1
+		}
+		return 1
+	}
+	if a.Message != b.Message {
+		if a.Message < b.Message {
+			return -1
+		}
+		return 1
+	}
+	return 0
+}
+
+// SortAndDedupEdges sorts one row by (associated_line_pos_x, pos_x,
+// edge_type) and removes exact duplicates.
+func SortAndDedupEdges(edges []Edge) []Edge {
+	row := append([]Edge(nil), edges...)
+	sort.SliceStable(row, func(a, b int) bool {
+		if row[a].AssociatedLinePosX != row[b].AssociatedLinePosX {
+			return row[a].AssociatedLinePosX < row[b].AssociatedLinePosX
+		}
+		if row[a].PosX != row[b].PosX {
+			return row[a].PosX < row[b].PosX
+		}
+		return row[a].EdgeType < row[b].EdgeType
+	})
+	if len(row) > 0 {
+		deduped := row[:1]
+		for _, e := range row[1:] {
+			if e != deduped[len(deduped)-1] {
+				deduped = append(deduped, e)
+			}
+		}
+		row = deduped
+	}
+	return row
+}
+
+// ---------------------------------------------------------------------------
+// Config semantics (the only in-scope config keys).
+// ---------------------------------------------------------------------------
+
+const (
+	coreOptionOrder = "core.option.order"
+	coreGitMailmap  = "core.git.mailmap"
+
+	configFileEnvName    = "SERIE_CONFIG_FILE"
+	xdgConfigHomeEnvName = "XDG_CONFIG_HOME"
+)
+
+// Config contains the in-scope core configuration values.
+type Config struct {
+	Order   SortCommit
+	Mailmap bool
+}
+
+// DefaultConfig returns the baseline defaults.
+func DefaultConfig() Config { return Config{Order: SortChronological, Mailmap: false} }
+
+// LoadConfig reads the baseline config lookup locations.
+func LoadConfig() (Config, error) {
+	path, explicit := configLookupPath()
+	if path == "" {
+		return DefaultConfig(), nil
+	}
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if explicit {
+				return Config{}, fmt.Errorf("Config file specified by $%s environment variable not found: %s", configFileEnvName, path)
+			}
+			return DefaultConfig(), nil
+		}
+		return Config{}, err
+	}
+	return LoadConfigFromFile(path)
+}
+
+// LoadConfigFromFile reads only the in-scope keys from a TOML file.
+func LoadConfigFromFile(path string) (Config, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, err
+	}
+	return ParseCoreConfig(string(content))
+}
+
+// ParseCoreConfig extracts core.option.order and core.git.mailmap.
+func ParseCoreConfig(content string) (Config, error) {
+	// A config reader is optional for a library-only delivery. When present,
+	// exercise the candidate reader instead of supplying its behavior here.
+	if raw, supported, err := realParseCoreConfig(content); supported {
+		if err != nil {
+			return Config{}, err
+		}
+		return asConfig(reflect.ValueOf(raw))
+	}
+	config := DefaultConfig()
+	section := ""
+	depth := 0
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	for _, rawLine := range lines {
+		line := stripTOMLComment(rawLine)
+		if depth > 0 {
+			depth += bracketDelta(line)
+			if depth < 0 {
+				depth = 0
+			}
+			continue
+		}
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[") {
+			if end := strings.LastIndex(trimmed, "]"); end > 0 {
+				inner := strings.TrimSpace(trimmed[1:end])
+				inner = strings.Trim(inner, "[]")
+				section = normalizeTOMLKey(inner)
+				continue
+			}
+		}
+		eq := topLevelEquals(trimmed)
+		if eq < 0 {
+			depth += bracketDelta(trimmed)
+			if depth < 0 {
+				depth = 0
+			}
+			continue
+		}
+		keyPart := strings.TrimSpace(trimmed[:eq])
+		valuePart := strings.TrimSpace(trimmed[eq+1:])
+		key := normalizeTOMLKey(keyPart)
+		if section != "" {
+			key = section + "." + key
+		}
+		switch key {
+		case coreOptionOrder:
+			value, err := parseTOMLString(valuePart)
+			if err != nil {
+				return Config{}, err
+			}
+			switch value {
+			case "chrono":
+				config.Order = SortChronological
+			case "topo":
+				config.Order = SortTopological
+			default:
+				return Config{}, fmt.Errorf("invalid value for core.option.order: %s", value)
+			}
+		case coreGitMailmap:
+			switch strings.TrimSpace(valuePart) {
+			case "true":
+				config.Mailmap = true
+			case "false":
+				config.Mailmap = false
+			default:
+				return Config{}, fmt.Errorf("invalid value for core.git.mailmap: %s", valuePart)
+			}
+		}
+		depth += bracketDelta(valuePart)
+		if depth < 0 {
+			depth = 0
+		}
+	}
+	return config, nil
+}
+
+func asConfig(value reflect.Value) (Config, error) {
+	config := DefaultConfig()
+	if core, ok := fieldOf(value, "Core"); ok {
+		value = core
+	}
+	option := value
+	if nested, ok := fieldOf(value, "Option"); ok {
+		option = nested
+	}
+	if order, ok := fieldOf(option, "Order"); ok {
+		order = indirect(order)
+		if order.IsValid() {
+			name := stringOf(order)
+			switch name {
+			case "chrono", "chronological", "0":
+				config.Order = SortChronological
+			case "topo", "topological", "1":
+				config.Order = SortTopological
+			default:
+				return Config{}, fmt.Errorf("unknown candidate config order %q", name)
+			}
+		}
+	}
+	git := value
+	if nested, ok := fieldOf(value, "Git"); ok {
+		git = nested
+	}
+	if mailmap, ok := fieldOf(git, "Mailmap"); ok {
+		mailmap = indirect(mailmap)
+		if mailmap.IsValid() {
+			if mailmap.Kind() != reflect.Bool {
+				return Config{}, fmt.Errorf("candidate config mailmap is not a boolean")
+			}
+			config.Mailmap = mailmap.Bool()
+		}
+	}
+	return config, nil
+}
+
+func configLookupPath() (string, bool) {
+	if path, ok := os.LookupEnv(configFileEnvName); ok {
+		return path, true
+	}
+	if dir, ok := os.LookupEnv(xdgConfigHomeEnvName); ok {
+		return filepath.Join(dir, "serie", "config.toml"), false
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", false
+	}
+	return filepath.Join(home, ".config", "serie", "config.toml"), false
+}
+
+func stripTOMLComment(line string) string {
+	var quote byte
+	escaped := false
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if quote != 0 {
+			if quote == '"' && escaped {
+				escaped = false
+				continue
+			}
+			if quote == '"' && c == '\\' {
+				escaped = true
+				continue
+			}
+			if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '"', '\'':
+			quote = c
+		case '#':
+			return line[:i]
+		}
+	}
+	return line
+}
+
+func bracketDelta(line string) int {
+	delta := 0
+	var quote byte
+	escaped := false
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if quote != 0 {
+			if quote == '"' && escaped {
+				escaped = false
+				continue
+			}
+			if quote == '"' && c == '\\' {
+				escaped = true
+				continue
+			}
+			if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '"', '\'':
+			quote = c
+		case '[', '{':
+			delta++
+		case ']', '}':
+			delta--
+		}
+	}
+	return delta
+}
+
+func topLevelEquals(line string) int {
+	var quote byte
+	escaped := false
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if quote != 0 {
+			if quote == '"' && escaped {
+				escaped = false
+				continue
+			}
+			if quote == '"' && c == '\\' {
+				escaped = true
+				continue
+			}
+			if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '"', '\'':
+			quote = c
+		case '=':
+			return i
+		}
+	}
+	return -1
+}
+
+func normalizeTOMLKey(key string) string {
+	parts := strings.Split(key, ".")
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+		if len(part) >= 2 {
+			if (part[0] == '"' && part[len(part)-1] == '"') || (part[0] == '\'' && part[len(part)-1] == '\'') {
+				part = part[1 : len(part)-1]
+			}
+		}
+		parts[i] = part
+	}
+	return strings.Join(parts, ".")
+}
+
+func parseTOMLString(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", fmt.Errorf("expected a string value")
+	}
+	switch value[0] {
+	case '"':
+		end := -1
+		escaped := false
+		for i := 1; i < len(value); i++ {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if value[i] == '\\' {
+				escaped = true
+				continue
+			}
+			if value[i] == '"' {
+				end = i
+				break
+			}
+		}
+		if end < 0 {
+			return "", fmt.Errorf("unterminated string value")
+		}
+		return strconv.Unquote(value[:end+1])
+	case '\'':
+		end := strings.IndexByte(value[1:], '\'')
+		if end < 0 {
+			return "", fmt.Errorf("unterminated string value")
+		}
+		return value[1 : 1+end], nil
+	default:
+		return "", fmt.Errorf("expected a quoted string value")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// NUL-separated commit record parsing (contract behavior).
+// ---------------------------------------------------------------------------
+
+func parseISODate(s string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05-07:00", time.RFC3339Nano} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Parse(time.RFC3339, s)
+}
+
+func parseCommitRecord(record string) (Commit, error) {
+	fields := strings.Split(record, "\x1f")
+	if len(fields) != 10 {
+		return Commit{}, fmt.Errorf("expected 10 NUL-separated fields, got %d", len(fields))
+	}
+	var c Commit
+	c.CommitHash = NewCommitHash(fields[0])
+	c.AuthorName = fields[1]
+	c.AuthorEmail = fields[2]
+	authorDate, err := parseISODate(fields[3])
+	if err != nil {
+		return Commit{}, err
+	}
+	c.AuthorDate = authorDate
+	c.CommitterName = fields[4]
+	c.CommitterEmail = fields[5]
+	committerDate, err := parseISODate(fields[6])
+	if err != nil {
+		return Commit{}, err
+	}
+	c.CommitterDate = committerDate
+	c.Subject = fields[7]
+	c.Body = fields[8]
+	if parents := strings.TrimSpace(fields[9]); parents != "" {
+		for _, h := range strings.Fields(parents) {
+			c.ParentCommitHashes = append(c.ParentCommitHashes, NewCommitHash(h))
+		}
+	}
+	return c, nil
+}
+
+func parseCommitRecords(out []byte) ([]Commit, error) {
+	var commits []Commit
+	for _, record := range strings.Split(string(out), "\x00") {
+		if strings.TrimSpace(record) == "" {
+			continue
+		}
+		commit, err := parseCommitRecord(record)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, commit)
+	}
+	return commits, nil
+}
+
+// ---------------------------------------------------------------------------
+// Repository: delegates every query to the candidate implementation.
+// ---------------------------------------------------------------------------
+
+// Repository is a read-only view over the candidate's loaded repository.
+type Repository struct {
+	raw any
+}
+
+// Load delegates to the candidate's loader and wraps the result.
+func Load(path string, order SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
+	raw, err := realLoad(path, order, maxCount, mailmap)
+	if err != nil {
+		return nil, err
+	}
+	return &Repository{raw: raw}, nil
+}
+
+// LoadRepository is an alias of Load.
+func LoadRepository(path string, order SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
+	return Load(path, order, maxCount, mailmap)
+}
+
+func (r *Repository) rawValue() reflect.Value { return reflect.ValueOf(r.raw) }
+
+// Commit returns the commit for a hash, or nil.
+func (r *Repository) Commit(h CommitHash) *Commit {
+	out, ok := callHashMethod(r.rawValue(), "Commit", h)
+	if !ok || len(out) == 0 || resultAbsent(out) {
+		return nil
+	}
+	return asCommitPtr(out[0])
+}
+
+// AllCommits returns the loaded commits in order.
+func (r *Repository) AllCommits() []*Commit {
+	out, ok := callMethod(r.rawValue(), "AllCommits")
+	if !ok || len(out) == 0 {
+		return nil
+	}
+	return asCommits(out[0])
+}
+
+// ParentsHash returns a commit's parent hashes.
+func (r *Repository) ParentsHash(h CommitHash) []CommitHash {
+	out, ok := callHashMethod(r.rawValue(), "ParentsHash", h)
+	if !ok || len(out) == 0 {
+		return nil
+	}
+	return asHashes(out[0])
+}
+
+// ChildrenHash returns a commit's child hashes.
+func (r *Repository) ChildrenHash(h CommitHash) []CommitHash {
+	out, ok := callHashMethod(r.rawValue(), "ChildrenHash", h)
+	if !ok || len(out) == 0 {
+		return nil
+	}
+	return asHashes(out[0])
+}
+
+// Refs returns the references pointing at a commit.
+func (r *Repository) Refs(h CommitHash) []Ref {
+	out, ok := callHashMethod(r.rawValue(), "Refs", h)
+	if !ok || len(out) == 0 {
+		return nil
+	}
+	return asRefs(out[0])
+}
+
+// AllRefs returns all references as a canonical projection: each reference
+// appears once and is ordered by CompareRefs. The contract fixes per-commit
+// reference ordering and determinism but not the global projection order, so
+// this normalizes equivalent candidate layouts without changing Refs().
+func (r *Repository) AllRefs() []Ref {
+	out, ok := callMethod(r.rawValue(), "AllRefs")
+	if !ok || len(out) == 0 {
+		return nil
+	}
+	refs := asRefs(out[0])
+	seen := make(map[string]bool, len(refs))
+	unique := make([]Ref, 0, len(refs))
+	for _, ref := range refs {
+		key := string(ref.Kind) + "\x00" + ref.Name + "\x00" + ref.Target.Full + "\x00" + ref.Message
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		unique = append(unique, ref)
+	}
+	sort.SliceStable(unique, func(i, j int) bool { return CompareRefs(unique[i], unique[j]) < 0 })
+	return unique
+}
+
+// Head returns the repository HEAD.
+func (r *Repository) Head() Head {
+	out, ok := callMethod(r.rawValue(), "Head")
+	if !ok || len(out) == 0 {
+		return Head{Kind: HeadKindNone}
+	}
+	return asHead(out[0])
+}
+
+// CommitDetail returns a commit and its file changes.
+func (r *Repository) CommitDetail(h CommitHash) (Commit, []FileChange) {
+	out, ok := callHashMethod(r.rawValue(), "CommitDetail", h)
+	if !ok || len(out) == 0 || resultAbsent(out) {
+		return Commit{}, nil
+	}
+	// Equivalent APIs return either (commit, changes[, error]) or a detail
+	// structure containing those two fields, optionally followed by an error.
+	if commit, found := fieldOf(out[0], "Commit"); found {
+		if changes, found := fieldOf(out[0], "FileChanges", "Changes"); found {
+			return asCommit(commit), asChanges(changes)
+		}
+	}
+	if len(out) < 2 {
+		return Commit{}, nil
+	}
+	return asCommit(out[0]), asChanges(out[1])
+}
+
+// CalcGraph delegates graph calculation to the candidate implementation.
+func CalcGraph(repo *Repository) *Graph {
+	if repo == nil || repo.raw == nil {
+		return &Graph{CommitPosMap: map[CommitHash]Position{}}
+	}
+	return asGraph(reflect.ValueOf(realCalcGraph(repo.raw)))
+}
+
+// ---------------------------------------------------------------------------
+// Reflection-based conversion helpers.
+// ---------------------------------------------------------------------------
+
+// resultAbsent respects explicit presence/error results without inventing
+// data for an absent lookup. Conversion never performs repository work.
+func resultAbsent(out []reflect.Value) bool {
+    errorType := reflect.TypeOf((*error)(nil)).Elem()
+    for _, result := range out[1:] {
+        if result.Kind() == reflect.Bool && !result.Bool() {
+            return true
+        }
+        if result.Type().Implements(errorType) && !result.IsNil() {
+            return true
+        }
+    }
+    return false
+}
+
+func callMethod(v reflect.Value, name string) ([]reflect.Value, bool) {
+	if !v.IsValid() {
+		return nil, false
+	}
+	m := v.MethodByName(name)
+	if !m.IsValid() && v.Kind() == reflect.Pointer && v.CanInterface() {
+		m = v.MethodByName(name)
+	}
+	if !m.IsValid() {
+		return nil, false
+	}
+	return m.Call(nil), true
+}
+
+func callHashMethod(v reflect.Value, name string, h CommitHash) ([]reflect.Value, bool) {
+	if !v.IsValid() {
+		return nil, false
+	}
+	m := v.MethodByName(name)
+	if !m.IsValid() || m.Type().NumIn() != 1 {
+		return nil, false
+	}
+	return m.Call([]reflect.Value{hashArg(m.Type().In(0), h)}), true
+}
+
+func hashArg(t reflect.Type, h CommitHash) reflect.Value {
+	switch t.Kind() {
+	case reflect.String:
+		return reflect.ValueOf(h.Full).Convert(t)
+	case reflect.Interface:
+		return reflect.ValueOf(h.Full)
+	case reflect.Struct:
+		val := reflect.New(t).Elem()
+		set := false
+		if f := val.FieldByName("Full"); f.IsValid() && f.Kind() == reflect.String {
+			f.SetString(h.Full)
+			set = true
+		}
+		if f := val.FieldByName("Short"); f.IsValid() && f.Kind() == reflect.String {
+			f.SetString(h.Short)
+		}
+		if !set && t.NumField() == 1 && val.Field(0).Kind() == reflect.String {
+			val.Field(0).SetString(h.Full)
+		}
+		return val
+	}
+	return reflect.ValueOf(h.Full)
+}
+
+func indirect(v reflect.Value) reflect.Value {
+	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
+		if v.IsNil() {
+			return reflect.Value{}
+		}
+		v = v.Elem()
+	}
+	return v
+}
+
+func normName(s string) string {
+	s = strings.ToLower(s)
+	return strings.NewReplacer("_", "", "-", "", " ", "").Replace(s)
+}
+
+func fieldOf(v reflect.Value, names ...string) (reflect.Value, bool) {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Struct {
+		return reflect.Value{}, false
+	}
+	for _, name := range names {
+		if f := v.FieldByName(name); f.IsValid() {
+			return f, true
+		}
+	}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		fn := normName(t.Field(i).Name)
+		for _, name := range names {
+			if fn == normName(name) {
+				return v.Field(i), true
+			}
+		}
+	}
+	return reflect.Value{}, false
+}
+
+func stringOf(v reflect.Value) string {
+	v = indirect(v)
+	if !v.IsValid() {
+		return ""
+	}
+	if v.Kind() == reflect.String {
+		return v.String()
+	}
+	if v.CanInterface() {
+		if s, ok := v.Interface().(fmt.Stringer); ok {
+			return s.String()
+		}
+	}
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10)
+	case reflect.Bool:
+		return strconv.FormatBool(v.Bool())
+	}
+	return ""
+}
+
+func intOf(v reflect.Value) int {
+	v = indirect(v)
+	if !v.IsValid() {
+		return 0
+	}
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return int(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return int(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		return int(v.Float())
+	case reflect.String:
+		n, _ := strconv.Atoi(v.String())
+		return n
+	}
+	return 0
+}
+
+func getString(v reflect.Value, names ...string) string {
+	if f, ok := fieldOf(v, names...); ok {
+		return stringOf(f)
+	}
+	for _, name := range names {
+		if out, ok := callMethod(v, name); ok && len(out) > 0 {
+			return stringOf(out[0])
+		}
+	}
+	return ""
+}
+
+func getInt(v reflect.Value, names ...string) int {
+	if f, ok := fieldOf(v, names...); ok {
+		return intOf(f)
+	}
+	return 0
+}
+
+func asHash(v reflect.Value) CommitHash {
+	v = indirect(v)
+	if !v.IsValid() {
+		return CommitHash{}
+	}
+	if v.Kind() == reflect.String {
+		return NewCommitHash(v.String())
+	}
+	if v.Kind() == reflect.Struct {
+		if f, ok := fieldOf(v, "Full", "FullHash", "Hash", "Value", "Str"); ok {
+			full := stringOf(f)
+			h := CommitHash{Full: full}
+			if sf, ok2 := fieldOf(v, "Short", "ShortHash"); ok2 {
+				h.Short = stringOf(sf)
+			}
+			if h.Short == "" {
+				h = NewCommitHash(full)
+			}
+			return h
+		}
+		if v.NumField() == 1 {
+			return NewCommitHash(stringOf(v.Field(0)))
+		}
+	}
+	for _, name := range []string{"AsStr", "AsString", "FullHash", "Full", "String"} {
+		if out, ok := callMethod(v, name); ok && len(out) > 0 && indirect(out[0]).Kind() == reflect.String {
+			return NewCommitHash(indirect(out[0]).String())
+		}
+	}
+	return NewCommitHash(stringOf(v))
+}
+
+func asTime(v reflect.Value) time.Time {
+	iv := indirect(v)
+	if !iv.IsValid() {
+		return time.Time{}
+	}
+	if t, ok := iv.Interface().(time.Time); ok {
+		return t
+	}
+	if iv.Kind() == reflect.String {
+		if t, err := parseISODate(iv.String()); err == nil {
+			return t
+		}
+	}
+	if iv.Kind() >= reflect.Int && iv.Kind() <= reflect.Int64 {
+		return time.Unix(iv.Int(), 0)
+	}
+	return time.Time{}
+}
+
+func asCommit(v reflect.Value) Commit {
+	var c Commit
+	iv := indirect(v)
+	if !iv.IsValid() {
+		return c
+	}
+	if f, ok := fieldOf(iv, "CommitHash", "Hash", "Commit"); ok {
+		c.CommitHash = asHash(f)
+	}
+	c.AuthorName = getString(iv, "AuthorName")
+	c.AuthorEmail = getString(iv, "AuthorEmail")
+	if f, ok := fieldOf(iv, "AuthorDate", "AuthorTime", "AuthorTimestamp"); ok {
+		c.AuthorDate = asTime(f)
+	}
+	c.CommitterName = getString(iv, "CommitterName")
+	c.CommitterEmail = getString(iv, "CommitterEmail")
+	if f, ok := fieldOf(iv, "CommitterDate", "CommitterTime", "CommitterTimestamp"); ok {
+		c.CommitterDate = asTime(f)
+	}
+	c.Subject = getString(iv, "Subject")
+	c.Body = getString(iv, "Body")
+	if f, ok := fieldOf(iv, "ParentCommitHashes", "Parents", "ParentHashes", "ParentHash"); ok {
+		c.ParentCommitHashes = asHashes(f)
+	}
+	return c
+}
+
+func asCommitPtr(v reflect.Value) *Commit {
+	iv := indirect(v)
+	if !iv.IsValid() {
+		return nil
+	}
+	c := asCommit(iv)
+	return &c
+}
+
+func asCommits(v reflect.Value) []*Commit {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Slice {
+		return nil
+	}
+	out := make([]*Commit, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		out = append(out, asCommitPtr(v.Index(i)))
+	}
+	return out
+}
+
+func asHashes(v reflect.Value) []CommitHash {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Slice {
+		return nil
+	}
+	out := make([]CommitHash, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		out = append(out, asHash(v.Index(i)))
+	}
+	return out
+}
+
+func kindName(v reflect.Value) string {
+	iv := indirect(v)
+	if !iv.IsValid() {
+		return ""
+	}
+	if iv.Kind() == reflect.String {
+		return iv.String()
+	}
+	if out, ok := callMethod(iv, "String"); ok && len(out) > 0 {
+		return stringOf(out[0])
+	}
+	return ""
+}
+
+func normKind(s string) string {
+	s = strings.ToLower(s)
+	return strings.NewReplacer("_", "", "-", "", " ", "").Replace(s)
+}
+
+func asRefKind(v reflect.Value) RefKind {
+	if n := normKind(kindName(v)); n != "" {
+		switch n {
+		case "tag":
+			return RefKindTag
+		case "branch", "localbranch":
+			return RefKindBranch
+		case "remotebranch", "remote":
+			return RefKindRemoteBranch
+		case "stash":
+			return RefKindStash
+		}
+	}
+	iv := indirect(v)
+	if iv.IsValid() && iv.Kind() >= reflect.Int && iv.Kind() <= reflect.Int64 {
+		switch iv.Int() {
+		case 0:
+			return RefKindTag
+		case 1:
+			return RefKindBranch
+		case 2:
+			return RefKindRemoteBranch
+		case 3:
+			return RefKindStash
+		}
+	}
+	return RefKind(normKind(kindName(v)))
+}
+
+func asHeadKind(v reflect.Value) HeadKind {
+	if n := normKind(kindName(v)); n != "" {
+		switch n {
+		case "branch", "namedbranch":
+			return HeadKindBranch
+		case "detached", "detachedhead":
+			return HeadKindDetached
+		case "none", "nohead":
+			return HeadKindNone
+		}
+	}
+	iv := indirect(v)
+	if iv.IsValid() && iv.Kind() >= reflect.Int && iv.Kind() <= reflect.Int64 {
+		switch iv.Int() {
+		case 0:
+			return HeadKindBranch
+		case 1:
+			return HeadKindDetached
+		case 2:
+			return HeadKindNone
+		}
+	}
+	return HeadKindNone
+}
+
+func asChangeKind(v reflect.Value) FileChangeKind {
+	if n := normKind(kindName(v)); n != "" {
+		switch n {
+		case "add", "addition", "added":
+			return FileChangeAdd
+		case "modify", "modified", "modification":
+			return FileChangeModify
+		case "delete", "deleted", "deletion":
+			return FileChangeDelete
+		case "rename", "renamed", "move", "moved":
+			return FileChangeRename
+		}
+	}
+	iv := indirect(v)
+	if iv.IsValid() && iv.Kind() >= reflect.Int && iv.Kind() <= reflect.Int64 {
+		switch iv.Int() {
+		case 0:
+			return FileChangeAdd
+		case 1:
+			return FileChangeModify
+		case 2:
+			return FileChangeDelete
+		case 3:
+			return FileChangeRename
+		}
+	}
+	return FileChangeKind(normKind(kindName(v)))
+}
+
+func asRef(v reflect.Value) Ref {
+	var r Ref
+	if f, ok := fieldOf(v, "Kind", "Type", "RefType"); ok {
+		r.Kind = asRefKind(f)
+	}
+	r.Name = getString(v, "Name")
+	if f, ok := fieldOf(v, "Target", "CommitHash", "Hash"); ok {
+		r.Target = asHash(f)
+	}
+	r.Message = getString(v, "Message")
+	return r
+}
+
+func asRefs(v reflect.Value) []Ref {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Slice {
+		return nil
+	}
+	out := make([]Ref, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		out = append(out, asRef(v.Index(i)))
+	}
+	return out
+}
+
+func asHead(v reflect.Value) Head {
+	var h Head
+	if f, ok := fieldOf(v, "Kind", "Type", "HeadType"); ok {
+		h.Kind = asHeadKind(f)
+	}
+	h.Name = getString(v, "Name", "BranchName", "Branch")
+	if f, ok := fieldOf(v, "Target", "CommitHash", "Hash"); ok {
+		h.Target = asHash(f)
+	}
+	if h.Kind == "" {
+		h.Kind = HeadKindNone
+	}
+	return h
+}
+
+func asChange(v reflect.Value) FileChange {
+	var c FileChange
+	if f, ok := fieldOf(v, "Kind", "Type", "ChangeType"); ok {
+		c.Kind = asChangeKind(f)
+	}
+	c.Path = getString(v, "Path")
+	c.From = getString(v, "From", "Source", "OldPath", "Src")
+	c.To = getString(v, "To", "Destination", "NewPath", "Dst")
+	return c
+}
+
+func asChanges(v reflect.Value) []FileChange {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Slice {
+		return nil
+	}
+	out := make([]FileChange, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		out = append(out, asChange(v.Index(i)))
+	}
+	return out
+}
+
+func asEdgeType(v reflect.Value) EdgeType {
+	iv := indirect(v)
+	if iv.IsValid() && iv.Kind() >= reflect.Int && iv.Kind() <= reflect.Int64 {
+		n := int(iv.Int())
+		if n >= 0 && n < len(edgeTypeNames) {
+			return EdgeType(n)
+		}
+	}
+	// Equivalent Go APIs may use unsigned enums (for example uint8).
+	// Preserve their declared edge order just as for signed enums; otherwise
+	// every non-vertical edge silently falls through to the vertical default.
+	if iv.IsValid() && iv.Kind() >= reflect.Uint && iv.Kind() <= reflect.Uint64 {
+		n := iv.Uint()
+		if n < uint64(len(edgeTypeNames)) {
+			return EdgeType(n)
+		}
+	}
+	if n := normKind(kindName(v)); n != "" {
+		for i, name := range edgeTypeNames {
+			if normKind(name) == n {
+				return EdgeType(i)
+			}
+		}
+	}
+	return EdgeTypeVertical
+}
+
+func asEdge(v reflect.Value) Edge {
+	var e Edge
+	if f, ok := fieldOf(v, "EdgeType", "Type", "Kind"); ok {
+		e.EdgeType = asEdgeType(f)
+	}
+	e.PosX = getInt(v, "PosX", "X")
+	e.AssociatedLinePosX = getInt(v, "AssociatedLinePosX", "LinePosX", "AssociatedX", "AssociatedPosition")
+	return e
+}
+
+func asEdges(v reflect.Value) [][]Edge {
+	v = indirect(v)
+	if !v.IsValid() || v.Kind() != reflect.Slice {
+		return nil
+	}
+	out := make([][]Edge, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		row := indirect(v.Index(i))
+		if row.IsValid() && row.Kind() == reflect.Slice {
+			edges := make([]Edge, row.Len())
+			for j := 0; j < row.Len(); j++ {
+				edges[j] = asEdge(row.Index(j))
+			}
+			out[i] = edges
+		}
+	}
+	return out
+}
+
+func asPosition(v reflect.Value) Position {
+	var p Position
+	p.PosX = getInt(v, "PosX", "X", "Column")
+	p.PosY = getInt(v, "PosY", "Y", "Row")
+	return p
+}
+
+func asGraph(v reflect.Value) *Graph {
+	g := &Graph{CommitPosMap: map[CommitHash]Position{}}
+	iv := indirect(v)
+	if !iv.IsValid() {
+		return g
+	}
+	if f, ok := fieldOf(iv, "Commits"); ok {
+		g.Commits = asCommits(f)
+	}
+	if f, ok := fieldOf(iv, "CommitPosMap", "Positions", "CommitPositions"); ok {
+		m := indirect(f)
+		if m.IsValid() && m.Kind() == reflect.Map {
+			for _, key := range m.MapKeys() {
+				g.CommitPosMap[asHash(key)] = asPosition(m.MapIndex(key))
+			}
+		}
+	}
+	if f, ok := fieldOf(iv, "Edges"); ok {
+		g.Edges = asEdges(f)
+	}
+	g.MaxPosX = getInt(iv, "MaxPosX", "MaxLane", "MaxLaneIndex", "Max")
+	return g
+}

@@ -1,0 +1,3512 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "execution": {
+    "source": {
+      "command": [
+        "cargo",
+        "test",
+        "--no-fail-fast"
+      ],
+      "cwd": "/input/source",
+      "failed": [],
+      "native_suite": {
+        "command": [
+          "/tmp/cargo/bin/cargo",
+          "test",
+          "--no-fail-fast"
+        ],
+        "cwd": "/input/source",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running unittests src/main.rs (/tmp/source-target/debug/deps/rubyfmt_main-3066f6be3aea3fb6)\n     Running tests/cli_interface_test.rs (/tmp/source-target/debug/deps/cli_interface_test-c485f0ba918819e5)\n     Running tests/common.rs (/tmp/source-target/debug/deps/common-db5a5a28d3271ab8)\n     Running tests/error_handling_test.rs (/tmp/source-target/debug/deps/error_handling_test-5338a8f5edc28c29)\n     Running tests/fixtures_test.rs (/tmp/source-target/debug/deps/fixtures_test-94cf0adbbf5dcab1)\n     Running tests/stress_test.rs (/tmp/source-target/debug/deps/stress_test-0a72aa8d36b7e153)\n",
+        "stdout_tail": "ent_header                                ... ok\ntest test_small_arg_list_with_bare_assoc_hash                         ... ok\ntest test_small_trailing_empty_star                                   ... ok\ntest test_small_when_indent                                           ... ok\ntest test_small_constant_target                                       ... ok\ntest test_small_match_last_line                                       ... ok\ntest test_small_attr_write_hash_comments                              ... ok\ntest test_small_unless                                                ... ok\ntest test_small_paren_with_multiple_expressions                       ... ok\ntest test_small_array_with_splat                                      ... ok\ntest test_small_super_in_call_chain                                   ... ok\ntest test_small_stabby_lambda                                         ... ok\ntest test_small_ivar                                                  ... ok\ntest test_small_empty_array                                           ... ok\ntest test_small_nested_block_breakable                                ... ok\ntest test_small_comments_at_indentation_changes                       ... ok\ntest test_small_defined                                               ... ok\ntest test_small_super_with_empty_paren                                ... ok\ntest test_small_kwargs_multiline                                      ... ok\ntest test_small_multiline_chained_call                                ... ok\ntest test_small_long_blockvar                                         ... ok\ntest test_small_conditionals_with_ending_comments                     ... ok\ntest test_small_multi_return                                          ... ok\ntest test_small_conditional_assign                                    ... ok\ntest test_small_bare_assoc_multiple                                   ... ok\ntest test_small_call_operator_write                                   ... ok\ntest test_small_massign_omg                                           ... ok\ntest test_small_regexp_literal                                        ... ok\ntest test_small_defs_comment                                          ... ok\ntest test_small_sclass                                                ... ok\ntest test_small_multiline_defs                                        ... ok\ntest test_small_begin_ensure_rescue                                   ... ok\ntest test_small_more_methods                                          ... ok\ntest test_small_many_splats                                           ... ok\ntest test_small_long_line_with_indentation                            ... ok\ntest test_small_weird_percent_strings                                 ... ok\ntest test_small_multi_variable_binding                                ... ok\ntest test_small_multi_statement_brace_block_in_embexpr                ... ok\ntest test_small_hash_rocket_usage                                     ... ok\ntest test_small_heredoc_escape_sequence_indent                        ... ok\ntest test_small_bracket_method_call_on_module_with_no_args            ... ok\ntest test_small_end_data                                              ... ok\ntest test_small_fib                                                   ... ok\ntest test_small_start_of_file_comments                                ... ok\ntest test_small_memoist                                               ... ok\ntest test_small_dot2                                                  ... ok\ntest test_small_comments_with_breaks                                  ... ok\ntest test_small_flip_flop                                             ... ok\n\ntest result: ok. 401 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s\n\n\nrunning 3 tests\ntest methods_prism_stress_test ... ok\ntest string_literals_prism_stress_test ... ok\ntest arrays_prism_stress_test ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s\n\n"
+      },
+      "native_tests": {
+        "P2P-001": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "native_test": "test_small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "/tmp/cargo/bin/cargo",
+              "test",
+              "--test",
+              "fixtures_test",
+              "--",
+              "test_small_rspec_its",
+              "--exact"
+            ],
+            "cwd": "/input/source",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running tests/fixtures_test.rs (/tmp/source-target/debug/deps/fixtures_test-94cf0adbbf5dcab1)\n",
+            "stdout_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n"
+          },
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-008": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "native_test": "test_small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "/tmp/cargo/bin/cargo",
+              "test",
+              "--test",
+              "fixtures_test",
+              "--",
+              "test_small_rspec_its",
+              "--exact"
+            ],
+            "cwd": "/input/source",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running tests/fixtures_test.rs (/tmp/source-target/debug/deps/fixtures_test-94cf0adbbf5dcab1)\n",
+            "stdout_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n"
+          },
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-018": {
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "native_test": "test_small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "/tmp/cargo/bin/cargo",
+              "test",
+              "--test",
+              "fixtures_test",
+              "--",
+              "test_small_rspec_its",
+              "--exact"
+            ],
+            "cwd": "/input/source",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running tests/fixtures_test.rs (/tmp/source-target/debug/deps/fixtures_test-94cf0adbbf5dcab1)\n",
+            "stdout_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n"
+          },
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        },
+        "P2P-030": {
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "native_test": "test_small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "/tmp/cargo/bin/cargo",
+              "test",
+              "--test",
+              "fixtures_test",
+              "--",
+              "test_small_rspec_its",
+              "--exact"
+            ],
+            "cwd": "/input/source",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s\n     Running tests/fixtures_test.rs (/tmp/source-target/debug/deps/fixtures_test-94cf0adbbf5dcab1)\n",
+            "stdout_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n"
+          },
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        }
+      },
+      "report": "source/batches/BATCH-P2P-0001/report.json",
+      "required_runtime_observations": [
+        "P2P-030",
+        "P2P-002",
+        "P2P-003",
+        "P2P-004",
+        "P2P-005",
+        "P2P-006",
+        "P2P-009",
+        "P2P-010",
+        "P2P-012",
+        "P2P-013",
+        "P2P-014",
+        "P2P-015",
+        "P2P-016",
+        "P2P-017",
+        "P2P-019",
+        "P2P-020",
+        "P2P-021",
+        "P2P-022",
+        "P2P-023",
+        "P2P-024",
+        "P2P-026",
+        "P2P-027",
+        "P2P-031",
+        "P2P-032",
+        "P2P-033",
+        "P2P-034",
+        "P2P-035",
+        "P2P-036",
+        "P2P-007",
+        "P2P-011",
+        "P2P-025",
+        "P2P-028",
+        "P2P-029",
+        "P2P-001",
+        "P2P-008",
+        "P2P-018"
+      ],
+      "result": "PASS",
+      "results": {
+        "P2P-001": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-002": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-003": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-004": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-005": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-006": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-007": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-008": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-009": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-010": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-011": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-012": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-013": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-014": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-015": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-016": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-017": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-018": {
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        },
+        "P2P-019": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-020": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-021": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-022": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-023": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-024": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-025": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-026": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-027": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-028": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-029": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-030": {
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        },
+        "P2P-031": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-032": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-033": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-034": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-035": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-036": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "returncode": 0,
+      "values": {
+        "P2P-001": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        },
+        "P2P-002": {
+          "result": "PASS"
+        },
+        "P2P-003": {
+          "result": "PASS"
+        },
+        "P2P-004": {
+          "result": "PASS"
+        },
+        "P2P-005": {
+          "result": "PASS"
+        },
+        "P2P-006": {
+          "result": "PASS"
+        },
+        "P2P-007": {
+          "result": "PASS"
+        },
+        "P2P-008": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        },
+        "P2P-009": {
+          "result": "PASS"
+        },
+        "P2P-010": {
+          "result": "PASS"
+        },
+        "P2P-011": {
+          "result": "PASS"
+        },
+        "P2P-012": {
+          "result": "PASS"
+        },
+        "P2P-013": {
+          "result": "PASS"
+        },
+        "P2P-014": {
+          "result": "PASS"
+        },
+        "P2P-015": {
+          "result": "PASS"
+        },
+        "P2P-016": {
+          "result": "PASS"
+        },
+        "P2P-017": {
+          "result": "PASS"
+        },
+        "P2P-018": {
+          "case": "bees",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 211,
+          "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+        },
+        "P2P-019": {
+          "result": "PASS"
+        },
+        "P2P-020": {
+          "result": "PASS"
+        },
+        "P2P-021": {
+          "result": "PASS"
+        },
+        "P2P-022": {
+          "result": "PASS"
+        },
+        "P2P-023": {
+          "result": "PASS"
+        },
+        "P2P-024": {
+          "result": "PASS"
+        },
+        "P2P-025": {
+          "result": "PASS"
+        },
+        "P2P-026": {
+          "result": "PASS"
+        },
+        "P2P-027": {
+          "result": "PASS"
+        },
+        "P2P-028": {
+          "result": "PASS"
+        },
+        "P2P-029": {
+          "result": "PASS"
+        },
+        "P2P-030": {
+          "case": "a",
+          "chunk_count": 5,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 209,
+          "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+        },
+        "P2P-031": {
+          "result": "PASS"
+        },
+        "P2P-032": {
+          "result": "PASS"
+        },
+        "P2P-033": {
+          "result": "PASS"
+        },
+        "P2P-034": {
+          "result": "PASS"
+        },
+        "P2P-035": {
+          "result": "PASS"
+        },
+        "P2P-036": {
+          "result": "PASS"
+        }
+      }
+    },
+    "target": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/input/target",
+      "failed": [],
+      "native_suite": {
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "./..."
+        ],
+        "cwd": "/input/target",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "",
+        "stdout_tail": "ok  \trubyfmt\t0.001s\n?   \trubyfmt/cmd/rubyfmt\t[no test files]\nok  \trubyfmt/internal/cli\t0.715s\nok  \trubyfmt/internal/formatter\t0.947s\n?   \trubyfmt/internal/prism\t[no test files]\n"
+      },
+      "native_tests": {
+        "P2P-001": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "native_test": "TestFixtures/small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "go",
+              "test",
+              "-count=1",
+              "-v",
+              "./internal/formatter",
+              "-run",
+              "^TestFixtures$/^small_rspec_its$"
+            ],
+            "cwd": "/input/target",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "",
+            "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+          },
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-008": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "native_test": "TestFixtures/small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "go",
+              "test",
+              "-count=1",
+              "-v",
+              "./internal/formatter",
+              "-run",
+              "^TestFixtures$/^small_rspec_its$"
+            ],
+            "cwd": "/input/target",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "",
+            "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+          },
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-018": {
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "native_test": "TestFixtures/small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "go",
+              "test",
+              "-count=1",
+              "-v",
+              "./internal/formatter",
+              "-run",
+              "^TestFixtures$/^small_rspec_its$"
+            ],
+            "cwd": "/input/target",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "",
+            "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+          },
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        },
+        "P2P-030": {
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "native_test": "TestFixtures/small_rspec_its",
+          "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "projection": {
+            "command": [
+              "go",
+              "test",
+              "-count=1",
+              "-v",
+              "./internal/formatter",
+              "-run",
+              "^TestFixtures$/^small_rspec_its$"
+            ],
+            "cwd": "/input/target",
+            "result": "PASS",
+            "returncode": 0,
+            "stderr_tail": "",
+            "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+          },
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        }
+      },
+      "report": "target/batches/BATCH-P2P-0001/report.json",
+      "required_runtime_observations": [
+        "P2P-030",
+        "P2P-002",
+        "P2P-003",
+        "P2P-004",
+        "P2P-005",
+        "P2P-006",
+        "P2P-009",
+        "P2P-010",
+        "P2P-012",
+        "P2P-013",
+        "P2P-014",
+        "P2P-015",
+        "P2P-016",
+        "P2P-017",
+        "P2P-019",
+        "P2P-020",
+        "P2P-021",
+        "P2P-022",
+        "P2P-023",
+        "P2P-024",
+        "P2P-026",
+        "P2P-027",
+        "P2P-031",
+        "P2P-032",
+        "P2P-033",
+        "P2P-034",
+        "P2P-035",
+        "P2P-036",
+        "P2P-007",
+        "P2P-011",
+        "P2P-025",
+        "P2P-028",
+        "P2P-029",
+        "P2P-001",
+        "P2P-008",
+        "P2P-018"
+      ],
+      "result": "PASS",
+      "results": {
+        "P2P-001": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-002": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-003": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-004": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-005": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-006": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-007": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-008": {
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "P2P-009": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-010": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-011": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-012": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-013": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-014": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-015": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-016": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-017": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-018": {
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        },
+        "P2P-019": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-020": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-021": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-022": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-023": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-024": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-025": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-026": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-027": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-028": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-029": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-030": {
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "fixture_native_result": "PASS",
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        },
+        "P2P-031": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-032": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-033": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-034": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-035": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "P2P-036": {
+          "result": "PASS",
+          "status": "PASS",
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "returncode": 0,
+      "values": {
+        "P2P-001": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        },
+        "P2P-002": {
+          "result": "PASS"
+        },
+        "P2P-003": {
+          "result": "PASS"
+        },
+        "P2P-004": {
+          "result": "PASS"
+        },
+        "P2P-005": {
+          "result": "PASS"
+        },
+        "P2P-006": {
+          "result": "PASS"
+        },
+        "P2P-007": {
+          "result": "PASS"
+        },
+        "P2P-008": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        },
+        "P2P-009": {
+          "result": "PASS"
+        },
+        "P2P-010": {
+          "result": "PASS"
+        },
+        "P2P-011": {
+          "result": "PASS"
+        },
+        "P2P-012": {
+          "result": "PASS"
+        },
+        "P2P-013": {
+          "result": "PASS"
+        },
+        "P2P-014": {
+          "result": "PASS"
+        },
+        "P2P-015": {
+          "result": "PASS"
+        },
+        "P2P-016": {
+          "result": "PASS"
+        },
+        "P2P-017": {
+          "result": "PASS"
+        },
+        "P2P-018": {
+          "case": "bees",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 211,
+          "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+        },
+        "P2P-019": {
+          "result": "PASS"
+        },
+        "P2P-020": {
+          "result": "PASS"
+        },
+        "P2P-021": {
+          "result": "PASS"
+        },
+        "P2P-022": {
+          "result": "PASS"
+        },
+        "P2P-023": {
+          "result": "PASS"
+        },
+        "P2P-024": {
+          "result": "PASS"
+        },
+        "P2P-025": {
+          "result": "PASS"
+        },
+        "P2P-026": {
+          "result": "PASS"
+        },
+        "P2P-027": {
+          "result": "PASS"
+        },
+        "P2P-028": {
+          "result": "PASS"
+        },
+        "P2P-029": {
+          "result": "PASS"
+        },
+        "P2P-030": {
+          "case": "a",
+          "chunk_count": 5,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 209,
+          "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+        },
+        "P2P-031": {
+          "result": "PASS"
+        },
+        "P2P-032": {
+          "result": "PASS"
+        },
+        "P2P-033": {
+          "result": "PASS"
+        },
+        "P2P-034": {
+          "result": "PASS"
+        },
+        "P2P-035": {
+          "result": "PASS"
+        },
+        "P2P-036": {
+          "result": "PASS"
+        }
+      }
+    }
+  },
+  "kind": "P2P",
+  "observations": [
+    {
+      "atomic_claim": "Preserve observable behavior for test:fixtures/small/rspec_its_expected.rb#a",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "test_small_rspec_its",
+          "native_test_command": [
+            "cargo",
+            "test",
+            "--test",
+            "fixtures_test",
+            "--",
+            "test_small_rspec_its",
+            "--exact"
+          ],
+          "native_test_cwd": "/input/source",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "fixture_case": "a",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "TestFixtures/small_rspec_its",
+          "native_test_command": [
+            "go",
+            "test",
+            "-count=1",
+            "-v",
+            "./internal/formatter",
+            "-run",
+            "^TestFixtures$/^small_rspec_its$"
+          ],
+          "native_test_cwd": "/input/target",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "a",
+            "chunk_count": 5,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 209,
+            "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+          }
+        }
+      },
+      "id": "P2P-030",
+      "requirement_ids": [
+        "R003",
+        "R005",
+        "R013",
+        "R018",
+        "R025"
+      ],
+      "source": {
+        "fixture_case": "a",
+        "fixture_input": "fixtures/small/rspec_its_expected.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "a",
+          "chunk_count": 5,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 209,
+          "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+        }
+      },
+      "surface": "test:fixtures/small/rspec_its_expected.rb#a",
+      "target": {
+        "fixture_case": "a",
+        "fixture_input": "fixtures/small/rspec_its_expected.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "a",
+          "chunk_count": 5,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 209,
+          "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+        }
+      }
+    },
+    {
+      "atomic_claim": "The Go source, module files, tests, scripts, and supporting assets are left in the `/workspace/repo` working tree so the complete diff from the starting commit is collected.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "repository working-tree deliverable",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Checks remain active: invalid Ruby `a 1,2,,` still fails, `--check` still exits 5 on differences, fixture comparisons remain exact byte comparisons, and no evaluation input is special-cased.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-003",
+      "requirement_ids": [
+        "R033"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "test assertion strength",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`rubyfmt -V` and `rubyfmt --version` print a line beginning with `rubyfmt `; `rubyfmt -h` and `rubyfmt --help` print help containing `Usage: rubyfmt`; none of these outputs contains `rubyfmt-main`.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-004",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "version and help identity",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "With `--fail-fast`, a syntax-error input exits 1, a missing named input exits 3, and a missing `@file` list exits 3 even without other inputs.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-005",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "fail-fast exit codes",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Formatting `a 1,2,3` from stdin and from a named file each emits exactly `a(1, 2, 3)\\n` and exits 0.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-006",
+      "requirement_ids": [
+        "R017"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "stdin and file formatting output",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Flags `-c`/`--check`, `-i`/`--in-place`, `--stdin-filepath`, `--header-opt-in`, `--header-opt-out`, `--include-gitignored`, `--fail-fast`, and `-V`/`--version` keep their names; exit codes 0, 1, 3, and 5 keep their meanings; formatting style and fixture expectations remain identical.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-009",
+      "requirement_ids": [
+        "R030"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "CLI contract and formatting style",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "All documented CLI modes, the library formatting entry point, stdin/stdout/in-place operation, check diffs, ignore handling, and header controls remain available with their documented contracts.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-010",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "public capability set",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "The library returns formatted bytes for `a 1,2,3`; invalid Ruby `a 1,2,,` returns a syntax error mapping to exit code 1, a missing input maps to IO exit code 3, and success maps to 0.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-012",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "library formatting entry point",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "With `--header-opt-in`, input `# rubyfmt: true\\na 1,2,3\\n` becomes `# rubyfmt: true\\na(1, 2, 3)\\n`, while input `a 1,2,3` passes through unchanged.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-013",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "header opt-in formatting",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`editor_plugins/` remains byte-for-byte unchanged and no browser/client UI is added as part of the formatter migration.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-014",
+      "requirement_ids": [
+        "R002"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "repository editor_plugins tree",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Adapted harnesses still run the formatter and assert the same behavior, including exact fixture bytes, idempotency, stress-script output equality, CLI exit codes, and stdout/stderr expectations.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-015",
+      "requirement_ids": [
+        "R032"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "adapted test harness behavior",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "For each of `ci/methods_stress_test.rb`, `ci/string_literals_stress_test.rb`, and `ci/array_literals_stress_test.rb`, running the script with Ruby before and after formatting produces identical stdout and a successful exit.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-016",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "ci stress-script runtime behavior",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Check mode emits `--- <path>`, `+++ <path>`, and the unified hunk for each changed input; with `--stdin-filepath lib/foo.rb` the diff headers use exactly `lib/foo.rb`.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-017",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "check-mode diff headers",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Every file under `fixtures/`, including every `_actual.rb` and `_expected.rb` pair, remains byte-for-byte unchanged, and every file under `editor_plugins/` remains unmodified.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-019",
+      "requirement_ids": [
+        "R031"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "fixtures and editor_plugins immutability",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`--include-gitignored` formats a file matched by `.gitignore`, and an explicitly named file is formatted even when its name is matched by `.rubyfmtignore`.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-020",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "ignore override behavior",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "With no positional paths and piped stdin `a 1,2,3`, rubyfmt reads stdin and writes `a(1, 2, 3)\\n`; when stdin is a terminal, it prints help instead of reading input.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-021",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "stdin input and terminal help",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Without `--check` or `--in-place`, formatted bytes for each input are written to stdout and no input file is modified.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-022",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "CLI default output sink",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`--stdin-filepath ignored.rb` applies .rubyfmtignore/.gitignore to stdin, and combining `--stdin-filepath` with a positional path or `-i` exits nonzero with a conflict error on stderr.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-023",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "--stdin-filepath conflict and ignore behavior",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "With `--header-opt-out`, input `# rubyfmt: false\\na 1,2,3` is emitted unchanged and the process exits 0.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-024",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "header opt-out skipping",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "The Go library and rubyfmt executable together replace both Rust workspace components: the executable performs file, directory, @file, and stdin formatting while the library exposes formatting, without requiring the Rust crate or ruby-prism dependency.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-026",
+      "requirement_ids": [
+        "R001"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "Go formatter library and rubyfmt executable",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Stdin `a 1,2,,` exits 1 and writes stderr text containing `syntax error`.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-027",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "stdin syntax-error diagnostics",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Outside check mode without `--fail-fast`, a named syntax-error file and a missing named file are reported on stderr as warnings, other inputs are still formatted, and the process exits 0.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-031",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "named-input warning continuation",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "For a stdin filepath matched by `.rubyfmtignore`, normal mode prints the input unchanged; the same input with `--check` prints nothing and exits 0.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-032",
+      "requirement_ids": [
+        "R024"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "ignored stdin-filepath handling",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "The resulting change set consists of formatter and CLI source, Go build/dependency configuration, and supporting assets; unrelated capabilities and out-of-scope components are not modified.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-033",
+      "requirement_ids": [
+        "R029"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "change-set scope",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "After `rubyfmt -i` on an already formatted file, its modification time is identical to the value before the run; the modification time of a file that was rewritten advances.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-034",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "in-place modification times",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`rubyfmt --check` exits 1 when any input contains a syntax error, and exits 0 with empty stdout when all inputs already equal their formatted bytes.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-035",
+      "requirement_ids": [
+        "R006"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "check-mode syntax and clean exit status",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`rubyfmt -i` rewrites a file containing `a 1,2,3` to `a(1, 2, 3)\\n` but does not open for writing a file that already contains `a(1, 2, 3)\\n`.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-036",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "in-place file rewriting",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "`rubyfmt --check test.rb` or `rubyfmt -c test.rb` on a file containing `a 1,2,3` writes a unified diff to stdout and exits 5.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-007",
+      "requirement_ids": [
+        "R005"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "check-mode diff and exit status",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "The built executable named `rubyfmt` accepts a file path, a directory path, and an `@list.txt` path list; `rubyfmt test.rb` on `a 1,2,3` writes `a(1, 2, 3)\\n` to stdout, and an `@list.txt` containing that file produces the same result.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-011",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "CLI invocation and positional include-paths",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "For every `_actual.rb`/`_expected.rb` pair under `fixtures/small` and `fixtures/large`, formatting the actual file emits the expected bytes and formatting the expected file emits the same bytes.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-025",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "fixture formatting and idempotency",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "An explicitly named `test.rake` is formatted to `a(1, 2, 3)\\n`; traversing a directory formats `test.rb` and leaves `test.txt` containing Ruby unchanged.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-028",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "extension filtering for explicit paths and traversal",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Given `.rubyfmtignore` or a git repository's `.gitignore` containing `/a/b/`, traversing `a` formats `a/test.rb` to `a(1, 2, 3)\\n` and leaves `a/b/test.rb` unchanged.",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "kind": "repository-native-suite+behavioral-probe",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "result": "PASS"
+          }
+        }
+      },
+      "id": "P2P-029",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      },
+      "surface": "ignore-controlled directory traversal",
+      "target": {
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "result": "PASS"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Preserve observable behavior for test:fixtures/small/rspec_its_expected.rb#foo",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "test_small_rspec_its",
+          "native_test_command": [
+            "cargo",
+            "test",
+            "--test",
+            "fixtures_test",
+            "--",
+            "test_small_rspec_its",
+            "--exact"
+          ],
+          "native_test_cwd": "/input/source",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_expected.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "TestFixtures/small_rspec_its",
+          "native_test_command": [
+            "go",
+            "test",
+            "-count=1",
+            "-v",
+            "./internal/formatter",
+            "-run",
+            "^TestFixtures$/^small_rspec_its$"
+          ],
+          "native_test_cwd": "/input/target",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_expected.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        }
+      },
+      "id": "P2P-001",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source": {
+        "fixture_case": "foo",
+        "fixture_input": "fixtures/small/rspec_its_expected.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        }
+      },
+      "surface": "test:fixtures/small/rspec_its_expected.rb#foo",
+      "target": {
+        "fixture_case": "foo",
+        "fixture_input": "fixtures/small/rspec_its_expected.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_expected.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Preserve observable behavior for test:fixtures/small/rspec_its_actual.rb#foo",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "test_small_rspec_its",
+          "native_test_command": [
+            "cargo",
+            "test",
+            "--test",
+            "fixtures_test",
+            "--",
+            "test_small_rspec_its",
+            "--exact"
+          ],
+          "native_test_cwd": "/input/source",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "fixture_case": "foo",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "TestFixtures/small_rspec_its",
+          "native_test_command": [
+            "go",
+            "test",
+            "-count=1",
+            "-v",
+            "./internal/formatter",
+            "-run",
+            "^TestFixtures$/^small_rspec_its$"
+          ],
+          "native_test_cwd": "/input/target",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "foo",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 269,
+            "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+          }
+        }
+      },
+      "id": "P2P-008",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source": {
+        "fixture_case": "foo",
+        "fixture_input": "fixtures/small/rspec_its_actual.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        }
+      },
+      "surface": "test:fixtures/small/rspec_its_actual.rb#foo",
+      "target": {
+        "fixture_case": "foo",
+        "fixture_input": "fixtures/small/rspec_its_actual.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "foo",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 269,
+          "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+        }
+      }
+    },
+    {
+      "atomic_claim": "Preserve observable behavior for test:fixtures/small/rspec_its_actual.rb#bees",
+      "executable_projection": {
+        "source": {
+          "command": [
+            "cargo",
+            "test",
+            "--no-fail-fast"
+          ],
+          "cwd": "/input/source",
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "test_small_rspec_its",
+          "native_test_command": [
+            "cargo",
+            "test",
+            "--test",
+            "fixtures_test",
+            "--",
+            "test_small_rspec_its",
+            "--exact"
+          ],
+          "native_test_cwd": "/input/source",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "\nrunning 1 test\ntest test_small_rspec_its ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 0.02s\n\n",
+          "probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        },
+        "target": {
+          "command": [
+            "go",
+            "test",
+            "-count=1",
+            "./..."
+          ],
+          "cwd": "/input/target",
+          "fixture_case": "bees",
+          "fixture_input": "fixtures/small/rspec_its_actual.rb",
+          "kind": "repository-native-suite+behavioral-probe",
+          "native_test": "TestFixtures/small_rspec_its",
+          "native_test_command": [
+            "go",
+            "test",
+            "-count=1",
+            "-v",
+            "./internal/formatter",
+            "-run",
+            "^TestFixtures$/^small_rspec_its$"
+          ],
+          "native_test_cwd": "/input/target",
+          "native_test_result": "PASS",
+          "native_test_returncode": 0,
+          "output_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n",
+          "probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+          "probe_result": "PASS",
+          "result": "PASS",
+          "returncode": 0,
+          "value": {
+            "case": "bees",
+            "chunk_count": 4,
+            "file": "fixtures/small/rspec_its_actual.rb",
+            "formatted_length": 211,
+            "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+          }
+        }
+      },
+      "id": "P2P-018",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source": {
+        "fixture_case": "bees",
+        "fixture_input": "fixtures/small/rspec_its_actual.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "bees",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 211,
+          "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+        }
+      },
+      "surface": "test:fixtures/small/rspec_its_actual.rb#bees",
+      "target": {
+        "fixture_case": "bees",
+        "fixture_input": "fixtures/small/rspec_its_actual.rb",
+        "fixture_native_result": "PASS",
+        "result": "PASS",
+        "status": "PASS",
+        "value": {
+          "case": "bees",
+          "chunk_count": 4,
+          "file": "fixtures/small/rspec_its_actual.rb",
+          "formatted_length": 211,
+          "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+        }
+      }
+    }
+  ],
+  "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+  "required_runtime_observations": [
+    "P2P-030",
+    "P2P-002",
+    "P2P-003",
+    "P2P-004",
+    "P2P-005",
+    "P2P-006",
+    "P2P-009",
+    "P2P-010",
+    "P2P-012",
+    "P2P-013",
+    "P2P-014",
+    "P2P-015",
+    "P2P-016",
+    "P2P-017",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-026",
+    "P2P-027",
+    "P2P-031",
+    "P2P-032",
+    "P2P-033",
+    "P2P-034",
+    "P2P-035",
+    "P2P-036",
+    "P2P-007",
+    "P2P-011",
+    "P2P-025",
+    "P2P-028",
+    "P2P-029",
+    "P2P-001",
+    "P2P-008",
+    "P2P-018"
+  ],
+  "source_probe": "source/batches/BATCH-P2P-0001/p2p_probe.py",
+  "source_report": "source/batches/BATCH-P2P-0001/report.json",
+  "stable_projection": {
+    "result": "PASS"
+  },
+  "target_probe": "target/batches/BATCH-P2P-0001/p2p_probe.py",
+  "target_report": "target/batches/BATCH-P2P-0001/report.json"
+}

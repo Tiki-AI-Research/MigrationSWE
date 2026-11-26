@@ -1,0 +1,46 @@
+{
+  "schema": "migration-integration-corpus:v1",
+  "batch_id": "BATCH-INTEGRATION-0001",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "source_version": "6.0.3",
+    "target_language": "Go",
+    "target_version": "1.24.0"
+  },
+  "shared_corpus_required": true,
+  "observation_inventory": "shared/integration/observations.json",
+  "harness": "shared/integration/harness.json",
+  "dispatch": {
+    "source_entry": "source/runner",
+    "target_entry": "target/runner",
+    "modes": ["report", "batch-exec", "list"],
+    "batch_exec_covers": ["P2P", "F2P", "DIFFERENTIAL", "CONTRACT"]
+  },
+  "executable_projections": {
+    "f2p": {
+      "relation": "target_postcondition",
+      "predicate": "shared-target-technology",
+      "source_status_required": "FAIL",
+      "target_status_required": "PASS",
+      "note": "Both sides execute the same target-technology predicate; the raw per-side observation is reported."
+    },
+    "p2p": {
+      "relation": "equal_after_normalization",
+      "note": "Each side runs its own executable projection (repository tests or the batch-provided probe package) and reports the raw PASS/FAIL."
+    },
+    "differential": {
+      "relation": "equal_after_normalization",
+      "note": "Both sides run their probe script and project a stable normalized behaviour value."
+    },
+    "contract": {
+      "relation": "equal_after_normalization",
+      "note": "Both sides re-check the preserved public surface declared for that side."
+    }
+  },
+  "harness_limits": {
+    "long_running_commands_require_timeout": true,
+    "no_unbounded_wait": true,
+    "exclude_privileged_or_blocking_cases": true
+  }
+}

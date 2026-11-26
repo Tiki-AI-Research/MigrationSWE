@@ -1,0 +1,15 @@
+# BATCH-F2P-0003 / F2P-068: configuration order used to assert that
+# all-labels lists preexisting labels first and then newly matched labels in
+# configuration order (b, a, c). With preexisting labels [a] and changed file
+# "x.txt" the expected all-labels value is "a,b,c".
+b:
+  - changed-files:
+      - any-glob-to-any-file: ['*.txt']
+
+a:
+  - changed-files:
+      - any-glob-to-any-file: ['*.txt']
+
+c:
+  - changed-files:
+      - any-glob-to-any-file: ['*.txt']

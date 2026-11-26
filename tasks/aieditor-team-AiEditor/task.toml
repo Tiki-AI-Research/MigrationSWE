@@ -1,0 +1,64 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/aieditor-team-AiEditor"
+description = "Migrate AiEditor AI generation from openai 7.8.0 to @openai/agents 0.1.0."
+
+[metadata]
+category = "Framework_migration"
+language = "typescript"
+repository_id = "9baee221-0f20-4816-a3fa-909c4a9a1366"
+task_id = "tp-1aa338b2449b57a271ef0c45bb08e819"
+repository_url = "https://github.com/aieditor-team/AiEditor"
+base_commit_hash = "c0386187d1c55ca84920c342c585b7ffdf272519"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 46
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:aieditor-team-aieditor-verifier-image-20261126"
+image_digest = "sha256:75a9bfdbfeafc856289e5b12588664f823f5a8a74497ed6ad62ebe529548ac16"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached c0386187d1c55ca84920c342c585b7ffdf272519 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:aieditor-team-aieditor-task-image-20261126"
+image_digest = "sha256:4acb10d04332d65e777e7ca231ad38000630f7964bc74ca68096872e05a90934"
+[environment.healthcheck]
+command = "runuser -u agent -- env COREPACK_ENABLE_NETWORK=0 COREPACK_DEFAULT_TO_LATEST=0 sh -c 'node -e '\"'\"'const fs=require('\"'\"'\"'\"'\"'\"'\"'\"'fs'\"'\"'\"'\"'\"'\"'\"'\"'),cp=require('\"'\"'\"'\"'\"'\"'\"'\"'child_process'\"'\"'\"'\"'\"'\"'\"'\"');if(!fs.existsSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"'))process.exit(0);const p=JSON.parse(fs.readFileSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"','\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"')).packageManager;if(p===undefined)process.exit(0);const m=/^(npm|pnpm|yarn)@(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)(?:\\+sha(?:224|256|384|512)\\.[0-9a-fA-F]+)?$/.exec(p);if(!m)process.exit(2);const r=cp.spawnSync(m[1],['\"'\"'\"'\"'\"'\"'\"'\"'--version'\"'\"'\"'\"'\"'\"'\"'\"'],{encoding:'\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"',env:{...process.env,COREPACK_ENABLE_NETWORK:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"',COREPACK_DEFAULT_TO_LATEST:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"'}});if(r.error||r.status!==0)process.exit(r.status||3);process.exit((r.stdout||'\"'\"'\"'\"'\"'\"'\"'\"''\"'\"'\"'\"'\"'\"'\"'\"').trim().split(/\\s+/)[0]===m[2]?0:4);'\"'\"''"
+interval_sec = 1.0
+timeout_sec = 30.0
+retries = 1
+

@@ -1,0 +1,925 @@
+{
+  "schema_version": "migration-asset-observations:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "projection": "equal_after_normalization",
+  "observations": [
+    {
+      "id": "P2P-045",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "UIResolver public API",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/UIResolver.test.ts#resolves nested paths, missing values, and local shadowing",
+      "contract_requirement_ids": [
+        "R003",
+        "R005",
+        "R008",
+        "R010",
+        "R011",
+        "R015",
+        "R016",
+        "R020",
+        "R021",
+        "R022",
+        "R034",
+        "R039",
+        "R040",
+        "R041",
+        "R042",
+        "R044",
+        "R045",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "coverage": {
+        "input_class": "boundary",
+        "projection": "return-value",
+        "scenario": "boundary",
+        "surface": "test:tests/tinyui/UIResolver.test.ts#resolves nested paths, missing values, and local shadowing"
+      },
+      "evidence_refs": [
+        "EVIDENCE-04488"
+      ],
+      "fingerprint": "sha256:e40f283e4d3572423ccbe9f481a5ad895c27a5d67738fe29a1e6cb82ce015b9c",
+      "projection_signature": "sha256:95a7d4a8eb98fd978567f332eb745fbb2d1292ef722a93cd2cf6a94ebf0a2f3b",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-045 UIResolver nested, missing, shadowing",
+      "surface_path": "src/tinyui/resolver/UIResolver.ts",
+      "expected_projection": {
+        "local": "Local",
+        "nullableUndefined": true,
+        "missingUndefined": true,
+        "dependency": "user"
+      }
+    },
+    {
+      "id": "P2P-046",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "UIUpdateQueue and UIBinding public API",
+      "atomic_claim": "Preserve observable behavior for test:tests/tinyui/UICore.test.ts#clears pending bindings without updating them",
+      "contract_requirement_ids": [
+        "R003",
+        "R004",
+        "R011",
+        "R015",
+        "R019",
+        "R020",
+        "R023",
+        "R024",
+        "R029",
+        "R031",
+        "R032",
+        "R035",
+        "R036",
+        "R037",
+        "R041",
+        "R042",
+        "R045",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:tests/tinyui/UICore.test.ts#clears pending bindings without updating them"
+      },
+      "evidence_refs": [
+        "EVIDENCE-04240"
+      ],
+      "fingerprint": "sha256:fa30b7527b3d9cac6abc5c96909ade1df94a7eb81bb861b326fce6ff0d74b423",
+      "projection_signature": "sha256:31bb390fd9811b04c39aab961bfbe25dd652072950fe802a2324cec9f5e37c5d",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-046 clears pending bindings without updating",
+      "surface_path": "src/tinyui/core/UIUpdateQueue.ts",
+      "expected_projection": {
+        "updateCount": 0
+      }
+    },
+    {
+      "id": "P2P-033",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "block drag quick insert menu",
+      "atomic_claim": "Preserve observable behavior for test:tests/features/block-drag/BlockDragMenu.test.ts#closes the quick insert menu when clicking outside",
+      "contract_requirement_ids": [
+        "R003",
+        "R010",
+        "R020",
+        "R021",
+        "R024",
+        "R025",
+        "R026",
+        "R027",
+        "R030",
+        "R042",
+        "R045",
+        "R050",
+        "R051",
+        "R052"
+      ],
+      "coverage": {
+        "input_class": "valid-sequence",
+        "projection": "state-transition",
+        "scenario": "lifecycle",
+        "surface": "test:tests/features/block-drag/BlockDragMenu.test.ts#closes the quick insert menu when clicking outside"
+      },
+      "evidence_refs": [
+        "EVIDENCE-03626"
+      ],
+      "fingerprint": "sha256:98aba2e0c6622fc04e0ed19c83733b81e7be7de3a89b6a9cc8b87633370a4c3b",
+      "projection_signature": "sha256:204393f24b3f54a599d8f1a83053538ea8f72df80ce025d1551d040ca03658ba",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-033 closes quick insert when clicking outside",
+      "surface_path": "src/features/block-drag/BlockDragMenu.ts",
+      "expected_projection": {
+        "openedHidden": false,
+        "closedHidden": true
+      }
+    },
+    {
+      "id": "P2P-032",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "EditorToolRegistry constructor",
+      "atomic_claim": "new EditorToolRegistry([new ReplaceSelectionTool(), new ReplaceSelectionTool()]) throws 'Duplicate editor tool: replace_selection'; a registry with uniquely named tools constructs successfully.",
+      "contract_requirement_ids": [
+        "R033"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "EditorToolRegistry duplicate-name construction error"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00037"
+      ],
+      "fingerprint": "sha256:96387c345a8c7531ab9828f7ec7c21c8357167b55161f97c74f1ddcd6aeb453c",
+      "projection_signature": "sha256:5a379b03f43f1423cb36caaa7a7da643e18f411ccf025a0ea430f17b43f5ed0b",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-032 duplicate editor tools",
+      "surface_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "expected_projection": {
+        "duplicateMessage": "Duplicate editor tool: replace_selection",
+        "uniqueConstructs": true
+      }
+    },
+    {
+      "id": "P2P-043",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "AiEditorToolName literal union",
+      "atomic_claim": "AiEditorToolName accepts exactly get_editor_context, search_document, replace_selection, insert_content, apply_formatting, and apply_text_edits; any other literal fails type-check.",
+      "contract_requirement_ids": [
+        "R014"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "AiEditorToolName literal union"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00018"
+      ],
+      "fingerprint": "sha256:b3a2cfc97fb45b4e86b1e00f25310937a7bbb3a449986d0a0684dcf000b0cc0a",
+      "projection_signature": "sha256:536fac51b2bf79ca1fd30cd7427229d221ba32b1d7f233d8c55831d7b290439c",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-043 editor tool names",
+      "surface_path": "src/ai/types.ts",
+      "expected_projection": {
+        "names": [
+          "get_editor_context",
+          "search_document",
+          "replace_selection",
+          "insert_content",
+          "apply_formatting",
+          "apply_text_edits"
+        ],
+        "toolNames": [
+          "get_editor_context",
+          "search_document",
+          "replace_selection",
+          "insert_content",
+          "apply_formatting",
+          "apply_text_edits"
+        ]
+      }
+    },
+    {
+      "id": "P2P-025",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "applyEditorToolProposal result contract",
+      "atomic_claim": "applyEditorToolProposal returns an object with ok:boolean and message:string; a successful apply has ok true and a rejected apply has ok false with a message.",
+      "contract_requirement_ids": [
+        "R012"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "AiEditorToolApplyResult shape"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00016"
+      ],
+      "fingerprint": "sha256:6139ce82e60ea3bb1934a2a665a8fa02b96691836f1f780cba5107181602f38e",
+      "projection_signature": "sha256:a8855076ca8ff27150ef94f0459a64ec66fb724bc3043d064de1ecca5d777d3d",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-025 apply result shape",
+      "surface_path": "src/ai/editor-tools.ts",
+      "expected_projection": {
+        "appliedOk": true,
+        "appliedMessage": "Applied to the document.",
+        "rejectedOk": false,
+        "rejectedHasMessage": true
+      }
+    },
+    {
+      "id": "P2P-026",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "createAiService factory",
+      "atomic_claim": "createAiService(existingService) returns the same object; createAiService({provider:'custom',generate:async()=> 'ok'}).generate(request,context) resolves {text:'ok'}; createAiService({provider:'openai',model:'gpt-4o-mini'}) returns an OpenAiService.",
+      "contract_requirement_ids": [
+        "R005"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "createAiService factory inputs and result"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00009"
+      ],
+      "fingerprint": "sha256:6b63916dcb9f547d7f97bbe2051cc63861c81d1dc3cc9c9bfa199d9696ff332a",
+      "projection_signature": "sha256:8be96832a8cfb61d95a55c9ce6a314b09b9a7e327667d22232de2486ed8aa37e",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-026 createAiService results",
+      "surface_path": "src/ai/index.ts",
+      "expected_projection": {
+        "existingSame": true,
+        "customText": "ok",
+        "openaiIsService": true
+      }
+    },
+    {
+      "id": "P2P-027",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "OpenAiServiceConfig accepted fields",
+      "atomic_claim": "Constructing OpenAiService with provider, providers, model, apiKey, baseURL, client, organization, project, timeout, maxRetries, defaultHeaders, fetch, fetchOptions, dangerouslyAllowBrowser, response, and buildInput type-checks and constructs; removing any documented field from the config type fails.",
+      "contract_requirement_ids": [
+        "R006"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "OpenAiServiceConfig accepted fields"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00010"
+      ],
+      "fingerprint": "sha256:6e8f08ccbeb9eca9f4f53e882281d243215f856db8572a2b64ba3ff53e90ee42",
+      "projection_signature": "sha256:e6df7047e982a4713ee250365561895850956ea6e47a09444e5814cce6e56063",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-027 OpenAiServiceConfig accepted fields",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "constructed": true,
+        "clientReused": true
+      }
+    },
+    {
+      "id": "P2P-028",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "package exports map",
+      "atomic_claim": "Preserve observable behavior for exports:.",
+      "contract_requirement_ids": [
+        "R020",
+        "R052"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "exports:."
+      },
+      "evidence_refs": [
+        "EVIDENCE-00695"
+      ],
+      "fingerprint": "sha256:76404826a837b940f7e50717b7ba3502d4479e3aba6e3a7c1e18ba7d818fa427",
+      "projection_signature": "sha256:00c3404f0627ac8c65d6253d6a49de8d8a59de958e6c9e83a406eb1825ccaa1a",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-028 package exports map",
+      "surface_path": "package.json",
+      "expected_projection": {
+        "main": "./dist/index.cjs",
+        "module": "./dist/index.js",
+        "importTypes": "./dist/index.d.ts",
+        "importDefault": "./dist/index.js",
+        "requireTypes": "./dist/index.d.cts",
+        "requireDefault": "./dist/index.cjs"
+      }
+    },
+    {
+      "id": "P2P-029",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "rebaseEditorToolProposal coordinate mapping",
+      "atomic_claim": "With _selection_from 8, _selection_to 13, _insert_position 13, _range_from 8, _range_to 13, and edits [{from:8,to:13}], rebaseEditorToolProposal with StepMap([1,5,1]) maps those to 4, 9, 9, 4, 9, and edit 4..9, and sets documentVersion to the supplied 3.",
+      "contract_requirement_ids": [
+        "R038"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "rebaseEditorToolProposal coordinate mapping"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00042"
+      ],
+      "fingerprint": "sha256:79dd467a359cfffa398f1ae5c6fe1145ff5bb2a2a0ddee226dd5a1005ba3ae81",
+      "projection_signature": "sha256:5da40963568447fb1fefbcce99d8a696137b94e3dd952528506b82cc1d6ebc8a",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-029 rebase coordinate mapping",
+      "surface_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "expected_projection": {
+        "documentVersion": 3,
+        "_selection_from": 4,
+        "_selection_to": 9,
+        "_insert_position": 9,
+        "_range_from": 4,
+        "_range_to": 9,
+        "edit": {
+          "from": 4,
+          "to": 9
+        }
+      }
+    },
+    {
+      "id": "P2P-030",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "tool output call identifier continuity",
+      "atomic_claim": "When the model returns call id 'call_1', the next model round contains a function_call_output for exactly call_1 with that tool's JSON output; reusing call_1 for another call or reordering call identifiers fails.",
+      "contract_requirement_ids": [
+        "R027"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "tool output call-identifier continuity"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00031"
+      ],
+      "fingerprint": "sha256:7f658f8e342b37b82a43f46c8dc2ed2a00220fa5f1c96d56e8aab79b8774d840",
+      "projection_signature": "sha256:18ade96d2918ae27106b8f19ca9df0aa6c9b88e7c790a8748218febe4731e461",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-030 tool output call id continuity",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "text": "done",
+        "outputCount": 1,
+        "callIds": [
+          "call_1"
+        ],
+        "outputOk": true
+      }
+    },
+    {
+      "id": "P2P-031",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "default model input composition",
+      "atomic_claim": "Without buildInput, history [{role:'user',content:'u'},{role:'assistant',content:'a'}] and prompt 'p' render 'User: u\\nAssistant: a\\nUser: p'; scope defaults to selection when selectedText is non-empty and document otherwise; selection appends 'Selected text:' plus the selected plain text, document appends 'Document:' plus full plain text, none appends neither, and a supplied buildInput replaces the composition.",
+      "contract_requirement_ids": [
+        "R024"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "default input composition, scope, history, and buildInput override"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00028"
+      ],
+      "fingerprint": "sha256:8af309e613e866d324da38fc55f3c2dff3ffa95f5a5bfb5ad37eff96eb831b60",
+      "projection_signature": "sha256:f62a185e1d48698510affd8764b72596bea5184e9c5b0e92d66fc73f5619318f",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-031 default input composition",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "documentInput": "User: u\nAssistant: a\nUser: p\n\nDocument:\ndoc",
+        "selectionInput": "p\n\nSelected text:\nsel",
+        "noneInput": "p",
+        "overrideInput": "CUSTOM"
+      }
+    },
+    {
+      "id": "P2P-034",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "proposal-producing tool execution",
+      "atomic_claim": "executeEditorFunctionTool('replace_selection','{\"text\":\"x\"}', context with selection 1..3 and documentVersion 7) returns output {ok:true,status:'pending_user_approval',proposal_id:<id>} and a proposal with status pending and documentVersion 7.",
+      "contract_requirement_ids": [
+        "R031"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "proposal-producing tool output and initial proposal status"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00035"
+      ],
+      "fingerprint": "sha256:99b43f8b2ca14a728823d6b10037e150ce1ab4a66c5cebbcca688ae374070e93",
+      "projection_signature": "sha256:145ed9edb7024955489f0471b5e63c06c738fd9cbb10e2aabd98ee723f456729",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-034 proposal tool output and initial status",
+      "surface_path": "src/ai/tools/core/EditorMutationTool.ts",
+      "expected_projection": {
+        "outputOk": true,
+        "status": "pending_user_approval",
+        "hasProposalId": true,
+        "proposalStatus": "pending",
+        "proposalDocumentVersion": 7
+      }
+    },
+    {
+      "id": "P2P-035",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "editor tool loop accumulated result",
+      "atomic_claim": "With editorTools:true and a model that calls a tool and then returns final text, generate exposes the six tool definitions, executes calls locally, continues until no calls remain, and returns accumulated text, accumulated toolProposals, and raw when a final response is available.",
+      "contract_requirement_ids": [
+        "R026"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "editor tool loop termination and accumulated result"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00030"
+      ],
+      "fingerprint": "sha256:a07cec3f3ad08cbcf9e1cc052ee71dd2a53e1381125cb1df7f64e355834a5b75",
+      "projection_signature": "sha256:a6a9ba62791de74b81b83bc471f6ee59527020f2d3ba3ea8b0a94cf14ae39c53",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-035 editor tool loop accumulated result",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "text": "ab",
+        "proposalCount": 1,
+        "proposalTool": "replace_selection",
+        "hasRaw": true,
+        "calls": 2
+      }
+    },
+    {
+      "id": "P2P-036",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "request-time context snapshot isolation",
+      "atomic_claim": "Start generate with context.text 'original' and selectedText 'ori', then mutate context.editor to 'mutated' while the request is pending; the default model input remains based on original and ori, while a tool may read the live editor.",
+      "contract_requirement_ids": [
+        "R023"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "request-time context snapshot isolation"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00027"
+      ],
+      "fingerprint": "sha256:a3673d5a085e4e378fb50c425dc9e4e8254aec76348a1a3fa57eaca2e4f212d2",
+      "projection_signature": "sha256:71ae255974a15c7560e4f0731ddf7d37574b2316586d2bc0ed4c6c93e7f31604",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-036 request-time context snapshot isolation",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "selectionInput": "go\n\nSelected text:\nori",
+        "documentInput": "go\n\nDocument:\noriginal",
+        "selectionHasSnapshot": true,
+        "documentHasSnapshot": true
+      }
+    },
+    {
+      "id": "P2P-037",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "model precedence and blank-model validation",
+      "atomic_claim": "new OpenAiService({provider:{id:'p',name:'P',model:'provider-model'},model:'config-model'}) requests config-model; without model it requests provider-model; model:'   ' throws 'OpenAiService requires a model' before any model request.",
+      "contract_requirement_ids": [
+        "R041"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "model precedence and blank-model validation"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00045"
+      ],
+      "fingerprint": "sha256:a7b8633cde2561068d78cb71a48c59b15a4065f9c6246cac7e659f3a52c3ac5a",
+      "projection_signature": "sha256:16a9b75f956fd9be86106d461ba3864ed505b267ed549697987deb8889914798",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-037 model precedence and blank model",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "configModel": "config-model",
+        "providerModel": "provider-model",
+        "blankError": "OpenAiService requires a model",
+        "blankCalls": 0
+      }
+    },
+    {
+      "id": "P2P-038",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "stale documentVersion apply rejection",
+      "atomic_claim": "Applying a pending proposal with documentVersion 2 to an editor at version 3 returns {ok:false,message:'The document changed. Ask AI to create a new proposal.'} and leaves the document unchanged.",
+      "contract_requirement_ids": [
+        "R036"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "stale documentVersion apply rejection"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00040"
+      ],
+      "fingerprint": "sha256:a9a49330b85d5243dcf20e89fba82eccfc62181a514d67742bca582f0ba3e3a7",
+      "projection_signature": "sha256:accafe2a5d8a37a3194603bf3ab22f33b963bb515f513d7f98cad72773a8d3bf",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-038 stale document version rejection",
+      "surface_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "expected_projection": {
+        "ok": false,
+        "message": "The document changed. Ask AI to create a new proposal.",
+        "text": "hello"
+      }
+    },
+    {
+      "id": "P2P-039",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "abort signal propagation",
+      "atomic_claim": "When request.signal aborts with reason Error('stop'), generate rejects with that Error and never resolves a partial {text}; an already-aborted signal rejects before issuing a model request.",
+      "contract_requirement_ids": [
+        "R045"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "abort signal propagation without partial success"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00049"
+      ],
+      "fingerprint": "sha256:ac6b184ab7f1e8431008ec385da2f402945a97281d3c4b24c038956083f13c8e",
+      "projection_signature": "sha256:95a22bed1e8fe51b6df0a4db58b4c0fd271364487907ad441059c4be0b2bf958",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-039 abort propagation",
+      "surface_path": "src/ai/OpenAiService.ts",
+      "expected_projection": {
+        "preResolved": false,
+        "preMessage": "stop",
+        "inResolved": false,
+        "inMessage": "stop"
+      }
+    },
+    {
+      "id": "P2P-040",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "package root and src/ai/index.ts export map",
+      "atomic_claim": "Importing the package root exposes OpenAiService, createAiService, AI_PROVIDERS, registerAiProvider, getAiProviders, getAiProvider, editorTools, editorFunctionTools, executeEditorFunctionTool, applyEditorToolProposal, defaultEditorToolRegistry, defaultEditorTools, EditorToolRegistry, EditorTool, EditorMutationTool, ApplyFormattingTool, ApplyTextEditsTool, GetEditorContextTool, InsertContentTool, ReplaceSelectionTool, and SearchDocumentTool; importing src/ai/index.ts exposes rebaseEditorToolProposal.",
+      "contract_requirement_ids": [
+        "R003"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "package root and src/ai/index.ts export map"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00007"
+      ],
+      "fingerprint": "sha256:b069ba2d367cae5b48006bc42c60626fa195c08b2e7f0f1badb615edd26fb516",
+      "projection_signature": "sha256:06cbe058c3439f76f744ff2cb3c2f71fee91ba3622a7273c097e41942227c60b",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-040 public exports",
+      "surface_path": "src/index.ts",
+      "expected_projection": {
+        "aiMissing": [],
+        "rootMissing": [],
+        "rebaseMissingFromAi": false
+      }
+    },
+    {
+      "id": "P2P-041",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "read-only tool apply rejection",
+      "atomic_claim": "applyEditorToolProposal(editor, version, proposal for search_document or get_editor_context with status pending) returns a failure message '<tool name> is read-only and cannot be applied.' and leaves the document text unchanged.",
+      "contract_requirement_ids": [
+        "R032"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "read-only tool apply rejection"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00036"
+      ],
+      "fingerprint": "sha256:b0e0c3a2af0a9cd6b627151d0597dd2485f36ee0bbee9601a8b51d1ba8ef66bb",
+      "projection_signature": "sha256:e1a528aae48ae202aa8e7d049c82736a6e69fe2cc5028587499289d7ce0e51ae",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-041 read-only apply rejection",
+      "surface_path": "src/ai/tools/core/EditorTool.ts",
+      "expected_projection": {
+        "messages": [
+          "search_document is read-only and cannot be applied.",
+          "get_editor_context is read-only and cannot be applied."
+        ],
+        "text": "hello"
+      }
+    },
+    {
+      "id": "P2P-042",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "non-pending proposal apply rejection",
+      "atomic_claim": "Applying a proposal whose status is applied or discarded returns {ok:false,message:'This proposal is no longer pending.'} and leaves the document unchanged.",
+      "contract_requirement_ids": [
+        "R035"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "non-pending proposal apply rejection"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00039"
+      ],
+      "fingerprint": "sha256:b355d78bd46b2fe7b5818c295310963017710a465324f9977ab8786b72dd02aa",
+      "projection_signature": "sha256:20efc63ae73277c7ec50c351a07b0f9b14e18411c2ca3c9221eadaf0ec86c6af",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-042 non-pending apply rejection",
+      "surface_path": "src/ai/tools/core/EditorToolRegistry.ts",
+      "expected_projection": {
+        "results": [
+          {
+            "ok": false,
+            "message": "This proposal is no longer pending."
+          },
+          {
+            "ok": false,
+            "message": "This proposal is no longer pending."
+          }
+        ],
+        "text": "hello"
+      }
+    },
+    {
+      "id": "P2P-044",
+      "kind": "P2P",
+      "family": "public-api",
+      "surface": "editorFunctionTools model-visible definitions",
+      "atomic_claim": "editorFunctionTools contains exactly six function tools named get_editor_context, search_document, replace_selection, insert_content, apply_formatting, and apply_text_edits with their existing descriptions and JSON schemas; changing a name or schema changes the observed definitions.",
+      "contract_requirement_ids": [
+        "R017"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "editorFunctionTools model-visible definitions"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00021"
+      ],
+      "fingerprint": "sha256:b3ed6679686bce7b106c7d333d59f6bb675901d24c71c2875370e4f22c2f445b",
+      "projection_signature": "sha256:587a944f90b0e902c4fdfa96c2c17c6b83150a6989eb0ad709e16ecfb77b4eee",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe_file": "shared/batches/BATCH-P2P-0002/probe.test.ts",
+      "probe_name": "P2P-044 editor function tool definitions",
+      "surface_path": "src/ai/tools/implementations/index.ts",
+      "expected_projection": {
+        "definitions": [
+          {
+            "name": "get_editor_context",
+            "description": "Read the current document, selection, active block, formatting marks, outline, and document version.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [],
+            "required": []
+          },
+          {
+            "name": "search_document",
+            "description": "Search the editor document for text and return matching ranges and excerpts.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [
+              "query",
+              "case_sensitive",
+              "max_results"
+            ],
+            "required": [
+              "query"
+            ]
+          },
+          {
+            "name": "replace_selection",
+            "description": "Propose replacing the current text selection. The host applies its configured approval policy.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [
+              "text"
+            ],
+            "required": [
+              "text"
+            ]
+          },
+          {
+            "name": "insert_content",
+            "description": "Propose inserting plain text before or after the current selection, or at the end of the document.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [
+              "position",
+              "content"
+            ],
+            "required": [
+              "position",
+              "content"
+            ]
+          },
+          {
+            "name": "apply_formatting",
+            "description": "Propose formatting a document range. The host applies its configured approval policy.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [
+              "from",
+              "to",
+              "marks",
+              "block_type",
+              "heading_level",
+              "alignment"
+            ],
+            "required": []
+          },
+          {
+            "name": "apply_text_edits",
+            "description": "Propose multiple plain-text replacements as one atomic editor transaction. The host applies its configured approval policy.",
+            "strict": false,
+            "schemaKeys": [
+              "type",
+              "properties",
+              "required",
+              "additionalProperties"
+            ],
+            "propertyKeys": [
+              "edits"
+            ],
+            "required": [
+              "edits"
+            ]
+          }
+        ],
+        "expectedSchemaKeys": {
+          "get_editor_context": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "search_document": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "replace_selection": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "insert_content": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "apply_formatting": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ],
+          "apply_text_edits": [
+            "type",
+            "properties",
+            "required",
+            "additionalProperties"
+          ]
+        }
+      }
+    }
+  ]
+}

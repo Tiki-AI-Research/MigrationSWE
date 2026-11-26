@@ -1,0 +1,1690 @@
+{
+  "schema_version": "migration-differential-fixture:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "kind": "DIFFERENTIAL",
+  "relation": "equal_after_normalization",
+  "observations": [
+    "DIFF-001",
+    "DIFF-002",
+    "DIFF-003",
+    "DIFF-004",
+    "DIFF-005",
+    "DIFF-006",
+    "DIFF-007",
+    "DIFF-008",
+    "DIFF-009",
+    "DIFF-010",
+    "DIFF-011",
+    "DIFF-012",
+    "DIFF-013",
+    "DIFF-014",
+    "DIFF-015",
+    "DIFF-016",
+    "DIFF-017",
+    "DIFF-018",
+    "DIFF-019",
+    "DIFF-020",
+    "DIFF-021",
+    "DIFF-022",
+    "DIFF-023",
+    "DIFF-024",
+    "DIFF-025",
+    "DIFF-026",
+    "DIFF-027",
+    "DIFF-028",
+    "DIFF-029",
+    "DIFF-030",
+    "DIFF-031",
+    "DIFF-032"
+  ],
+  "expected": {
+    "DIFF-001": {
+      "v3": {
+        "components": {
+          "parameters": {
+            "ThingId": {
+              "description": "thing id",
+              "in": "path",
+              "name": "ThingId",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/ThingId"
+              }
+            }
+          },
+          "responses": {
+            "NotFound": {
+              "description": "Not found"
+            }
+          },
+          "schemas": {
+            "BigValue": {
+              "pattern": "^\\d+$",
+              "type": "string"
+            },
+            "Catchall": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "properties": {},
+              "type": "object"
+            },
+            "DateValue": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "Intersected": {
+              "allOf": [
+                {
+                  "properties": {
+                    "a": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "b": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "b"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "Literal": {
+              "enum": [
+                "fixed"
+              ],
+              "type": "string"
+            },
+            "Pattern": {
+              "pattern": "^[a-z]+$",
+              "type": "string"
+            },
+            "RecordMap": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "Thing": {
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                },
+                "count": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "tags": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "count"
+              ],
+              "type": "object"
+            },
+            "ThingId": {
+              "type": "string"
+            },
+            "UnionValue": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          }
+        },
+        "info": {
+          "title": "Differential corpus",
+          "version": "1.0.0"
+        },
+        "openapi": "3.0.0",
+        "paths": {
+          "/items/{id}": {
+            "get": {
+              "parameters": [
+                {
+                  "in": "path",
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "in": "query",
+                  "name": "filter",
+                  "required": false,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Thing"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/Thing"
+                      }
+                    }
+                  },
+                  "description": "OK"
+                },
+                "404": {
+                  "description": "Missing"
+                }
+              }
+            }
+          }
+        }
+      },
+      "v31": {
+        "components": {
+          "parameters": {
+            "ThingId": {
+              "description": "thing id",
+              "in": "path",
+              "name": "ThingId",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/ThingId"
+              }
+            }
+          },
+          "responses": {
+            "NotFound": {
+              "description": "Not found"
+            }
+          },
+          "schemas": {
+            "BigValue": {
+              "pattern": "^\\d+$",
+              "type": "string"
+            },
+            "Catchall": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "properties": {},
+              "type": "object"
+            },
+            "DateValue": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "Intersected": {
+              "allOf": [
+                {
+                  "properties": {
+                    "a": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "b": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "b"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "Literal": {
+              "enum": [
+                "fixed"
+              ],
+              "type": "string"
+            },
+            "Pattern": {
+              "pattern": "^[a-z]+$",
+              "type": "string"
+            },
+            "RecordMap": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "Thing": {
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                },
+                "count": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "tags": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "count"
+              ],
+              "type": "object"
+            },
+            "ThingId": {
+              "type": "string"
+            },
+            "UnionValue": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          }
+        },
+        "info": {
+          "title": "Differential corpus",
+          "version": "1.0.0"
+        },
+        "openapi": "3.1.0",
+        "paths": {
+          "/items/{id}": {
+            "get": {
+              "parameters": [
+                {
+                  "in": "path",
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "in": "query",
+                  "name": "filter",
+                  "required": false,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Thing"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/Thing"
+                      }
+                    }
+                  },
+                  "description": "OK"
+                },
+                "404": {
+                  "description": "Missing"
+                }
+              }
+            }
+          }
+        },
+        "webhooks": {
+          "/thing-changed": {
+            "post": {
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Thing"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "accepted"
+                }
+              }
+            }
+          }
+        }
+      },
+      "v32": {
+        "components": {
+          "parameters": {
+            "ThingId": {
+              "description": "thing id",
+              "in": "path",
+              "name": "ThingId",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/ThingId"
+              }
+            }
+          },
+          "responses": {
+            "NotFound": {
+              "description": "Not found"
+            }
+          },
+          "schemas": {
+            "BigValue": {
+              "pattern": "^\\d+$",
+              "type": "string"
+            },
+            "Catchall": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "properties": {},
+              "type": "object"
+            },
+            "DateValue": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "Intersected": {
+              "allOf": [
+                {
+                  "properties": {
+                    "a": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "b": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "b"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "Literal": {
+              "enum": [
+                "fixed"
+              ],
+              "type": "string"
+            },
+            "Pattern": {
+              "pattern": "^[a-z]+$",
+              "type": "string"
+            },
+            "RecordMap": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "Thing": {
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                },
+                "count": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "tags": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "count"
+              ],
+              "type": "object"
+            },
+            "ThingId": {
+              "type": "string"
+            },
+            "UnionValue": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          }
+        },
+        "info": {
+          "title": "Differential corpus",
+          "version": "1.0.0"
+        },
+        "openapi": "3.2.0",
+        "paths": {
+          "/items/{id}": {
+            "get": {
+              "parameters": [
+                {
+                  "in": "path",
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "in": "query",
+                  "name": "filter",
+                  "required": false,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Thing"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/Thing"
+                      }
+                    }
+                  },
+                  "description": "OK"
+                },
+                "404": {
+                  "description": "Missing"
+                }
+              }
+            }
+          }
+        },
+        "webhooks": {
+          "/thing-changed": {
+            "post": {
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Thing"
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "accepted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "DIFF-002": {
+      "expectedExports": [
+        "OpenAPIRegistry",
+        "OpenApiGeneratorV3",
+        "OpenApiGeneratorV31",
+        "OpenApiGeneratorV32",
+        "RouteConfig",
+        "ResponseConfig",
+        "ZodContentObject",
+        "ZodMediaTypeObject",
+        "ZodOpenAPIMetadata",
+        "ZodRequestBody",
+        "extendZodWithOpenApi",
+        "zodToOpenAPIRegistry"
+      ],
+      "exports": [
+        "OpenAPIRegistry",
+        "OpenApiGeneratorV3",
+        "OpenApiGeneratorV31",
+        "OpenApiGeneratorV32",
+        "extendZodWithOpenApi",
+        "getOpenApiMetadata",
+        "getRefId",
+        "zodToOpenAPIRegistry"
+      ],
+      "registryMethods": [
+        "constructor",
+        "definitions",
+        "register",
+        "registerComponent",
+        "registerParameter",
+        "registerPath",
+        "registerWebhook",
+        "schemaWithRefId"
+      ],
+      "v31Methods": [
+        "constructor",
+        "generateComponents",
+        "generateDocument",
+        "generateSingleWebhook",
+        "generateWebhooks"
+      ],
+      "v32Methods": [
+        "constructor",
+        "generateComponents",
+        "generateDocument",
+        "generateSingleWebhook",
+        "generateWebhooks"
+      ],
+      "v3Methods": [
+        "constructor",
+        "generateComponents",
+        "generateDocument"
+      ]
+    },
+    "DIFF-003": [
+      {
+        "name": "OpenAPIRegistry",
+        "typeof": "function"
+      },
+      {
+        "name": "OpenApiGeneratorV3",
+        "typeof": "function"
+      },
+      {
+        "name": "OpenApiGeneratorV31",
+        "typeof": "function"
+      },
+      {
+        "name": "OpenApiGeneratorV32",
+        "typeof": "function"
+      },
+      {
+        "name": "extendZodWithOpenApi",
+        "typeof": "function"
+      },
+      {
+        "name": "getOpenApiMetadata",
+        "typeof": "function"
+      },
+      {
+        "name": "getRefId",
+        "typeof": "function"
+      },
+      {
+        "name": "zodToOpenAPIRegistry",
+        "typeof": "object"
+      }
+    ],
+    "DIFF-004": {
+      "components": {
+        "components": {
+          "parameters": {},
+          "schemas": {
+            "Ref": {
+              "description": "d",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "oneReturnsOpenapi": "function",
+      "oneType": "ZodString",
+      "prototypeOpenapi": "function",
+      "twoReturnsOpenapi": "function",
+      "twoType": "ZodString"
+    },
+    "DIFF-005": [
+      {
+        "componentType": null,
+        "method": null,
+        "name": null,
+        "path": null,
+        "refId": "A",
+        "type": "schema"
+      },
+      {
+        "componentType": null,
+        "method": null,
+        "name": null,
+        "path": null,
+        "refId": "P",
+        "type": "parameter"
+      },
+      {
+        "componentType": null,
+        "method": "get",
+        "name": null,
+        "path": "/a",
+        "refId": null,
+        "type": "route"
+      },
+      {
+        "componentType": null,
+        "method": "post",
+        "name": null,
+        "path": "/hook",
+        "refId": null,
+        "type": "webhook"
+      },
+      {
+        "componentType": "schemas",
+        "method": null,
+        "name": "Raw",
+        "path": null,
+        "refId": null,
+        "type": "component"
+      }
+    ],
+    "DIFF-006": [
+      "schema",
+      "parameter",
+      "component",
+      "route",
+      "webhook"
+    ],
+    "DIFF-007": {
+      "hasComponents": true,
+      "hasPaths": true,
+      "hasWebhooks": false,
+      "webhooksValue": null
+    },
+    "DIFF-008": {
+      "hasComponents": true,
+      "hasPaths": true,
+      "webhookMethods": [
+        "post"
+      ],
+      "webhookPaths": [
+        "/hook"
+      ]
+    },
+    "DIFF-009": {
+      "hasComponents": true,
+      "hasPaths": true,
+      "webhookMethods": [
+        "post"
+      ],
+      "webhookPaths": [
+        "/hook"
+      ]
+    },
+    "DIFF-010": {
+      "child": {
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "parent": {
+        "properties": {
+          "child": {
+            "$ref": "#/components/schemas/Child"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Child"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "child",
+          "children"
+        ],
+        "type": "object"
+      },
+      "refs": [
+        "#/components/schemas/Child",
+        "#/components/schemas/Child"
+      ],
+      "roundTrips": true
+    },
+    "DIFF-011": {
+      "conflict": {
+        "isZodToOpenAPIError": false,
+        "message": "Conflicting names for parameter",
+        "name": "ConflictError",
+        "threw": true
+      },
+      "missing": {
+        "isZodToOpenAPIError": false,
+        "message": "Missing parameter data, please specify `name` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+        "name": "MissingParameterDataError",
+        "threw": true
+      },
+      "unknown": {
+        "isZodToOpenAPIError": false,
+        "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`.",
+        "name": "UnknownZodTypeError",
+        "threw": true
+      }
+    },
+    "DIFF-012": {
+      "declarationExports": [
+        "*:./openapi-metadata",
+        "OpenAPIRegistry",
+        "OpenApiGeneratorV3",
+        "OpenApiGeneratorV31",
+        "OpenApiGeneratorV32",
+        "ResponseConfig",
+        "RouteConfig",
+        "ZodContentObject",
+        "ZodMediaTypeObject",
+        "ZodOpenAPIMetadata",
+        "ZodRequestBody",
+        "extendZodWithOpenApi",
+        "zodToOpenAPIRegistry"
+      ],
+      "declarationHasExportBlock": true,
+      "files": {
+        "index.cjs": {
+          "exists": true,
+          "nonEmpty": true
+        },
+        "index.d.ts": {
+          "exists": true,
+          "nonEmpty": true
+        },
+        "index.mjs": {
+          "exists": true,
+          "nonEmpty": true
+        }
+      },
+      "packageEntryFields": {
+        "main": "dist/index.cjs",
+        "module": "dist/index.mjs",
+        "types": "dist/index.d.ts"
+      }
+    },
+    "DIFF-013": {
+      "components": {
+        "parameters": {},
+        "schemas": {
+          "Array": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "BigInt": {
+            "pattern": "^\\d+$",
+            "type": "string"
+          },
+          "Catchall": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "properties": {},
+            "type": "object"
+          },
+          "Date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "Email": {
+            "format": "email",
+            "type": "string"
+          },
+          "Intersection": {
+            "allOf": [
+              {
+                "properties": {
+                  "a": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "a"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "b": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "b"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "Literal": {
+            "enum": [
+              "literal-value"
+            ],
+            "type": "string"
+          },
+          "NumericBounds": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Pattern": {
+            "pattern": "^abc$",
+            "type": "string"
+          },
+          "Record": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "Template": {
+            "pattern": "^prefix-.*$",
+            "type": "string"
+          },
+          "Union": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "DIFF-014": {
+      "v3": {
+        "nullable": true,
+        "type": "string"
+      },
+      "v31": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "v32": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "DIFF-015": {
+      "v3": {
+        "already": {
+          "$ref": "#/components/schemas/Already"
+        },
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/String"
+            },
+            {
+              "nullable": true
+            }
+          ]
+        },
+        "string": {
+          "type": "string"
+        }
+      },
+      "v31": {
+        "already": {
+          "$ref": "#/components/schemas/Already"
+        },
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/String"
+            },
+            {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          ]
+        },
+        "string": {
+          "type": "string"
+        }
+      },
+      "v32": {
+        "already": {
+          "$ref": "#/components/schemas/Already"
+        },
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/String"
+            },
+            {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          ]
+        },
+        "string": {
+          "type": "string"
+        }
+      }
+    },
+    "DIFF-016": {
+      "v3": {
+        "already": {
+          "$ref": "#/components/schemas/AlreadyNullable"
+        },
+        "next": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/NullableRecursive"
+            },
+            {
+              "nullable": true
+            }
+          ]
+        }
+      },
+      "v31": {
+        "already": {
+          "$ref": "#/components/schemas/AlreadyNullable"
+        },
+        "next": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/NullableRecursive"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "v32": {
+        "already": {
+          "$ref": "#/components/schemas/AlreadyNullable"
+        },
+        "next": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/NullableRecursive"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "DIFF-017": {
+      "v3": {
+        "items": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "v31": {
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "v32": {
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      }
+    },
+    "DIFF-018": {
+      "mixed": {
+        "isZodToOpenAPIError": true,
+        "message": "Enum has mixed string and number values, please specify the OpenAPI type manually",
+        "name": "ZodToOpenAPIError",
+        "threw": true
+      },
+      "nullable": {
+        "enum": [
+          "a",
+          "b",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "numeric": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer"
+      },
+      "strings": {
+        "enum": [
+          "a",
+          "b"
+        ],
+        "type": "string"
+      }
+    },
+    "DIFF-019": {
+      "components": {
+        "parameters": {},
+        "schemas": {
+          "A": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "a"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "value"
+            ],
+            "type": "object"
+          },
+          "B": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "b"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "value"
+            ],
+            "type": "object"
+          },
+          "C": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "c"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "MissingRefUnion": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/A"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "c"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "NestedUnion": {
+            "oneOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "a": "#/components/schemas/A",
+                    "b": "#/components/schemas/B"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/A"
+                  },
+                  {
+                    "$ref": "#/components/schemas/B"
+                  }
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/C"
+              }
+            ]
+          },
+          "NullableUnion": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/A"
+              },
+              {
+                "$ref": "#/components/schemas/B"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "NumberKindUnion": {
+            "discriminator": {
+              "mapping": {},
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/One"
+              },
+              {
+                "$ref": "#/components/schemas/Two"
+              }
+            ]
+          },
+          "One": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  1
+                ],
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "Two": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  2
+                ],
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "Union": {
+            "discriminator": {
+              "mapping": {
+                "a": "#/components/schemas/A",
+                "b": "#/components/schemas/B"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/A"
+              },
+              {
+                "$ref": "#/components/schemas/B"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "DIFF-020": {
+      "calls": [
+        [
+          "No discriminator found for discriminated union",
+          {
+            "type": "union"
+          }
+        ]
+      ],
+      "schema": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/A"
+          },
+          {
+            "$ref": "#/components/schemas/B"
+          }
+        ]
+      }
+    },
+    "DIFF-021": {
+      "registrationParameters": [
+        "ZParam",
+        "AParam"
+      ],
+      "registrationSchemas": [
+        "Zeta",
+        "Alpha",
+        "ZParam",
+        "AParam"
+      ],
+      "sortedParameters": [
+        "AParam",
+        "ZParam"
+      ],
+      "sortedSchemas": [
+        "Alpha",
+        "AParam",
+        "Zeta",
+        "ZParam"
+      ]
+    },
+    "DIFF-022": {
+      "generator": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "perSchema": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      }
+    },
+    "DIFF-023": {
+      "hasMetaKey": false,
+      "schemas": {
+        "Open": {
+          "type": "string"
+        },
+        "S": {
+          "deprecated": true,
+          "description": "openapi",
+          "type": "string"
+        }
+      }
+    },
+    "DIFF-024": {
+      "components": {
+        "parameters": {},
+        "schemas": {
+          "Defaulted": {
+            "default": "x",
+            "type": "string"
+          },
+          "Lazy": {
+            "type": "string"
+          },
+          "Piped": {
+            "type": "string"
+          },
+          "Prefaulted": {
+            "default": "x",
+            "type": "string"
+          },
+          "Refined": {
+            "type": "string"
+          },
+          "Transformed": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DIFF-025": {
+      "components": {
+        "parameters": {},
+        "schemas": {
+          "Tree": {
+            "properties": {
+              "child": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Tree"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "children": {
+                "items": {
+                  "$ref": "#/components/schemas/Tree"
+                },
+                "type": "array"
+              },
+              "combined": {
+                "allOf": [
+                  {
+                    "properties": {
+                      "x": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "x"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Tree"
+                  }
+                ]
+              },
+              "either": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Tree"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "children",
+              "either",
+              "combined"
+            ],
+            "type": "object"
+          }
+        }
+      }
+    },
+    "DIFF-026": {
+      "components": {
+        "parameters": {},
+        "schemas": {
+          "Item": {
+            "type": "string"
+          }
+        }
+      },
+      "info": {
+        "title": "Differential corpus",
+        "version": "1.0.0"
+      },
+      "openapi": "3.2.0",
+      "paths": {
+        "/search": {
+          "query": {
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "itemEncoding": {
+                    "contentType": "text/plain"
+                  },
+                  "itemSchema": {
+                    "$ref": "#/components/schemas/Item"
+                  },
+                  "prefixEncoding": [
+                    {
+                      "contentType": "text/plain"
+                    }
+                  ]
+                }
+              }
+            },
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  }
+                },
+                "description": "OK",
+                "summary": "Search results"
+              }
+            }
+          }
+        }
+      },
+      "webhooks": {}
+    },
+    "DIFF-027": {
+      "conflict": {
+        "isZodToOpenAPIError": false,
+        "message": "Conflicting location for parameter test",
+        "name": "ConflictError",
+        "threw": true
+      },
+      "missing": {
+        "isZodToOpenAPIError": false,
+        "message": "Missing parameter data, please specify `name` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+        "name": "MissingParameterDataError",
+        "threw": true
+      },
+      "unknown": {
+        "isZodToOpenAPIError": false,
+        "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`.",
+        "name": "UnknownZodTypeError",
+        "threw": true
+      }
+    },
+    "DIFF-028": {
+      "componentKeys": [
+        "schemas",
+        "parameters"
+      ],
+      "schemaKeys": [
+        "Pet"
+      ],
+      "serialized": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"Differential corpus\",\"version\":\"1.0.0\"},\"components\":{\"schemas\":{\"Pet\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"age\":{\"type\":\"integer\"}},\"required\":[\"name\"]}},\"parameters\":{}},\"paths\":{\"/pets\":{\"get\":{\"responses\":{\"200\":{\"description\":\"ok\",\"content\":{\"application/json\":{\"schema\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/components/schemas/Pet\"}}}}}}}}},\"webhooks\":{}}",
+      "topLevelKeys": [
+        "openapi",
+        "info",
+        "components",
+        "paths",
+        "webhooks"
+      ]
+    },
+    "DIFF-029": {
+      "exports": [
+        "OpenAPIRegistry",
+        "OpenApiGeneratorV3",
+        "OpenApiGeneratorV31",
+        "OpenApiGeneratorV32",
+        "extendZodWithOpenApi",
+        "getOpenApiMetadata",
+        "getRefId",
+        "zodToOpenAPIRegistry"
+      ],
+      "hasIndex": true,
+      "main": "dist/index.cjs",
+      "module": "dist/index.mjs",
+      "types": "dist/index.d.ts"
+    },
+    "DIFF-030": {
+      "v3": {
+        "hasWebhooks": false,
+        "openapi": "3.0.0",
+        "webhookPaths": []
+      },
+      "v31": {
+        "hasWebhooks": true,
+        "openapi": "3.1.0",
+        "webhookPaths": [
+          "/hook"
+        ]
+      },
+      "v32": {
+        "hasWebhooks": true,
+        "openapi": "3.2.0",
+        "webhookPaths": [
+          "/hook"
+        ]
+      }
+    },
+    "DIFF-031": {
+      "conflict": {
+        "isZodToOpenAPIError": false,
+        "message": "Conflicting names for parameter",
+        "name": "ConflictError",
+        "threw": true
+      },
+      "consoleError": [
+        [
+          "No discriminator found for discriminated union",
+          {
+            "type": "union"
+          }
+        ]
+      ],
+      "missing": {
+        "isZodToOpenAPIError": false,
+        "message": "Missing parameter data, please specify `name` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+        "name": "MissingParameterDataError",
+        "threw": true
+      },
+      "unknown": {
+        "isZodToOpenAPIError": false,
+        "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`.",
+        "name": "UnknownZodTypeError",
+        "threw": true
+      }
+    },
+    "DIFF-032": {
+      "dependencyNames": [
+        "@rollup/plugin-commonjs",
+        "@rollup/plugin-node-resolve",
+        "@types/jest",
+        "jest",
+        "openapi3-ts",
+        "prettier",
+        "rollup",
+        "rollup-plugin-typescript2",
+        "ts-jest",
+        "tsd",
+        "typescript",
+        "yaml",
+        "zod"
+      ],
+      "hasEntryHtml": false,
+      "main": "dist/index.cjs",
+      "sourceExtensions": [
+        ".ts"
+      ],
+      "suspiciousFiles": [],
+      "uiDependencies": []
+    }
+  }
+}

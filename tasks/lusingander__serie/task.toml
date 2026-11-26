@@ -1,0 +1,61 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/lusingander__serie"
+description = "Migrate serie repository and commit-graph core from Rust to Go 1.24.0."
+
+[metadata]
+category = "Language_migration"
+language = "rust"
+repository_id = "821ccae3-0ece-4f1d-959a-bbe8f7d5b034"
+task_id = "tp-ab30066fff5d441564cb83b90c3869ea"
+repository_url = "https://github.com/lusingander/serie"
+base_commit_hash = "605702602d2de9275d6df2d1162248d4d503b72e"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 30
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:lusingander__serie-verifier-image-20261126"
+image_digest = "sha256:65312524b797341650186fbe6100e1d99eae37c4b610f89eb260648a0519fe9a"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 605702602d2de9275d6df2d1162248d4d503b72e > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:lusingander__serie-task-image-20261126"
+image_digest = "sha256:a1f9e1dedea40fd3b9e89d8ae81aa770ad4c7e9cb5dd490c420b2386a1893f09"

@@ -1,0 +1,661 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "scope": "target",
+  "input_mount": "/input/target",
+  "native_test_commands": [
+    [
+      "node",
+      "--test",
+      "--test-reporter=junit",
+      "--test-reporter-destination={report}",
+      "tests/*.test.js"
+    ],
+    [
+      "npm",
+      "test"
+    ]
+  ],
+  "observations": [
+    "P2P-021",
+    "P2P-009",
+    "P2P-016",
+    "P2P-017",
+    "P2P-019",
+    "P2P-020",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-013",
+    "P2P-014",
+    "P2P-015",
+    "P2P-018",
+    "P2P-001",
+    "P2P-002",
+    "P2P-003",
+    "P2P-004",
+    "P2P-005",
+    "P2P-006",
+    "P2P-007",
+    "P2P-008",
+    "P2P-010",
+    "P2P-011",
+    "P2P-012"
+  ],
+  "entries": [
+    {
+      "observation_id": "P2P-021",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/paypal-approve-detection.test.js",
+        "PayPal approve discovers PayPal tabs through the locked automation window query"
+      ],
+      "selector": "tests/paypal-approve-detection.test.js",
+      "test_name": "PayPal approve discovers PayPal tabs through the locked automation window query",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/paypal-approve-detection.test.js",
+        "test_name": "PayPal approve discovers PayPal tabs through the locked automation window query"
+      }
+    },
+    {
+      "observation_id": "P2P-009",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "hotmail_helper.py",
+        "routes_hotmail"
+      ],
+      "probe": "P2P-009",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "dispatched": true,
+        "routes": {
+          "/append-account-log": 200,
+          "/code": 500,
+          "/messages": 500,
+          "/sync-account-run-records": 200
+        }
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "hotmail_helper.py",
+        "bind_hotmail"
+      ],
+      "probe": "P2P-016",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "bound": true,
+        "host": "127.0.0.1",
+        "port": 17373
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "custom_mail_helper.py",
+        "routes_custom"
+      ],
+      "probe": "P2P-017",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "dispatched": true,
+        "routes": {
+          "/code": 500,
+          "/env": 200,
+          "/health": 200,
+          "/messages": 500,
+          "/random-email": 200
+        }
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "custom_mail_helper.py",
+        "bind_custom"
+      ],
+      "probe": "P2P-019",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "default": 17374,
+        "host": "127.0.0.1",
+        "port": 17374,
+        "port_env": "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT"
+      }
+    },
+    {
+      "observation_id": "P2P-020",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "hotmail_helper.py",
+        "importable"
+      ],
+      "probe": "P2P-020",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "functions": [
+          "fetch_graph_messages",
+          "get_json",
+          "refresh_access_token",
+          "select_latest_code"
+        ],
+        "importable": true
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "hotmail_helper.py",
+        "sync_records"
+      ],
+      "probe": "P2P-022",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "has_generatedAt": true,
+        "retryCount": 2,
+        "summary": {
+          "failed": 0,
+          "retryTotal": 2,
+          "success": 1,
+          "total": 1
+        }
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    # The wire target is captured by the production request handler. A Flask\n    # test_client call bypasses that handler and cannot assess this contract.\n    if app is not None:\n        import socket,subprocess,time\n        port=m.PORT\n        proc=subprocess.Popen([sys.executable,repo+'/scripts/'+script],cwd=repo,\n                              stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n        try:\n            for attempt in range(100):\n                if proc.poll() is not None:\n                    raise RuntimeError('helper exited before accepting requests')\n                try:\n                    with socket.create_connection(('127.0.0.1',port),timeout=0.2):\n                        break\n                except OSError:\n                    time.sleep(0.05)\n            else:\n                raise RuntimeError('helper did not accept requests')\n            payload=json.dumps({'email':'a@b.com','clientId':'c','refreshToken':'r'}).encode()\n            rq=urllib.request.Request('http://127.0.0.1:%d/does-not-exist'%port,\n                                      data=payload,method='POST',\n                                      headers={'Content-Type':'application/json'})\n            try:\n                res=urllib.request.urlopen(rq,timeout=20)\n                st,body=res.status,res.read().decode()\n            except urllib.error.HTTPError as exc:\n                st,body=exc.code,exc.read().decode()\n        finally:\n            proc.terminate()\n            try:\n                proc.wait(timeout=5)\n            except subprocess.TimeoutExpired:\n                proc.kill()\n                proc.wait(timeout=5)\n    else:\n        st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "custom_mail_helper.py",
+        "unknown_path"
+      ],
+      "probe": "P2P-023",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "unknown_body": "{\"ok\": false, \"error\": \"Unsupported path: /does-not-exist\"}",
+        "unknown_status": 404
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "side": "target",
+      "driver": "http-probe",
+      "invocation": [
+        "python3",
+        "-c",
+        "import importlib.util,json,os,sys,tempfile,threading,urllib.request,urllib.error\nrepo=sys.argv[1]; script=sys.argv[2]; mode=sys.argv[3]\nspec=importlib.util.spec_from_file_location('m',repo+'/scripts/'+script)\nm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\ntmp=tempfile.mkdtemp()\nfor attr,fname in (('ACCOUNT_LOG_PATH','account-run-history.txt'),('ACCOUNT_RECORDS_SNAPSHOT_PATH','account-run-history.json'),('RANDOM_EMAIL_DB_PATH','custom-mail-helper.sqlite3')):\n    if hasattr(m,attr): setattr(m,attr,os.path.join(tmp,fname))\napp=getattr(m,'app',None)\nif app is None and callable(getattr(m,'create_app',None)):\n    app=m.create_app()\nif app is not None:\n    c=app.test_client()\n    def req(method,route,body=None):\n        kw={}\n        if body is not None: kw=dict(data=json.dumps(body).encode(),content_type='application/json')\n        r=c.open(route,method=method,**kw); return r.status_code,r.get_data(as_text=True)\nelse:\n    h=getattr(m,'HotmailHelperHandler',None) or m.CustomMailHelperHandler\n    s=m.ThreadingHTTPServer(('127.0.0.1',0),h)\n    threading.Thread(target=s.serve_forever,daemon=True).start()\n    base='http://127.0.0.1:%d'%s.server_address[1]\n    def req(method,route,body=None):\n        d=json.dumps(body).encode() if body is not None else None\n        rq=urllib.request.Request(base+route,data=d,method=method,headers={'Content-Type':'application/json'})\n        try:\n            z=urllib.request.urlopen(rq,timeout=20); return z.status,z.read().decode()\n        except urllib.error.HTTPError as e: return e.code,e.read().decode()\nout={}\nif mode=='routes_hotmail':\n    r={}\n    for route in ('/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/append-account-log']=req('POST','/append-account-log',{'email':'a@b.com','password':'p','status':'success','recordedAt':'2026-01-01T00:00:00Z','reason':'r'})[0]\n    r['/sync-account-run-records']=req('POST','/sync-account-run-records',{'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_hotmail':\n    out={'host':m.HOST,'port':m.PORT,'bound':m.HOST=='127.0.0.1' and m.PORT==17373}\nelif mode=='routes_custom':\n    r={}\n    for route in ('/health','/env','/messages','/code'): r[route]=req('POST',route,{})[0]\n    r['/random-email']=req('POST','/random-email',{'domain':'example.com','n':2})[0]\n    out={'routes':r,'dispatched':all(v not in (404,405) for v in r.values())}\nelif mode=='bind_custom':\n    out={'host':m.HOST,'port':m.PORT,'port_env':'FLOWPILOT_CUSTOM_MAIL_HELPER_PORT','default':17374}\nelif mode=='importable':\n    out={'importable':True,'functions':sorted(n for n in ('select_latest_code','refresh_access_token','fetch_graph_messages','get_json') if callable(getattr(m,n,None)))}\nelif mode=='sync_records':\n    fp=m.sync_account_run_records({'records':[{'email':'a@b.com','password':'p','finalStatus':'success','retryCount':2}]})\n    d=json.load(open(fp))\n    out={'summary':d.get('summary'),'has_generatedAt':bool(d.get('generatedAt')),'retryCount':d['records'][0].get('retryCount')}\nelif mode=='unknown_path':\n    st,body=req('POST','/does-not-exist',{'email':'a@b.com','clientId':'c','refreshToken':'r'})\n    out={'unknown_status':st,'unknown_body':body}\nelif mode=='normalize':\n    recs=[]\n    for st in ('success','failed','stopped','bogus'):\n        rec=m.normalize_account_run_snapshot_record({'email':'x@y.com','password':'p','finalStatus':st,'retryCount':3,'failedStep':2,'autoRunContext':{'currentRun':1,'totalRuns':3,'attemptRun':1}})\n        recs.append({'finalStatus':st,'accepted':rec is not None,'retryCount':(rec or {}).get('retryCount'),'has_failedStep':'failedStep' in (rec or {}),'has_autoRunContext':'autoRunContext' in (rec or {})})\n    out={'records':recs}\nelif mode=='preflight':\n    st,body=req('OPTIONS','/messages',None)\n    out={'options_status':st,'options_body':body}\nprint(json.dumps(out,sort_keys=True))\n",
+        "{repo}",
+        "hotmail_helper.py",
+        "normalize"
+      ],
+      "probe": "P2P-024",
+      "projection": "http_probe_observable",
+      "expected": "PASS",
+      "expected_value": {
+        "records": [
+          {
+            "accepted": true,
+            "finalStatus": "success",
+            "has_autoRunContext": true,
+            "has_failedStep": true,
+            "retryCount": 3
+          },
+          {
+            "accepted": true,
+            "finalStatus": "failed",
+            "has_autoRunContext": true,
+            "has_failedStep": true,
+            "retryCount": 3
+          },
+          {
+            "accepted": true,
+            "finalStatus": "stopped",
+            "has_autoRunContext": true,
+            "has_failedStep": true,
+            "retryCount": 3
+          },
+          {
+            "accepted": false,
+            "finalStatus": "bogus",
+            "has_autoRunContext": false,
+            "has_failedStep": false,
+            "retryCount": null
+          }
+        ]
+      }
+    },
+    {
+      "observation_id": "P2P-013",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/hotmail-auto-run-preflight.test.js",
+        "ensureHotmailMailboxReadyForAutoRunRound falls back to pending hotmail accounts after authorized accounts fail"
+      ],
+      "selector": "tests/hotmail-auto-run-preflight.test.js",
+      "test_name": "ensureHotmailMailboxReadyForAutoRunRound falls back to pending hotmail accounts after authorized accounts fail",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/hotmail-auto-run-preflight.test.js",
+        "test_name": "ensureHotmailMailboxReadyForAutoRunRound falls back to pending hotmail accounts after authorized accounts fail"
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/phone-sms-provider-registry.test.js",
+        "phone sms provider registry can create the real NexSMS provider module"
+      ],
+      "selector": "tests/phone-sms-provider-registry.test.js",
+      "test_name": "phone sms provider registry can create the real NexSMS provider module",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/phone-sms-provider-registry.test.js",
+        "test_name": "phone sms provider registry can create the real NexSMS provider module"
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/mail-2925-content.test.js",
+        "getTargetEmailMatchState decodes generic forwarded bounce aliases without OpenAI-specific domains"
+      ],
+      "selector": "tests/mail-2925-content.test.js",
+      "test_name": "getTargetEmailMatchState decodes generic forwarded bounce aliases without OpenAI-specific domains",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/mail-2925-content.test.js",
+        "test_name": "getTargetEmailMatchState decodes generic forwarded bounce aliases without OpenAI-specific domains"
+      }
+    },
+    {
+      "observation_id": "P2P-018",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/verification-flow-polling.test.js",
+        "verification flow keeps combined signup profile skip reason when completing signup verification"
+      ],
+      "selector": "tests/verification-flow-polling.test.js",
+      "test_name": "verification flow keeps combined signup profile skip reason when completing signup verification",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/verification-flow-polling.test.js",
+        "test_name": "verification flow keeps combined signup profile skip reason when completing signup verification"
+      }
+    },
+    {
+      "observation_id": "P2P-001",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-step7-recovery.test.js",
+        "step 8 completes directly when auth page is already on OAuth consent page"
+      ],
+      "selector": "tests/background-step7-recovery.test.js",
+      "test_name": "step 8 completes directly when auth page is already on OAuth consent page",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-step7-recovery.test.js",
+        "test_name": "step 8 completes directly when auth page is already on OAuth consent page"
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-grok-state-module.test.js",
+        "grok state keeps canonical runtime authoritative over stale non-empty flat fields"
+      ],
+      "selector": "tests/background-grok-state-module.test.js",
+      "test_name": "grok state keeps canonical runtime authoritative over stale non-empty flat fields",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-grok-state-module.test.js",
+        "test_name": "grok state keeps canonical runtime authoritative over stale non-empty flat fields"
+      }
+    },
+    {
+      "observation_id": "P2P-003",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-panel-bridge-module.test.js",
+        "panel bridge can request SUB2API oauth url without opening the admin page"
+      ],
+      "selector": "tests/background-panel-bridge-module.test.js",
+      "test_name": "panel bridge can request SUB2API oauth url without opening the admin page",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-panel-bridge-module.test.js",
+        "test_name": "panel bridge can request SUB2API oauth url without opening the admin page"
+      }
+    },
+    {
+      "observation_id": "P2P-004",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-message-router-step2-skip.test.js",
+        "message router skips Plus login-code step when oauth login lands on consent page"
+      ],
+      "selector": "tests/background-message-router-step2-skip.test.js",
+      "test_name": "message router skips Plus login-code step when oauth login lands on consent page",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-message-router-step2-skip.test.js",
+        "test_name": "message router skips Plus login-code step when oauth login lands on consent page"
+      }
+    },
+    {
+      "observation_id": "P2P-005",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-account-run-history-module.test.js",
+        "background imports account run history module"
+      ],
+      "selector": "tests/background-account-run-history-module.test.js",
+      "test_name": "background imports account run history module",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-account-run-history-module.test.js",
+        "test_name": "background imports account run history module"
+      }
+    },
+    {
+      "observation_id": "P2P-006",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/i18n-runtime.test.js",
+        "i18n translates catalog entries with fallback and interpolation"
+      ],
+      "selector": "tests/i18n-runtime.test.js",
+      "test_name": "i18n translates catalog entries with fallback and interpolation",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/i18n-runtime.test.js",
+        "test_name": "i18n translates catalog entries with fallback and interpolation"
+      }
+    },
+    {
+      "observation_id": "P2P-007",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/flow-capabilities-module.test.js",
+        "flow capability registry normalizes unsupported account delivery mode switches"
+      ],
+      "selector": "tests/flow-capabilities-module.test.js",
+      "test_name": "flow capability registry normalizes unsupported account delivery mode switches",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/flow-capabilities-module.test.js",
+        "test_name": "flow capability registry normalizes unsupported account delivery mode switches"
+      }
+    },
+    {
+      "observation_id": "P2P-008",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-step7-recovery.test.js",
+        "step 8 checks iCloud session before polling iCloud mailbox"
+      ],
+      "selector": "tests/background-step7-recovery.test.js",
+      "test_name": "step 8 checks iCloud session before polling iCloud mailbox",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-step7-recovery.test.js",
+        "test_name": "step 8 checks iCloud session before polling iCloud mailbox"
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/sidepanel-phone-verification-settings.test.js",
+        "sidepanel source wires free reusable phone save and clear actions to runtime messages"
+      ],
+      "selector": "tests/sidepanel-phone-verification-settings.test.js",
+      "test_name": "sidepanel source wires free reusable phone save and clear actions to runtime messages",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/sidepanel-phone-verification-settings.test.js",
+        "test_name": "sidepanel source wires free reusable phone save and clear actions to runtime messages"
+      }
+    },
+    {
+      "observation_id": "P2P-011",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/background-icloud-mail-provider.test.js",
+        "getMailConfig returns icloud mail tab config with host preference"
+      ],
+      "selector": "tests/background-icloud-mail-provider.test.js",
+      "test_name": "getMailConfig returns icloud mail tab config with host preference",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/background-icloud-mail-provider.test.js",
+        "test_name": "getMailConfig returns icloud mail tab config with host preference"
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "side": "target",
+      "driver": "node-test",
+      "invocation": [
+        "python3",
+        "-c",
+        "import json,re,subprocess,sys\nrepo,test,name=sys.argv[1],sys.argv[2],sys.argv[3]\np=subprocess.run(['node','--test','--test-name-pattern',re.escape(name),test],cwd=repo,capture_output=True,text=True)\no=p.stdout+p.stderr\npresent=bool(re.search(r'^# Subtest: '+re.escape(name)+r'\\s*$',o,re.M))\nok=bool(re.search(r'^ok \\d+ - '+re.escape(name)+r'\\s*$',o,re.M))\nmp=re.search(r'^# pass (\\d+)$',o,re.M); mf=re.search(r'^# fail (\\d+)$',o,re.M)\nprint(json.dumps({'test':test,'test_name':name,'present':present,'pass':int(mp.group(1)) if mp else 0,'fail':int(mf.group(1)) if mf else 1,'result':'PASS' if (ok and p.returncode==0) else 'FAIL'},sort_keys=True))\n",
+        "{repo}",
+        "tests/sidepanel-mail2925-manager.test.js",
+        "mail2925 manager exposes a factory and renders empty state"
+      ],
+      "selector": "tests/sidepanel-mail2925-manager.test.js",
+      "test_name": "mail2925 manager exposes a factory and renders empty state",
+      "projection": "node_test_pass_fail",
+      "expected": "PASS",
+      "expected_value": {
+        "fail": 0,
+        "pass": 1,
+        "present": true,
+        "result": "PASS",
+        "test": "tests/sidepanel-mail2925-manager.test.js",
+        "test_name": "mail2925 manager exposes a factory and renders empty state"
+      }
+    }
+  ]
+}

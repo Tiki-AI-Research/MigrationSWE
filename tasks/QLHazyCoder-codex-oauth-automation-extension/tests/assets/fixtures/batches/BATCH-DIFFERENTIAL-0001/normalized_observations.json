@@ -1,0 +1,1213 @@
+{
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "normalizations": [
+    {
+      "field": "used_port",
+      "observation_id": "DIFF-002",
+      "reason": "ephemeral free port chosen at probe time"
+    },
+    {
+      "field": "filePath",
+      "observation_id": "DIFF-003",
+      "reason": "absolute repo path differs by checkout"
+    },
+    {
+      "field": "emails",
+      "observation_id": "DIFF-012",
+      "reason": "secrets-based random prefixes differ per run"
+    },
+    {
+      "field": "project_root",
+      "observation_id": "DIFF-018",
+      "reason": "temp checkout path differs by run"
+    },
+    {
+      "field": "content_type(204)",
+      "observation_id": "DIFF-005",
+      "reason": "204 has no body; only CORS headers are asserted"
+    }
+  ],
+  "observations": {
+    "DIFF-001": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "accepted": {
+          "body": {
+            "filePath": "{repo}/data/account-run-history.json",
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "bound": true
+      },
+      "target": {
+        "accepted": {
+          "body": {
+            "filePath": "{repo}/data/account-run-history.json",
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "bound": true
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-002": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "accepted": {
+          "body": {
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "bound": true,
+        "default_port_source": 17374,
+        "used_port": "{port}"
+      },
+      "target": {
+        "accepted": {
+          "body": {
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "bound": true,
+        "default_port_source": 17374,
+        "used_port": "{port}"
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-003": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "routes": {
+          "/append-account-log": {
+            "body": {
+              "filePath": "{repo}/data/account-run-history.txt",
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/code": {
+            "body": {
+              "error": "Missing email/clientId/refreshToken",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/messages": {
+            "body": {
+              "error": "Missing email/clientId/refreshToken",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/sync-account-run-records": {
+            "body": {
+              "filePath": "{repo}/data/account-run-history.json",
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          }
+        }
+      },
+      "target": {
+        "routes": {
+          "/append-account-log": {
+            "body": {
+              "filePath": "{repo}/data/account-run-history.txt",
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/code": {
+            "body": {
+              "error": "Missing email/clientId/refreshToken",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/messages": {
+            "body": {
+              "error": "Missing email/clientId/refreshToken",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/sync-account-run-records": {
+            "body": {
+              "filePath": "{repo}/data/account-run-history.json",
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          }
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-004": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "routes": {
+          "/code": {
+            "body": {
+              "error": "Missing FLOWPILOT_CUSTOM_IMAP_USER/FLOWPILOT_CUSTOM_IMAP_PASS",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/env": {
+            "body": {
+              "env": {
+                "FLOWPILOT_SUB2API_REDIRECT_URI": ""
+              },
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/health": {
+            "body": {
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/messages": {
+            "body": {
+              "error": "Missing FLOWPILOT_CUSTOM_IMAP_USER/FLOWPILOT_CUSTOM_IMAP_PASS",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/random-email": {
+            "body": {
+              "error": "Invalid domain",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          }
+        }
+      },
+      "target": {
+        "routes": {
+          "/code": {
+            "body": {
+              "error": "Missing FLOWPILOT_CUSTOM_IMAP_USER/FLOWPILOT_CUSTOM_IMAP_PASS",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/env": {
+            "body": {
+              "env": {
+                "FLOWPILOT_SUB2API_REDIRECT_URI": ""
+              },
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/health": {
+            "body": {
+              "ok": true
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 200
+          },
+          "/messages": {
+            "body": {
+              "error": "Missing FLOWPILOT_CUSTOM_IMAP_USER/FLOWPILOT_CUSTOM_IMAP_PASS",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          },
+          "/random-email": {
+            "body": {
+              "error": "Invalid domain",
+              "ok": false
+            },
+            "content_type": "application/json; charset=utf-8",
+            "cors": {
+              "headers": "Content-Type",
+              "methods": "POST, OPTIONS",
+              "origin": "*"
+            },
+            "status": 500
+          }
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-005": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "hotmail": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        }
+      },
+      "target": {
+        "custom": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "hotmail": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-006": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom_204": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "custom_404": {
+          "body": {
+            "error": "Unsupported path: /nope",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "custom_500": {
+          "body": {
+            "error": "Invalid domain",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "custom_success": {
+          "body": {
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "hotmail_204": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "hotmail_404": {
+          "body": {
+            "error": "Unsupported path: /nope",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "hotmail_500": {
+          "body": {
+            "error": "Missing email/clientId/refreshToken",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "hotmail_success": {
+          "body": {
+            "filePath": "{repo}/data/account-run-history.json",
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        }
+      },
+      "target": {
+        "custom_204": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "custom_404": {
+          "body": {
+            "error": "Unsupported path: /nope",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "custom_500": {
+          "body": {
+            "error": "Invalid domain",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "custom_success": {
+          "body": {
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        },
+        "hotmail_204": {
+          "body": null,
+          "content_type": null,
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 204
+        },
+        "hotmail_404": {
+          "body": {
+            "error": "Unsupported path: /nope",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "hotmail_500": {
+          "body": {
+            "error": "Missing email/clientId/refreshToken",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "hotmail_success": {
+          "body": {
+            "filePath": "{repo}/data/account-run-history.json",
+            "ok": true
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 200
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-007": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "random_keys": [
+          "count",
+          "domain",
+          "email",
+          "emails",
+          "ok"
+        ],
+        "sync_keys": [
+          "filePath",
+          "ok"
+        ]
+      },
+      "target": {
+        "random_keys": [
+          "count",
+          "domain",
+          "email",
+          "emails",
+          "ok"
+        ],
+        "sync_keys": [
+          "filePath",
+          "ok"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-008": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom": {
+          "body": {
+            "error": "Invalid domain",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "hotmail": {
+          "body": {
+            "error": "Missing email/clientId/refreshToken",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        }
+      },
+      "target": {
+        "custom": {
+          "body": {
+            "error": "Invalid domain",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        },
+        "hotmail": {
+          "body": {
+            "error": "Missing email/clientId/refreshToken",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 500
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-009": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom": {
+          "body": {
+            "error": "Unsupported path: /does-not-exist",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "hotmail": {
+          "body": {
+            "error": "Unsupported path: /does-not-exist",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        }
+      },
+      "target": {
+        "custom": {
+          "body": {
+            "error": "Unsupported path: /does-not-exist",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        },
+        "hotmail": {
+          "body": {
+            "error": "Unsupported path: /does-not-exist",
+            "ok": false
+          },
+          "content_type": "application/json; charset=utf-8",
+          "cors": {
+            "headers": "Content-Type",
+            "methods": "POST, OPTIONS",
+            "origin": "*"
+          },
+          "status": 404
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-010": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom_functions": [
+          "select_latest_code"
+        ],
+        "hotmail_functions": [
+          "fetch_graph_messages",
+          "get_json",
+          "refresh_access_token",
+          "select_latest_code"
+        ]
+      },
+      "target": {
+        "custom_functions": [
+          "select_latest_code"
+        ],
+        "hotmail_functions": [
+          "fetch_graph_messages",
+          "get_json",
+          "refresh_access_token",
+          "select_latest_code"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-011": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "error": "Missing email/clientId/refreshToken"
+      },
+      "target": {
+        "error": "Missing email/clientId/refreshToken"
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-012": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "count": 3,
+        "domain": "example.com",
+        "emails_len": 3,
+        "row_count": 3,
+        "unique_in_schema": true
+      },
+      "target": {
+        "count": 3,
+        "domain": "example.com",
+        "emails_len": 3,
+        "row_count": 3,
+        "unique_in_schema": true
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-013": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "error": "Unable to generate enough unique emails",
+        "rows_committed_for_const": 3
+      },
+      "target": {
+        "error": "Unable to generate enough unique emails",
+        "rows_committed_for_const": 3
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-014": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "generatedAt": "2024-01-01T00:00:00Z",
+        "record_count": 2,
+        "summary": {
+          "failed": 0,
+          "retryTotal": 2,
+          "success": 1,
+          "total": 2
+        }
+      },
+      "target": {
+        "generatedAt": "2024-01-01T00:00:00Z",
+        "record_count": 2,
+        "summary": {
+          "failed": 0,
+          "retryTotal": 2,
+          "success": 1,
+          "total": 2
+        }
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-015": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "has_fields": true,
+        "statuses": [
+          "success",
+          "stopped"
+        ]
+      },
+      "target": {
+        "has_fields": true,
+        "statuses": [
+          "success",
+          "stopped"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-016": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "fields": [
+          "2024-01-01T00:00:00Z",
+          "user@example.com",
+          "secret",
+          "success",
+          "reason here"
+        ],
+        "line_count": 1
+      },
+      "target": {
+        "fields": [
+          "2024-01-01T00:00:00Z",
+          "user@example.com",
+          "secret",
+          "success",
+          "reason here"
+        ],
+        "line_count": 1
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-017": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "keys": [
+          "count",
+          "domain",
+          "email",
+          "emails"
+        ]
+      },
+      "target": {
+        "keys": [
+          "count",
+          "domain",
+          "email",
+          "emails"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-018": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "port_from_root_env": 18099
+      },
+      "target": {
+        "port_from_root_env": 18099
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-019": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "all_five_fields": true,
+        "append_lines": 7,
+        "errors": []
+      },
+      "target": {
+        "all_five_fields": true,
+        "append_lines": 7,
+        "errors": []
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-020": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "custom_paths": [
+          "/code",
+          "/env",
+          "/health",
+          "/messages",
+          "/random-email"
+        ],
+        "hotmail_paths": [
+          "/append-account-log",
+          "/code",
+          "/messages",
+          "/sync-account-run-records"
+        ]
+      },
+      "target": {
+        "custom_paths": [
+          "/code",
+          "/env",
+          "/health",
+          "/messages",
+          "/random-email"
+        ],
+        "hotmail_paths": [
+          "/append-account-log",
+          "/code",
+          "/messages",
+          "/sync-account-run-records"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-021": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "code_extraction": "123456",
+        "status_vocab_ok": true
+      },
+      "target": {
+        "code_extraction": "123456",
+        "status_vocab_ok": true
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-022": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "hotmail_ok_keys": [
+          "generatedAt",
+          "records",
+          "summary"
+        ],
+        "log_columns": 5
+      },
+      "target": {
+        "hotmail_ok_keys": [
+          "generatedAt",
+          "records",
+          "summary"
+        ],
+        "log_columns": 5
+      },
+      "verdict": "PASS"
+    },
+    "DIFF-023": {
+      "relation": "equal_after_normalization",
+      "source": {
+        "digest_mismatches": [],
+        "extension_asset_files_checked": 113
+      },
+      "target": {
+        "digest_mismatches": [],
+        "extension_asset_files_checked": 113
+      },
+      "verdict": "PASS"
+    }
+  },
+  "schema_version": "migration-asset-fragment:v2",
+  "shared_cases": {
+    "DIFF-001": {
+      "body": {
+        "records": []
+      },
+      "method": "POST",
+      "path": "/sync-account-run-records"
+    },
+    "DIFF-002": {
+      "body": {},
+      "method": "POST",
+      "path": "/health"
+    },
+    "DIFF-003": {
+      "append_body": {
+        "email": "a@b.com",
+        "password": "p",
+        "reason": "r",
+        "recordedAt": "t",
+        "status": "success"
+      },
+      "method": "POST",
+      "paths": [
+        "/messages",
+        "/code",
+        "/append-account-log",
+        "/sync-account-run-records"
+      ]
+    },
+    "DIFF-004": {
+      "body": {},
+      "method": "POST",
+      "paths": [
+        "/messages",
+        "/code",
+        "/health",
+        "/env",
+        "/random-email"
+      ]
+    },
+    "DIFF-005": {
+      "method": "OPTIONS",
+      "paths": [
+        "/messages",
+        "/health"
+      ]
+    },
+    "DIFF-006": {
+      "covers": [
+        "success",
+        "404",
+        "500",
+        "204"
+      ]
+    },
+    "DIFF-007": {
+      "random_email": {
+        "domain": "example.com",
+        "n": 2
+      },
+      "sync": {
+        "records": []
+      }
+    },
+    "DIFF-008": {
+      "custom_random_email": {
+        "domain": "bad domain",
+        "n": 1
+      },
+      "hotmail_messages": {}
+    },
+    "DIFF-009": {
+      "hotmail_body": {
+        "clientId": "c",
+        "email": "a@b.com",
+        "refreshToken": "r"
+      },
+      "method": "POST",
+      "paths": [
+        "/does-not-exist"
+      ]
+    },
+    "DIFF-010": {
+      "imports": [
+        "hotmail_helper",
+        "custom_mail_helper"
+      ]
+    },
+    "DIFF-011": {
+      "body": {},
+      "method": "POST",
+      "path": "/messages"
+    },
+    "DIFF-012": {
+      "random_email": {
+        "domain": "example.com",
+        "n": 3
+      }
+    },
+    "DIFF-013": {
+      "forced_prefix_collision": true,
+      "random_email": {
+        "domain": "example.com",
+        "n": 2
+      }
+    },
+    "DIFF-014": {
+      "record": {
+        "email": "a@b.com",
+        "finalStatus": "success",
+        "password": "p",
+        "retryCount": 2
+      }
+    },
+    "DIFF-015": {
+      "fields": [
+        "retryCount",
+        "failedStep",
+        "autoRunContext"
+      ],
+      "statuses": [
+        "success",
+        "bogus",
+        "stopped"
+      ]
+    },
+    "DIFF-016": {
+      "append": {
+        "email": "user@example.com",
+        "password": "secret",
+        "reason": "reason here",
+        "recordedAt": "2024-01-01T00:00:00Z",
+        "status": "Success"
+      }
+    },
+    "DIFF-017": {
+      "random_email": {
+        "domain": "example.com",
+        "n": 3
+      }
+    },
+    "DIFF-018": {
+      "dotenv": {
+        "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT": "18099"
+      },
+      "relative_to": "project root (parent of scripts/)"
+    },
+    "DIFF-019": {
+      "concurrent_requests": 6,
+      "path": "/append-account-log"
+    },
+    "DIFF-020": {
+      "custom_paths": [
+        "/messages",
+        "/code",
+        "/health",
+        "/env",
+        "/random-email"
+      ],
+      "hotmail_paths": [
+        "/messages",
+        "/code",
+        "/append-account-log",
+        "/sync-account-run-records"
+      ]
+    },
+    "DIFF-021": {
+      "code_sample": "Your code is 123456",
+      "final_status_input": "STOPPED"
+    },
+    "DIFF-022": {
+      "envelope_keys": [
+        "generatedAt",
+        "summary",
+        "records"
+      ],
+      "log_columns": 5,
+      "snapshot_table": "generated_emails"
+    },
+    "DIFF-023": {
+      "extension_assets": [
+        "manifest.json",
+        "rules.json",
+        "background/*",
+        "content/*",
+        "flows/*",
+        "sidepanel/*"
+      ]
+    }
+  },
+  "source_tree": "/input/source",
+  "target_tree": "/input/target"
+}

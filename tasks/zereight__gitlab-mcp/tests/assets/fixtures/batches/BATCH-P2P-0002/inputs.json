@@ -1,0 +1,85 @@
+{
+  "schema_version": "migration-p2p-fixtures:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "description": "Deterministic inputs shared by the source and target P2P probes. The probes create their own isolated temporary workspace per case and remove it afterwards; this file is the canonical record of the exact inputs those cases use.",
+  "workspace": {
+    "env_key": "WORKSPACE_ROOT",
+    "omc_state_layout": ".omc/state/<mode>-state.json",
+    "omc_prd_path": ".omc/prd.json",
+    "omc_memory_path": ".omc/project-memory.json"
+  },
+  "cases": {
+    "P2P-025": {
+      "high_agents": ["architect", "critic", "analyst", "planner"],
+      "low_agents": ["writer", "git-master", "code-simplifier", "explore"],
+      "override_task": "quick fix",
+      "low_override_task": "architect design refactor"
+    },
+    "P2P-026": {
+      "success_call": {"tool": "omg_list_active", "args": {}},
+      "failure_call": {"tool": "omg_read_state", "args": {"mode": "../../etc"}}
+    },
+    "P2P-027": {
+      "mode": "ralph",
+      "writes": ["{\"a\":1}", "{\"b\":2}"],
+      "invalid_state": "not json"
+    },
+    "P2P-028": {
+      "expected_tool_count": 15,
+      "expected_identity": {"name": "omg-workflow", "version": "1.0.0"}
+    },
+    "P2P-029": {
+      "source_suite": "mcp-server/test/run-tests.mjs",
+      "target_suite": "mcp-server/tests"
+    },
+    "P2P-030": {
+      "manifest": "package.json",
+      "expected_name": "@zereight/mcp-gitlab",
+      "expected_bin": {"mcp-gitlab": "build/index.js", "zereight-mcp-gitlab": "build/index.js"}
+    },
+    "P2P-031": {
+      "accepted_modes": ["omg-autopilot", "ralph", "__proto__"],
+      "rejected_modes": ["mode name", "foo/bar", ""]
+    },
+    "P2P-032": {
+      "active_state": {"mode": "ralph", "state": "{\"active\":true}"},
+      "stopped_state": {"mode": "ralph", "state": "{\"active\":false}"}
+    },
+    "P2P-033": {
+      "create_prd": {"title": "T", "stories": [{"title": "S"}]}
+    },
+    "P2P-034": {
+      "known_story_id": "story-00000000",
+      "unknown_story_id": "story-deadbeef",
+      "evidence": "log"
+    },
+    "P2P-035": {
+      "test_file": "test/test-upload-markdown.ts",
+      "case_name": "rejects file_path with \"..\" traversal"
+    },
+    "P2P-036": {
+      "regular_content": "data",
+      "oversize_bytes": 5242881
+    },
+    "P2P-037": {
+      "tasks": {
+        "quick_fix": {"task": "quick fix"},
+        "design_refactor": {"task": "design refactor"},
+        "architect_design_refactor": {"task": "architect design refactor"},
+        "many_files_high": {"task": "design refactor", "file_count": 10}
+      }
+    },
+    "P2P-038": {
+      "symlink_target_content": "data",
+      "write_payload": "new"
+    },
+    "P2P-039": {
+      "simple_task": "quick fix",
+      "complex_task": "architect design refactor"
+    },
+    "P2P-040": {
+      "call_count": 20,
+      "expected_length": 8
+    }
+  }
+}

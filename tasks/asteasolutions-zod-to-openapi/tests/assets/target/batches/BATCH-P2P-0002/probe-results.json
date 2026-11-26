@@ -1,0 +1,1413 @@
+{
+  "schema_version": "migration-p2p-results:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "repo": "/input/target",
+  "baseline": "/input/source",
+  "dependencies": "/tmp/p2p/target/node_modules",
+  "jest": {
+    "skipped": false,
+    "summary": {
+      "suites": 51,
+      "passedSuites": 51,
+      "failedSuites": 0,
+      "tests": 320,
+      "passedTests": 316,
+      "failedTests": 0,
+      "skippedTests": 2,
+      "success": true
+    },
+    "error": null
+  },
+  "observations": {
+    "P2P-025": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "keys": [
+            "S",
+            "Open"
+          ],
+          "schemas": {
+            "S": {
+              "type": "string",
+              "description": "openapi",
+              "deprecated": true
+            },
+            "Open": {
+              "type": "string"
+            }
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/modifiers/meta.spec.ts",
+            "fullName": "meta should override metadata when calling .meta",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/meta.spec.ts",
+            "fullName": "meta should override metadata when calling .openapi",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/meta.spec.ts",
+            "fullName": "meta should preserve metadata through the meta modifier",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/meta.spec.ts",
+            "fullName": "meta should use the refId from .openapi as priority over the one in .meta",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/openapi-metadata.spec.ts",
+            "fullName": "OpenAPI metadata can obtain overridden metadata",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-026": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "Category": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "subcategories": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "subcategories"
+            ]
+          },
+          "Node": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "child": {
+                "$ref": "#/components/schemas/Node"
+              },
+              "unionChild": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Node"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "intersectChild": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Node"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "extra": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "extra"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/types/lazy.spec.ts",
+            "fullName": "lazy basic functionality supports registered recursive lazy schemas",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/lazy.spec.ts",
+            "fullName": "lazy performance and stability handles deep recursive nesting without stack overflow",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) basic recursive functionality supports basic recursive lazy schemas with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) basic recursive functionality supports optional recursive properties with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports deeply nested recursive tree structures with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports mutual recursion between schemas using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports recursive schemas with unions using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) edge cases with recursive getters handles simple recursive schema using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) edge cases with recursive getters supports recursive schemas in nested arrays and objects using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports nullable recursive schemas with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports recursive schemas with defaults using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports recursive schemas with OpenAPI metadata using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) OpenAPI version compatibility with recursive getters supports recursive schemas with OpenAPI 3.0 using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) OpenAPI version compatibility with recursive getters supports recursive schemas with OpenAPI 3.1 using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) performance and stability with recursive getters handles deep recursive nesting without stack overflow using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) performance and stability with recursive getters handles multiple independent recursive schemas efficiently using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in arrays with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in intersections with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in unions with getters",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-027": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "Template": {
+            "type": "string",
+            "pattern": "^id-[+-]?\\d+(\\.\\d+)?$"
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/types/template-literal.spec.ts",
+            "fullName": "template literal generates OpenAPI schema for template with number interpolation",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-028": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "changed": [],
+          "outOfScope": [],
+          "integrity": []
+        },
+        "tests": []
+      }
+    },
+    "P2P-029": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "messages": [
+            "No discriminator found for discriminated union"
+          ],
+          "schemaArgPresent": [
+            true
+          ],
+          "hasOneOf": true,
+          "oneOfLength": 2,
+          "hasDiscriminator": false
+        },
+        "tests": [
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union can automatically register discriminated union items",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union creates a discriminator mapping when a registered object uses a zodEnum as the discriminator",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union creates a discriminator mapping when all objects in the discriminated union contain a registered schema",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union does not create a discriminator mapping when only some objects in the discriminated union contain a registered schema",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union does not create a discriminator mapping when the discrimnated union is nullable",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union omits mapping entries for non-string discriminator values",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union resolves discriminator values through two levels of nested discriminated unions",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union resolves enum discriminator values from within a nested discriminated union",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union supports basic discriminated unions",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/discriminated-union.spec.ts",
+            "fullName": "discriminated union supports nested discriminated unions",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-030": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "docParameters": {
+            "TestParam": {
+              "schema": {
+                "$ref": "#/components/schemas/TestParam"
+              },
+              "required": true,
+              "name": "test",
+              "in": "path"
+            }
+          },
+          "pathParameters": [
+            {
+              "$ref": "#/components/parameters/TestParam"
+            }
+          ]
+        },
+        "tests": [
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters path generates a reference path parameter for route",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-031": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "serialized": "{\"components\":{\"schemas\":{\"A\":{\"type\":\"object\",\"properties\":{\"b\":{\"$ref\":\"#/components/schemas/B\"},\"list\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/components/schemas/B\"}},\"child\":{\"type\":\"object\",\"properties\":{\"b\":{\"$ref\":\"#/components/schemas/B\"}},\"required\":[\"b\"]}},\"required\":[\"b\",\"list\",\"child\"]},\"B\":{\"type\":\"object\",\"properties\":{\"n\":{\"type\":\"number\"}},\"required\":[\"n\"]}},\"parameters\":{}}}",
+          "refs": [
+            "#/components/schemas/B",
+            "#/components/schemas/B",
+            "#/components/schemas/B"
+          ]
+        },
+        "tests": [
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry preserves name given with .openapi over the reference name",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register extended parent properties",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register extended schemas",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register object properties",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object creates separate schemas and links them",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object generates OpenAPI schema for nested objects",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object maps additionalProperties to false for strict objects",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-032": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "v3": {
+            "Recursive": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "next": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "next"
+              ]
+            },
+            "PendingParent": {
+              "type": "object",
+              "properties": {
+                "child": {
+                  "$ref": "#/components/schemas/PendingChild"
+                }
+              },
+              "required": [
+                "child"
+              ]
+            },
+            "PendingChild": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "parent": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PendingParent"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "parent"
+              ]
+            },
+            "Already": {
+              "type": "string",
+              "nullable": true
+            },
+            "Holder": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "$ref": "#/components/schemas/Already"
+                },
+                "b": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ]
+            }
+          },
+          "v31": {
+            "Recursive": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "next": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "next"
+              ]
+            },
+            "PendingParent": {
+              "type": "object",
+              "properties": {
+                "child": {
+                  "$ref": "#/components/schemas/PendingChild"
+                }
+              },
+              "required": [
+                "child"
+              ]
+            },
+            "PendingChild": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "parent": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PendingParent"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "parent"
+              ]
+            },
+            "Already": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "Holder": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "$ref": "#/components/schemas/Already"
+                },
+                "b": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ]
+            }
+          },
+          "v32": {
+            "Recursive": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "next": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "next"
+              ]
+            },
+            "PendingParent": {
+              "type": "object",
+              "properties": {
+                "child": {
+                  "$ref": "#/components/schemas/PendingChild"
+                }
+              },
+              "required": [
+                "child"
+              ]
+            },
+            "PendingChild": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "parent": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PendingParent"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "parent"
+              ]
+            },
+            "Already": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "Holder": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "$ref": "#/components/schemas/Already"
+                },
+                "b": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Recursive"
+                    },
+                    {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable overrides zod nullable when there is specified type in openapi",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable should not apply nullable if the schema is already nullable",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable should not apply nullable if the schema is already nullable in open api 3.1.0",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports null example",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports null example in openapi 3.0.0",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports nullable",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports nullable for registered schemas",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports nullable for registered schemas in open api 3.1.0",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports nullable in open api 3.1.0",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports referencing nullable zod effects",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/modifiers/nullable.spec.ts",
+            "fullName": "nullable supports referencing nullable zod effects with Openapi v3.1.0",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) basic recursive functionality supports basic recursive lazy schemas with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) basic recursive functionality supports optional recursive properties with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports deeply nested recursive tree structures with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports mutual recursion between schemas using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) complex recursive scenarios with getters supports recursive schemas with unions using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) edge cases with recursive getters handles simple recursive schema using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) edge cases with recursive getters supports recursive schemas in nested arrays and objects using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports nullable recursive schemas with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports recursive schemas with defaults using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) metadata and modifiers with recursive getters supports recursive schemas with OpenAPI metadata using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) OpenAPI version compatibility with recursive getters supports recursive schemas with OpenAPI 3.0 using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) OpenAPI version compatibility with recursive getters supports recursive schemas with OpenAPI 3.1 using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) performance and stability with recursive getters handles deep recursive nesting without stack overflow using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) performance and stability with recursive getters handles multiple independent recursive schemas efficiently using getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in arrays with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in intersections with getters",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/recursive-schemas.spec.ts",
+            "fullName": "recursive schemas (new getter approach) recursive schemas with complex types and getters supports recursive schemas in unions with getters",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-033": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "exports": [
+            "OpenAPIRegistry",
+            "OpenApiGeneratorV3",
+            "OpenApiGeneratorV31",
+            "OpenApiGeneratorV32",
+            "ResponseConfig",
+            "RouteConfig",
+            "ZodContentObject",
+            "ZodMediaTypeObject",
+            "ZodOpenAPIMetadata",
+            "ZodRequestBody",
+            "extendZodWithOpenApi",
+            "getOpenApiMetadata",
+            "getRefId",
+            "zodToOpenAPIRegistry"
+          ],
+          "registryMethods": [
+            "definitions",
+            "register",
+            "registerComponent",
+            "registerParameter",
+            "registerPath",
+            "registerWebhook",
+            "schemaWithRefId"
+          ],
+          "v3Methods": [
+            "generateComponents",
+            "generateDocument"
+          ],
+          "v31Methods": [
+            "generateComponents",
+            "generateDocument",
+            "generateSingleWebhook",
+            "generateWebhooks"
+          ],
+          "v32Methods": [
+            "generateComponents",
+            "generateDocument",
+            "generateSingleWebhook",
+            "generateWebhooks"
+          ]
+        },
+        "tests": [
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry preserves name given with .openapi over the reference name",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-034": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "Dynamic": {
+            "type": "object",
+            "properties": {
+              "dyn13": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "dyn13"
+            ]
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register extended parent properties",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register extended schemas",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object can automatically register object properties",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object creates separate schemas and links them",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object generates OpenAPI schema for nested objects",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/object.spec.ts",
+            "fullName": "object maps additionalProperties to false for strict objects",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-035": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "main": "dist/index.cjs",
+          "module": "dist/index.mjs",
+          "types": "dist/index.d.ts",
+          "moduleExports": [
+            "OpenAPIRegistry",
+            "OpenApiGeneratorV3",
+            "OpenApiGeneratorV31",
+            "OpenApiGeneratorV32",
+            "ResponseConfig",
+            "RouteConfig",
+            "ZodContentObject",
+            "ZodMediaTypeObject",
+            "ZodOpenAPIMetadata",
+            "ZodRequestBody",
+            "extendZodWithOpenApi",
+            "getOpenApiMetadata",
+            "getRefId",
+            "zodToOpenAPIRegistry"
+          ],
+          "indexExportStatements": [
+            "export *",
+            "export {\n  OpenAPIRegistry,\n  RouteConfig,\n  ResponseConfig,\n  ZodMediaTypeObject,\n  ZodContentObject,\n  ZodRequestBody,\n}",
+            "export { OpenApiGeneratorV3 }",
+            "export { OpenApiGeneratorV31 }",
+            "export { OpenApiGeneratorV32 }",
+            "export { ZodOpenAPIMetadata, extendZodWithOpenApi }",
+            "export { zodToOpenAPIRegistry }"
+          ]
+        },
+        "tests": [
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry preserves name given with .openapi over the reference name",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-036": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "definitions": [
+            "schema",
+            "parameter",
+            "route",
+            "webhook",
+            "component"
+          ],
+          "schemas": {
+            "Schema": {
+              "type": "string"
+            },
+            "Param": {
+              "type": "string"
+            }
+          },
+          "parameters": {
+            "Param": {
+              "schema": {
+                "$ref": "#/components/schemas/Param"
+              },
+              "required": true,
+              "name": "p",
+              "in": "query"
+            }
+          },
+          "headers": {
+            "Header": {
+              "description": "h",
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "pathKeys": [
+            "/p"
+          ],
+          "webhookKeys": [
+            "/hook"
+          ]
+        },
+        "tests": [
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create parameter definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry can create schema definition with additional metadata",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/registry.spec.ts",
+            "fullName": "OpenAPIRegistry preserves name given with .openapi over the reference name",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-037": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "unsupported": {
+            "thrown": true,
+            "name": "UnknownZodTypeError",
+            "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`."
+          },
+          "missingName": {
+            "thrown": true,
+            "name": "MissingParameterDataError",
+            "message": "Missing parameter data, please specify `name` and other OpenAPI parameter props using the `param` field of `schema.openapi`"
+          },
+          "missingLocation": {
+            "thrown": true,
+            "name": "MissingParameterDataError",
+            "message": "Missing parameter data, please specify `in` and other OpenAPI parameter props using the `param` field of `schema.openapi`"
+          },
+          "conflict": {
+            "thrown": true,
+            "name": "ConflictError",
+            "message": "Conflicting names for parameter"
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of location mismatch",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of location mismatch with reference",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of missing location when registering a parameter",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of missing name",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of name mismatch with reference",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/parameters.spec.ts",
+            "fullName": "parameters errors throws an error in case of names mismatch",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/types/native-enum.spec.ts",
+            "fullName": "native enum does not support mixed native enums",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-038": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "webhooks": {
+            "/event": {
+              "post": {
+                "responses": {
+                  "200": {
+                    "description": "ok"
+                  }
+                }
+              }
+            }
+          },
+          "versions": "3.1.0",
+          "hasPaths": true
+        },
+        "tests": [
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes can generate paths with multiple examples",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes request body can automatically register request body data",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes request body can have multiple media format bodies",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes request body can specify request body metadata - description/required",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes request body can specify request body using plain OpenApi format",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can automatically register response body data",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can generate response headers",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can generate responses without content",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can set description",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can set multiple response formats",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can specify response with plain OpenApi format",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks can generate paths with multiple examples",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks request body can automatically register request body data",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks request body can have multiple media format bodies",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks request body can specify request body metadata - description/required",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks request body can specify request body using plain OpenApi format",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can automatically register response body data",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can generate response headers",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can generate responses without content",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can set description",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can set multiple response formats",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Webhooks response definitions can specify response with plain OpenApi format",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/v3.2/openapi-generator.spec.ts",
+            "fullName": "OpenApiGeneratorV32 emits the same JSON Schema dialect as 3.1 (type arrays for nullable)",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/v3.2/openapi-generator.spec.ts",
+            "fullName": "OpenApiGeneratorV32 keeps the 3.2 openapi version supplied by the config",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-039": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "200": {
+            "description": "Simple response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "test"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SomeRef"
+                }
+              }
+            }
+          }
+        },
+        "tests": [
+          {
+            "spec": "spec/routes/index.spec.ts",
+            "fullName": "Routes response definitions can specify response with plain OpenApi format",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "P2P-040": {
+      "status": "PASS",
+      "projection": {
+        "value": {
+          "docKeys": [
+            "components",
+            "info",
+            "openapi",
+            "paths"
+          ],
+          "hasPaths": true,
+          "hasComponents": true,
+          "hasWebhooks": false,
+          "componentsKeys": [
+            "parameters",
+            "schemas"
+          ],
+          "version": "3.0.0"
+        },
+        "tests": [
+          {
+            "spec": "spec/custom-components.spec.ts",
+            "fullName": "Custom components can generate responses",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/custom-components.spec.ts",
+            "fullName": "Custom components can register and generate headers",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/custom-components.spec.ts",
+            "fullName": "Custom components can register and generate security schemes",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV3 does not sort parameters by default",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV3 does not sort schemas by default",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV3 supports sorting parameters alphabetically",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV3 supports sorting schemas alphabetically",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV31 does not sort parameters by default",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV31 does not sort schemas by default",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV31 supports sorting parameters alphabetically",
+            "status": "passed"
+          },
+          {
+            "spec": "spec/generation-sort.spec.ts",
+            "fullName": "OpenApiGenerator - sorting With OpenApiGeneratorV31 supports sorting schemas alphabetically",
+            "status": "passed"
+          }
+        ]
+      }
+    }
+  }
+}

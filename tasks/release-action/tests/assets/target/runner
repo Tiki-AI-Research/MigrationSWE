@@ -1,0 +1,14 @@
+#!/bin/sh
+# INTEGRATION harness entry point -- post-migration (target) side.
+#
+# Usage: target/runner [report.json]
+#
+# Dispatches the target-side projections of every batch probe through the
+# shared integration engine.  Every long-running command is wrapped in an
+# explicit `timeout` inside the engine, so the harness never waits forever.
+set -eu
+
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ASSETS=$(CDPATH= cd -- "$DIR/.." && pwd)
+
+exec python3 "$ASSETS/shared/integration/runner.py" --side target --assets "$ASSETS" "$@"

@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+'use strict';
+
+const path = require('path');
+const shared = require(path.join(__dirname, '..', 'shared', 'skeleton'));
+
+function buildReport(repoRoot) {
+  return {
+    side: 'target',
+    migration: shared.MIGRATION.name,
+    expectedVersion: shared.MIGRATION.targetVersion,
+    repoRoot,
+    checks: [],
+  };
+}
+
+function main(argv) {
+  const repoRoot = argv[2] || process.cwd();
+  process.stdout.write(`${JSON.stringify(buildReport(repoRoot))}\n`);
+  return 0;
+}
+
+process.exitCode = main(process.argv);

@@ -1,0 +1,90 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "scope": "fixtures",
+  "observations": [
+    "P2P-021",
+    "P2P-009",
+    "P2P-016",
+    "P2P-017",
+    "P2P-019",
+    "P2P-020",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-013",
+    "P2P-014",
+    "P2P-015",
+    "P2P-018",
+    "P2P-001",
+    "P2P-002",
+    "P2P-003",
+    "P2P-004",
+    "P2P-005",
+    "P2P-006",
+    "P2P-007",
+    "P2P-008",
+    "P2P-010",
+    "P2P-011",
+    "P2P-012"
+  ],
+  "entries": [
+    {
+      "observation_id": "P2P-016",
+      "fixture": {
+        "HOST": "127.0.0.1",
+        "PORT": 17373
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "fixture": {
+        "HOST": "127.0.0.1",
+        "PORT_ENV": "FLOWPILOT_CUSTOM_MAIL_HELPER_PORT",
+        "PORT_DEFAULT": 17374
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "fixture": {
+        "records": [
+          {
+            "email": "a@b.com",
+            "password": "p",
+            "finalStatus": "success",
+            "retryCount": 2
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "success": 1,
+          "failed": 0,
+          "retryTotal": 2
+        }
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "fixture": {
+        "finalStatus_allowed": [
+          "success",
+          "failed",
+          "stopped"
+        ],
+        "retained_fields": [
+          "retryCount",
+          "failedStep",
+          "autoRunContext"
+        ]
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "fixture": {
+        "unknown_path": "/does-not-exist",
+        "error_prefix": "Unsupported path: "
+      }
+    }
+  ]
+}

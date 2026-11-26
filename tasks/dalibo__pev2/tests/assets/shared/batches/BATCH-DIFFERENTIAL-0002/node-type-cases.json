@@ -1,0 +1,134 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "corpus_id": "BATCH-DIFFERENTIAL-0002-node-type",
+  "family": "shared-case-corpus",
+  "requirement_ids": ["R033"],
+  "observation_ids": ["DIFF-033"],
+  "description": "Node-type strings whose normalized Node fields must be identical between the TypeScript source (src/interfaces.ts Node constructor) and the Rust target (pev2_core::parse_node_type). Each `expect` object is a normalized subset of the produced node map; only the fields named in R033 are asserted.",
+  "cases": [
+    {
+      "input": "Seq Scan on t",
+      "expect": {"Node Type": "Seq Scan", "Relation Name": "t", "Alias": "t", "Parallel Aware": false, "Async Capable": false}
+    },
+    {
+      "input": "Parallel Seq Scan on t",
+      "expect": {"Node Type": "Seq Scan", "Relation Name": "t", "Alias": "t", "Parallel Aware": true}
+    },
+    {
+      "input": "Async Foreign Scan on t",
+      "expect": {"Node Type": "Foreign Scan", "Relation Name": "t", "Alias": "t", "Async Capable": true}
+    },
+    {
+      "input": "Update on t",
+      "expect": {"Node Type": "Update", "Relation Name": "t", "Alias": "t"}
+    },
+    {
+      "input": "Insert on t",
+      "expect": {"Node Type": "Insert", "Relation Name": "t", "Alias": "t"}
+    },
+    {
+      "input": "Delete on t",
+      "expect": {"Node Type": "Delete", "Relation Name": "t", "Alias": "t"}
+    },
+    {
+      "input": "Merge on t",
+      "expect": {"Node Type": "Merge", "Relation Name": "t", "Alias": "t"}
+    },
+    {
+      "input": "Index Scan using idx on t",
+      "expect": {"Node Type": "Index Scan", "Relation Name": "t", "Index Name": "idx", "Scan Direction": "Forward"}
+    },
+    {
+      "input": "Index Scan using idx on t t2",
+      "expect": {"Node Type": "Index Scan", "Relation Name": "t", "Alias": "t2", "Index Name": "idx", "Scan Direction": "Forward"}
+    },
+    {
+      "input": "Index Scan Backward using idx on t",
+      "expect": {"Node Type": "Index Scan", "Relation Name": "t", "Index Name": "idx", "Scan Direction": "Backward"}
+    },
+    {
+      "input": "Index Only Scan using idx on t t2",
+      "expect": {"Node Type": "Index Only Scan", "Relation Name": "t", "Alias": "t2", "Index Name": "idx", "Scan Direction": "Forward"}
+    },
+    {
+      "input": "Bitmap Index Scan on idx",
+      "expect": {"Node Type": "Bitmap Index Scan", "Index Name": "idx"}
+    },
+    {
+      "input": "CTE Scan on c",
+      "expect": {"Node Type": "CTE Scan", "CTE Name": "c"}
+    },
+    {
+      "input": "Function Scan on f",
+      "expect": {"Node Type": "Function Scan", "Function Name": "f"}
+    },
+    {
+      "input": "Subquery Scan on q",
+      "expect": {"Node Type": "Subquery Scan", "Alias": "q"}
+    },
+    {
+      "input": "Nested Loop",
+      "expect": {"Node Type": "Nested Loop"}
+    },
+    {
+      "input": "Nested Loop Join",
+      "expect": {"Node Type": "Nested Loop", "Join Type": "Inner"}
+    },
+    {
+      "input": "Nested Loop Left Join",
+      "expect": {"Node Type": "Nested Loop", "Join Type": "Left"}
+    },
+    {
+      "input": "Nested Loop Anti Join",
+      "expect": {"Node Type": "Nested Loop", "Join Type": "Anti"}
+    },
+    {
+      "input": "Merge Join",
+      "expect": {"Node Type": "Merge Join", "Join Type": "Inner"}
+    },
+    {
+      "input": "Merge Left Join",
+      "expect": {"Node Type": "Merge Join", "Join Type": "Left"}
+    },
+    {
+      "input": "Merge Semi Join",
+      "expect": {"Node Type": "Merge Join", "Join Type": "Semi"}
+    },
+    {
+      "input": "Hash Join",
+      "expect": {"Node Type": "Hash Join", "Join Type": "Inner"}
+    },
+    {
+      "input": "Hash Right Join",
+      "expect": {"Node Type": "Hash Join", "Join Type": "Right"}
+    },
+    {
+      "input": "Hash Right Semi Join",
+      "expect": {"Node Type": "Hash Join", "Join Type": "Right Semi"}
+    },
+    {
+      "input": "HashAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Simple", "Strategy": "Hashed"}
+    },
+    {
+      "input": "Finalize HashAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Finalize", "Strategy": "Hashed"}
+    },
+    {
+      "input": "Partial HashAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Partial", "Strategy": "Hashed"}
+    },
+    {
+      "input": "GroupAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Simple", "Strategy": "Sorted"}
+    },
+    {
+      "input": "Partial GroupAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Partial", "Strategy": "Sorted"}
+    },
+    {
+      "input": "MixedAggregate",
+      "expect": {"Node Type": "Aggregate", "Partial Mode": "Simple", "Strategy": "Mixed"}
+    }
+  ]
+}

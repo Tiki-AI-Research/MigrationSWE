@@ -1,0 +1,42 @@
+{
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "scope": "target",
+  "technology": {
+    "language": "Go",
+    "version": "1.23.0",
+    "build_command": "go build ./...",
+    "test_command": "go test ./... -count=1"
+  },
+  "execution": {
+    "runtime": "go",
+    "harness_script": "target/batches/BATCH-DIFFERENTIAL-0001/run_probe.sh",
+    "timeout_sec": 600,
+    "note": "run_probe.sh wraps every go build / go test invocation with an explicit timeout and never waits indefinitely.",
+    "verified_against": "reference target (Rust -> Go migration)",
+    "verified_result": "PASS",
+    "verified_at_utc": "2026-11-05T21:05:36Z"
+  },
+  "probes": [
+    {"observation_id": "DIFF-001", "probe": "TestDiff001RootFlags", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-002", "probe": "TestDiff002SubcommandTree", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-003", "probe": "TestDiff003ConfigKeysLoad", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-004", "probe": "TestDiff004ConfigLoadFailure", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-005", "probe": "TestDiff005RecentRegionOrdering", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-006", "probe": "TestDiff006ResourceKeys", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-007", "probe": "TestDiff007ProtocolDispatch", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-008", "probe": "TestDiff008RequestConstruction", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-009", "probe": "TestDiff009PaginationParsing", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-010", "probe": "TestDiff010CredentialPrecedence", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-011", "probe": "TestDiff011EnvironmentOverrides", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-012", "probe": "TestDiff012ListProfilesAndRegions", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-013", "probe": "TestDiff013OperationResults", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-014", "probe": "TestDiff014StartupToleratesBadConfig", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-015", "probe": "TestDiff015ReadOnlySuppression", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-016", "probe": "TestDiff016EndpointOverride", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-017", "probe": "TestDiff017NextPageAndMaxResults", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-018", "probe": "TestDiff018LoginRequirementReporting", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-019", "probe": "TestDiff019SSMExitReporting", "package": "main", "result": "PASS"},
+    {"observation_id": "DIFF-020", "probe": "TestDiff020RetainedCapabilities", "package": "differentialprobe", "result": "PASS"},
+    {"observation_id": "DIFF-021", "probe": "TestDiff021PortedTestSuite", "package": "differentialprobe", "result": "PASS"}
+  ]
+}

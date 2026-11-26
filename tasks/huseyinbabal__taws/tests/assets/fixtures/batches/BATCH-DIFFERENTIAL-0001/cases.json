@@ -1,0 +1,270 @@
+{
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "kind": "DIFFERENTIAL",
+  "normalization_ref": "shared/batches/BATCH-DIFFERENTIAL-0001/normalization.json",
+  "cases": [
+    {
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R002"],
+      "surface": "taws root command flag set",
+      "source_invocation": "taws --log-level off --readonly --help; taws --log-level bogus; taws --version",
+      "target_invocation": "taws --log-level off --readonly --help; taws --log-level bogus; taws --version",
+      "expected": {
+        "help_exit_code": 0,
+        "help_contains_flags": ["--profile", "--region", "--log-level", "--readonly", "--endpoint-url", "--help", "--version", "-p", "-r", "-h", "-V"],
+        "unknown_flag_exit_nonzero": true,
+        "invalid_log_level_exit_code": 2,
+        "version_stdout": "taws 1.3.0-rc.8\n"
+      }
+    },
+    {
+      "observation_id": "DIFF-002",
+      "requirement_ids": ["R003"],
+      "surface": "taws subcommand tree (completion, list-profiles, list-regions)",
+      "source_invocation": "taws completion bash|zsh|fish|powershell|elvish; taws list-profiles; taws list-regions",
+      "target_invocation": "taws completion bash|zsh|fish|powershell|elvish; taws list-profiles; taws list-regions",
+      "expected": {
+        "completion_shells_non_empty": ["bash", "zsh", "fish", "powershell"],
+        "completion_unknown_falls_back_to_default": "elvish",
+        "list_subcommands_hidden_from_help": ["list-profiles", "list-regions"],
+        "list_regions_first": "us-east-1",
+        "one_entry_per_line": true
+      }
+    },
+    {
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "surface": "YAML preferences document at taws/config.yaml",
+      "source_invocation": "load config.yaml with profile/region/last_resource/recently_used_regions",
+      "target_invocation": "config.Load() over taws/config.yaml",
+      "expected": {
+        "keys": ["profile", "region", "last_resource", "recently_used_regions"],
+        "profile": "dev",
+        "region": "eu-west-1",
+        "last_resource": "ec2-instances",
+        "empty_document_yields_unset_profile_region_last_resource_and_empty_recents": true
+      }
+    },
+    {
+      "observation_id": "DIFF-004",
+      "requirement_ids": ["R005"],
+      "surface": "configuration loader error handling",
+      "source_invocation": "load invalid config bytes; load missing config",
+      "target_invocation": "config.Load() over invalid then missing taws/config.yaml",
+      "expected": {
+        "invalid_yaml_returns_defaults": true,
+        "invalid_yaml_no_panic": true,
+        "invalid_yaml_warning_contains": "Failed to parse config",
+        "missing_file_warning_contains": "Config file does not exist"
+      }
+    },
+    {
+      "observation_id": "DIFF-005",
+      "requirement_ids": ["R006"],
+      "surface": "recently-used-region ordering",
+      "source_invocation": "AddRecentRegion(\"us-east-1\") from [eu-west-1, us-east-1]; seven distinct additions",
+      "target_invocation": "Config.AddRecentRegion sequence",
+      "expected": {
+        "after_duplicate_add": ["us-east-1", "eu-west-1"],
+        "after_seven_additions_length": 6,
+        "newest_at_index_zero": true
+      }
+    },
+    {
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R008"],
+      "surface": "directly addressable resource key set",
+      "source_invocation": "GetAllResourceKeys()",
+      "target_invocation": "resource.GetAllResourceKeys()",
+      "expected": {
+        "min_count": 30,
+        "includes": ["ec2-instances", "lambda-functions", "s3-buckets"],
+        "excludes_requires_parent_example": "iam-user-policies",
+        "returns_all_map_keys_is_failure": true
+      }
+    },
+    {
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R010"],
+      "surface": "AWS protocol dispatch (query, json, rest-json, rest-xml)",
+      "source_invocation": "protocol handler selection for query/json/rest-json/rest-xml",
+      "target_invocation": "resource.GetProtocolHandler + QueryRequest/JSONRequest wire form",
+      "expected": {
+        "protocols": ["query", "json", "rest-json", "rest-xml"],
+        "unknown_protocol_rejected": true,
+        "query_request_has_action_and_version": true,
+        "json_request_has_x_amz_target_header": "DynamoDB_20120810.ListTables"
+      }
+    },
+    {
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R011"],
+      "surface": "request construction from api_config/action_configs/describe_config",
+      "source_invocation": "resolve static param template with {resource_id}/{timestamp}",
+      "target_invocation": "resource.ResolveStaticParamTemplate; lambda-functions api_config method/path",
+      "expected": {
+        "template_result": "taws-cluster-20260309T143000",
+        "lambda_method": "GET",
+        "lambda_path": "/2015-03-31/functions"
+      }
+    },
+    {
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R012"],
+      "surface": "pagination configuration handling",
+      "source_invocation": "parse page with output_token NextToken",
+      "target_invocation": "UnifiedProtocolHandler.ParseItems with pagination.output_token",
+      "expected": {
+        "token_from_present_output_token": "tok1",
+        "token_absent_is_nil": true
+      }
+    },
+    {
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R013"],
+      "surface": "AWS credential resolution chain",
+      "source_invocation": "resolve env then sso_session then login_session then role then files then IMDSv2",
+      "target_invocation": "aws.LoadCredentials / aws.LoadCredentialsWithSSOCheck",
+      "expected": {
+        "env_first": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"],
+        "sso_before_login_before_static": true,
+        "login_requirement_errors": ["ErrSSOLoginRequired", "ErrConsoleLoginRequired"]
+      }
+    },
+    {
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R014"],
+      "surface": "AWS override environment variables",
+      "source_invocation": "honor AWS_SHARED_CREDENTIALS_FILE, AWS_CONFIG_FILE, AWS_LOGIN_CACHE_DIRECTORY, AWS_CA_BUNDLE, SSL_CERT_FILE",
+      "target_invocation": "aws.ListProfiles / aws.GetAWSConfigFilePath / aws.AwsConfigDir / aws.LoadCredentialsWithSSOCheck / aws.LoadCACertificates",
+      "expected": {
+        "shared_credentials_file_honored": true,
+        "config_file_honored": true,
+        "login_cache_directory_honored": true,
+        "ca_bundle_honored": true
+      }
+    },
+    {
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R015"],
+      "surface": "list-profiles and list-regions output",
+      "source_invocation": "credentials [dev] + config [profile prod]",
+      "target_invocation": "aws.ListProfiles / aws.ListRegions",
+      "expected": {
+        "profiles_sorted_union": ["default", "dev", "prod"],
+        "regions_first": "us-east-1"
+      }
+    },
+    {
+      "observation_id": "DIFF-013",
+      "requirement_ids": ["R016"],
+      "surface": "list, describe and action operation results",
+      "source_invocation": "list returns items plus optional next token; action executes write; read actions return value",
+      "target_invocation": "resource.BuildResponse / registry action_configs / get_secret_value, get_parameter",
+      "expected": {
+        "list_uses_next_token_key": "_next_token",
+        "read_actions": ["get_secret_value", "get_parameter"],
+        "terminate_instance_action": "TerminateInstances"
+      }
+    },
+    {
+      "observation_id": "DIFF-014",
+      "requirement_ids": ["R017"],
+      "surface": "taws startup with bad preferences file",
+      "source_invocation": "taws with invalid taws/config.yaml",
+      "target_invocation": "taws list-regions with invalid taws/config.yaml",
+      "expected": {
+        "starts_and_exits_zero": true,
+        "does_not_abort_or_panic": true,
+        "proceeds_with_defaults": true
+      }
+    },
+    {
+      "observation_id": "DIFF-015",
+      "requirement_ids": ["R018"],
+      "surface": "--readonly write suppression",
+      "source_invocation": "read-only mode terminates/deletes are blocked",
+      "target_invocation": "resource.SetReadOnly(true); resource.ExecuteAction(\"ec2\", \"terminate_instance\", ...)",
+      "expected": {
+        "mutating_action_returns_error": true,
+        "error_mentions_read_only": true,
+        "no_aws_request": true
+      }
+    },
+    {
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R019"],
+      "surface": "custom endpoint URL resolution",
+      "source_invocation": "AWS_ENDPOINT_URL used when no flag; --endpoint-url wins",
+      "target_invocation": "aws.NewHTTPClient(...).GetEndpoint(service)",
+      "expected": {
+        "env_override": "http://localhost:4566",
+        "explicit_flag_wins": true
+      }
+    },
+    {
+      "observation_id": "DIFF-017",
+      "requirement_ids": ["R020"],
+      "surface": "next-page loadability and max_results",
+      "source_invocation": "feed output token back as input token; max_results applied",
+      "target_invocation": "resource.FetchResourcesPaginated(\"ssm-parameters\", ...) with page token",
+      "expected": {
+        "input_token_param": "NextToken",
+        "max_results_param": "MaxResults",
+        "max_results_value": 50,
+        "next_token_from_response": "next-page"
+      }
+    },
+    {
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R021"],
+      "surface": "SSO / console-login requirement reporting",
+      "source_invocation": "sso_session profile reports SSO login; login_session reports console login",
+      "target_invocation": "aws.LoadCredentialsWithSSOCheck(profile)",
+      "expected": {
+        "sso_error_kind": "ErrSSOLoginRequired",
+        "sso_session_name": "mysess",
+        "console_error_kind": "ErrConsoleLoginRequired"
+      }
+    },
+    {
+      "observation_id": "DIFF-019",
+      "requirement_ids": ["R022"],
+      "surface": "SSM session exit reporting",
+      "source_invocation": "aws ssm start-session exits 254 / nonzero",
+      "target_invocation": "portal.reportSSMExit(254) / reportSSMExit(1)",
+      "expected": {
+        "exit_line_254": "SSM session exited with code: 254",
+        "exit_254_mentions_not_connected": true,
+        "exit_1_has_no_254_hint": true
+      }
+    },
+    {
+      "observation_id": "DIFF-020",
+      "requirement_ids": ["R023"],
+      "surface": "retained public CLI/config/aws/resource capabilities",
+      "source_invocation": "inventory of public capabilities",
+      "target_invocation": "taws --help; resource.GetAllResourceKeys(); config.Load()",
+      "expected": {
+        "binary_and_flags_present": true,
+        "subcommands_present": ["completion", "list-profiles", "list-regions"],
+        "registry_non_empty": true,
+        "config_loader_present": true
+      }
+    },
+    {
+      "observation_id": "DIFF-021",
+      "requirement_ids": ["R030"],
+      "surface": "ported public test suite",
+      "source_invocation": "cargo test",
+      "target_invocation": "go test ./...",
+      "expected": {
+        "config_dedupe_test_present": "TestAddRecentRegion",
+        "registry_keys_test_present": "TestGetAllResourceKeys",
+        "field_mapper_test_present": "TestTransformFormatBytes",
+        "assertions_not_weakened": true
+      }
+    }
+  ]
+}

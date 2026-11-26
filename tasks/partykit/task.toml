@@ -1,0 +1,59 @@
+schema_version = "1.3"
+artifacts = []
+
+[task]
+name = "tikiai/partykit"
+description = "Migrate the hono-party adapter from Hono to Elysia 1.3.0."
+
+[metadata]
+category = "Framework_migration"
+language = "typescript"
+repository_id = "cc22023d-4115-4e0e-8905-9fa9170831d0"
+task_id = "tp-3c8a14b8aeb70f799ddf9473a2340bbf"
+repository_url = "https://github.com/cloudflare/partykit"
+base_commit_hash = "f0a2e97d233f24545b2648aec2ed6a191e11074e"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 37
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:partykit-verifier-image-20261126"
+image_digest = "sha256:8509510761df002ab06bd39f89ea4689e4096fe1ba9927733abc6ed2df4249d8"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached f0a2e97d233f24545b2648aec2ed6a191e11074e > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:partykit-task-image-20261126"
+image_digest = "sha256:7c94342c965ab89e87385517fdc59100d5578289357899c46aad0c60475f8ca2"

@@ -1,0 +1,602 @@
+// Historical internal-interface fixture; no active probe installs this file.
+// All active assertions are public behavior scenarios in shared/integration/public_behavior.py.
+package main
+
+// F2P probe predicate for BATCH-F2P-0002.
+//
+// Every test below exercises the concrete entry named by the corresponding
+// F2P observation in the required target technology (Go). The exact same
+// predicate is intended to run against the source repository, where the Go
+// implementation is absent, so every assertion fails there and passes on the
+// migrated target. All helper names are prefixed with f2p so the file can be
+// dropped next to the repository's own tests without collisions.
+
+import (
+	"errors"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// ---------------------------------------------------------------------------
+// fakes
+// ---------------------------------------------------------------------------
+
+type f2pCreateCall struct {
+	tag    string
+	draft  *bool
+	body   *string
+	commit *string
+}
+
+type f2pUpdateCall struct {
+	id     int64
+	draft  *bool
+	body   *string
+	commit *string
+}
+
+type f2pReleases struct {
+	getByTagResult *ReleaseData
+	getByTagErr    error
+	createCalls    []f2pCreateCall
+	updateCalls    []f2pUpdateCall
+	listAssets     []ReleaseAsset
+	deleted        []int64
+	uploadErr      error
+	uploadCalls    int
+}
+
+func (f *f2pReleases) Create(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
+	f.createCalls = append(f.createCalls, f2pCreateCall{tag, draft, body, commitHash})
+	return ReleaseData{ID: 100, UploadURL: "https://uploads.example.com", TagName: tag, HTMLURL: "https://example.com/100"}, nil
+}
+
+func (f *f2pReleases) Update(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
+	f.updateCalls = append(f.updateCalls, f2pUpdateCall{id, draft, body, commitHash})
+	return ReleaseData{ID: id, UploadURL: "https://uploads.example.com", TagName: tag, HTMLURL: "https://example.com/100"}, nil
+}
+
+func (f *f2pReleases) GetByTag(tag string) (*ReleaseData, error) { return f.getByTagResult, f.getByTagErr }
+
+func (f *f2pReleases) GenerateReleaseNotes(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error) {
+	return GenerateReleaseNotesResponse{Body: "generated"}, nil
+}
+
+func (f *f2pReleases) ListReleases() (*ListReleasesResponse, error) {
+	return &ListReleasesResponse{}, nil
+}
+
+func (f *f2pReleases) ListArtifactsForRelease(releaseId int64) ([]ReleaseAsset, error) {
+	return f.listAssets, nil
+}
+
+func (f *f2pReleases) DeleteArtifact(assetId int64) error {
+	f.deleted = append(f.deleted, assetId)
+	return nil
+}
+
+func (f *f2pReleases) UploadArtifact(assetUrl string, contentLength int64, contentType string, file io.Reader, name string, releaseId int64) (UploadArtifactResponse, error) {
+	f.uploadCalls++
+	if f.uploadErr != nil {
+		return UploadArtifactResponse{}, f.uploadErr
+	}
+	return UploadArtifactResponse{BrowserDownloadURL: "https://downloads.example.com/" + name}, nil
+}
+
+type f2pOutputs struct {
+	release *ReleaseData
+	urls    map[string]string
+}
+
+func (o *f2pOutputs) ApplyReleaseData(data ReleaseData) {
+	copied := data
+	o.release = &copied
+}
+
+func (o *f2pOutputs) ApplyAssetUrls(urls map[string]string) { o.urls = urls }
+
+type f2pUploader struct {
+	err   error
+	calls int
+}
+
+func (u *f2pUploader) UploadArtifacts(artifacts []Artifact, releaseId int64, uploadUrl string) (map[string]string, error) {
+	u.calls++
+	if u.err != nil {
+		return nil, u.err
+	}
+	urls := map[string]string{}
+	for _, artifact := range artifacts {
+		urls[artifact.Name] = "https://downloads.example.com/" + artifact.Name
+	}
+	return urls, nil
+}
+
+type f2pDestroyer struct{ calls int }
+
+func (d *f2pDestroyer) DestroyArtifacts(releaseId int64) error { d.calls++; return nil }
+
+type f2pSkipper struct {
+	skip bool
+	err  error
+}
+
+func (s *f2pSkipper) ShouldSkip() (bool, error) { return s.skip, s.err }
+
+type f2pInputGetter struct {
+	values  map[string]string
+	bools   map[string]bool
+	boolErr map[string]error
+}
+
+func (g *f2pInputGetter) GetInput(name string) string {
+	if v, ok := g.values[name]; ok {
+		return v
+	}
+	return ""
+}
+
+func (g *f2pInputGetter) GetBooleanInput(name string) (bool, error) {
+	if err, ok := g.boolErr[name]; ok {
+		return false, err
+	}
+	return g.bools[name], nil
+}
+
+type f2pStubGlobber struct {
+	result   []string
+	err      error
+	patterns []string
+}
+
+func (g *f2pStubGlobber) Glob(pattern string) ([]string, error) {
+	g.patterns = append(g.patterns, pattern)
+	return g.result, g.err
+}
+
+type f2pRecordGlobber struct {
+	artifact    string
+	contentType string
+	result      []Artifact
+}
+
+func (g *f2pRecordGlobber) GlobArtifactString(artifact string, contentType string, errorsFailBuild bool) ([]Artifact, error) {
+	g.artifact = artifact
+	g.contentType = contentType
+	return g.result, nil
+}
+
+func f2pLoad(t *testing.T, values map[string]string, bools map[string]bool, ctx ActionContext, globber ArtifactGlobber) *Inputs {
+	t.Helper()
+	if globber == nil {
+		globber = &f2pRecordGlobber{result: []Artifact{}}
+	}
+	merged := map[string]string{"token": "token"}
+	for key, value := range values {
+		merged[key] = value
+	}
+	inputs, err := LoadInputs(&f2pInputGetter{values: merged, bools: bools}, globber, ctx)
+	if err != nil {
+		t.Fatalf("LoadInputs returned error: %v", err)
+	}
+	return inputs
+}
+
+func f2pContext() ActionContext {
+	return ActionContext{Ref: "refs/tags/context-tag", Owner: "context-owner", Repo: "context-repo"}
+}
+
+func f2pRead(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(data)
+}
+
+// ---------------------------------------------------------------------------
+// F2P-025 (R039) action.yml runs launches the Go implementation via Docker.
+// ---------------------------------------------------------------------------
+
+func TestF2P025(t *testing.T) {
+	action := f2pRead(t, "action.yml")
+	docker := f2pRead(t, "Dockerfile")
+
+	if !strings.Contains(action, "using: 'docker'") && !strings.Contains(action, "using: docker") {
+		t.Fatalf("action.yml runs.using is not docker")
+	}
+	if !strings.Contains(action, "image: 'Dockerfile'") && !strings.Contains(action, "image: Dockerfile") {
+		t.Fatalf("action.yml runs.image is not Dockerfile")
+	}
+	if !strings.Contains(docker, "go build") {
+		t.Fatalf("Dockerfile does not build the Go binary")
+	}
+	if !strings.Contains(docker, "ENTRYPOINT") {
+		t.Fatalf("Dockerfile does not set an ENTRYPOINT")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-039 (R043) release output types and null handling.
+// ---------------------------------------------------------------------------
+
+func TestF2P039(t *testing.T) {
+	got := map[string]string{}
+	outputs := NewCoreOutputsWith(func(name, value string) { got[name] = value })
+	outputs.ApplyReleaseData(ReleaseData{ID: 42, TarballURL: nil, ZipballURL: nil})
+
+	if got["id"] != "42" {
+		t.Fatalf("id = %q, want \"42\"", got["id"])
+	}
+	if got["tarball_url"] != "" || got["zipball_url"] != "" {
+		t.Fatalf("null urls not written as empty strings: %v", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-042 (R044) artifact tilde expansion.
+// ---------------------------------------------------------------------------
+
+func TestF2P042(t *testing.T) {
+	home := "/home/probeuser"
+	if got := expandTildeWithHome("~/dist/app.bin", home); got != home+"/dist/app.bin" {
+		t.Fatalf("~/dist/app.bin expanded to %q", got)
+	}
+	if got := expandTildeWithHome("~otheruser/app.bin", home); got != "~otheruser/app.bin" {
+		t.Fatalf("~otheruser/app.bin changed to %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-047 (R040) skipIfReleaseExists published release and lookup failure.
+// ---------------------------------------------------------------------------
+
+func TestF2P047(t *testing.T) {
+	published := &ReleaseData{Draft: false}
+	skip, err := NewReleaseActionSkipper(true, &f2pReleases{getByTagResult: published}, "v1").ShouldSkip()
+	if err != nil || !skip {
+		t.Fatalf("published release should skip: skip=%v err=%v", skip, err)
+	}
+
+	skip, err = NewReleaseActionSkipper(true, &f2pReleases{getByTagErr: errors.New("lookup failed")}, "v1").ShouldSkip()
+	if err != nil || skip {
+		t.Fatalf("lookup failure should continue: skip=%v err=%v", skip, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-031 (R030) compiled Go binary does not delegate to Node.
+// ---------------------------------------------------------------------------
+
+func TestF2P031(t *testing.T) {
+	mod := f2pRead(t, "go.mod")
+	if strings.Contains(mod, "github.com/actions/") || strings.Contains(mod, "@actions/") {
+		t.Fatalf("go.mod depends on Node action modules")
+	}
+	if !strings.Contains(mod, "github.com/bmatcuk/doublestar/v4") {
+		t.Fatalf("go.mod missing the expected doublestar dependency")
+	}
+
+	entries, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no Go production sources in module root")
+	}
+	for _, name := range entries {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		src := f2pRead(t, name)
+		if strings.Contains(src, "\"os/exec\"") || strings.Contains(src, "exec.Command") {
+			t.Fatalf("%s spawns subprocesses instead of handling the behavior in-process", name)
+		}
+		if strings.Contains(src, "dist/index.js") || strings.Contains(src, "node_modules") {
+			t.Fatalf("%s references the Node bundle", name)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-034 (R033) empty glob result fails when artifactErrorsFailBuild is on.
+// ---------------------------------------------------------------------------
+
+func TestF2P034(t *testing.T) {
+	validator := NewArtifactPathValidator(true, []string{}, "no/such/pattern")
+	if _, err := validator.Validate(); err == nil {
+		t.Fatal("expected an error for an empty glob result with errorsFailBuild=true")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-026 (R033) artifact input splits on the comma separator.
+// ---------------------------------------------------------------------------
+
+func TestF2P026(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "one.bin")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	stub := &f2pStubGlobber{result: []string{file}}
+	globber := NewFileArtifactGlobberWith(stub)
+	artifacts, err := globber.GlobArtifactString("one.bin,two.bin", "raw", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stub.patterns) != 2 {
+		t.Fatalf("globbed %d patterns, want 2: %v", len(stub.patterns), stub.patterns)
+	}
+	if len(artifacts) != 2 {
+		t.Fatalf("produced %d artifacts, want 2", len(artifacts))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-027 (R033) skipper returns false when the flag is disabled.
+// ---------------------------------------------------------------------------
+
+func TestF2P027(t *testing.T) {
+	skip, err := NewReleaseActionSkipper(false, &f2pReleases{getByTagResult: &ReleaseData{Draft: false}}, "v1").ShouldSkip()
+	if err != nil || skip {
+		t.Fatalf("disabled skipper should not skip: skip=%v err=%v", skip, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-028 (R033) a non-404 release lookup error propagates.
+// ---------------------------------------------------------------------------
+
+func TestF2P028(t *testing.T) {
+	releases := &f2pReleases{getByTagErr: &GithubError{Status: 500, Message: "boom"}}
+	action := NewAction(
+		&Inputs{AllowUpdates: true, Tag: "v1"},
+		&f2pOutputs{}, releases,
+		&f2pUploader{}, &f2pDestroyer{}, &f2pSkipper{},
+	)
+	if err := action.Perform(); err == nil {
+		t.Fatal("expected a non-404 lookup error to propagate")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-029 / F2P-035 (R037) skipIfReleaseExists workflow boolean literals.
+// ---------------------------------------------------------------------------
+
+func TestF2P029(t *testing.T) {
+	t.Setenv("INPUT_SKIPIFRELEASEEXISTS", "TRUE")
+	value, err := EnvInputGetter{}.GetBooleanInput("skipIfReleaseExists")
+	if err != nil || !value {
+		t.Fatalf("TRUE -> value=%v err=%v, want true/nil", value, err)
+	}
+
+	t.Setenv("INPUT_SKIPIFRELEASEEXISTS", "yes")
+	if _, err := (EnvInputGetter{}).GetBooleanInput("skipIfReleaseExists"); err == nil {
+		t.Fatal("expected a non-workflow boolean literal to fail")
+	}
+}
+
+func TestF2P035(t *testing.T) {
+	inputs, err := LoadInputs(
+		&f2pInputGetter{values: map[string]string{"token": "t", "tag": "v1"}, bools: map[string]bool{"skipIfReleaseExists": true}},
+		&f2pRecordGlobber{}, f2pContext(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !inputs.SkipIfReleaseExists {
+		t.Fatal("skipIfReleaseExists was not propagated into Inputs")
+	}
+
+	if _, err := LoadInputs(
+		&f2pInputGetter{values: map[string]string{"token": "t", "tag": "v1"}, boolErr: map[string]error{"skipIfReleaseExists": errors.New("invalid boolean")}},
+		&f2pRecordGlobber{}, f2pContext(),
+	); err == nil {
+		t.Fatal("expected an invalid boolean input to fail LoadInputs")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-030 (R033) generateReleaseNotesPreviousTag optional input.
+// ---------------------------------------------------------------------------
+
+func TestF2P030(t *testing.T) {
+	inputs := f2pLoad(t, map[string]string{"generateReleaseNotesPreviousTag": "v1.0.0"}, nil, f2pContext(), nil)
+	if inputs.GenerateReleaseNotesPreviousTag == nil || *inputs.GenerateReleaseNotesPreviousTag != "v1.0.0" {
+		t.Fatalf("previous tag = %v", inputs.GenerateReleaseNotesPreviousTag)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-032 (R039) action.yml docker entry and REST endpoint mapping.
+// ---------------------------------------------------------------------------
+
+func TestF2P032(t *testing.T) {
+	action := f2pRead(t, "action.yml")
+	if !strings.Contains(action, "using: 'docker'") && !strings.Contains(action, "using: docker") {
+		t.Fatal("action.yml runs.using is not docker")
+	}
+
+	releases := f2pRead(t, "releases.go")
+	for _, segment := range []string{`"releases"`, `"tags"`, `"generate-notes"`, `"assets"`} {
+		if !strings.Contains(releases, segment) {
+			t.Fatalf("releases.go is missing REST segment %s", segment)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-033 (R003) action entry point launches the compiled Go binary.
+// ---------------------------------------------------------------------------
+
+func TestF2P033(t *testing.T) {
+	action := f2pRead(t, "action.yml")
+	if strings.Contains(action, "node24") || strings.Contains(action, "dist/index.js") {
+		t.Fatal("action.yml still launches the Node entry point")
+	}
+	if !strings.Contains(action, "using: 'docker'") && !strings.Contains(action, "using: docker") {
+		t.Fatal("action.yml does not launch the Go binary through Docker")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-036 (R033) repo defaults to the workflow context.
+// ---------------------------------------------------------------------------
+
+func TestF2P036(t *testing.T) {
+	inputs := f2pLoad(t, nil, nil, f2pContext(), nil)
+	if inputs.Repo != "context-repo" {
+		t.Fatalf("repo = %q, want the context repo", inputs.Repo)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-037 (R037) artifacts fallback and artifactContentType default.
+// ---------------------------------------------------------------------------
+
+func TestF2P037(t *testing.T) {
+	globber := &f2pRecordGlobber{result: []Artifact{}}
+	_ = f2pLoad(t, map[string]string{"artifact": "dist/app.bin"}, nil, f2pContext(), globber)
+	if globber.artifact != "dist/app.bin" {
+		t.Fatalf("artifact fallback = %q", globber.artifact)
+	}
+	if globber.contentType != "raw" {
+		t.Fatalf("content type = %q, want raw", globber.contentType)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-038 (R033) updatedDraft and omitDraftDuringUpdate.
+// ---------------------------------------------------------------------------
+
+func TestF2P038(t *testing.T) {
+	inputs := f2pLoad(t, map[string]string{"draft": "true"}, nil, f2pContext(), nil)
+	if inputs.UpdatedDraft == nil || !*inputs.UpdatedDraft {
+		t.Fatalf("updated draft = %v, want true", inputs.UpdatedDraft)
+	}
+
+	omitted := f2pLoad(t, map[string]string{"draft": "true", "omitDraftDuringUpdate": "true"}, nil, f2pContext(), nil)
+	if omitted.UpdatedDraft != nil {
+		t.Fatalf("updated draft should be omitted, got %v", *omitted.UpdatedDraft)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-040 (R033) directories are filtered out and warned about.
+// ---------------------------------------------------------------------------
+
+func TestF2P040(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	warnings := []string{}
+	original := logWarning
+	logWarning = func(message string) { warnings = append(warnings, message) }
+	defer func() { logWarning = original }()
+
+	validator := NewArtifactPathValidator(false, []string{sub}, "**")
+	result, err := validator.Validate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 0 {
+		t.Fatalf("directory was not filtered out: %v", result)
+	}
+	if len(warnings) == 0 {
+		t.Fatal("expected a warning for the directory path")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-041 (R033) tag input resolution.
+// ---------------------------------------------------------------------------
+
+func TestF2P041(t *testing.T) {
+	inputs := f2pLoad(t, map[string]string{"tag": "v9"}, nil, f2pContext(), nil)
+	if inputs.Tag != "v9" {
+		t.Fatalf("tag = %q", inputs.Tag)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-043 (R047) immutableCreate request sequence.
+// ---------------------------------------------------------------------------
+
+func TestF2P043(t *testing.T) {
+	releases := &f2pReleases{}
+	outputs := &f2pOutputs{}
+	inputs := &Inputs{Tag: "v1", ImmutableCreate: true, CreatedDraft: false}
+	action := NewAction(inputs, outputs, releases, &f2pUploader{}, &f2pDestroyer{}, &f2pSkipper{})
+	if err := action.Perform(); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(releases.createCalls) != 1 || releases.createCalls[0].draft == nil || !*releases.createCalls[0].draft {
+		t.Fatalf("expected a draft create first, got %+v", releases.createCalls)
+	}
+	if len(releases.updateCalls) != 1 {
+		t.Fatalf("expected one publish update, got %+v", releases.updateCalls)
+	}
+	update := releases.updateCalls[0]
+	if update.body != nil || update.commit != nil || update.draft == nil || *update.draft {
+		t.Fatalf("publish update should omit body/commit and set draft=false: %+v", update)
+	}
+	if outputs.release == nil || outputs.release.ID != update.id {
+		t.Fatalf("outputs were not taken from the publish response: %+v", outputs.release)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-044 (R033) GithubErrorDetail documentation URL rendering.
+// ---------------------------------------------------------------------------
+
+func TestF2P044(t *testing.T) {
+	detail := GithubErrorDetail{Code: "custom", Message: "foo", DocumentationURL: "https://api.example.com"}
+	if got := detail.String(); got != "foo\nPlease see https://api.example.com." {
+		t.Fatalf("detail = %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-045 (R033) relative paths are left unchanged.
+// ---------------------------------------------------------------------------
+
+func TestF2P045(t *testing.T) {
+	if got := expandTilde("relative/path"); got != "relative/path" {
+		t.Fatalf("relative path changed to %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-046 (R033) explicit repo input wins over the context.
+// ---------------------------------------------------------------------------
+
+func TestF2P046(t *testing.T) {
+	inputs := f2pLoad(t, map[string]string{"repo": "explicit-repo"}, nil, f2pContext(), nil)
+	if inputs.Repo != "explicit-repo" {
+		t.Fatalf("repo = %q", inputs.Repo)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F2P-048 (R033) GithubError exposes its HTTP status.
+// ---------------------------------------------------------------------------
+
+func TestF2P048(t *testing.T) {
+	githubErr := &GithubError{Status: 422, Message: "validation failed"}
+	if githubErr.StatusCode() != 422 {
+		t.Fatalf("status = %d", githubErr.StatusCode())
+	}
+	var asError error = githubErr
+	if asError.Error() == "" {
+		t.Fatal("empty error string")
+	}
+}

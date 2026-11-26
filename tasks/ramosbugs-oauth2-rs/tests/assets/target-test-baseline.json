@@ -1,0 +1,2177 @@
+{
+  "files": {
+    "oauth2/code_test.go": {
+      "code_sha256": "sha256:79bb66e3e793e8d941797dcf93e097cff5cc7528ae86f2ee02edd8e2c8f0168c",
+      "sha256": "sha256:187adcae250dde05bb3ddd59651a0be7214fab50ae22a255b95560a68f94091c"
+    },
+    "oauth2/devicecode_test.go": {
+      "code_sha256": "sha256:1912cdd144f1cd99f9fb477a45e59f6739d6cd4b459fb8753b4e5cfabcbbac77",
+      "sha256": "sha256:20cd323503d1d216e0d1a1fc40042751a62b4c2e7f4a232736d0943b676a0424"
+    },
+    "oauth2/endpoint_test.go": {
+      "code_sha256": "sha256:711f2da635f53d0ee85e9f6f28e2359dc87827f11955504f13de7f2dd962fdbc",
+      "sha256": "sha256:01ae740d80b4822759c6a696a0ed1d037fa01ee3a773f9d26d7a6288c8991e02"
+    },
+    "oauth2/error_test.go": {
+      "code_sha256": "sha256:6f8ce4188445b7d5e25e2d6b9613a79efcacb4b1f2077d8c1a5f4eabc5302aef",
+      "sha256": "sha256:d08d2ac1eac51c4068fc9c062b12b09fcd4b1064085bbaf3eda3020e143833e7"
+    },
+    "oauth2/extension_test.go": {
+      "code_sha256": "sha256:9abe87db6a328eca26505a5254e9f9b01dd44481396845c4cd316c89e2e7e28e",
+      "sha256": "sha256:68edf2194d87ab22e526bdd4b66d639913019a8ae4da7735ac6b48c89b3cb273"
+    },
+    "oauth2/introspection_test.go": {
+      "code_sha256": "sha256:a6e243c8f041f0704c3797c605a468ee9365125717e6a405c450c8223d994adf",
+      "sha256": "sha256:747f785dcd9cf190acdbe196f9ce41de7c703f7b4f075637202c1af68d727013"
+    },
+    "oauth2/revocation_test.go": {
+      "code_sha256": "sha256:2c1a49c4cb34fba7c14e19a4492f35b29334e1646463fe5b7dd2ed69795f3668",
+      "sha256": "sha256:f65140d373c68d6df250477f614444d1f23fa711206f9fddf9c9a638127beda7"
+    },
+    "oauth2/src/tests.rs": {
+      "code_sha256": "sha256:fd325d89619b99fd728b774d490070f7daee6da71dd1befecf02c0fcff874056",
+      "sha256": "sha256:e8b4481573a65d01c1e681b7bc7be12e970de405d4d9fb5eb81467ffeea18a3d"
+    },
+    "oauth2/src/token/tests.rs": {
+      "code_sha256": "sha256:c563239a23274bd4cb2e6d40a9f7dd5b7df3986073e48c4245230acda7db4227",
+      "sha256": "sha256:027ed2000cdf85ac85234dfbaa6b021474368db35acc36e74ddf950e2f492e7c"
+    },
+    "oauth2/tests_support_test.go": {
+      "code_sha256": "sha256:a7a1b4d264720eddfef0737c0aa225efcdcf71b6ea018fb32ec35761a0d71ea0",
+      "sha256": "sha256:1b00a60c1d0ea88b0ebe7190cdc6477d4234ee9dad500f74a9e9a105240ab27a"
+    },
+    "oauth2/token_test.go": {
+      "code_sha256": "sha256:419a7a52901d5d68f284a7ab3de81822453538310bae9d21cf7a15f8a01f2cbc",
+      "sha256": "sha256:41d5d131be9f4ae5672537a88571fc81ccd0a780d69f9c9be323cca2bdee15a6"
+    },
+    "oauth2/types_test.go": {
+      "code_sha256": "sha256:03b460ce1d975a041932c4ed8bbdee6e820cccf2e8b9def9512e18f9f375ce74",
+      "sha256": "sha256:7151ca4a78674e31999a9a598d33d7c1c9e8a1e20d1604d61bcddfa52ab0d9c1"
+    }
+  },
+  "functions": {
+    "oauth2/code_test.go": {
+      "TestAuthorizeURL": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "\"https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "state.Secret()",
+            "op": "!=",
+            "rhs": "\"csrf_token\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestAuthorizeURLImplicit": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "\"https://example.com/auth?response_type=token&client_id=aaa&state=csrf_token\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestAuthorizeURLMissingEndpoint": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "err.Error()",
+            "op": "!=",
+            "rhs": "\"No authorization endpoint URL specified\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestAuthorizeURLPKCE": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestAuthorizeURLWithExtensionResponseType": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestAuthorizeURLWithOneScope": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestAuthorizeURLWithParam": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "\"https://example.com/auth?foo=bar&response_type=code&client_id=aaa&state=csrf_token\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestAuthorizeURLWithRedirectURL": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestAuthorizeURLWithRedirectURLOverride": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestAuthorizeURLWithScopes": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "url.String()",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      }
+    },
+    "oauth2/devicecode_test.go": {
+      "TestDeviceAuthResponseDefaultInterval": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Interval()",
+            "op": "!=",
+            "rhs": "5*time.Second",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestDeviceAuthResponseNonDefaultInterval": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Interval()",
+            "op": "!=",
+            "rhs": "10*time.Second",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestDeviceAuthResponseNullInterval": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Interval()",
+            "op": "!=",
+            "rhs": "5*time.Second",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestDeviceAuthResponseVerificationURLAlias": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.VerificationURI().String()",
+            "op": "!=",
+            "rhs": "\"https://verify/here\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestDeviceTokenAccessDenied": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "DeviceCodeErrorResponseTypeAccessDenied",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestDeviceTokenAuthorizationTimeout": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "DeviceCodeErrorResponseTypeExpiredToken",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "errorResponse.ErrorDescription",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*errorResponse.ErrorDescription",
+            "op": "!=",
+            "rhs": "\"This device code has expired.\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestDeviceTokenExpired": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "DeviceCodeErrorResponseTypeExpiredToken",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestDeviceTokenPendingThenSuccess": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.AccessToken().Secret()",
+            "op": "!=",
+            "rhs": "\"12/34\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.TokenTypeValue()",
+            "op": "!=",
+            "rhs": "BasicTokenTypeBearer",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(token.Scopes())",
+            "op": "!=",
+            "rhs": "1",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.Scopes()[0].AsStr()",
+            "op": "!=",
+            "rhs": "\"openid\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.RefreshToken()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestDeviceTokenSlowdownThenSuccess": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeDeviceCodeAndToken": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      }
+    },
+    "oauth2/endpoint_test.go": {
+      "TestAsyncClientClosure": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.AccessToken().Secret()",
+            "op": "!=",
+            "rhs": "\"12/34\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.TokenTypeValue()",
+            "op": "!=",
+            "rhs": "BasicTokenTypeBearer",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestHelperOptionalStringOrVecString": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(list)",
+            "op": "!=",
+            "rhs": "1",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "list[0]",
+            "op": "!=",
+            "rhs": "\"v1\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(list)",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "list",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestHelperSpaceDelimitedVec": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "len(scopes)",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "scopes[0].AsStr()",
+            "op": "!=",
+            "rhs": "\"read\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "scopes[1].AsStr()",
+            "op": "!=",
+            "rhs": "\"write\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"read write\"",
+            "rhs_literal": true
+          }
+        ]
+      }
+    },
+    "oauth2/error_test.go": {
+      "TestConfigurationErrorMessages": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"No revocation endpoint URL specified\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"Scheme for revocation endpoint URL must be HTTPS\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestErrorResponseDisplay": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"invalid_request: stuff happened\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"invalid_request: stuff happened (see https://errors)\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestErrorResponseSerializer": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "`{\"error\":\"unauthorized_client\"}`",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "decoded.Error",
+            "op": "!=",
+            "rhs": "invalid.Error",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "decoded.ErrorDescription",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*decoded.ErrorDescription",
+            "op": "!=",
+            "rhs": "*invalid.ErrorDescription",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "decoded.ErrorURI",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*decoded.ErrorURI",
+            "op": "!=",
+            "rhs": "*invalid.ErrorURI",
+            "rhs_literal": false
+          }
+        ]
+      }
+    },
+    "oauth2/extension_test.go": {
+      "TestExtensionRevocationSuccessful": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExtensionSerializer": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExtensionSuccessfulWithCompleteJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.TokenTypeValue()",
+            "op": "!=",
+            "rhs": "ColorfulTokenTypeRed",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(token.Scopes())",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.Scopes()[0].AsStr()",
+            "op": "!=",
+            "rhs": "\"read\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.Scopes()[1].AsStr()",
+            "op": "!=",
+            "rhs": "\"write\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "expires",
+            "op": "!=",
+            "rhs": "3600",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.RefreshToken()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.RefreshToken().Secret()",
+            "op": "!=",
+            "rhs": "\"foobar\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.ExtraFields().Shape",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*token.ExtraFields().Shape",
+            "op": "!=",
+            "rhs": "\"round\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.ExtraFields().Height",
+            "op": "!=",
+            "rhs": "12",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExtensionSuccessfulWithMinimalJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.AccessToken().Secret()",
+            "op": "!=",
+            "rhs": "\"12/34\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.TokenTypeValue()",
+            "op": "!=",
+            "rhs": "ColorfulTokenTypeGreen",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.RefreshToken()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.ExtraFields().Shape",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.ExtraFields().Height",
+            "op": "!=",
+            "rhs": "10",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "`{\"access_token\":\"12/34\",\"token_type\":\"green\",\"height\":10}`",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExtensionWithCustomJSONError": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "custom.CustomError",
+            "op": "!=",
+            "rhs": "\"non-compliant oauth implementation ;-)\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExtensionWithSimpleJSONError": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorServerResponse",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "ColorfulErrorResponseTypeTooLight",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.ErrorString()",
+            "op": "!=",
+            "rhs": "\"too_light: stuff happened (see https://errors)\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Error()",
+            "op": "!=",
+            "rhs": "\"Server returned error response: too_light: stuff happened (see https://errors)\"",
+            "rhs_literal": true
+          }
+        ]
+      }
+    },
+    "oauth2/introspection_test.go": {
+      "TestTokenIntrospectionMissingEndpoint": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "err.Error()",
+            "op": "!=",
+            "rhs": "\"No introspection endpoint URL specified\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(response.Scopes())",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Scopes()[0].AsStr()",
+            "op": "!=",
+            "rhs": "\"email\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Scopes()[1].AsStr()",
+            "op": "!=",
+            "rhs": "\"profile\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.ClientId()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.ClientId().String()",
+            "op": "!=",
+            "rhs": "\"aaa\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Username()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Username()",
+            "op": "!=",
+            "rhs": "\"demo\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenType",
+            "op": "!=",
+            "rhs": "BasicTokenTypeBearer",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Exp()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Exp()",
+            "op": "!=",
+            "rhs": "1604073517",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Iat()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Iat()",
+            "op": "!=",
+            "rhs": "1604073217",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Nbf()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Nbf()",
+            "op": "!=",
+            "rhs": "1604073317",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Sub()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Sub()",
+            "op": "!=",
+            "rhs": "\"demo\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(response.Aud())",
+            "op": "!=",
+            "rhs": "1",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "response.Aud()[0]",
+            "op": "!=",
+            "rhs": "\"demo\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Iss()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Iss()",
+            "op": "!=",
+            "rhs": "\"http://127.0.0.1:8080/auth/realms/test-realm\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Jti()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*response.Jti()",
+            "op": "!=",
+            "rhs": "\"be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Scopes()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.ClientId()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Username()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Exp()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Iat()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Nbf()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Sub()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Aud()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Iss()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "response.Jti()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenIntrospectionWithRequestBodyAuth": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      }
+    },
+    "oauth2/revocation_test.go": {
+      "TestTokenRevocationWithAccessTokenAndEmptyJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithAccessTokenAndEmptyResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithAccessTokenAndNonJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithMissingURL": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "err.Error()",
+            "op": "!=",
+            "rhs": "\"No revocation endpoint URL specified\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithNonHTTPSURL": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "err.Error()",
+            "op": "!=",
+            "rhs": "\"Scheme for revocation endpoint URL must be HTTPS\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithRefreshToken": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestTokenRevocationWithUnsupportedTokenType": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorServerResponse",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "RevocationErrorResponseTypeUnsupportedTokenType",
+            "rhs_literal": false
+          }
+        ]
+      }
+    },
+    "oauth2/token_test.go": {
+      "TestExchangeClientCredentialsWithBasicAuth": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(token.Scopes())",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeClientCredentialsWithBasicAuthButNoClientSecret": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeClientCredentialsWithBodyAuthAndScope": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeFailsGracefullyOnTransportError": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorRequest",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExchangeCodeMissingTokenEndpoint": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "err.Error()",
+            "op": "!=",
+            "rhs": "\"No token endpoint URL specified\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithBasicAuth": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithCompleteJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "len(token.Scopes())",
+            "op": "!=",
+            "rhs": "2",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "expires",
+            "op": "!=",
+            "rhs": "3600",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.RefreshToken()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.RefreshToken().Secret()",
+            "op": "!=",
+            "rhs": "\"foobar\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithMinimalJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.AccessToken().Secret()",
+            "op": "!=",
+            "rhs": "\"12/34\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "token.TokenTypeValue()",
+            "op": "!=",
+            "rhs": "BasicTokenTypeBearer",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "token.RefreshToken()",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "`{\"access_token\":\"12/34\",\"token_type\":\"bearer\"}`",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "roundTripped.AccessToken().Secret()",
+            "op": "!=",
+            "rhs": "token.AccessToken().Secret()",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithPKCEAndExtension": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithRedirectURL": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeSuccessfulWithRedirectURLOverride": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeWith400StatusCode": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Error()",
+            "op": "!=",
+            "rhs": "\"Server returned error response: invalid_request: Expired code.\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeWithInvalidTokenType": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorParse",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExchangeCodeWithJSONParseError": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorParse",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(tokenErr.RawBody)",
+            "op": "!=",
+            "rhs": "\"broken json\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeWithSimpleJSONError": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorServerResponse",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "errorResponse.Error",
+            "op": "!=",
+            "rhs": "BasicErrorResponseTypeInvalidRequest",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": true,
+            "lhs": "errorResponse.ErrorDescription",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "*errorResponse.ErrorDescription",
+            "op": "!=",
+            "rhs": "\"stuff happened\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "errorResponse.ErrorURI",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"Server returned error response: invalid_request: stuff happened\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "string(serialized)",
+            "op": "!=",
+            "rhs": "`{\"error\":\"invalid_request\",\"error_description\":\"stuff happened\"}`",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeCodeWithUnexpectedContentType": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Kind",
+            "op": "!=",
+            "rhs": "RequestTokenErrorOther",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "tokenErr.Error()",
+            "op": "!=",
+            "rhs": "\"Other error: \"+want",
+            "rhs_literal": false
+          }
+        ]
+      },
+      "TestExchangePasswordWithJSONResponse": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestExchangeRefreshTokenWithBasicAuth": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "err",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": true,
+            "lhs": "tokenErr",
+            "op": "!=",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      }
+    },
+    "oauth2/types_test.go": {
+      "TestPkceCodeVerifierChallenge": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "challenge.AsStr()",
+            "op": "!=",
+            "rhs": "\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "challenge.ChallengeMethod().String()",
+            "op": "!=",
+            "rhs": "\"S256\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestPkceCodeVerifierMax": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "len(verifier.Secret())",
+            "op": "!=",
+            "rhs": "128",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestPkceCodeVerifierMin": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "len(verifier.Secret())",
+            "op": "!=",
+            "rhs": "43",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestPkceCodeVerifierTooLong": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "recover()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestPkceCodeVerifierTooShort": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": true,
+            "lhs": "recover()",
+            "op": "==",
+            "rhs": "nil",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestPkcePlainChallenge": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "challenge.AsStr()",
+            "op": "!=",
+            "rhs": "verifier.Secret()",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "challenge.ChallengeMethod().String()",
+            "op": "!=",
+            "rhs": "\"plain\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "randomChallenge.AsStr()",
+            "op": "!=",
+            "rhs": "randomVerifier.Secret()",
+            "rhs_literal": false
+          },
+          {
+            "degenerate": false,
+            "lhs": "randomChallenge.ChallengeMethod().String()",
+            "op": "!=",
+            "rhs": "\"plain\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestSecretConversion": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "secret.Secret()",
+            "op": "!=",
+            "rhs": "\"top_secret\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestSecretRedaction": {
+        "empty_guards": 0,
+        "guards": [
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"ClientSecret([redacted])\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"ClientSecret([redacted])\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "got",
+            "op": "!=",
+            "rhs": "\"ClientSecret([redacted])\"",
+            "rhs_literal": true
+          },
+          {
+            "degenerate": false,
+            "lhs": "fmt.Sprintf(\"%v\",secret)",
+            "op": "==",
+            "rhs": "\"top_secret\"",
+            "rhs_literal": true
+          }
+        ]
+      },
+      "TestSecretsEqual": {
+        "empty_guards": 0,
+        "guards": []
+      }
+    }
+  },
+  "marker_counts": {
+    "disabled": 0,
+    "skip": 0,
+    "xfail": 0
+  },
+  "schema_version": "migration-target-test-baseline:v2"
+}

@@ -1,0 +1,137 @@
+{
+  "schema_version": "webvr-migration-contract/v1",
+  "task_id": "immersive-w-webvr-polyfill-20260911094313-be1b9f",
+  "suite_id": "immersive-w-webvr-polyfill-20260911094313-be1b9f-r1",
+  "source_provenance": {
+    "repository": "https://github.com/immersive-web/webvr-polyfill",
+    "declared_upstream_commit": "e77ab9a4a59aad0035f90a3dfa17c582113b84cf",
+    "upstream_tree": "6fba19571de6113b622e5fc1de1c25fc113b8df7",
+    "verification_status": "verified_upstream_tree_match",
+    "verification_note": "The declared upstream commit was fetched from the public repository and its tree equals replay_base.tree byte-for-byte for all 35 paths; see provenance/upstream-manifest.json.",
+    "provenance_manifest": "provenance/upstream-manifest.json",
+    "provenance_manifest_sha256": "f73d0ea1c2f6009376485140809527296c5031e9b4b5ac8a0b51da1005061a4c",
+    "git_bundle": "provenance/upstream-e77ab9a.bundle",
+    "git_bundle_sha256": "395f75c3eb03a820a5f3d6c4df73f1d71508199dd9901616ae1bcc08561896cd",
+    "source_archive": "provenance/upstream-e77ab9a.tar.gz",
+    "source_archive_sha256": "f07c0bae6f5ce449c225221e4728ffb313396baa6667aadd73498f4719d96f60"
+  },
+  "replay_base": {
+    "kind": "packaged_synthetic_snapshot",
+    "commit": "a1efca7a94d05af5a048ab3b5d9c12fdc22bafae",
+    "tree": "6fba19571de6113b622e5fc1de1c25fc113b8df7",
+    "runtime_commit_policy": "runtime commits may differ; the tree must equal replay_base.tree"
+  },
+  "allowed_changes": {
+    ".npmignore": [
+      "modify",
+      "delete"
+    ],
+    ".travis.yml": [
+      "modify",
+      "delete"
+    ],
+    ".gitignore": [
+      "modify"
+    ],
+    ".babelrc": [
+      "delete"
+    ],
+    "package.json": [
+      "modify"
+    ],
+    "package-lock.json": [
+      "modify"
+    ],
+    "rollup.config.js": [
+      "delete"
+    ],
+    "rollup.config.min.js": [
+      "delete"
+    ],
+    "vite.config.mjs": [
+      "add"
+    ],
+    "vite.config.js": [
+      "add"
+    ],
+    "vitest.config.mjs": [
+      "add"
+    ],
+    "vitest.config.js": [
+      "add"
+    ],
+    "scripts/build-vite.mjs": [
+      "add"
+    ],
+    "scripts/watch-vite.mjs": [
+      "add"
+    ],
+    "test/.babelrc": [
+      "delete"
+    ],
+    "test/init.js": [
+      "modify",
+      "delete"
+    ],
+    "test/setup.js": [
+      "add"
+    ],
+    "test/setup.mjs": [
+      "add"
+    ],
+    "test/utils.js": [
+      "modify"
+    ],
+    "test/webvr-polyfill.test.js": [
+      "modify"
+    ]
+  },
+  "allowed_change_patterns": {
+    ".github/workflows/*.yml": [
+      "add",
+      "modify"
+    ],
+    ".github/workflows/*.yaml": [
+      "add",
+      "modify"
+    ]
+  },
+  "frozen_sources": {
+    "src/webvr-polyfill.js": {
+      "mode": "100644",
+      "git_blob": "acd7fdc0ad04098380f29ca7b6e34bb9e06de19c",
+      "sha256": "e6ff250017e859bfe346bd015d664889e027f3a913145dc179177c58ddc3f217"
+    },
+    "src/config.js": {
+      "mode": "100644",
+      "git_blob": "9275206a8c9c6a75705e20bae30b2d4b86852867",
+      "sha256": "eb6037f67844b8c36421376994d542da854e3d208a4390d7bc75413b8eaf253f"
+    },
+    "src/util.js": {
+      "mode": "100644",
+      "git_blob": "409db9547a1e0e3476d0e810369611998f8fa3ab",
+      "sha256": "1b56d2feeac9ad22a130768255f2e044167ffeeb8b8d908d10ecf7870ed35f2e"
+    },
+    "src/index.js": {
+      "mode": "100644",
+      "git_blob": "d1998bad401bc310826cdbd4775ae77e32c45bcf",
+      "sha256": "7942d1845ec58e48860b8e1c7c406b0f45b62e484737076912c1ce8886c407a8"
+    }
+  },
+  "reference_solution": {
+    "path": "solution/solution.patch",
+    "sha256": "4ff3ae1104a4f921291dd01a3725ac3c862677dfb4383b6969d676376b5569ca"
+  },
+  "legacy_test_patch": {
+    "path": "tests/verifier/test.patch",
+    "sha256": "b0c81a14b1073c95347b1e949d6252c8b9f4dfa3975d75f9fa7f8e59b7c2f319",
+    "status": "retained_for_audit_not_applied"
+  },
+  "evaluator_assets": {
+    "ownership": "evaluator",
+    "candidate_mutable": false,
+    "candidate_readable": false,
+    "manifest": "tests/assets-manifest.json",
+    "execution_model": "candidate commands run as uid 10001 with no read/traverse access to the 0750 root:evaluator /tests tree; the evaluator-owned suite runs as the evaluator identity and hardgate.py records negative read probes in hard-gate.json"
+  }
+}

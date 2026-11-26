@@ -1,0 +1,59 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/rust-itertools-itertools-rust-to-go-v1"
+description = "Migrate the itertools iterator-extension library from Rust to Go 1.23.0."
+
+[metadata]
+category = "Language_migration"
+language = "rust"
+repository_id = "c667b6f9-8258-4ba0-a491-d4c1ce0cfc15"
+task_id = "tp-848531b8e2ba3b69a01eba080e75e0ad"
+repository_url = "https://github.com/rust-itertools/itertools"
+base_commit_hash = "fd619332f002979c3d7958fe0fc45509f84fdb8d"
+
+[metadata.tests]
+fail_to_pass_count = 48
+pass_to_pass_count = 27
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:rust-itertools-itertools-rust-to-go-v1-verifier-image-20261126"
+image_digest = "sha256:3f3c97f8b194823008d7cde3b572d6d5b9c86c326dfddc5f7b35818f4c58307a"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached fd619332f002979c3d7958fe0fc45509f84fdb8d > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 14400
+user = "agent"
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:rust-itertools-itertools-rust-to-go-v1-task-image-20261126"
+image_digest = "sha256:3f24ec1811b3edda9c4c861486dcf37fad0fc5184959bdff235d62d2eab69dbb"

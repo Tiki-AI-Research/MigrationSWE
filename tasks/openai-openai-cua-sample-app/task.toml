@@ -1,0 +1,67 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts/model.patch",
+]
+
+[task]
+name = "tikiai/openai-openai-cua-sample-app"
+description = "Migrate the JavaScript runner HTTP backend from Fastify 5.12.1 to Express 5.1.0."
+
+[metadata]
+category = "Framework_migration"
+language = "typescript"
+repository_id = "e12c5014-58e7-4780-8e24-dc4bdaa91a43"
+task_id = "tp-fc25f64925cde4fd822d7b63be66e504"
+repository_url = "https://github.com/openai/openai-cua-sample-app"
+base_commit_hash = "f2a3dc523ae406f9b704f9a420a05402a63b4522"
+
+[metadata.tests]
+fail_to_pass_count = 48
+pass_to_pass_count = 37
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:openai-openai-cua-sample-app-verifier-image-20261126"
+image_digest = "sha256:ffa0b22baf6ac2cd0095feb25aa21a2cb2dc9f277ee5eb872f1af7d00fe56748"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached f2a3dc523ae406f9b704f9a420a05402a63b4522 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:openai-openai-cua-sample-app-task-image-20261126"
+image_digest = "sha256:ebc520d2ef437e2e132ff3e1f2f1296ffe73fa3d34ec5ef706c807d716014f00"
+[environment.healthcheck]
+command = "runuser -u agent -- env COREPACK_ENABLE_NETWORK=0 COREPACK_DEFAULT_TO_LATEST=0 sh -c 'node -e '\"'\"'const fs=require('\"'\"'\"'\"'\"'\"'\"'\"'fs'\"'\"'\"'\"'\"'\"'\"'\"'),cp=require('\"'\"'\"'\"'\"'\"'\"'\"'child_process'\"'\"'\"'\"'\"'\"'\"'\"');if(!fs.existsSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"'))process.exit(0);const p=JSON.parse(fs.readFileSync('\"'\"'\"'\"'\"'\"'\"'\"'package.json'\"'\"'\"'\"'\"'\"'\"'\"','\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"')).packageManager;if(p===undefined)process.exit(0);const m=/^(npm|pnpm|yarn)@(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)(?:\\+sha(?:224|256|384|512)\\.[0-9a-fA-F]+)?$/.exec(p);if(!m)process.exit(2);const r=cp.spawnSync(m[1],['\"'\"'\"'\"'\"'\"'\"'\"'--version'\"'\"'\"'\"'\"'\"'\"'\"'],{encoding:'\"'\"'\"'\"'\"'\"'\"'\"'utf8'\"'\"'\"'\"'\"'\"'\"'\"',env:{...process.env,COREPACK_ENABLE_NETWORK:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"',COREPACK_DEFAULT_TO_LATEST:'\"'\"'\"'\"'\"'\"'\"'\"'0'\"'\"'\"'\"'\"'\"'\"'\"'}});if(r.error||r.status!==0)process.exit(r.status||3);process.exit((r.stdout||'\"'\"'\"'\"'\"'\"'\"'\"''\"'\"'\"'\"'\"'\"'\"'\"').trim().split(/\\s+/)[0]===m[2]?0:4);'\"'\"''"
+interval_sec = 1.0
+timeout_sec = 30.0
+retries = 1
+

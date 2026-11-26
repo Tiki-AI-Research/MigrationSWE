@@ -1,0 +1,1024 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "shared_corpus_required": true,
+  "fixtures": {
+    "label_config": "fixtures/batches/BATCH-P2P-0001/labeler.yml",
+    "event_pull_request": "fixtures/batches/BATCH-P2P-0001/event.json",
+    "changed_files": "fixtures/batches/BATCH-P2P-0001/changed_files.json"
+  },
+  "observations": [
+    {
+      "observation_id": "P2P-008",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R009",
+        "R013",
+        "R026",
+        "R031"
+      ],
+      "surface": "changed-file glob and branch pattern matching",
+      "source_test": "__tests__/main.test.ts#does not add labels to PRs that do not match our glob patterns|can support multiple branches by batching",
+      "target_test": "internal/match#TestCheckAnyBranch",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "does not add labels to PRs that do not match our glob patterns|can support multiple branches by batching"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestCheckAnyBranch$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R012",
+        "R019"
+      ],
+      "surface": "configuration validation",
+      "source_test": "__tests__/branch.test.ts#toBranchMatchConfig > when there are no branch keys in the config > returns an empty object",
+      "target_test": "internal/match#TestToBranchMatchConfig",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/branch.test.ts",
+          "-t",
+          "toBranchMatchConfig when there are no branch keys in the config returns an empty object"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestToBranchMatchConfig$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-005",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "configuration loading path",
+      "source_test": "__tests__/main.test.ts#should fetch configuration file from API if it does not exist locally",
+      "target_test": "internal/labeler#TestConfigFromAPI",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run should fetch configuration file from API if it does not exist locally"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestConfigFromAPI$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-006",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R015"
+      ],
+      "surface": "max-files-changed gating",
+      "source_test": "__tests__/main.test.ts#max-files-changed > skips file-based labels when changed files exceed limit",
+      "target_test": "internal/labeler#TestMaxFilesChanged",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run max-files-changed skips file-based labels when changed files exceed limit"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestMaxFilesChanged$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R030"
+      ],
+      "surface": "repository change surface",
+      "source_test": "policy:changed-scope",
+      "target_test": "policy:changed-scope",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-004",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R020"
+      ],
+      "surface": "pr-number input parsing",
+      "source_test": "__tests__/main.test.ts#(with pr-number: mix of valid and invalid) processes valid, skips invalid with warning",
+      "target_test": "internal/inputs#TestGetPRNumbersMix",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run \\(with pr-number: mix of valid and invalid\\) processes valid, skips invalid with warning"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetPRNumbersMix$",
+          "./internal/inputs"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-007",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R017"
+      ],
+      "surface": "changed-files label classification",
+      "source_test": "__tests__/labeler.test.ts#configUsesChangedFiles > returns true when config has mixed branch and changed-files patterns",
+      "target_test": "internal/match#TestConfigUsesChangedFiles",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/labeler.test.ts",
+          "-t",
+          "configUsesChangedFiles returns true when config has mixed branch and changed-files patterns"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestConfigUsesChangedFiles$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-009",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R006"
+      ],
+      "surface": "GitHub Actions runtime environment contract",
+      "source_test": "__tests__/main.test.ts#\\(with pr-number: array of one item, uses the PR number specified in the parameters",
+      "target_test": "internal/inputs#TestGetPRNumbersFromPayload",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run \\(with pr-number: array of one item, uses the PR number specified in the parameters"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetPRNumbersFromPayload$",
+          "./internal/inputs"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R019"
+      ],
+      "surface": "configuration validation",
+      "source_test": "__tests__/labeler.test.ts#getLabelConfigResultFromObject > throws error for negative changed-files-labels-limit value",
+      "target_test": "internal/config#TestLimitErrors",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/labeler.test.ts",
+          "-t",
+          "getLabelConfigResultFromObject throws error for negative changed-files-labels-limit value"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestLimitErrors$",
+          "./internal/config"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-013",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "action failure and warning behavior",
+      "source_test": "__tests__/labeler.test.ts#labeler error handling > throws a custom error for HttpError 403 with \"unauthorized\" message",
+      "target_test": "internal/labeler#TestAddLabelsForbidden",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/labeler.test.ts",
+          "-t",
+          "labeler error handling throws a custom error for HttpError 403 with \"unauthorized\" message"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsForbidden$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R025"
+      ],
+      "surface": "configuration fetch failure",
+      "source_test": "__tests__/main.test.ts#should warn if configuration file could not be fetched through the API, log error and fail the action",
+      "target_test": "internal/labeler#TestConfigFetchFailure",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run should warn if configuration file could not be fetched through the API, log error and fail the action"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestConfigFetchFailure$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R016"
+      ],
+      "surface": "changed-files-labels-limit gating",
+      "source_test": "__tests__/main.test.ts#changed-files-labels-limit > skips changed-files labels when count exceeds limit",
+      "target_test": "internal/labeler#TestChangedFilesLabelsLimit",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run changed-files-labels-limit skips changed-files labels when count exceeds limit"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestChangedFilesLabelsLimit$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-018",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R031"
+      ],
+      "surface": "test and evaluation integrity",
+      "source_test": "policy:test-integrity",
+      "target_test": "policy:test-integrity",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-019",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "configuration loading path",
+      "source_test": "__tests__/main.test.ts#should use local configuration file if it exists",
+      "target_test": "internal/config#TestLoadConfigLocalFirst",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run should use local configuration file if it exists"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestLoadConfigLocalFirst$",
+          "./internal/config"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-020",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R010"
+      ],
+      "surface": "changed-files rule evaluation",
+      "source_test": "__tests__/changedFiles.test.ts#checkAllChangedFiles > when all given glob pattern configs matched > returns true",
+      "target_test": "internal/match#TestCheckAllChangedFiles",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/changedFiles.test.ts",
+          "-t",
+          "checkAllChangedFiles when all given glob pattern configs matched returns true"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestCheckAllChangedFiles$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-021",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R026"
+      ],
+      "surface": "new-labels and all-labels outputs",
+      "source_test": "__tests__/main.test.ts#(with dot: false) adds labels to PRs that match our glob patterns",
+      "target_test": "internal/labeler#TestLabelerGoldenExpectations",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run \\(with dot: false\\) adds labels to PRs that match our glob patterns"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestLabelerGoldenExpectations$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R007"
+      ],
+      "surface": "GitHub REST and GraphQL calls issued by the action",
+      "source_test": "__tests__/add-labels.test.ts#does not verify a successful addition",
+      "target_test": "internal/githubapi#TestAddLabelsSuccess",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/add-labels.test.ts",
+          "-t",
+          "addLabels does not verify a successful addition"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsSuccess$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "any/all rule aggregation",
+      "source_test": "__tests__/labeler.test.ts#checkMatchConfigs > when multiple MatchConfigs are supplied > returns true when only both config matches",
+      "target_test": "internal/match#TestCheckMatchConfigs",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/labeler.test.ts",
+          "-t",
+          "checkMatchConfigs when multiple MatchConfigs are supplied returns true when only both config matches"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestCheckMatchConfigs$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "label removal on sync",
+      "source_test": "__tests__/main.test.ts#removes stale configured labels in one mutation",
+      "target_test": "internal/labeler#TestRemovesStaleConfiguredLabelsInOneMutation",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/main.test.ts",
+          "-t",
+          "run removes stale configured labels in one mutation"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestRemovesStaleConfiguredLabelsInOneMutation$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-001",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R008",
+        "R031"
+      ],
+      "surface": "changed-files rule evaluation",
+      "source_test": "__tests__/changedFiles.test.ts#checkIfAllGlobsMatchAllFiles",
+      "target_test": "internal/match#TestCheckIfAllGlobsMatchAllFiles",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/changedFiles.test.ts",
+          "-t",
+          "checkIfAllGlobsMatchAllFiles"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestCheckIfAllGlobsMatchAllFiles$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-003",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "changed-files rule evaluation",
+      "source_test": "__tests__/changedFiles.test.ts#toChangedFilesMatchConfig > when there is no 'changed-files' key in the config > returns an empty object",
+      "target_test": "internal/match#TestToChangedFilesMatchConfig",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/changedFiles.test.ts",
+          "-t",
+          "toChangedFilesMatchConfig when there is no 'changed-files' key in the config returns an empty object"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestToChangedFilesMatchConfig$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-011",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R005",
+        "R008",
+        "R019"
+      ],
+      "surface": "changed-file glob and branch pattern matching",
+      "source_test": "__tests__/branch.test.ts#getBranchName > when the pull requests base branch is requested > returns the base branch name",
+      "target_test": "internal/match#TestGetBranchName",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/branch.test.ts",
+          "-t",
+          "getBranchName when the pull requests base branch is requested returns the base branch name"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetBranchName$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R023"
+      ],
+      "surface": "label addition failure handling",
+      "source_test": "__tests__/add-labels.test.ts#checks subsequent pages after a committed server error",
+      "target_test": "internal/githubapi#TestAddLabelsServerErrorPagination",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/add-labels.test.ts",
+          "-t",
+          "addLabels checks subsequent pages after a committed server error"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsServerErrorPagination$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "kind": "P2P",
+      "requirement_ids": [
+        "R023"
+      ],
+      "surface": "label addition failure handling",
+      "source_test": "__tests__/add-labels.test.ts#preserves the server error when verification fails",
+      "target_test": "internal/githubapi#TestAddLabelsVerificationFails",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "source_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "node",
+          "--experimental-vm-modules",
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+          "--runTestsByPath",
+          "__tests__/add-labels.test.ts",
+          "-t",
+          "addLabels preserves the server error when verification fails"
+        ],
+        "timeout_seconds": 300
+      },
+      "target_invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsVerificationFails$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    }
+  ],
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "exclude_privileged_or_blocking_cases": true,
+    "source_test_command": [
+      "timeout",
+      "900",
+      "node",
+      "--experimental-vm-modules",
+      "./node_modules/jest/bin/jest.js",
+      "--runInBand"
+    ],
+    "target_test_command": [
+      "timeout",
+      "900",
+      "go",
+      "test",
+      "./..."
+    ]
+  }
+}

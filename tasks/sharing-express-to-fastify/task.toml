@@ -1,0 +1,64 @@
+schema_version = "1.3"
+[task]
+name = "tikiai/sharing-express-to-fastify"
+description = "Migrate the easy-sharing HTTP server from Express 4 to Fastify 4.28.1."
+authors = []
+keywords = ["framework-migration", "javascript", "express", "fastify", "nodejs"]
+
+[metadata]
+task_id = "sharing-express-to-fastify"
+category = "Framework_migration"
+language = "javascript"
+repository_url = "https://github.com/parvardegr/sharing"
+base_commit_hash = "e103cc3124227f42ea1e31f138560cbe7c031904"
+source_technology = "Express 4"
+target_technology = "Fastify 4"
+persistent_state_involved = false
+f2p_count = 10
+p2p_count = 56
+migration_units = ["fastify_dependencies", "app_exports_contract", "no_express_in_production"]
+
+[metadata.tests]
+f2p_count = 10
+p2p_count = 56
+fail_to_pass_count = 10
+pass_to_pass_count = 56
+allowed_change_paths = ["bin/app.js", "package.json", "package-lock.json", "test/fastify-smoke.js", "test/test.js"]
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+environment_mode = "separate"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+build_timeout_sec = 3600.0
+cpus = 4
+memory_mb = 8192
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:sharing-express-to-fastify-verifier-image-20261126"
+image_digest = "sha256:8cedd03d9fb372a7ad49e0ecb37f2cf6ed049b548af2ca9a598aaaee39ac5978"
+[[verifier.collect]]
+command = "python3 /opt/harbor/collect_patch.py"
+timeout_sec = 120.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+timeout_sec = 14400
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 1800.0
+os = "linux"
+cpus = 4
+memory_mb = 8192
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:sharing-express-to-fastify-task-image-20261126"
+image_digest = "sha256:564ef97d5b05ff06feb560b32042f304b1c4f270d47bc7d67a70bff82c80a388"
+[verifier.env]
+OPENAI_API_KEY = "${OPENAI_API_KEY}"
+LITELLM_LOCAL_MODEL_COST_MAP = "${LITELLM_LOCAL_MODEL_COST_MAP:-True}"

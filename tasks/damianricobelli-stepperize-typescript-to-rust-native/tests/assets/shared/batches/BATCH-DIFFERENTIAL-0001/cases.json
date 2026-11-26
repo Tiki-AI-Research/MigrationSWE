@@ -1,0 +1,213 @@
+{
+  "schema_version": "shared-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "projection": "normalized-result",
+  "description": "Shared runtime case corpus for the @stepperize/core TypeScript -> Rust migration. Source (TypeScript) and target (Rust) probes consume the same inputs and must produce equal normalized results.",
+  "fixtures": {
+    "steps": [
+      { "id": "first", "label": "Step 1" },
+      { "id": "second", "label": "Step 2" },
+      { "id": "third", "label": "Step 3" }
+    ],
+    "empty_steps": [],
+    "schema_steps": [{ "id": "name", "schema": "string-nonempty" }, { "id": "done" }],
+    "flow_data": { "first": { "saved": true } },
+    "current_index": 1
+  },
+  "cases": [
+    {
+      "observation_id": "DIFF-001",
+      "scenario": "shared-case-corpus",
+      "operation": "(aggregate)",
+      "checks": [
+        "every case below yields a source result equal to the target result after normalization"
+      ]
+    },
+    {
+      "observation_id": "DIFF-002",
+      "scenario": "step-map ids order",
+      "operation": "create_step_map(steps).ids",
+      "input": { "steps": ["first", "second", "third"] },
+      "expected": ["first", "second", "third"]
+    },
+    {
+      "observation_id": "DIFF-003",
+      "scenario": "step-map get",
+      "operation": "create_step_map(steps).get",
+      "checks": [
+        { "input": "second", "expected": { "id": "second", "label": "Step 2" } },
+        { "input": "missing", "expected": null }
+      ]
+    },
+    {
+      "observation_id": "DIFF-004",
+      "scenario": "step-map at",
+      "operation": "create_step_map(steps).at",
+      "checks": [
+        { "input": 0, "expected": { "id": "first", "label": "Step 1" } },
+        { "input": 9, "expected": null }
+      ]
+    },
+    {
+      "observation_id": "DIFF-005",
+      "scenario": "step-map indexOf",
+      "operation": "create_step_map(steps).indexOf",
+      "checks": [
+        { "input": "third", "expected": 2 },
+        { "input": "missing", "expected": -1 }
+      ]
+    },
+    {
+      "observation_id": "DIFF-006",
+      "scenario": "step-map has",
+      "operation": "create_step_map(steps).has",
+      "checks": [
+        { "input": "second", "expected": true },
+        { "input": "missing", "expected": false }
+      ]
+    },
+    {
+      "observation_id": "DIFF-007",
+      "scenario": "step-map first/last",
+      "operation": "create_step_map(steps).first/.last",
+      "checks": [
+        { "operation": "first", "expected": { "id": "first", "label": "Step 1" } },
+        { "operation": "last", "expected": { "id": "third", "label": "Step 3" } },
+        { "operation": "first(empty)", "expected": null },
+        { "operation": "last(empty)", "expected": null }
+      ]
+    },
+    {
+      "observation_id": "DIFF-008",
+      "scenario": "step-map next/prev/neighbors",
+      "operation": "create_step_map(steps).next/.prev/.neighbors",
+      "checks": [
+        { "operation": "next(first)", "expected": { "id": "second", "label": "Step 2" } },
+        { "operation": "prev(third)", "expected": { "id": "second", "label": "Step 2" } },
+        { "operation": "neighbors(second)", "expected": { "prev": { "id": "first", "label": "Step 1" }, "next": { "id": "third", "label": "Step 3" } } },
+        { "operation": "neighbors(first)", "expected": { "prev": null, "next": { "id": "second", "label": "Step 2" } } },
+        { "operation": "next(missing)", "expected": null },
+        { "operation": "prev(missing)", "expected": null }
+      ]
+    },
+    {
+      "observation_id": "DIFF-009",
+      "scenario": "initial step index",
+      "operation": "get_initial_step_index",
+      "checks": [
+        { "input": "second", "expected": 1 },
+        { "input": null, "expected": 0 },
+        { "input": "missing", "expected": 0 }
+      ]
+    },
+    {
+      "observation_id": "DIFF-010",
+      "scenario": "parse step",
+      "operation": "parse_step",
+      "checks": [
+        { "input": "second", "expected": "second" },
+        { "input": "missing", "expected": null },
+        { "input": null, "expected": null },
+        { "input": 42, "expected": null }
+      ]
+    },
+    {
+      "observation_id": "DIFF-011",
+      "scenario": "initial flow data copy",
+      "operation": "get_initial_data",
+      "checks": [
+        { "input": { "first": { "saved": true } }, "expected_equal": { "first": { "saved": true } } },
+        { "assertion": "returned map is a distinct object; mutating it does not change the input" },
+        { "input": null, "expected": {} }
+      ]
+    },
+    {
+      "observation_id": "DIFF-012",
+      "scenario": "validate without schema",
+      "operation": "validate_step",
+      "checks": [{ "id": "done", "value": { "anything": true }, "expected": { "success": true, "data": { "anything": true } } }]
+    },
+    {
+      "observation_id": "DIFF-013",
+      "scenario": "validate schema accepts",
+      "operation": "validate_step",
+      "checks": [{ "id": "name", "value": "Ada", "expected": { "success": true, "data": "Ada" } }]
+    },
+    {
+      "observation_id": "DIFF-014",
+      "scenario": "validate schema rejects",
+      "operation": "validate_step",
+      "checks": [{ "id": "name", "value": "", "expected": { "success": false, "issues": [{ "message": "Required" }] } }]
+    },
+    {
+      "observation_id": "DIFF-015",
+      "scenario": "validate unknown id",
+      "operation": "validate_step",
+      "checks": [{ "id": "missing", "value": null, "expected_error": "Step \"missing\" not found." }]
+    },
+    {
+      "observation_id": "DIFF-016",
+      "scenario": "validate async validator",
+      "operation": "validate_step",
+      "checks": [
+        { "schema": "string-nonempty-direct", "id": "name", "value": "Ada", "expected": { "success": true, "data": "Ada" } },
+        { "schema": "string-nonempty-async-yield-once", "id": "name", "value": "Ada", "expected": { "success": true, "data": "Ada" } }
+      ]
+    },
+    {
+      "observation_id": "DIFF-017",
+      "scenario": "single step status",
+      "operation": "get_step_status",
+      "checks": [
+        { "current_index": 1, "id": "first", "expected": "previous" },
+        { "current_index": 1, "id": "second", "expected": "active" },
+        { "current_index": 1, "id": "third", "expected": "upcoming" }
+      ]
+    },
+    {
+      "observation_id": "DIFF-018",
+      "scenario": "all step statuses",
+      "operation": "get_step_statuses",
+      "checks": [
+        { "current_index": 1, "lookup": { "first": "previous", "second": "active", "third": "upcoming" }, "assertion": "one status per step id; iteration order unspecified" }
+      ]
+    },
+    {
+      "observation_id": "DIFF-019",
+      "scenario": "match handler dispatch",
+      "operation": "match_step",
+      "checks": [{ "id": "second", "handlers": ["first", "second", "third"], "expected": "Step 2" }]
+    },
+    {
+      "observation_id": "DIFF-020",
+      "scenario": "match unknown id",
+      "operation": "match_step",
+      "checks": [{ "id": "missing", "expected_error": "Step \"missing\" not found." }]
+    },
+    {
+      "observation_id": "DIFF-021",
+      "scenario": "match missing handler",
+      "operation": "match_step",
+      "checks": [{ "id": "third", "handlers": ["first"], "expected_error": "No match handler found for step \"third\"." }]
+    },
+    {
+      "observation_id": "DIFF-022",
+      "scenario": "public capability set",
+      "operation": "(aggregate)",
+      "checks": ["every exported operation, StepMap query, and error contract remains available with unchanged semantics"]
+    },
+    {
+      "observation_id": "DIFF-023",
+      "scenario": "protected public artifacts",
+      "operation": "(aggregate)",
+      "checks": ["named exports, the exact error wording, and the Standard Schema boundary are preserved"]
+    },
+    {
+      "observation_id": "DIFF-024",
+      "scenario": "assertion integrity",
+      "operation": "(aggregate)",
+      "checks": ["checks and comparisons use real inputs; no assertion is removed or weakened and no input is hardcoded"]
+    }
+  ]
+}

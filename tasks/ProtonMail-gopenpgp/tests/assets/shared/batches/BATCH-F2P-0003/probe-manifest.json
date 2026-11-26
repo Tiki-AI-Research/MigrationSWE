@@ -1,0 +1,243 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "kind": "F2P",
+  "probe_file": "probe_test.go",
+  "source_technology": {
+    "name": "go-mime",
+    "version": "v0.0.0-20230322103455-7d82a3887f2f"
+  },
+  "target_technology": {
+    "name": "go-message",
+    "version": "v0.18.0"
+  },
+  "semantic_predicate": "go.mod must require go-message v0.18.0 and exclude go-mime, and the candidate must satisfy the named behavior through the public mime.Decrypt path. Library-only results do not satisfy these observations.",
+  "observation_probes": [
+    {
+      "observation_id": "F2P-072",
+      "test": "TestProbeGoMessageMultipartSignedRaw",
+      "capability": "raw multipart/signed part extraction",
+      "requirement_ids": [
+        "R029",
+        "R011"
+      ]
+    },
+    {
+      "observation_id": "F2P-049",
+      "test": "TestProbeGoMessageAttachmentDisposition",
+      "capability": "attachment detection by Content-Disposition",
+      "requirement_ids": [
+        "R030",
+        "R008"
+      ]
+    },
+    {
+      "observation_id": "F2P-050",
+      "test": "TestProbeGoMessageUnknownCharset",
+      "capability": "tolerance of unknown part charsets",
+      "requirement_ids": [
+        "R025"
+      ]
+    },
+    {
+      "observation_id": "F2P-051",
+      "test": "TestProbeGoMessageCharset",
+      "capability": "charset decoding for text/* parts",
+      "requirement_ids": [
+        "R024",
+        "R023"
+      ]
+    },
+    {
+      "observation_id": "F2P-052",
+      "test": "TestProbeGoMessageUnknownCharset",
+      "capability": "tolerance of unknown part charsets",
+      "requirement_ids": [
+        "R025"
+      ]
+    },
+    {
+      "observation_id": "F2P-053",
+      "test": "TestProbeGoMessageUnknownCharset",
+      "capability": "tolerance of unknown part charsets",
+      "requirement_ids": [
+        "R025"
+      ]
+    },
+    {
+      "observation_id": "F2P-054",
+      "test": "TestProbeGoMessageUnknownCharset",
+      "capability": "tolerance of unknown part charsets",
+      "requirement_ids": [
+        "R025"
+      ]
+    },
+    {
+      "observation_id": "F2P-055",
+      "test": "TestProbeGoMessageAttachmentHeaderBlock",
+      "capability": "attachment raw header block serialization",
+      "requirement_ids": [
+        "R028",
+        "R012"
+      ]
+    },
+    {
+      "observation_id": "F2P-056",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R014"
+      ]
+    },
+    {
+      "observation_id": "F2P-057",
+      "test": "TestProbeGoMessageMixedTraversal",
+      "capability": "part traversal, transfer-encoding and charset decoding",
+      "requirement_ids": [
+        "R001",
+        "R013"
+      ]
+    },
+    {
+      "observation_id": "F2P-058",
+      "test": "TestProbeGoMessageAlternativeSelection",
+      "capability": "body selection for multipart/alternative",
+      "requirement_ids": [
+        "R027",
+        "R023"
+      ]
+    },
+    {
+      "observation_id": "F2P-059",
+      "test": "TestProbeGoMessageAttachmentDisposition",
+      "capability": "attachment detection by Content-Disposition",
+      "requirement_ids": [
+        "R030",
+        "R016"
+      ]
+    },
+    {
+      "observation_id": "F2P-060",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R016"
+      ]
+    },
+    {
+      "observation_id": "F2P-061",
+      "test": "TestProbeGoMessageAlternativeSelection",
+      "capability": "body selection for multipart/alternative",
+      "requirement_ids": [
+        "R027",
+        "R011"
+      ]
+    },
+    {
+      "observation_id": "F2P-062",
+      "test": "TestProbeGoMessageAttachmentDisposition",
+      "capability": "attachment detection by Content-Disposition",
+      "requirement_ids": [
+        "R030",
+        "R014"
+      ]
+    },
+    {
+      "observation_id": "F2P-063",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R013"
+      ]
+    },
+    {
+      "observation_id": "F2P-064",
+      "test": "TestProbeGoMessageAttachmentHeaderBlock",
+      "capability": "attachment raw header block serialization",
+      "requirement_ids": [
+        "R028",
+        "R010"
+      ]
+    },
+    {
+      "observation_id": "F2P-065",
+      "test": "TestProbeGoMessageMixedTraversal",
+      "capability": "part traversal, transfer-encoding and charset decoding",
+      "requirement_ids": [
+        "R001",
+        "R004"
+      ]
+    },
+    {
+      "observation_id": "F2P-066",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R015"
+      ]
+    },
+    {
+      "observation_id": "F2P-067",
+      "test": "TestProbeGoMessageAttachmentDisposition",
+      "capability": "attachment detection by Content-Disposition",
+      "requirement_ids": [
+        "R030",
+        "R010"
+      ]
+    },
+    {
+      "observation_id": "F2P-068",
+      "test": "TestProbeGoMessageAlternativeSelection",
+      "capability": "body selection for multipart/alternative",
+      "requirement_ids": [
+        "R027",
+        "R015"
+      ]
+    },
+    {
+      "observation_id": "F2P-069",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R005"
+      ]
+    },
+    {
+      "observation_id": "F2P-070",
+      "test": "TestProbeGoMessageUnknownEncoding",
+      "capability": "tolerance of unknown part transfer encodings",
+      "requirement_ids": [
+        "R026",
+        "R004"
+      ]
+    },
+    {
+      "observation_id": "F2P-071",
+      "test": "TestProbeGoMessageUnknownCharset",
+      "capability": "tolerance of unknown part charsets",
+      "requirement_ids": [
+        "R025",
+        "R003"
+      ]
+    }
+  ],
+  "historical_library_only_observed": {
+    "source": {
+      "command": "go test -count=1 -run TestProbe ./mime/",
+      "exit_code": 1,
+      "result": "FAIL",
+      "reason": "cannot find module providing package github.com/emersion/go-message: module lookup disabled by GOPROXY=off (target capability absent)"
+    },
+    "target": {
+      "command": "go test -count=1 -run TestProbe ./mime/",
+      "exit_code": 0,
+      "result": "PASS",
+      "reason": "all F2P probes pass against go-message v0.18.0"
+    }
+  },
+  "validation_note": "Historical results above describe the replaced library-only suite. The current suite stages the shared black-box probes and checks the candidate public API; its Go execution must be validated in the grader environment."
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "migration-state-fields:v1",
+  "batch_id": "BATCH-STATE-0001",
+  "observations": {
+    "STATE-001": {
+      "requirement_ids": ["R007"],
+      "layout": {
+        "state": ".omc/state/<mode>-state.json",
+        "prd": ".omc/prd.json",
+        "memory": ".omc/project-memory.json"
+      },
+      "workspace_root_env": "WORKSPACE_ROOT"
+    },
+    "STATE-002": {
+      "requirement_ids": ["R007"],
+      "layout": {
+        "state": ".omc/state/<mode>-state.json",
+        "prd": ".omc/prd.json",
+        "memory": ".omc/project-memory.json"
+      },
+      "workspace_root_env": null
+    },
+    "STATE-003": {
+      "requirement_ids": ["R008"],
+      "state_fields": [
+        "updated_at",
+        "current_phase",
+        "phase_name",
+        "phase_started_at",
+        "active",
+        "completed",
+        "completed_at",
+        "skip_reason"
+      ],
+      "story_fields": [
+        "id",
+        "title",
+        "description",
+        "acceptance_criteria",
+        "passes",
+        "priority"
+      ],
+      "story_optional_fields": ["verification_evidence"]
+    },
+    "STATE-004": {
+      "requirement_ids": ["R008"],
+      "memory_entry_fields": [
+        "key",
+        "value",
+        "category",
+        "created_at",
+        "updated_at"
+      ]
+    }
+  }
+}

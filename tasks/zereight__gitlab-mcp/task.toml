@@ -1,0 +1,66 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "migration/zereight-gitlab-mcp"
+description = "Migrate the project from TypeScript 5.9.3 to Python 3.13.0 while preserving the existing observable behavior and public contract."
+
+[metadata]
+category = "Language_migration"
+language = "typescript"
+repository_id = "910f8f96-83d3-40ff-970a-c75280d67d88"
+task_id = "tp-3ad4b7f4c211ca1926eadc80341d06e8"
+repository_url = "https://github.com/zereight/gitlab-mcp"
+base_commit_hash = "ee18073a11e04534911bd2900e9879ababed3367"
+
+[metadata.tests]
+fail_to_pass_count = 23
+pass_to_pass_count = 40
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:zereight__gitlab-mcp-verifier-image-20261126"
+image_digest = "sha256:827f91fc84cd5a04a734f9b45b1aef0bc17419b19239bbc6ed38ab88379cf39c"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached ee18073a11e04534911bd2900e9879ababed3367 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 14400.0
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:zereight__gitlab-mcp-task-image-20261126"
+image_digest = "sha256:e4f71c47cca006f328981ff03913c15fab147e8b2d2cc2ee8ab1aaad68fe6356"
+[environment.env]
+
+[solution.env]

@@ -1,0 +1,37 @@
+{
+  "skeleton_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0003",
+  "source_technology": { "name": "Express", "version": "4.17.1" },
+  "target_technology": { "name": "Fastify", "version": "4.28.1" },
+  "observations": [
+    "F2P-060", "F2P-066", "F2P-069", "F2P-056", "F2P-057", "F2P-061",
+    "F2P-062", "F2P-063", "F2P-064", "F2P-065", "F2P-067", "F2P-068",
+    "F2P-070", "F2P-071", "F2P-072", "F2P-049", "F2P-050", "F2P-051",
+    "F2P-052", "F2P-053", "F2P-054", "F2P-055", "F2P-058", "F2P-059"
+  ],
+  "requests": [
+    { "id": "console", "observation_id": "F2P-056", "method": "GET", "path": "/console" },
+    { "id": "register-areas", "observation_id": "F2P-057", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": {} },
+    { "id": "apidoc-file", "observation_id": "F2P-062", "method": "GET", "path": "/api/doc/index.html" },
+    { "id": "malformed-json", "observation_id": "F2P-063", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": "{" },
+    { "id": "ui-get", "observation_id": "F2P-064", "method": "GET", "path": "/ui" },
+    { "id": "counter-csv", "observation_id": "F2P-065", "method": "GET", "path": "/recording/000000000000000000000000/counter/csv" },
+    { "id": "apidoc-bare", "observation_id": "F2P-067", "method": "GET", "path": "/api/doc" },
+    { "id": "tracker-sse", "observation_id": "F2P-068", "method": "GET", "path": "/tracker/sse" },
+    { "id": "recording-by-id", "observation_id": "F2P-070", "method": "GET", "path": "/recording/000000000000000000000000" },
+    { "id": "list-areas", "observation_id": "F2P-071", "method": "GET", "path": "/counter/areas" },
+    { "id": "list-files", "observation_id": "F2P-072", "method": "GET", "path": "/files" },
+    { "id": "status", "observation_id": "F2P-050", "method": "GET", "path": "/status" },
+    { "id": "config", "observation_id": "F2P-051", "method": "GET", "path": "/config" },
+    { "id": "recording-start", "observation_id": "F2P-052", "method": "GET", "path": "/recording/start" },
+    { "id": "empty-counter", "observation_id": "F2P-055", "method": "GET", "path": "/recording/000000000000000000000000/counter" },
+    { "id": "unknown-page", "observation_id": "F2P-059", "method": "GET", "path": "/a-page-that-does-not-exist" }
+  ],
+  "payloads": {
+    "json_90kb": { "pad": "<generated 90kB JSON string, under the 100kb body-parser limit>" },
+    "json_110kb": { "pad": "<generated 110kB JSON string, over the 100kb body-parser limit>" },
+    "multipart_video": { "field": "video", "filename": "demo.mp4" },
+    "multipart_wrong_field": { "field": "file", "filename": "demo.mp4" },
+    "multipart_wrong_name": { "field": "video", "filename": "demo.txt" }
+  }
+}

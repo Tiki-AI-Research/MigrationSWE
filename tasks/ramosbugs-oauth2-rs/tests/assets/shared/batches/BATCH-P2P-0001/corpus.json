@@ -1,0 +1,346 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "description": "Executable state-preservation corpus. Each observation is bound to the repository's own reference test cases on both the Rust source side (/input/source) and the Go target side (/input/target). Both sides must report PASS; the normalized common projection is the status wrapper {\"result\": \"PASS\"}.",
+  "migration": {
+    "category": "language",
+    "source": "Rust 2021",
+    "target": "Go 1.22"
+  },
+  "projection": {
+    "id": "status-wrapper",
+    "normalization": "Both sides emit the stable wrapper {\"result\": \"PASS\"} (or {\"result\": \"FAIL\"} on failure). The wrapper is identical after normalization, so source and target compare equal.",
+    "success_value": {"result": "PASS"},
+    "failure_value": {"result": "FAIL"}
+  },
+  "observations": [
+    {
+      "id": "P2P-001",
+      "requirement_ids": ["R010"],
+      "family": "public-api",
+      "atomic_claim": "SyncHTTPClient.Call(HTTPRequest) (HTTPResponse, error) and AsyncHTTPClient.Call(ctx, HTTPRequest) (HTTPResponse, error) are the single call operations carrying method/URL/headers/body and returning status/headers/body or error, and a caller-supplied implementation passed to Request/RequestAsync is the one invoked.",
+      "source_cases": [
+        "endpoint::tests::test_async_client_closure",
+        "token::tests::test_exchange_code_successful_with_basic_auth"
+      ],
+      "target_cases": [
+        "TestAsyncClientClosure",
+        "TestExchangeCodeSuccessfulWithBasicAuth"
+      ]
+    },
+    {
+      "id": "P2P-002",
+      "requirement_ids": ["R023"],
+      "family": "public-api",
+      "atomic_claim": "The migrated package retains every public capability of the Rust library and continues to implement the RFC 6749, RFC 7662, RFC 7009 and RFC 8628 semantics without behavioral change.",
+      "source_cases": [
+        "tests::test_send_sync_impl",
+        "token::tests::test_exchange_code_successful_with_complete_json_response",
+        "revocation::tests::test_token_revocation_with_refresh_token"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+        "TestTokenRevocationWithRefreshToken",
+        "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"
+      ]
+    },
+    {
+      "id": "P2P-003",
+      "requirement_ids": ["R004"],
+      "family": "public-api",
+      "atomic_claim": "NewBasicClient(NewClientId(\"id\")) defaults AuthType to BasicAuth; each of SetAuthURL, SetTokenURL, SetRedirectURL, SetDeviceAuthorizationURL, SetIntrospectionURL, SetRevocationURL and SetClientSecret stores its value with the matching accessor returning it, and the conditional Set*URLOption setters accept an optional endpoint while flow accessors are fallible.",
+      "source_cases": [
+        "tests::test_send_sync_impl"
+      ],
+      "target_cases": [
+        "TestAuthorizeURL",
+        "TestExchangeCodeSuccessfulWithMinimalJSONResponse"
+      ]
+    },
+    {
+      "id": "P2P-004",
+      "requirement_ids": ["R015"],
+      "family": "public-api",
+      "atomic_claim": "A status-200 response with a non-empty JSON body containing access_token, token_type, optional expires_in, optional refresh_token, optional space-delimited scope and extra fields deserializes into the corresponding token or introspection response with each field populated.",
+      "source_cases": [
+        "token::tests::test_exchange_code_successful_with_minimal_json_response",
+        "token::tests::test_exchange_code_successful_with_complete_json_response",
+        "introspection::tests::test_token_introspection_successful_with_basic_auth_full_response"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithMinimalJSONResponse",
+        "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+        "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"
+      ]
+    },
+    {
+      "id": "P2P-005",
+      "requirement_ids": ["R018"],
+      "family": "public-api",
+      "atomic_claim": "A revocation request inspects only the status code: a body is ignored, a non-200 status is mapped through the status check, and a 200 status returns a nil error.",
+      "source_cases": [
+        "revocation::tests::test_token_revocation_with_access_token_and_empty_json_response",
+        "revocation::tests::test_token_revocation_with_access_token_and_empty_response",
+        "revocation::tests::test_token_revocation_with_access_token_and_non_json_response"
+      ],
+      "target_cases": [
+        "TestTokenRevocationWithAccessTokenAndEmptyJSONResponse",
+        "TestTokenRevocationWithAccessTokenAndEmptyResponse",
+        "TestTokenRevocationWithAccessTokenAndNonJSONResponse"
+      ]
+    },
+    {
+      "id": "P2P-006",
+      "requirement_ids": ["R005"],
+      "family": "public-api",
+      "atomic_claim": "Executing any flow request through a fake client yields an HTTPRequest with Method \"POST\", Header[\"Content-Type\"] == \"application/x-www-form-urlencoded\", Header[\"Accept\"] == \"application/json\", and a form-encoded body.",
+      "source_cases": [
+        "token::tests::test_exchange_code_successful_with_basic_auth",
+        "token::tests::test_exchange_client_credentials_with_basic_auth"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithBasicAuth",
+        "TestExchangeClientCredentialsWithBasicAuth"
+      ]
+    },
+    {
+      "id": "P2P-007",
+      "requirement_ids": ["R021"],
+      "family": "public-api",
+      "atomic_claim": "Deserializing token_type \"BEARER\" and \"bearer\" both yields BasicTokenTypeBearer, and serializing BasicTokenTypeBearer emits \"bearer\".",
+      "source_cases": [
+        "token::tests::test_exchange_code_successful_with_minimal_json_response"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithMinimalJSONResponse"
+      ]
+    },
+    {
+      "id": "P2P-008",
+      "requirement_ids": ["R028"],
+      "family": "public-api",
+      "atomic_claim": "The public configuration and error contract surface (AuthUrl, TokenUrl, RedirectUrl, IntrospectionUrl, RevocationUrl, DeviceAuthorizationUrl, ConfigurationError, RequestTokenError, HTTPClientError, BasicAuth/RequestBody, StandardErrorResponse) keeps equivalent names and behavior rebuilt with Go idioms.",
+      "source_cases": [
+        "error::tests::test_error_response_serializer"
+      ],
+      "target_cases": [
+        "TestErrorResponseSerializer",
+        "TestConfigurationErrorMessages"
+      ]
+    },
+    {
+      "id": "P2P-009",
+      "requirement_ids": ["R011"],
+      "family": "public-api",
+      "atomic_claim": "fmt.Sprintf with %s, %v and %#v (or String/GoString) of NewClientSecret(\"s3cr3t\"), NewAccessToken, NewRefreshToken, NewAuthorizationCode, NewPkceCodeVerifier, NewCsrfToken, NewDeviceCode, NewUserCode and NewVerificationUriComplete never contains the underlying value, while Secret() returns it.",
+      "source_cases": [
+        "types::tests::test_secret_redaction",
+        "types::tests::test_secret_conversion"
+      ],
+      "target_cases": [
+        "TestSecretRedaction",
+        "TestSecretConversion"
+      ]
+    },
+    {
+      "id": "P2P-010",
+      "requirement_ids": ["R009"],
+      "family": "public-api",
+      "atomic_claim": "AddExtraParam(name, value) on the authorization, code, client-credentials, password, refresh-token, device-authorization, device-access-token, introspection and revocation requests appends the supplied name/value to the outgoing request.",
+      "source_cases": [
+        "code::tests::test_authorize_url_with_param"
+      ],
+      "target_cases": [
+        "TestAuthorizeURLWithParam"
+      ]
+    },
+    {
+      "id": "P2P-011",
+      "requirement_ids": ["R020"],
+      "family": "public-api",
+      "atomic_claim": "Device access token polling calls the supplied sleep function between polls with the device-authorization interval (defaulting to 5s), reuses the same interval on authorization_pending, adds 5s on slow_down, backs off exponentially to a 10s cap (or SetMaxBackoffInterval) on transport errors, and returns an expired_token server-response error once the timeout elapses.",
+      "source_cases": [
+        "devicecode::tests::test_device_token_pending_then_success",
+        "devicecode::tests::test_device_token_slowdown_then_success",
+        "devicecode::tests::test_device_token_expired",
+        "devicecode::tests::test_device_token_authorization_timeout"
+      ],
+      "target_cases": [
+        "TestDeviceTokenPendingThenSuccess",
+        "TestDeviceTokenSlowdownThenSuccess",
+        "TestDeviceTokenExpired",
+        "TestDeviceTokenAuthorizationTimeout"
+      ]
+    },
+    {
+      "id": "P2P-012",
+      "requirement_ids": ["R012"],
+      "family": "public-api",
+      "atomic_claim": "StandardErrorResponse always serializes the required error field and includes error_description and error_uri only when set; token types parse case-insensitively and serialize to canonical strings; error types serialize to their canonical strings.",
+      "source_cases": [
+        "error::tests::test_error_response_serializer"
+      ],
+      "target_cases": [
+        "TestErrorResponseSerializer"
+      ]
+    },
+    {
+      "id": "P2P-013",
+      "requirement_ids": ["R008"],
+      "family": "public-api",
+      "atomic_claim": "RevokeToken sends token=<token secret> plus the optional token_type_hint (access_token or refresh_token) and a non-HTTPS revocation URL returns a configuration error.",
+      "source_cases": [
+        "revocation::tests::test_token_revocation_with_refresh_token",
+        "revocation::tests::test_token_revocation_with_non_https_url"
+      ],
+      "target_cases": [
+        "TestTokenRevocationWithRefreshToken",
+        "TestTokenRevocationWithNonHTTPSURL"
+      ]
+    },
+    {
+      "id": "P2P-014",
+      "requirement_ids": ["R016"],
+      "family": "public-api",
+      "atomic_claim": "A non-200 response with a parseable body returns RequestTokenError{Kind: RequestTokenErrorServerResponse}; a non-200 response with an unparseable non-empty body returns Kind RequestTokenErrorParse with RawBody equal to the body; a non-200 response with an empty body returns Kind RequestTokenErrorOther.",
+      "source_cases": [
+        "token::tests::test_exchange_code_with_simple_json_error",
+        "token::tests::test_exchange_code_with_json_parse_error",
+        "token::tests::test_exchange_code_with_400_status_code"
+      ],
+      "target_cases": [
+        "TestExchangeCodeWithSimpleJSONError",
+        "TestExchangeCodeWithJSONParseError",
+        "TestExchangeCodeWith400StatusCode"
+      ]
+    },
+    {
+      "id": "P2P-015",
+      "requirement_ids": ["R007"],
+      "family": "public-api",
+      "atomic_claim": "AuthorizationRequest.URL() always contains response_type, client_id and state; contains code_challenge and code_challenge_method only when a PKCE challenge is set; contains redirect_uri only when a redirect URL is set; contains scope (space-joined) only when scopes exist; and appends extra parameters, with default response_type=code, UseImplicitFlow selecting token, and SetResponseType supporting a custom value.",
+      "source_cases": [
+        "code::tests::test_authorize_url",
+        "code::tests::test_authorize_url_pkce",
+        "code::tests::test_authorize_url_implicit",
+        "code::tests::test_authorize_url_with_param",
+        "code::tests::test_authorize_url_with_scopes",
+        "code::tests::test_authorize_url_with_redirect_url"
+      ],
+      "target_cases": [
+        "TestAuthorizeURL",
+        "TestAuthorizeURLPKCE",
+        "TestAuthorizeURLImplicit",
+        "TestAuthorizeURLWithParam",
+        "TestAuthorizeURLWithScopes",
+        "TestAuthorizeURLWithRedirectURL"
+      ]
+    },
+    {
+      "id": "P2P-016",
+      "requirement_ids": ["R017"],
+      "family": "public-api",
+      "atomic_claim": "A response whose present Content-Type is not application/json after case-insensitive comparison and ignoring parameters returns an other error naming the content type, and a response with an empty body returns an other error reporting an empty body.",
+      "source_cases": [
+        "token::tests::test_exchange_code_with_unexpected_content_type"
+      ],
+      "target_cases": [
+        "TestExchangeCodeWithUnexpectedContentType"
+      ]
+    },
+    {
+      "id": "P2P-017",
+      "requirement_ids": ["R019"],
+      "family": "public-api",
+      "atomic_claim": "RevokeToken with a non-HTTPS revocation URL returns a *ConfigurationError with Kind ConfigurationInsecureURL and the injected HTTP client is never called.",
+      "source_cases": [
+        "revocation::tests::test_token_revocation_with_non_https_url"
+      ],
+      "target_cases": [
+        "TestTokenRevocationWithNonHTTPSURL"
+      ]
+    },
+    {
+      "id": "P2P-018",
+      "requirement_ids": ["R014"],
+      "family": "public-api",
+      "atomic_claim": "Any flow accessor whose required endpoint is unset returns a *ConfigurationError with Kind ConfigurationMissingURL naming that endpoint (authorization, token, device authorization, introspection or revocation) rather than issuing a request.",
+      "source_cases": [
+        "tests::test_send_sync_impl"
+      ],
+      "target_cases": [
+        "TestAuthorizeURLMissingEndpoint",
+        "TestExchangeCodeMissingTokenEndpoint",
+        "TestTokenIntrospectionMissingEndpoint",
+        "TestTokenRevocationWithMissingURL"
+      ]
+    },
+    {
+      "id": "P2P-019",
+      "requirement_ids": ["R001"],
+      "family": "public-api",
+      "atomic_claim": "A consumer importing package oauth2 can construct a client, build and execute every documented flow request, introspect and revoke tokens, inject a custom HTTP client, and receive the documented response and error types.",
+      "source_cases": [
+        "token::tests::test_exchange_code_successful_with_complete_json_response",
+        "revocation::tests::test_token_revocation_with_missing_url",
+        "introspection::tests::test_token_introspection_successful_with_basic_auth_minimal_response"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithCompleteJSONResponse",
+        "TestTokenRevocationWithMissingURL",
+        "TestTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse"
+      ]
+    },
+    {
+      "id": "P2P-020",
+      "requirement_ids": ["R006"],
+      "family": "public-api",
+      "atomic_claim": "With BasicAuth and a client secret the request carries Authorization: Basic base64(urlencode(client_id):urlencode(client_secret)) and omits client_id/client_secret from the body; with RequestBody auth (or no secret) client_id, and client_secret when set, appear in the form body instead.",
+      "source_cases": [
+        "token::tests::test_exchange_client_credentials_with_basic_auth",
+        "token::tests::test_exchange_client_credentials_with_body_auth_and_scope",
+        "token::tests::test_exchange_client_credentials_with_basic_auth_but_no_client_secret"
+      ],
+      "target_cases": [
+        "TestExchangeClientCredentialsWithBasicAuth",
+        "TestExchangeClientCredentialsWithBodyAuthAndScope",
+        "TestExchangeClientCredentialsWithBasicAuthButNoClientSecret"
+      ]
+    },
+    {
+      "id": "P2P-021",
+      "requirement_ids": ["R013"],
+      "family": "public-api",
+      "atomic_claim": "For each scenario exercised by the Rust unit tests and doctests under oauth2/src using an injected fake HTTP client, the Go implementation produces the same observable request, response or error.",
+      "source_cases": [
+        "token::tests::test_exchange_code_successful_with_pkce_and_extension",
+        "devicecode::tests::test_exchange_device_code_and_token",
+        "introspection::tests::test_token_introspection_successful_with_basic_auth_full_response",
+        "revocation::tests::test_extension_token_revocation_successful"
+      ],
+      "target_cases": [
+        "TestExchangeCodeSuccessfulWithPKCEAndExtension",
+        "TestExchangeDeviceCodeAndToken",
+        "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse",
+        "TestExtensionRevocationSuccessful"
+      ]
+    },
+    {
+      "id": "P2P-022",
+      "requirement_ids": ["R022"],
+      "family": "public-api",
+      "atomic_claim": "For a fixed input the generated authorization URL matches the baseline tests' exact parameter set, percent-encoding and ordering.",
+      "source_cases": [
+        "code::tests::test_authorize_url",
+        "code::tests::test_authorize_url_with_scopes",
+        "code::tests::test_authorize_url_with_one_scope"
+      ],
+      "target_cases": [
+        "TestAuthorizeURL",
+        "TestAuthorizeURLWithScopes",
+        "TestAuthorizeURLWithOneScope"
+      ]
+    }
+  ]
+}

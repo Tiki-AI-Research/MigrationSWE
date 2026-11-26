@@ -1,0 +1,247 @@
+{
+  "schema_version": "migration-p2p-fixtures:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "relation": "equal_after_normalization",
+  "cases": [
+    {
+      "observation_id": "P2P-007",
+      "surface": "test:test/core/basic/code.authorization.test.js#interaction check no session & max_age combo",
+      "input_class": "boundary",
+      "scenario": "boundary",
+      "source_probe": "test/core/basic/code.authorization.test.js :: interaction check no session & max_age combo",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "surface": "test:test/userinfo/bearer.test.js#bad Authorization header format (not bearer)",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "test/userinfo/bearer.test.js :: bad Authorization header format (not bearer)",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-005",
+      "surface": "test:test/configuration/custom_client_metadata.test.js#should not allow customization to remove redirect_uris when response_types need them",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "test/configuration/custom_client_metadata.test.js :: should not allow customization to remove redirect_uris when response_types need them",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-008",
+      "surface": "test:test/discovery/oauth_authorization_server.test.js#does not populate ctx.oidc.entities",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "test/discovery/oauth_authorization_server.test.js :: does not populate ctx.oidc.entities",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-009",
+      "surface": "route-name resolution and exposed router fields",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "resolve route name `discovery` to the first well-known registration and assert the request exposes params plus the router, routerName, routerPath, _matchedRoute and _matchedRouteName fields.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "surface": "secure/proxy detection for request.protocol and request.secure",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "request.protocol and request.secure follow trustProxy resolution for direct and proxied requests.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-011",
+      "surface": "public capabilities and their contracts",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert the named exports, constructor/configuration schema, adapter persistence contract, provider events and cookie names/signing contracts.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "surface": "delegation of migrated responsibilities to a Koa runtime",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert no migration-scope production module spawns, RPCs, dlopens or otherwise delegates request handling to a Koa runtime.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-013",
+      "surface": "production imports of Koa in the migration scope",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert no migration-scope production module imports or calls Koa to serve a request.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "surface": "CORS preflight OPTIONS responses",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "preflight OPTIONS carrying Access-Control-Request-Method to the listed endpoints returns 204 with Access-Control-Allow-Origin, Access-Control-Allow-Methods and Access-Control-Max-Age.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "surface": "CORS response headers emitted per endpoint profile",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert the open, challenge, userinfo, client, clientWithDPoP and credential profiles emit Access-Control-Allow-Origin plus the profile-specific Access-Control-Expose-Headers.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "surface": "request-body parsing for urlencoded and JSON bodies",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert application/x-www-form-urlencoded and application/json bodies yield the same ctx.oidc.body values.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-018",
+      "surface": "session and interaction persistence timing",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert a touched session is upserted exactly once before the response and an untouched session is not persisted.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "surface": "rejection of unsupported content types on body endpoints",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert a body endpoint receiving a present unsupported Content-Type keeps its `only <cty> content-type bodies are supported on <method> <path>` rejection.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-020",
+      "surface": "HEAD routing to GET handlers",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert HEAD /jwks and HEAD /auth route to the GET handler and return the same status and headers with no body.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-021",
+      "surface": "rejection of unparseable request bodies",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert an unparseable body yields 400 with error exactly `failed to parse the request body`.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "surface": "mounting under a path prefix",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert provider.callback() serves correctly when mounted under the /oidc prefix through Express, Fastify and Hapi hosts.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "surface": "response mode serialization for query, fragment, form_post, jwt and web_message",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert the query, fragment, form_post, jwt and web_message response modes keep their serialization and parameter placement.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "surface": "request-body reading on body-consuming endpoints",
+      "input_class": "valid",
+      "scenario": "normal",
+      "source_probe": "assert the raw body bytes reach the token, introspection, revocation, registration, device, PAR, CIBA, credential, challenge and interaction readers.",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-001",
+      "surface": "test:test/interaction/interaction.test.js#should abort an interaction when given an error result object (no description)",
+      "input_class": "invalid",
+      "scenario": "error",
+      "source_probe": "test/interaction/interaction.test.js :: should abort an interaction when given an error result object (no description)",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-003",
+      "surface": "test:test/helpers/runtime_params.test.js#reads enabled features and extra parameters for each authorization request",
+      "input_class": "parameterized",
+      "scenario": "combination",
+      "source_probe": "test/helpers/runtime_params.test.js :: reads enabled features and extra parameters for each authorization request",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-004",
+      "surface": "test:test/request/jwt_request.test.js#can contain claims parameter as JSON",
+      "input_class": "valid",
+      "scenario": "serialization",
+      "source_probe": "test/request/jwt_request.test.js :: can contain claims parameter as JSON",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-006",
+      "surface": "test:test/registration_management/registration_management.test.js#Client Delete Request",
+      "input_class": "valid-sequence",
+      "scenario": "lifecycle",
+      "source_probe": "test/registration_management/registration_management.test.js :: Client Delete Request",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "surface": "test:test/jwt/jsonwebtoken.test.js#does not verify none with a key",
+      "input_class": "boundary",
+      "scenario": "boundary",
+      "source_probe": "test/jwt/jsonwebtoken.test.js :: does not verify none with a key",
+      "expected_normalized": {
+        "result": "PASS"
+      }
+    }
+  ]
+}

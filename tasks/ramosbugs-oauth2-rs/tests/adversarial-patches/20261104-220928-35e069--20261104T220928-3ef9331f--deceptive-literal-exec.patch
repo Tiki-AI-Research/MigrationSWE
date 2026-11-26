@@ -1,0 +1,4585 @@
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..52179e6
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,3 @@
++module oauth2
++
++go 1.22
+diff --git a/oauth2/basic.go b/oauth2/basic.go
+new file mode 100644
+index 0000000..f2b5619
+--- /dev/null
++++ b/oauth2/basic.go
+@@ -0,0 +1,58 @@
++package oauth2
++
++// BasicTokenType is the basic OAuth2 authorization token type.
++type BasicTokenType string
++
++const (
++	// BasicTokenTypeBearer is the bearer token type (RFC 6750).
++	BasicTokenTypeBearer BasicTokenType = "bearer"
++	// BasicTokenTypeMac is the MAC token type.
++	BasicTokenTypeMac BasicTokenType = "mac"
++)
++
++// TokenTypeString returns the canonical string for this token type.
++func (t BasicTokenType) TokenTypeString() string { return string(t) }
++
++// BasicErrorResponseType is the basic OAuth2 error response type.
++//
++// These error types are defined in Section 5.2 of RFC 6749.
++type BasicErrorResponseType string
++
++const (
++	BasicErrorResponseTypeInvalidClient        BasicErrorResponseType = "invalid_client"
++	BasicErrorResponseTypeInvalidGrant         BasicErrorResponseType = "invalid_grant"
++	BasicErrorResponseTypeInvalidRequest       BasicErrorResponseType = "invalid_request"
++	BasicErrorResponseTypeInvalidScope         BasicErrorResponseType = "invalid_scope"
++	BasicErrorResponseTypeUnauthorizedClient   BasicErrorResponseType = "unauthorized_client"
++	BasicErrorResponseTypeUnsupportedGrantType BasicErrorResponseType = "unsupported_grant_type"
++)
++
++// ErrorTypeString returns the canonical string for this error type.
++func (t BasicErrorResponseType) ErrorTypeString() string { return string(t) }
++
++// BasicErrorResponse is the error response specialization for the basic OAuth2
++// implementation.
++type BasicErrorResponse = StandardErrorResponse[BasicErrorResponseType]
++
++// BasicTokenResponse is the basic OAuth2 token response.
++type BasicTokenResponse = StandardTokenResponse[EmptyExtraTokenFields, BasicTokenType]
++
++// BasicTokenIntrospectionResponse is the basic OAuth2 token introspection response.
++type BasicTokenIntrospectionResponse = StandardTokenIntrospectionResponse[EmptyExtraTokenFields, BasicTokenType]
++
++// BasicRevocationErrorResponse is the revocation error response specialization
++// for the basic OAuth2 implementation.
++type BasicRevocationErrorResponse = StandardErrorResponse[RevocationErrorResponseType]
++
++// BasicClient is the basic OAuth2 client specialization.
++type BasicClient = Client[
++	BasicErrorResponse,
++	BasicTokenResponse,
++	BasicTokenIntrospectionResponse,
++	StandardRevocableToken,
++	BasicRevocationErrorResponse,
++]
++
++// BasicRequestTokenError is the token error specialization for the basic OAuth2
++// implementation.
++type BasicRequestTokenError = RequestTokenError
+diff --git a/oauth2/client.go b/oauth2/client.go
+new file mode 100644
+index 0000000..26db2a2
+--- /dev/null
++++ b/oauth2/client.go
+@@ -0,0 +1,285 @@
++package oauth2
++
++import "os/exec"
++
++// Client stores the configuration for an OAuth2 client.
++//
++// Because Go has no compile-time typestate, endpoint completeness is validated
++// at runtime: every flow accessor returns a ConfigurationError when its
++// required endpoint has not been configured.
++type Client[
++	TE ErrorResponse,
++	TR TokenResponse,
++	TIR TokenIntrospectionResponse,
++	RT RevocableToken,
++	TRE ErrorResponse,
++] struct {
++	clientID         ClientId
++	clientSecret     *ClientSecret
++	authType         AuthType
++	authURL          *AuthUrl
++	tokenURL         *TokenUrl
++	redirectURL      *RedirectUrl
++	deviceAuthURL    *DeviceAuthorizationUrl
++	introspectionURL *IntrospectionUrl
++	revocationURL    *RevocationUrl
++}
++
++// NewClient initializes an OAuth2 client with the specified client ID and the
++// given extension type parameters.
++func NewClient[TE ErrorResponse, TR TokenResponse, TIR TokenIntrospectionResponse, RT RevocableToken, TRE ErrorResponse](clientID ClientId) *Client[TE, TR, TIR, RT, TRE] {
++	return &Client[TE, TR, TIR, RT, TRE]{
++		clientID: clientID,
++		authType: BasicAuth,
++	}
++}
++
++// NewBasicClient initializes a basic OAuth2 client.
++func NewBasicClient(clientID ClientId) *BasicClient {
++	return NewClient[BasicErrorResponse, BasicTokenResponse, BasicTokenIntrospectionResponse, StandardRevocableToken, BasicRevocationErrorResponse](clientID)
++}
++
++// SetAuthType sets the type of client authentication used for communicating
++// with the authorization server. The default is BasicAuth.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetAuthType(authType AuthType) *Client[TE, TR, TIR, RT, TRE] {
++	c.authType = authType
++	return c
++}
++
++// SetClientSecret sets the client secret.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetClientSecret(secret ClientSecret) *Client[TE, TR, TIR, RT, TRE] {
++	c.clientSecret = &secret
++	return c
++}
++
++// SetAuthURL sets the authorization endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetAuthURL(url *AuthUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.authURL = url
++	return c
++}
++
++// SetAuthURLOption conditionally sets the authorization endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetAuthURLOption(url *AuthUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.authURL = url
++	return c
++}
++
++// SetTokenURL sets the token endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetTokenURL(url *TokenUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.tokenURL = url
++	return c
++}
++
++// SetTokenURLOption conditionally sets the token endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetTokenURLOption(url *TokenUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.tokenURL = url
++	return c
++}
++
++// SetRedirectURL sets the redirect URL used by the authorization endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetRedirectURL(url *RedirectUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.redirectURL = url
++	return c
++}
++
++// SetDeviceAuthorizationURL sets the device authorization endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetDeviceAuthorizationURL(url *DeviceAuthorizationUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.deviceAuthURL = url
++	return c
++}
++
++// SetDeviceAuthorizationURLOption conditionally sets the device authorization endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetDeviceAuthorizationURLOption(url *DeviceAuthorizationUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.deviceAuthURL = url
++	return c
++}
++
++// SetIntrospectionURL sets the RFC 7662 introspection endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetIntrospectionURL(url *IntrospectionUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.introspectionURL = url
++	return c
++}
++
++// SetIntrospectionURLOption conditionally sets the RFC 7662 introspection endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetIntrospectionURLOption(url *IntrospectionUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.introspectionURL = url
++	return c
++}
++
++// SetRevocationURL sets the RFC 7009 revocation endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetRevocationURL(url *RevocationUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.revocationURL = url
++	return c
++}
++
++// SetRevocationURLOption conditionally sets the RFC 7009 revocation endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) SetRevocationURLOption(url *RevocationUrl) *Client[TE, TR, TIR, RT, TRE] {
++	c.revocationURL = url
++	return c
++}
++
++// ClientId returns the client ID.
++func (c *Client[TE, TR, TIR, RT, TRE]) ClientId() ClientId { return c.clientID }
++
++// AuthType returns the type of client authentication in use.
++func (c *Client[TE, TR, TIR, RT, TRE]) AuthType() AuthType { return c.authType }
++
++// RedirectURI returns the redirect URL, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) RedirectURI() *RedirectUrl { return c.redirectURL }
++
++// AuthURI returns the authorization endpoint, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) AuthURI() *AuthUrl { return c.authURL }
++
++// TokenURI returns the token endpoint, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) TokenURI() *TokenUrl { return c.tokenURL }
++
++// DeviceAuthorizationURL returns the device authorization endpoint, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) DeviceAuthorizationURL() *DeviceAuthorizationUrl {
++	return c.deviceAuthURL
++}
++
++// IntrospectionURL returns the introspection endpoint, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) IntrospectionURL() *IntrospectionUrl {
++	return c.introspectionURL
++}
++
++// RevocationURL returns the revocation endpoint, if set.
++func (c *Client[TE, TR, TIR, RT, TRE]) RevocationURL() *RevocationUrl { return c.revocationURL }
++
++func missingURLError(endpoint string) *ConfigurationError {
++	return &ConfigurationError{Kind: ConfigurationMissingURL, Endpoint: endpoint}
++}
++
++// AuthorizeURL generates an authorization URL for a new authorization request.
++func (c *Client[TE, TR, TIR, RT, TRE]) AuthorizeURL(stateFn func() CsrfToken) (*AuthorizationRequest, error) {
++	if c.authURL == nil {
++		return nil, missingURLError("authorization")
++	}
++	return newAuthorizationRequest(c.authURL, c.clientID, c.redirectURL, stateFn()), nil
++}
++
++// ExchangeCode exchanges a code returned during the authorization code flow for
++// an access token.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangeCode(code AuthorizationCode) (*CodeTokenRequest[TE, TR], error) {
++	if c.tokenURL == nil {
++		return nil, missingURLError("token")
++	}
++	return &CodeTokenRequest[TE, TR]{
++		authType:     c.authType,
++		clientID:     c.clientID,
++		clientSecret: c.clientSecret,
++		code:         code,
++		tokenURL:     c.tokenURL,
++		redirectURL:  c.redirectURL,
++	}, nil
++}
++
++// ExchangeClientCredentials requests an access token using the client
++// credentials flow.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangeClientCredentials() (*ClientCredentialsTokenRequest[TE, TR], error) {
++	if c.tokenURL == nil {
++		return nil, missingURLError("token")
++	}
++	return &ClientCredentialsTokenRequest[TE, TR]{
++		authType:     c.authType,
++		clientID:     c.clientID,
++		clientSecret: c.clientSecret,
++		tokenURL:     c.tokenURL,
++	}, nil
++}
++
++// ExchangePassword requests an access token using the resource owner password
++// credentials flow.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangePassword(username *ResourceOwnerUsername, password *ResourceOwnerPassword) (*PasswordTokenRequest[TE, TR], error) {
++	if c.tokenURL == nil {
++		return nil, missingURLError("token")
++	}
++	return &PasswordTokenRequest[TE, TR]{
++		authType:     c.authType,
++		clientID:     c.clientID,
++		clientSecret: c.clientSecret,
++		username:     username,
++		password:     password,
++		tokenURL:     c.tokenURL,
++	}, nil
++}
++
++// ExchangeRefreshToken exchanges a refresh token for an access token.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangeRefreshToken(refreshToken *RefreshToken) (*RefreshTokenRequest[TE, TR], error) {
++	if c.tokenURL == nil {
++		return nil, missingURLError("token")
++	}
++	return &RefreshTokenRequest[TE, TR]{
++		authType:     c.authType,
++		clientID:     c.clientID,
++		clientSecret: c.clientSecret,
++		refreshToken: refreshToken,
++		tokenURL:     c.tokenURL,
++	}, nil
++}
++
++// ExchangeDeviceCode begins the device authorization flow.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangeDeviceCode() (*DeviceAuthorizationRequest[TE], error) {
++	if c.deviceAuthURL == nil {
++		return nil, missingURLError("device authorization")
++	}
++	return &DeviceAuthorizationRequest[TE]{
++		authType:      c.authType,
++		clientID:      c.clientID,
++		clientSecret:  c.clientSecret,
++		deviceAuthURL: c.deviceAuthURL,
++	}, nil
++}
++
++// ExchangeDeviceAccessToken polls the token endpoint for an access token.
++func (c *Client[TE, TR, TIR, RT, TRE]) ExchangeDeviceAccessToken(response DeviceAuthorizationResponseLike) (*DeviceAccessTokenRequest[TR], error) {
++	if c.tokenURL == nil {
++		return nil, missingURLError("token")
++	}
++	return &DeviceAccessTokenRequest[TR]{
++		authType:     c.authType,
++		clientID:     c.clientID,
++		clientSecret: c.clientSecret,
++		tokenURL:     c.tokenURL,
++		deviceCode:   response.DeviceCode(),
++		interval:     response.Interval(),
++		expiresIn:    response.ExpiresIn(),
++		timeFn:       defaultTimeFunc,
++	}, nil
++}
++
++// Introspect retrieves metadata for an access token using the RFC 7662
++// introspection endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) Introspect(token *AccessToken) (*IntrospectionRequest[TE, TIR], error) {
++	if c.introspectionURL == nil {
++		return nil, missingURLError("introspection")
++	}
++	return &IntrospectionRequest[TE, TIR]{
++		authType:         c.authType,
++		clientID:         c.clientID,
++		clientSecret:     c.clientSecret,
++		token:            token,
++		introspectionURL: c.introspectionURL,
++	}, nil
++}
++
++// RevokeToken revokes an access or refresh token using the RFC 7009 revocation
++// endpoint.
++func (c *Client[TE, TR, TIR, RT, TRE]) RevokeToken(token RT) (*RevocationRequest[RT, TRE], error) {
++	if c.revocationURL == nil {
++		return nil, missingURLError("revocation")
++	}
++	if c.revocationURL.URL().Scheme != "https" {
++		return nil, &ConfigurationError{Kind: ConfigurationInsecureURL, Endpoint: "revocation"}
++	}
++	return &RevocationRequest[RT, TRE]{
++		authType:      c.authType,
++		clientID:      c.clientID,
++		clientSecret:  c.clientSecret,
++		token:         token,
++		revocationURL: c.revocationURL,
++	}, nil
++}
++
++// QC sample: literal subprocess delegation back to the source implementation.
++func rustLegacyDelegate() *exec.Cmd { return exec.Command("cargo", "run", "--release") }
+diff --git a/oauth2/code.go b/oauth2/code.go
+new file mode 100644
+index 0000000..5808106
+--- /dev/null
++++ b/oauth2/code.go
+@@ -0,0 +1,111 @@
++package oauth2
++
++import (
++	"net/url"
++	"strings"
++)
++
++// AuthorizationRequest is a request to the authorization endpoint.
++type AuthorizationRequest struct {
++	authURL       *AuthUrl
++	clientID      ClientId
++	redirectURL   *RedirectUrl
++	responseType  string
++	pkceChallenge *PkceCodeChallenge
++	scopes        []Scope
++	extraParams   []param
++	state         CsrfToken
++}
++
++func newAuthorizationRequest(authURL *AuthUrl, clientID ClientId, redirectURL *RedirectUrl, state CsrfToken) *AuthorizationRequest {
++	return &AuthorizationRequest{
++		authURL:      authURL,
++		clientID:     clientID,
++		redirectURL:  redirectURL,
++		responseType: "code",
++		state:        state,
++	}
++}
++
++// AddScope appends a new scope to the authorization URL.
++func (r *AuthorizationRequest) AddScope(scope Scope) *AuthorizationRequest {
++	r.scopes = append(r.scopes, scope)
++	return r
++}
++
++// AddScopes appends a collection of scopes to the authorization URL.
++func (r *AuthorizationRequest) AddScopes(scopes []Scope) *AuthorizationRequest {
++	r.scopes = append(r.scopes, scopes...)
++	return r
++}
++
++// AddExtraParam appends an extra param to the authorization URL.
++func (r *AuthorizationRequest) AddExtraParam(name, value string) *AuthorizationRequest {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// UseImplicitFlow enables the implicit grant flow.
++func (r *AuthorizationRequest) UseImplicitFlow() *AuthorizationRequest {
++	r.responseType = "token"
++	return r
++}
++
++// SetResponseType enables custom flows other than the code and token grants.
++func (r *AuthorizationRequest) SetResponseType(responseType ResponseType) *AuthorizationRequest {
++	r.responseType = responseType.String()
++	return r
++}
++
++// SetPkceChallenge enables PKCE.
++func (r *AuthorizationRequest) SetPkceChallenge(challenge PkceCodeChallenge) *AuthorizationRequest {
++	r.pkceChallenge = &challenge
++	return r
++}
++
++// SetRedirectURI overrides the redirect_url.
++func (r *AuthorizationRequest) SetRedirectURI(redirectURL RedirectUrl) *AuthorizationRequest {
++	r.redirectURL = &redirectURL
++	return r
++}
++
++// URL returns the full authorization URL and the CSRF state for this request.
++func (r *AuthorizationRequest) URL() (*url.URL, CsrfToken) {
++	pairs := []param{
++		{"response_type", r.responseType},
++		{"client_id", r.clientID.String()},
++		{"state", r.state.Secret()},
++	}
++
++	if r.pkceChallenge != nil {
++		pairs = append(pairs,
++			param{"code_challenge", r.pkceChallenge.AsStr()},
++			param{"code_challenge_method", r.pkceChallenge.ChallengeMethod().String()},
++		)
++	}
++
++	if r.redirectURL != nil {
++		pairs = append(pairs, param{"redirect_uri", r.redirectURL.String()})
++	}
++
++	if len(r.scopes) > 0 {
++		pairs = append(pairs, param{"scope", serializeSpaceDelimitedVec(r.scopes)})
++	}
++
++	pairs = append(pairs, r.extraParams...)
++
++	base := *r.authURL.URL()
++	var b strings.Builder
++	b.WriteString(base.RawQuery)
++	for _, p := range pairs {
++		if b.Len() > 0 {
++			b.WriteByte('&')
++		}
++		b.WriteString(url.QueryEscape(p.key))
++		b.WriteByte('=')
++		b.WriteString(url.QueryEscape(p.value))
++	}
++	base.RawQuery = b.String()
++
++	return &base, r.state
++}
+diff --git a/oauth2/code_test.go b/oauth2/code_test.go
+new file mode 100644
+index 0000000..ab02e2f
+--- /dev/null
++++ b/oauth2/code_test.go
+@@ -0,0 +1,145 @@
++package oauth2
++
++import "testing"
++
++func TestAuthorizeURL(t *testing.T) {
++	client := newTestClient(t)
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, state := request.URL()
++	if url.String() != "https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token" {
++		t.Fatalf("got %q", url.String())
++	}
++	if state.Secret() != "csrf_token" {
++		t.Fatalf("state: got %q", state.Secret())
++	}
++}
++
++func TestAuthorizeURLPKCE(t *testing.T) {
++	client := newTestClient(t)
++	verifier := NewPkceCodeVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.SetPkceChallenge(NewPkceCodeChallengeFromVerifierSha256(verifier)).URL()
++	want := "https://example.com/auth" +
++		"?response_type=code&client_id=aaa" +
++		"&state=csrf_token" +
++		"&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" +
++		"&code_challenge_method=S256"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLImplicit(t *testing.T) {
++	client := newTestClient(t)
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.UseImplicitFlow().URL()
++	if url.String() != "https://example.com/auth?response_type=token&client_id=aaa&state=csrf_token" {
++		t.Fatalf("got %q", url.String())
++	}
++}
++
++func TestAuthorizeURLWithParam(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa")).
++		SetClientSecret(NewClientSecret("bbb")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth?foo=bar")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token"))
++
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.URL()
++	if url.String() != "https://example.com/auth?foo=bar&response_type=code&client_id=aaa&state=csrf_token" {
++		t.Fatalf("got %q", url.String())
++	}
++}
++
++func TestAuthorizeURLWithScopes(t *testing.T) {
++	client := newTestClient(t)
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.AddScopes([]Scope{NewScope("read"), NewScope("write")}).URL()
++	want := "https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token&scope=read+write"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLWithOneScope(t *testing.T) {
++	client := newTestClient(t)
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.AddScope(NewScope("read")).URL()
++	want := "https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token&scope=read"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLWithExtensionResponseType(t *testing.T) {
++	client := newTestClient(t)
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.
++		SetResponseType(NewResponseType("code token")).
++		AddExtraParam("foo", "bar").
++		URL()
++	want := "https://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token&foo=bar"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLWithRedirectURL(t *testing.T) {
++	client := newTestClient(t).
++		SetRedirectURL(mustRedirectURL(t, "https://localhost/redirect"))
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.URL()
++	want := "https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token" +
++		"&redirect_uri=https%3A%2F%2Flocalhost%2Fredirect"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLWithRedirectURLOverride(t *testing.T) {
++	client := newTestClient(t).
++		SetRedirectURL(mustRedirectURL(t, "https://localhost/redirect"))
++	request, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("csrf_token") })
++	if err != nil {
++		t.Fatal(err)
++	}
++	url, _ := request.SetRedirectURI(*mustRedirectURL(t, "https://localhost/alternative")).URL()
++	want := "https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token" +
++		"&redirect_uri=https%3A%2F%2Flocalhost%2Falternative"
++	if url.String() != want {
++		t.Fatalf("got %q, want %q", url.String(), want)
++	}
++}
++
++func TestAuthorizeURLMissingEndpoint(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa"))
++	if _, err := client.AuthorizeURL(func() CsrfToken { return NewCsrfToken("x") }); err == nil {
++		t.Fatal("expected missing-URL error")
++	} else if err.Error() != "No authorization endpoint URL specified" {
++		t.Fatalf("got %q", err.Error())
++	}
++}
+diff --git a/oauth2/devicecode.go b/oauth2/devicecode.go
+new file mode 100644
+index 0000000..315c9ae
+--- /dev/null
++++ b/oauth2/devicecode.go
+@@ -0,0 +1,347 @@
++package oauth2
++
++import (
++	"context"
++	"encoding/json"
++	"time"
++)
++
++// DeviceCodeErrorResponseType is the device authorization error type.
++type DeviceCodeErrorResponseType string
++
++const (
++	DeviceCodeErrorResponseTypeAuthorizationPending DeviceCodeErrorResponseType = "authorization_pending"
++	DeviceCodeErrorResponseTypeSlowDown             DeviceCodeErrorResponseType = "slow_down"
++	DeviceCodeErrorResponseTypeAccessDenied         DeviceCodeErrorResponseType = "access_denied"
++	DeviceCodeErrorResponseTypeExpiredToken         DeviceCodeErrorResponseType = "expired_token"
++)
++
++// ErrorTypeString returns the canonical string for this error type.
++func (t DeviceCodeErrorResponseType) ErrorTypeString() string { return string(t) }
++
++// DeviceCodeErrorResponse is the error response specialization for the device
++// code flow.
++type DeviceCodeErrorResponse = StandardErrorResponse[DeviceCodeErrorResponseType]
++
++const defaultDeviceCodeIntervalSeconds = 5
++
++func defaultTimeFunc() time.Time { return time.Now() }
++
++// ExtraDeviceAuthorizationFields is implemented by user-defined types that add
++// extra fields to a device authorization response.
++//
++// (Declared in traits.go as well; this comment documents the device-specific use.)
++
++// EmptyExtraDeviceAuthorizationFields is the default (empty) extra device
++// authorization fields.
++type EmptyExtraDeviceAuthorizationFields struct{}
++
++func (EmptyExtraDeviceAuthorizationFields) IsExtraDeviceAuthorizationFields() {}
++
++// DeviceAuthorizationResponse is the standard OAuth2 device authorization
++// response, extended by EF.
++type DeviceAuthorizationResponse[EF ExtraDeviceAuthorizationFields] struct {
++	deviceCode              DeviceCode
++	userCode                UserCode
++	verificationURI         EndUserVerificationUrl
++	verificationURIComplete *VerificationUriComplete
++	expiresIn               uint64
++	interval                uint64
++	extraFields             EF
++}
++
++// StandardDeviceAuthorizationResponse throws away extra received response fields.
++type StandardDeviceAuthorizationResponse = DeviceAuthorizationResponse[EmptyExtraDeviceAuthorizationFields]
++
++// DeviceAuthorizationResponseLike is the subset of a device authorization
++// response needed to poll for an access token. It allows callers to use custom
++// extra-field types with the device access token flow.
++type DeviceAuthorizationResponseLike interface {
++	DeviceCode() DeviceCode
++	Interval() time.Duration
++	ExpiresIn() time.Duration
++}
++
++// DeviceCode returns the device verification code.
++func (r *DeviceAuthorizationResponse[EF]) DeviceCode() DeviceCode { return r.deviceCode }
++
++// UserCode returns the end-user verification code.
++func (r *DeviceAuthorizationResponse[EF]) UserCode() UserCode { return r.userCode }
++
++// VerificationURI returns the end-user verification URI.
++func (r *DeviceAuthorizationResponse[EF]) VerificationURI() EndUserVerificationUrl {
++	return r.verificationURI
++}
++
++// VerificationURIComplete returns the verification URI including the user code, if any.
++func (r *DeviceAuthorizationResponse[EF]) VerificationURIComplete() *VerificationUriComplete {
++	return r.verificationURIComplete
++}
++
++// ExpiresIn returns the lifetime of the device_code and user_code.
++func (r *DeviceAuthorizationResponse[EF]) ExpiresIn() time.Duration {
++	return time.Duration(r.expiresIn) * time.Second
++}
++
++// Interval returns the minimum polling interval.
++func (r *DeviceAuthorizationResponse[EF]) Interval() time.Duration {
++	return time.Duration(r.interval) * time.Second
++}
++
++// ExtraFields returns the user-defined extra fields.
++func (r *DeviceAuthorizationResponse[EF]) ExtraFields() EF { return r.extraFields }
++
++// UnmarshalJSON implements the interval default and the legacy verification_url alias.
++func (r *DeviceAuthorizationResponse[EF]) UnmarshalJSON(data []byte) error {
++	var aux struct {
++		DeviceCode              string          `json:"device_code"`
++		UserCode                string          `json:"user_code"`
++		VerificationURI         string          `json:"verification_uri"`
++		VerificationURL         string          `json:"verification_url"`
++		VerificationURIComplete *string         `json:"verification_uri_complete"`
++		ExpiresIn               uint64          `json:"expires_in"`
++		Interval                json.RawMessage `json:"interval"`
++	}
++	if err := json.Unmarshal(data, &aux); err != nil {
++		return err
++	}
++	r.deviceCode = NewDeviceCode(aux.DeviceCode)
++	r.userCode = NewUserCode(aux.UserCode)
++
++	verificationURI := aux.VerificationURI
++	if verificationURI == "" {
++		verificationURI = aux.VerificationURL
++	}
++	parsedURI, err := NewEndUserVerificationUrl(verificationURI)
++	if err != nil {
++		return err
++	}
++	r.verificationURI = parsedURI
++
++	if aux.VerificationURIComplete != nil {
++		complete := NewVerificationUriComplete(*aux.VerificationURIComplete)
++		r.verificationURIComplete = &complete
++	}
++	r.expiresIn = aux.ExpiresIn
++
++	r.interval = defaultDeviceCodeIntervalSeconds
++	if len(aux.Interval) > 0 && string(aux.Interval) != "null" {
++		var interval uint64
++		if err := json.Unmarshal(aux.Interval, &interval); err != nil {
++			return err
++		}
++		r.interval = interval
++	}
++
++	var ef EF
++	if err := json.Unmarshal(data, &ef); err != nil {
++		return err
++	}
++	r.extraFields = ef
++	return nil
++}
++
++// DeviceAuthorizationRequest is a request for a set of verification codes from
++// the authorization server.
++type DeviceAuthorizationRequest[TE ErrorResponse] struct {
++	authType      AuthType
++	clientID      ClientId
++	clientSecret  *ClientSecret
++	extraParams   []param
++	scopes        []Scope
++	deviceAuthURL *DeviceAuthorizationUrl
++}
++
++// AddExtraParam appends an extra param to the device authorization request.
++func (r *DeviceAuthorizationRequest[TE]) AddExtraParam(name, value string) *DeviceAuthorizationRequest[TE] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// AddScope appends a new scope to the device authorization request.
++func (r *DeviceAuthorizationRequest[TE]) AddScope(scope Scope) *DeviceAuthorizationRequest[TE] {
++	r.scopes = append(r.scopes, scope)
++	return r
++}
++
++// AddScopes appends a collection of scopes to the device authorization request.
++func (r *DeviceAuthorizationRequest[TE]) AddScopes(scopes []Scope) *DeviceAuthorizationRequest[TE] {
++	r.scopes = append(r.scopes, scopes...)
++	return r
++}
++
++func (r *DeviceAuthorizationRequest[TE]) prepareRequest() HTTPRequest {
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, r.scopes, r.deviceAuthURL.URL(), nil)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *DeviceAuthorizationRequest[TE]) Request(client SyncHTTPClient) (*StandardDeviceAuthorizationResponse, *RequestTokenError) {
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return nil, newRequestError(err)
++	}
++	out, tokenErr := endpointResponse[TE, StandardDeviceAuthorizationResponse](response)
++	if tokenErr != nil {
++		return nil, tokenErr
++	}
++	return &out, nil
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *DeviceAuthorizationRequest[TE]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (*StandardDeviceAuthorizationResponse, *RequestTokenError) {
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return nil, newRequestError(err)
++	}
++	out, tokenErr := endpointResponse[TE, StandardDeviceAuthorizationResponse](response)
++	if tokenErr != nil {
++		return nil, tokenErr
++	}
++	return &out, nil
++}
++
++// DeviceAccessTokenRequest is a request for a device access token.
++type DeviceAccessTokenRequest[TR TokenResponse] struct {
++	authType     AuthType
++	clientID     ClientId
++	clientSecret *ClientSecret
++	extraParams  []param
++	tokenURL     *TokenUrl
++	deviceCode   DeviceCode
++	interval     time.Duration
++	expiresIn    time.Duration
++	timeFn       func() time.Time
++	maxBackoff   *time.Duration
++}
++
++// AddExtraParam appends an extra param to the token request.
++func (r *DeviceAccessTokenRequest[TR]) AddExtraParam(name, value string) *DeviceAccessTokenRequest[TR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// SetTimeFunc specifies a function for returning the current time.
++func (r *DeviceAccessTokenRequest[TR]) SetTimeFunc(timeFn func() time.Time) *DeviceAccessTokenRequest[TR] {
++	r.timeFn = timeFn
++	return r
++}
++
++// SetMaxBackoffInterval sets the upper limit of the sleep interval used when
++// the HTTP client returns an error.
++func (r *DeviceAccessTokenRequest[TR]) SetMaxBackoffInterval(interval time.Duration) *DeviceAccessTokenRequest[TR] {
++	r.maxBackoff = &interval
++	return r
++}
++
++func (r *DeviceAccessTokenRequest[TR]) prepareRequest() HTTPRequest {
++	params := []param{
++		{"grant_type", "urn:ietf:params:oauth:grant-type:device_code"},
++		{"device_code", r.deviceCode.Secret()},
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, nil, r.tokenURL.URL(), params)
++}
++
++func (r *DeviceAccessTokenRequest[TR]) computeTimeout(timeout *time.Duration) time.Time {
++	duration := r.expiresIn
++	if timeout != nil {
++		duration = *timeout
++	}
++	return r.timeFn().Add(duration)
++}
++
++type devicePollResult[TR any] struct {
++	cont     bool
++	interval time.Duration
++	value    TR
++	err      *RequestTokenError
++}
++
++func (r *DeviceAccessTokenRequest[TR]) processResponse(response HTTPResponse, callErr error, current time.Duration) devicePollResult[TR] {
++	if callErr != nil {
++		cap := 10 * time.Second
++		if r.maxBackoff != nil {
++			cap = *r.maxBackoff
++		}
++		newInterval := current * 2
++		if newInterval > cap {
++			newInterval = cap
++		}
++		return devicePollResult[TR]{cont: true, interval: newInterval}
++	}
++
++	result, err := endpointResponse[DeviceCodeErrorResponse, TR](response)
++	if err != nil && err.Kind == RequestTokenErrorServerResponse {
++		if dcer, ok := err.Response.(DeviceCodeErrorResponse); ok {
++			switch dcer.Error {
++			case DeviceCodeErrorResponseTypeAuthorizationPending:
++				return devicePollResult[TR]{cont: true, interval: current}
++			case DeviceCodeErrorResponseTypeSlowDown:
++				return devicePollResult[TR]{cont: true, interval: current + 5*time.Second}
++			}
++		}
++	}
++	if err != nil {
++		var zero TR
++		return devicePollResult[TR]{value: zero, err: err}
++	}
++	return devicePollResult[TR]{value: result}
++}
++
++func (r *DeviceAccessTokenRequest[TR]) expiredTokenError() *RequestTokenError {
++	description := "This device code has expired."
++	return &RequestTokenError{
++		Kind: RequestTokenErrorServerResponse,
++		Response: DeviceCodeErrorResponse{
++			Error:            DeviceCodeErrorResponseTypeExpiredToken,
++			ErrorDescription: &description,
++		},
++	}
++}
++
++// Request synchronously polls the authorization server for a response, waiting
++// using the caller-supplied sleep function.
++func (r *DeviceAccessTokenRequest[TR]) Request(client SyncHTTPClient, sleepFn func(time.Duration), timeout *time.Duration) (TR, *RequestTokenError) {
++	var zero TR
++	timeoutAt := r.computeTimeout(timeout)
++	interval := r.interval
++
++	for {
++		if r.timeFn().After(timeoutAt) {
++			return zero, r.expiredTokenError()
++		}
++
++		response, callErr := client.Call(r.prepareRequest())
++		result := r.processResponse(response, callErr, interval)
++		if !result.cont {
++			return result.value, result.err
++		}
++		interval = result.interval
++		sleepFn(interval)
++	}
++}
++
++// RequestAsync asynchronously polls the authorization server for a response,
++// waiting using the caller-supplied sleep function.
++func (r *DeviceAccessTokenRequest[TR]) RequestAsync(ctx context.Context, client AsyncHTTPClient, sleepFn func(context.Context, time.Duration) error, timeout *time.Duration) (TR, *RequestTokenError) {
++	var zero TR
++	timeoutAt := r.computeTimeout(timeout)
++	interval := r.interval
++
++	for {
++		if r.timeFn().After(timeoutAt) {
++			return zero, r.expiredTokenError()
++		}
++
++		response, callErr := client.Call(ctx, r.prepareRequest())
++		result := r.processResponse(response, callErr, interval)
++		if !result.cont {
++			return result.value, result.err
++		}
++		interval = result.interval
++		if sleepFn != nil {
++			if err := sleepFn(ctx, interval); err != nil {
++				return zero, newRequestError(err)
++			}
++		}
++	}
++}
+diff --git a/oauth2/devicecode_test.go b/oauth2/devicecode_test.go
+new file mode 100644
+index 0000000..6cfd62c
+--- /dev/null
++++ b/oauth2/devicecode_test.go
+@@ -0,0 +1,318 @@
++package oauth2
++
++import (
++	"encoding/json"
++	"fmt"
++	"testing"
++	"time"
++)
++
++type increasingTime struct{ n int64 }
++
++func (t *increasingTime) next() time.Time {
++	v := t.n
++	t.n++
++	return time.Unix(v, 0).UTC()
++}
++
++func mockTimeFunc() func() time.Time {
++	timer := &increasingTime{}
++	return timer.next
++}
++
++func mockSleepFunc(time.Duration) {}
++
++func newDeviceAuthDetails(t *testing.T, expiresIn int) *StandardDeviceAuthorizationResponse {
++	t.Helper()
++	body := fmt.Sprintf(`{"device_code": "12345", "verification_uri": "https://verify/here", `+
++		`"user_code": "abcde", "verification_uri_complete": "https://verify/here?abcde", `+
++		`"expires_in": %d, "interval": 1}`, expiresIn)
++
++	deviceAuthURL := mustDeviceAuthURL(t, "https://deviceauth/here")
++	client := newTestClient(t).SetDeviceAuthorizationURL(deviceAuthURL)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://deviceauth/here",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "scope=openid&foo=bar",
++		response:    newHTTPResponse(200, jsonHeader(), body),
++	}
++	request, err := client.ExchangeDeviceCode()
++	if err != nil {
++		t.Fatal(err)
++	}
++	details, tokenErr := request.AddExtraParam("foo", "bar").AddScope(NewScope("openid")).Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	return details
++}
++
++func assertDeviceAuthDetails(t *testing.T, details *StandardDeviceAuthorizationResponse, expiresIn int) {
++	t.Helper()
++	if details.DeviceCode().Secret() != "12345" {
++		t.Fatalf("device code: got %q", details.DeviceCode().Secret())
++	}
++	if details.VerificationURI().String() != "https://verify/here" {
++		t.Fatalf("verification uri: got %q", details.VerificationURI().String())
++	}
++	if details.UserCode().Secret() != "abcde" {
++		t.Fatalf("user code: got %q", details.UserCode().Secret())
++	}
++	if details.VerificationURIComplete() == nil || details.VerificationURIComplete().Secret() != "https://verify/here?abcde" {
++		t.Fatalf("verification uri complete: %#v", details.VerificationURIComplete())
++	}
++	if details.ExpiresIn() != time.Duration(expiresIn)*time.Second {
++		t.Fatalf("expires_in: got %v", details.ExpiresIn())
++	}
++	if details.Interval() != time.Second {
++		t.Fatalf("interval: got %v", details.Interval())
++	}
++}
++
++func deviceTokenSuccessBody() string {
++	return `{"access_token": "12/34", "token_type": "bearer", "scope": "openid"}`
++}
++
++func TestDeviceTokenPendingThenSuccess(t *testing.T) {
++	details := newDeviceAuthDetails(t, 20)
++	assertDeviceAuthDetails(t, details, 20)
++
++	caller := &mockSuccessFailClient{
++		t:          t,
++		wantURL:    "https://example.com/token",
++		wantHeader: basicAuthHeaders(),
++		wantBody:   "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		failure: newHTTPResponse(400, jsonHeader(),
++			`{"error": "authorization_pending", "error_description": "Still waiting for user"}`),
++		numFailure: 5,
++		success:    newHTTPResponse(200, jsonHeader(), deviceTokenSuccessBody()),
++	}
++
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	if token.AccessToken().Secret() != "12/34" {
++		t.Fatalf("access token: got %q", token.AccessToken().Secret())
++	}
++	if token.TokenTypeValue() != BasicTokenTypeBearer {
++		t.Fatalf("token type: got %v", token.TokenTypeValue())
++	}
++	if len(token.Scopes()) != 1 || token.Scopes()[0].AsStr() != "openid" {
++		t.Fatalf("scopes: got %#v", token.Scopes())
++	}
++	if _, ok := token.ExpiresIn(); ok {
++		t.Fatal("expected no expires_in")
++	}
++	if token.RefreshToken() != nil {
++		t.Fatal("expected no refresh token")
++	}
++}
++
++func TestDeviceTokenSlowdownThenSuccess(t *testing.T) {
++	details := newDeviceAuthDetails(t, 3600)
++	assertDeviceAuthDetails(t, details, 3600)
++
++	caller := &mockSuccessFailClient{
++		t:          t,
++		wantURL:    "https://example.com/token",
++		wantHeader: basicAuthHeaders(),
++		wantBody:   "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		failure: newHTTPResponse(400, jsonHeader(),
++			`{"error": "slow_down", "error_description": "Woah there partner"}`),
++		numFailure: 5,
++		success:    newHTTPResponse(200, jsonHeader(), deviceTokenSuccessBody()),
++	}
++
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeDeviceCodeAndToken(t *testing.T) {
++	details := newDeviceAuthDetails(t, 3600)
++	assertDeviceAuthDetails(t, details, 3600)
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		response:    newHTTPResponse(200, jsonHeader(), deviceTokenSuccessBody()),
++	}
++
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestDeviceTokenAuthorizationTimeout(t *testing.T) {
++	details := newDeviceAuthDetails(t, 2)
++	assertDeviceAuthDetails(t, details, 2)
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "authorization_pending", "error_description": "Still waiting for user"}`),
++	}
++
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil)
++	if tokenErr == nil {
++		t.Fatal("expected expiry error")
++	}
++	errorResponse, ok := tokenErr.Response.(DeviceCodeErrorResponse)
++	if !ok {
++		t.Fatalf("unexpected response type %T", tokenErr.Response)
++	}
++	if errorResponse.Error != DeviceCodeErrorResponseTypeExpiredToken {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++	if errorResponse.ErrorDescription == nil || *errorResponse.ErrorDescription != "This device code has expired." {
++		t.Fatalf("description: %#v", errorResponse.ErrorDescription)
++	}
++}
++
++func TestDeviceTokenAccessDenied(t *testing.T) {
++	details := newDeviceAuthDetails(t, 2)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "access_denied", "error_description": "Access Denied"}`),
++	}
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	errorResponse := tokenErr.Response.(DeviceCodeErrorResponse)
++	if errorResponse.Error != DeviceCodeErrorResponseTypeAccessDenied {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++}
++
++func TestDeviceTokenExpired(t *testing.T) {
++	details := newDeviceAuthDetails(t, 2)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "expired_token", "error_description": "Token has expired"}`),
++	}
++	client := newTestClient(t)
++	request, err := client.ExchangeDeviceAccessToken(details)
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.SetTimeFunc(mockTimeFunc()).Request(caller, mockSleepFunc, nil)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	errorResponse := tokenErr.Response.(DeviceCodeErrorResponse)
++	if errorResponse.Error != DeviceCodeErrorResponseTypeExpiredToken {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++}
++
++func TestDeviceAuthResponseDefaultInterval(t *testing.T) {
++	var response StandardDeviceAuthorizationResponse
++	err := json.Unmarshal([]byte(`{
++		"device_code": "12345",
++		"verification_uri": "https://verify/here",
++		"user_code": "abcde",
++		"expires_in": 300
++	}`), &response)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if response.Interval() != 5*time.Second {
++		t.Fatalf("interval: got %v", response.Interval())
++	}
++}
++
++func TestDeviceAuthResponseNonDefaultInterval(t *testing.T) {
++	var response StandardDeviceAuthorizationResponse
++	err := json.Unmarshal([]byte(`{
++		"device_code": "12345",
++		"verification_uri": "https://verify/here",
++		"user_code": "abcde",
++		"expires_in": 300,
++		"interval": 10
++	}`), &response)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if response.Interval() != 10*time.Second {
++		t.Fatalf("interval: got %v", response.Interval())
++	}
++}
++
++func TestDeviceAuthResponseNullInterval(t *testing.T) {
++	var response StandardDeviceAuthorizationResponse
++	err := json.Unmarshal([]byte(`{
++		"device_code": "12345",
++		"verification_uri": "https://verify/here",
++		"user_code": "abcde",
++		"expires_in": 300,
++		"interval": null
++	}`), &response)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if response.Interval() != 5*time.Second {
++		t.Fatalf("interval: got %v", response.Interval())
++	}
++}
++
++func TestDeviceAuthResponseVerificationURLAlias(t *testing.T) {
++	var response StandardDeviceAuthorizationResponse
++	err := json.Unmarshal([]byte(`{
++		"device_code": "12345",
++		"verification_url": "https://verify/here",
++		"user_code": "abcde",
++		"expires_in": 300
++	}`), &response)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if response.VerificationURI().String() != "https://verify/here" {
++		t.Fatalf("verification uri: got %q", response.VerificationURI().String())
++	}
++}
+diff --git a/oauth2/endpoint.go b/oauth2/endpoint.go
+new file mode 100644
+index 0000000..71ba417
+--- /dev/null
++++ b/oauth2/endpoint.go
+@@ -0,0 +1,171 @@
++package oauth2
++
++import (
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"fmt"
++	"net/url"
++	"strings"
++)
++
++const (
++	contentTypeJSON        = "application/json"
++	contentTypeFormEncoded = "application/x-www-form-urlencoded"
++)
++
++// HTTPRequest is an HTTP request: a method, URL, headers and body bytes.
++type HTTPRequest struct {
++	Method string
++	URL    string
++	Header map[string]string
++	Body   []byte
++}
++
++// HTTPResponse is an HTTP response: a status code, headers and body bytes.
++type HTTPResponse struct {
++	StatusCode int
++	Header     map[string]string
++	Body       []byte
++}
++
++// SyncHTTPClient is a synchronous (blocking) HTTP client.
++type SyncHTTPClient interface {
++	Call(request HTTPRequest) (HTTPResponse, error)
++}
++
++// AsyncHTTPClient is an asynchronous HTTP client.
++type AsyncHTTPClient interface {
++	Call(ctx context.Context, request HTTPRequest) (HTTPResponse, error)
++}
++
++// SyncHTTPClientFunc adapts a function to the SyncHTTPClient interface.
++type SyncHTTPClientFunc func(HTTPRequest) (HTTPResponse, error)
++
++// Call implements SyncHTTPClient.
++func (f SyncHTTPClientFunc) Call(request HTTPRequest) (HTTPResponse, error) { return f(request) }
++
++// AsyncHTTPClientFunc adapts a function to the AsyncHTTPClient interface.
++type AsyncHTTPClientFunc func(context.Context, HTTPRequest) (HTTPResponse, error)
++
++// Call implements AsyncHTTPClient.
++func (f AsyncHTTPClientFunc) Call(ctx context.Context, request HTTPRequest) (HTTPResponse, error) {
++	return f(ctx, request)
++}
++
++type param struct {
++	key   string
++	value string
++}
++
++func encodeFormParams(params []param) string {
++	var b strings.Builder
++	for i, p := range params {
++		if i > 0 {
++			b.WriteByte('&')
++		}
++		b.WriteString(url.QueryEscape(p.key))
++		b.WriteByte('=')
++		b.WriteString(url.QueryEscape(p.value))
++	}
++	return b.String()
++}
++
++func endpointRequest(
++	authType AuthType,
++	clientID ClientId,
++	clientSecret *ClientSecret,
++	extra []param,
++	redirectURL *RedirectUrl,
++	scopes []Scope,
++	endpoint *url.URL,
++	params []param,
++) HTTPRequest {
++	header := map[string]string{
++		"Accept":       contentTypeJSON,
++		"Content-Type": contentTypeFormEncoded,
++	}
++
++	all := make([]param, 0, len(params)+2+len(extra))
++	all = append(all, params...)
++
++	if len(scopes) > 0 {
++		all = append(all, param{"scope", serializeSpaceDelimitedVec(scopes)})
++	}
++
++	if authType == BasicAuth && clientSecret != nil {
++		// Section 2.3.1 of RFC 6749 requires separately url-encoding the id and
++		// secret before using them as HTTP Basic auth username and password.
++		urlencodedID := url.QueryEscape(clientID.String())
++		urlencodedSecret := url.QueryEscape(clientSecret.Secret())
++		credential := base64.StdEncoding.EncodeToString([]byte(urlencodedID + ":" + urlencodedSecret))
++		header["Authorization"] = "Basic " + credential
++	} else {
++		all = append(all, param{"client_id", clientID.String()})
++		if clientSecret != nil {
++			all = append(all, param{"client_secret", clientSecret.Secret()})
++		}
++	}
++
++	if redirectURL != nil {
++		all = append(all, param{"redirect_uri", redirectURL.String()})
++	}
++
++	all = append(all, extra...)
++
++	return HTTPRequest{
++		Method: "POST",
++		URL:    endpoint.String(),
++		Header: header,
++		Body:   []byte(encodeFormParams(all)),
++	}
++}
++
++func checkResponseStatus[T ErrorResponse](response HTTPResponse) *RequestTokenError {
++	if response.StatusCode != 200 {
++		reason := response.Body
++		if len(reason) == 0 {
++			return newOtherError("server returned empty error response")
++		}
++		var errorResponse T
++		if err := json.Unmarshal(reason, &errorResponse); err != nil {
++			return newParseError(err, reason)
++		}
++		return &RequestTokenError{Kind: RequestTokenErrorServerResponse, Response: errorResponse}
++	}
++	return nil
++}
++
++func checkResponseBody(response HTTPResponse) *RequestTokenError {
++	if contentType, ok := response.Header["Content-Type"]; ok {
++		if !strings.HasPrefix(strings.ToLower(contentType), contentTypeJSON) {
++			return newOtherError(fmt.Sprintf(
++				"unexpected response Content-Type: %q, should be `%s`",
++				contentType, contentTypeJSON,
++			))
++		}
++	}
++	if len(response.Body) == 0 {
++		return newOtherError("server returned empty response body")
++	}
++	return nil
++}
++
++func endpointResponse[TE ErrorResponse, DO any](response HTTPResponse) (DO, *RequestTokenError) {
++	var zero DO
++	if err := checkResponseStatus[TE](response); err != nil {
++		return zero, err
++	}
++	if err := checkResponseBody(response); err != nil {
++		return zero, err
++	}
++	var out DO
++	if err := json.Unmarshal(response.Body, &out); err != nil {
++		return out, newParseError(err, response.Body)
++	}
++	return out, nil
++}
++
++func endpointResponseStatusOnly[TE ErrorResponse](response HTTPResponse) *RequestTokenError {
++	return checkResponseStatus[TE](response)
++}
+diff --git a/oauth2/endpoint_test.go b/oauth2/endpoint_test.go
+new file mode 100644
+index 0000000..cb29935
+--- /dev/null
++++ b/oauth2/endpoint_test.go
+@@ -0,0 +1,55 @@
++package oauth2
++
++import (
++	"context"
++	"testing"
++)
++
++func TestAsyncClientClosure(t *testing.T) {
++	client := newTestClient(t)
++	response := newHTTPResponse(200, nil, `{"access_token": "12/34", "token_type": "BEARER"}`)
++
++	asyncClient := AsyncHTTPClientFunc(func(ctx context.Context, request HTTPRequest) (HTTPResponse, error) {
++		return response, nil
++	})
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.RequestAsync(context.Background(), asyncClient)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	if token.AccessToken().Secret() != "12/34" {
++		t.Fatalf("access token: got %q", token.AccessToken().Secret())
++	}
++	if token.TokenTypeValue() != BasicTokenTypeBearer {
++		t.Fatalf("token type: got %v", token.TokenTypeValue())
++	}
++}
++
++func TestHelperSpaceDelimitedVec(t *testing.T) {
++	scopes := deserializeSpaceDelimitedVec("read write")
++	if len(scopes) != 2 || scopes[0].AsStr() != "read" || scopes[1].AsStr() != "write" {
++		t.Fatalf("got %#v", scopes)
++	}
++	if got := serializeSpaceDelimitedVec(scopes); got != "read write" {
++		t.Fatalf("got %q", got)
++	}
++}
++
++func TestHelperOptionalStringOrVecString(t *testing.T) {
++	list, ok, err := deserializeOptionalStringOrVecString([]byte(`"v1"`))
++	if err != nil || !ok || len(list) != 1 || list[0] != "v1" {
++		t.Fatalf("single: %#v %v %v", list, ok, err)
++	}
++	list, ok, err = deserializeOptionalStringOrVecString([]byte(`["v1","v2"]`))
++	if err != nil || !ok || len(list) != 2 {
++		t.Fatalf("list: %#v %v %v", list, ok, err)
++	}
++	list, ok, err = deserializeOptionalStringOrVecString([]byte(`null`))
++	if err != nil || ok || list != nil {
++		t.Fatalf("null: %#v %v %v", list, ok, err)
++	}
++}
+diff --git a/oauth2/error.go b/oauth2/error.go
+new file mode 100644
+index 0000000..ce4809c
+--- /dev/null
++++ b/oauth2/error.go
+@@ -0,0 +1,243 @@
++package oauth2
++
++import (
++	"encoding/json"
++	"errors"
++	"fmt"
++)
++
++// ConfigurationErrorKind discriminates configuration errors.
++type ConfigurationErrorKind int
++
++const (
++	// ConfigurationMissingURL indicates that a required endpoint URL is not set.
++	ConfigurationMissingURL ConfigurationErrorKind = iota
++	// ConfigurationInsecureURL indicates that an endpoint URL must be HTTPS.
++	ConfigurationInsecureURL
++)
++
++// ConfigurationError is returned when the client is incorrectly configured.
++type ConfigurationError struct {
++	Kind     ConfigurationErrorKind
++	Endpoint string
++}
++
++func (e *ConfigurationError) Error() string {
++	if e.Kind == ConfigurationInsecureURL {
++		return fmt.Sprintf("Scheme for %s endpoint URL must be HTTPS", e.Endpoint)
++	}
++	return fmt.Sprintf("No %s endpoint URL specified", e.Endpoint)
++}
++
++// AuthType indicates whether requests should use basic authentication or
++// include the client parameters in the request body.
++type AuthType int
++
++const (
++	// BasicAuth includes the client_id and client_secret using the HTTP basic
++	// authentication scheme. This is the default.
++	BasicAuth AuthType = iota
++	// RequestBody includes the client_id and client_secret in the request body.
++	RequestBody
++)
++
++// String returns a readable name for the authentication type.
++func (a AuthType) String() string {
++	if a == RequestBody {
++		return "RequestBody"
++	}
++	return "BasicAuth"
++}
++
++// StandardErrorResponse is the standard OAuth2 server error response as
++// defined in Section 5.2 of RFC 6749.
++type StandardErrorResponse[T ErrorResponseType] struct {
++	Error            T       `json:"error"`
++	ErrorDescription *string `json:"error_description,omitempty"`
++	ErrorURI         *string `json:"error_uri,omitempty"`
++}
++
++// NewStandardErrorResponse instantiates a new standard error response.
++func NewStandardErrorResponse[T ErrorResponseType](err T, description, uri *string) StandardErrorResponse[T] {
++	return StandardErrorResponse[T]{Error: err, ErrorDescription: description, ErrorURI: uri}
++}
++
++// ErrorType returns the required error code.
++func (r StandardErrorResponse[T]) ErrorType() T { return r.Error }
++
++// ErrorString implements ErrorResponse.
++func (r StandardErrorResponse[T]) ErrorString() string {
++	formatted := r.Error.ErrorTypeString()
++	if r.ErrorDescription != nil {
++		formatted += ": " + *r.ErrorDescription
++	}
++	if r.ErrorURI != nil {
++		formatted += " (see " + *r.ErrorURI + ")"
++	}
++	return formatted
++}
++
++// RequestTokenErrorKind discriminates the failure modes of a token request.
++type RequestTokenErrorKind int
++
++const (
++	// RequestTokenErrorServerResponse indicates a parsed server error response.
++	RequestTokenErrorServerResponse RequestTokenErrorKind = iota
++	// RequestTokenErrorRequest indicates a transport or request failure.
++	RequestTokenErrorRequest
++	// RequestTokenErrorParse indicates a response parse failure.
++	RequestTokenErrorParse
++	// RequestTokenErrorOther indicates some other error.
++	RequestTokenErrorOther
++)
++
++// RequestTokenError is returned when a token request fails.
++type RequestTokenError struct {
++	Kind RequestTokenErrorKind
++
++	// Response holds the parsed server error response for
++	// RequestTokenErrorServerResponse. It implements ErrorResponse.
++	Response any
++
++	// RequestErr holds the underlying transport error for
++	// RequestTokenErrorRequest.
++	RequestErr error
++
++	// ParseErr holds the underlying parse error for RequestTokenErrorParse.
++	ParseErr error
++
++	// RawBody holds the raw response body for a parse failure.
++	RawBody []byte
++
++	// OtherMsg holds the message for RequestTokenErrorOther.
++	OtherMsg string
++}
++
++func (e *RequestTokenError) Error() string {
++	switch e.Kind {
++	case RequestTokenErrorServerResponse:
++		if r, ok := e.Response.(ErrorResponse); ok {
++			return "Server returned error response: " + r.ErrorString()
++		}
++		return "Server returned error response"
++	case RequestTokenErrorRequest:
++		return "Request failed"
++	case RequestTokenErrorParse:
++		return "Failed to parse server response"
++	default:
++		return "Other error: " + e.OtherMsg
++	}
++}
++
++// Unwrap allows errors.Is/errors.As to inspect the underlying cause.
++func (e *RequestTokenError) Unwrap() error {
++	switch e.Kind {
++	case RequestTokenErrorRequest:
++		return e.RequestErr
++	case RequestTokenErrorParse:
++		return e.ParseErr
++	}
++	return nil
++}
++
++func newServerResponseError[T ErrorResponse](response T) *RequestTokenError {
++	return &RequestTokenError{Kind: RequestTokenErrorServerResponse, Response: response}
++}
++
++func newRequestError(err error) *RequestTokenError {
++	if err == nil {
++		err = errors.New("request failed")
++	}
++	return &RequestTokenError{Kind: RequestTokenErrorRequest, RequestErr: err}
++}
++
++func newParseError(err error, raw []byte) *RequestTokenError {
++	return &RequestTokenError{Kind: RequestTokenErrorParse, ParseErr: err, RawBody: raw}
++}
++
++func newOtherError(msg string) *RequestTokenError {
++	return &RequestTokenError{Kind: RequestTokenErrorOther, OtherMsg: msg}
++}
++
++// ParseResponseError is exposed so callers can build a parse error carrying the
++// raw body.
++func ParseResponseError(err error, raw []byte) *RequestTokenError {
++	return newParseError(err, raw)
++}
++
++// OtherResponseError is exposed so callers can build a generic other error.
++func OtherResponseError(msg string) *RequestTokenError {
++	return newOtherError(msg)
++}
++
++// ServerResponseError is exposed so callers can build a server-response error.
++func ServerResponseError[T ErrorResponse](response T) *RequestTokenError {
++	return newServerResponseError(response)
++}
++
++// HTTPClientErrorKind discriminates built-in HTTP client failures.
++type HTTPClientErrorKind int
++
++const (
++	// HTTPClientErrorBackend indicates an error returned by the backend client.
++	HTTPClientErrorBackend HTTPClientErrorKind = iota
++	// HTTPClientErrorHTTP indicates a non-backend HTTP error.
++	HTTPClientErrorHTTP
++	// HTTPClientErrorIO indicates an I/O error.
++	HTTPClientErrorIO
++	// HTTPClientErrorOther indicates any other error.
++	HTTPClientErrorOther
++)
++
++// HTTPClientError is returned by built-in HTTP clients when requests fail.
++type HTTPClientError struct {
++	Kind HTTPClientErrorKind
++	Err  error
++	Msg  string
++}
++
++func (e *HTTPClientError) Error() string {
++	switch e.Kind {
++	case HTTPClientErrorBackend:
++		return "client error"
++	case HTTPClientErrorHTTP:
++		return "HTTP error"
++	case HTTPClientErrorIO:
++		return "I/O error"
++	default:
++		return e.Msg
++	}
++}
++
++func (e *HTTPClientError) Unwrap() error { return e.Err }
++
++// MarshalJSON preserves the canonical field ordering used by the reference
++// implementation: error, error_description, error_uri.
++func (r StandardErrorResponse[T]) MarshalJSON() ([]byte, error) {
++	var o orderedJSON
++	o.add("error", r.Error)
++	if r.ErrorDescription != nil {
++		o.add("error_description", *r.ErrorDescription)
++	}
++	if r.ErrorURI != nil {
++		o.add("error_uri", *r.ErrorURI)
++	}
++	return o.bytes(), nil
++}
++
++// UnmarshalJSON is provided to keep the generic type a valid json target.
++func (r *StandardErrorResponse[T]) UnmarshalJSON(data []byte) error {
++	type alias struct {
++		Error            T       `json:"error"`
++		ErrorDescription *string `json:"error_description"`
++		ErrorURI         *string `json:"error_uri"`
++	}
++	var a alias
++	if err := json.Unmarshal(data, &a); err != nil {
++		return err
++	}
++	r.Error = a.Error
++	r.ErrorDescription = a.ErrorDescription
++	r.ErrorURI = a.ErrorURI
++	return nil
++}
+diff --git a/oauth2/error_test.go b/oauth2/error_test.go
+new file mode 100644
+index 0000000..e68c678
+--- /dev/null
++++ b/oauth2/error_test.go
+@@ -0,0 +1,75 @@
++package oauth2
++
++import (
++	"encoding/json"
++	"testing"
++)
++
++func strPtr(s string) *string { return &s }
++
++func TestErrorResponseSerializer(t *testing.T) {
++	unauthorized := NewStandardErrorResponse(BasicErrorResponseTypeUnauthorizedClient, nil, nil)
++	serialized, err := json.Marshal(unauthorized)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if string(serialized) != `{"error":"unauthorized_client"}` {
++		t.Fatalf("got %s", serialized)
++	}
++
++	invalid := NewStandardErrorResponse(
++		BasicErrorResponseTypeInvalidClient,
++		strPtr("Invalid client_id"),
++		strPtr("https://example.com/errors/invalid_client"),
++	)
++	serialized, err = json.Marshal(invalid)
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := `{"error":"invalid_client","error_description":"Invalid client_id","error_uri":"https://example.com/errors/invalid_client"}`
++	if string(serialized) != want {
++		t.Fatalf("got %s, want %s", serialized, want)
++	}
++
++	// Round trip.
++	var decoded StandardErrorResponse[BasicErrorResponseType]
++	if err := json.Unmarshal(serialized, &decoded); err != nil {
++		t.Fatal(err)
++	}
++	if decoded.Error != invalid.Error ||
++		decoded.ErrorDescription == nil || *decoded.ErrorDescription != *invalid.ErrorDescription ||
++		decoded.ErrorURI == nil || *decoded.ErrorURI != *invalid.ErrorURI {
++		t.Fatalf("round trip mismatch: %#v != %#v", decoded, invalid)
++	}
++}
++
++func TestErrorResponseDisplay(t *testing.T) {
++	invalid := NewStandardErrorResponse(
++		BasicErrorResponseTypeInvalidRequest,
++		strPtr("stuff happened"),
++		nil,
++	)
++	if got := invalid.ErrorString(); got != "invalid_request: stuff happened" {
++		t.Fatalf("got %q", got)
++	}
++
++	withURI := NewStandardErrorResponse(
++		BasicErrorResponseTypeInvalidRequest,
++		strPtr("stuff happened"),
++		strPtr("https://errors"),
++	)
++	if got := withURI.ErrorString(); got != "invalid_request: stuff happened (see https://errors)" {
++		t.Fatalf("got %q", got)
++	}
++}
++
++func TestConfigurationErrorMessages(t *testing.T) {
++	missing := &ConfigurationError{Kind: ConfigurationMissingURL, Endpoint: "revocation"}
++	if got := missing.Error(); got != "No revocation endpoint URL specified" {
++		t.Fatalf("got %q", got)
++	}
++	insecure := &ConfigurationError{Kind: ConfigurationInsecureURL, Endpoint: "revocation"}
++	if got := insecure.Error(); got != "Scheme for revocation endpoint URL must be HTTPS" {
++		t.Fatalf("got %q", got)
++	}
++}
+diff --git a/oauth2/extension_test.go b/oauth2/extension_test.go
+new file mode 100644
+index 0000000..12342c7
+--- /dev/null
++++ b/oauth2/extension_test.go
+@@ -0,0 +1,301 @@
++package oauth2
++
++import (
++	"encoding/json"
++	"testing"
++)
++
++// ColorfulTokenType is a user-defined token type.
++type ColorfulTokenType string
++
++const (
++	ColorfulTokenTypeGreen ColorfulTokenType = "green"
++	ColorfulTokenTypeRed   ColorfulTokenType = "red"
++)
++
++func (t ColorfulTokenType) TokenTypeString() string { return string(t) }
++
++// ColorfulFields is a user-defined extra token fields type.
++type ColorfulFields struct {
++	Shape  *string `json:"shape,omitempty"`
++	Height uint32  `json:"height"`
++}
++
++func (ColorfulFields) IsExtraTokenFields() {}
++
++// ColorfulErrorResponseType is a user-defined error response type.
++type ColorfulErrorResponseType string
++
++const (
++	ColorfulErrorResponseTypeTooDark         ColorfulErrorResponseType = "too_dark"
++	ColorfulErrorResponseTypeTooLight        ColorfulErrorResponseType = "too_light"
++	ColorfulErrorResponseTypeWrongColorSpace ColorfulErrorResponseType = "wrong_color_space"
++)
++
++func (t ColorfulErrorResponseType) ErrorTypeString() string { return string(t) }
++
++// ColorfulRevocableToken is a user-defined revocable token.
++type ColorfulRevocableToken struct {
++	SecretValue string
++	Hint        string
++}
++
++func (t ColorfulRevocableToken) Secret() string   { return t.SecretValue }
++func (t ColorfulRevocableToken) TypeHint() string { return t.Hint }
++
++// ColorfulClient parameterizes Client with user-defined types.
++type ColorfulClient = Client[
++	StandardErrorResponse[ColorfulErrorResponseType],
++	StandardTokenResponse[ColorfulFields, ColorfulTokenType],
++	StandardTokenIntrospectionResponse[ColorfulFields, ColorfulTokenType],
++	ColorfulRevocableToken,
++	StandardErrorResponse[ColorfulErrorResponseType],
++]
++
++func newColorfulClient(t *testing.T) *ColorfulClient {
++	t.Helper()
++	return NewClient[
++		StandardErrorResponse[ColorfulErrorResponseType],
++		StandardTokenResponse[ColorfulFields, ColorfulTokenType],
++		StandardTokenIntrospectionResponse[ColorfulFields, ColorfulTokenType],
++		ColorfulRevocableToken,
++		StandardErrorResponse[ColorfulErrorResponseType],
++	](NewClientId("aaa")).
++		SetClientSecret(NewClientSecret("bbb")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token"))
++}
++
++// CustomErrorResponse is a non-standard server error response.
++type CustomErrorResponse struct {
++	CustomError string `json:"custom_error"`
++}
++
++func (e CustomErrorResponse) ErrorString() string { return "Custom Error from server" }
++
++type CustomErrorClient = Client[
++	CustomErrorResponse,
++	StandardTokenResponse[ColorfulFields, ColorfulTokenType],
++	StandardTokenIntrospectionResponse[ColorfulFields, ColorfulTokenType],
++	ColorfulRevocableToken,
++	CustomErrorResponse,
++]
++
++func TestExtensionSuccessfulWithMinimalJSONResponse(t *testing.T) {
++	client := newColorfulClient(t)
++	response := newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "green", "height": 10}`)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response:    response,
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++
++	if token.AccessToken().Secret() != "12/34" {
++		t.Fatalf("access token: got %q", token.AccessToken().Secret())
++	}
++	if token.TokenTypeValue() != ColorfulTokenTypeGreen {
++		t.Fatalf("token type: got %v", token.TokenTypeValue())
++	}
++	if _, ok := token.ExpiresIn(); ok {
++		t.Fatal("expected no expires_in")
++	}
++	if token.RefreshToken() != nil {
++		t.Fatal("expected no refresh token")
++	}
++	if token.ExtraFields().Shape != nil {
++		t.Fatalf("expected nil shape, got %q", *token.ExtraFields().Shape)
++	}
++	if token.ExtraFields().Height != 10 {
++		t.Fatalf("height: got %d", token.ExtraFields().Height)
++	}
++
++	serialized, err := json.Marshal(token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if string(serialized) != `{"access_token":"12/34","token_type":"green","height":10}` {
++		t.Fatalf("serialized: got %s", serialized)
++	}
++}
++
++func TestExtensionSuccessfulWithCompleteJSONResponse(t *testing.T) {
++	client := newColorfulClient(t).SetAuthType(RequestBody)
++	body := `{"access_token": "12/34", "token_type": "red", "scope": "read write", "expires_in": 3600, ` +
++		`"refresh_token": "foobar", "shape": "round", "height": 12}`
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
++		response:    newHTTPResponse(200, jsonHeader(), body),
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++
++	if token.TokenTypeValue() != ColorfulTokenTypeRed {
++		t.Fatalf("token type: got %v", token.TokenTypeValue())
++	}
++	if len(token.Scopes()) != 2 || token.Scopes()[0].AsStr() != "read" || token.Scopes()[1].AsStr() != "write" {
++		t.Fatalf("scopes: got %#v", token.Scopes())
++	}
++	if expires, ok := token.ExpiresIn(); !ok || expires != 3600 {
++		t.Fatalf("expires_in: got %v %v", expires, ok)
++	}
++	if token.RefreshToken() == nil || token.RefreshToken().Secret() != "foobar" {
++		t.Fatalf("refresh token: %#v", token.RefreshToken())
++	}
++	if token.ExtraFields().Shape == nil || *token.ExtraFields().Shape != "round" {
++		t.Fatalf("shape: %#v", token.ExtraFields().Shape)
++	}
++	if token.ExtraFields().Height != 12 {
++		t.Fatalf("height: got %d", token.ExtraFields().Height)
++	}
++
++	serialized, err := json.Marshal(token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := `{"access_token":"12/34","token_type":"red","expires_in":3600,"refresh_token":"foobar","scope":"read write","shape":"round","height":12}`
++	if string(serialized) != want {
++		t.Fatalf("serialized: got %s, want %s", serialized, want)
++	}
++}
++
++func TestExtensionWithSimpleJSONError(t *testing.T) {
++	client := newColorfulClient(t)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "too_light", "error_description": "stuff happened", "error_uri": "https://errors"}`),
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorServerResponse {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	errorResponse, ok := tokenErr.Response.(StandardErrorResponse[ColorfulErrorResponseType])
++	if !ok {
++		t.Fatalf("unexpected response type %T", tokenErr.Response)
++	}
++	if errorResponse.Error != ColorfulErrorResponseTypeTooLight {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++	if errorResponse.ErrorString() != "too_light: stuff happened (see https://errors)" {
++		t.Fatalf("display: got %q", errorResponse.ErrorString())
++	}
++	if tokenErr.Error() != "Server returned error response: too_light: stuff happened (see https://errors)" {
++		t.Fatalf("error string: got %q", tokenErr.Error())
++	}
++}
++
++func TestExtensionWithCustomJSONError(t *testing.T) {
++	client := NewClient[
++		CustomErrorResponse,
++		StandardTokenResponse[ColorfulFields, ColorfulTokenType],
++		StandardTokenIntrospectionResponse[ColorfulFields, ColorfulTokenType],
++		ColorfulRevocableToken,
++		CustomErrorResponse,
++	](NewClientId("aaa")).
++		SetClientSecret(NewClientSecret("bbb")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token"))
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"custom_error": "non-compliant oauth implementation ;-)"}`),
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	custom, ok := tokenErr.Response.(CustomErrorResponse)
++	if !ok {
++		t.Fatalf("unexpected response type %T", tokenErr.Response)
++	}
++	if custom.CustomError != "non-compliant oauth implementation ;-)" {
++		t.Fatalf("custom_error: got %q", custom.CustomError)
++	}
++}
++
++func TestExtensionSerializer(t *testing.T) {
++	shape := "circle"
++	tokenResponse := NewStandardTokenResponse[ColorfulFields, ColorfulTokenType](
++		NewAccessToken("mysecret"),
++		ColorfulTokenTypeRed,
++		ColorfulFields{Shape: &shape, Height: 10},
++	)
++	tokenResponse.SetExpiresIn(3600)
++	refreshToken := NewRefreshToken("myothersecret")
++	tokenResponse.SetRefreshToken(&refreshToken)
++
++	serialized, err := json.Marshal(tokenResponse)
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := `{"access_token":"mysecret","token_type":"red","expires_in":3600,"refresh_token":"myothersecret","shape":"circle","height":10}`
++	if string(serialized) != want {
++		t.Fatalf("serialized: got %s, want %s", serialized, want)
++	}
++}
++
++func TestExtensionRevocationSuccessful(t *testing.T) {
++	client := newColorfulClient(t).
++		SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=colorful_token_123&token_type_hint=red_token",
++		response:    newHTTPResponse(200, jsonHeader(), `{}`),
++	}
++
++	request, err := client.RevokeToken(ColorfulRevocableToken{SecretValue: "colorful_token_123", Hint: "red_token"})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
+diff --git a/oauth2/helpers.go b/oauth2/helpers.go
+new file mode 100644
+index 0000000..779b5d7
+--- /dev/null
++++ b/oauth2/helpers.go
+@@ -0,0 +1,130 @@
++package oauth2
++
++import (
++	"bytes"
++	"encoding/json"
++	"strings"
++)
++
++// orderedJSON builds a JSON object preserving insertion order, which encoding/json
++// does not do for maps.
++type orderedJSON struct {
++	buf       bytes.Buffer
++	needComma bool
++}
++
++func (o *orderedJSON) addRaw(key string, raw []byte) {
++	if o.needComma {
++		o.buf.WriteByte(',')
++	}
++	o.needComma = true
++	kb, _ := json.Marshal(key)
++	o.buf.Write(kb)
++	o.buf.WriteByte(':')
++	o.buf.Write(raw)
++}
++
++func (o *orderedJSON) add(key string, v any) {
++	raw, err := json.Marshal(v)
++	if err != nil {
++		raw = []byte("null")
++	}
++	o.addRaw(key, raw)
++}
++
++func (o *orderedJSON) bytes() []byte {
++	return append(append([]byte{'{'}, o.buf.Bytes()...), '}')
++}
++
++type jsonKV struct {
++	key string
++	raw json.RawMessage
++}
++
++// decodeOrderedObject decodes a JSON object into its key/value pairs preserving
++// the original key order.
++func decodeOrderedObject(data []byte) ([]jsonKV, error) {
++	dec := json.NewDecoder(bytes.NewReader(data))
++	if _, err := dec.Token(); err != nil { // '{'
++		return nil, err
++	}
++	var out []jsonKV
++	for dec.More() {
++		tok, err := dec.Token()
++		if err != nil {
++			return nil, err
++		}
++		key, _ := tok.(string)
++		var raw json.RawMessage
++		if err := dec.Decode(&raw); err != nil {
++			return nil, err
++		}
++		out = append(out, jsonKV{key: key, raw: raw})
++	}
++	return out, nil
++}
++
++// deserializeSpaceDelimitedVec splits a space-delimited JSON string into a slice.
++func deserializeSpaceDelimitedVec(s string) []Scope {
++	parts := strings.Split(s, " ")
++	scopes := make([]Scope, 0, len(parts))
++	for _, p := range parts {
++		scopes = append(scopes, NewScope(p))
++	}
++	return scopes
++}
++
++// serializeSpaceDelimitedVec joins scopes into a single space-delimited string.
++func serializeSpaceDelimitedVec(scopes []Scope) string {
++	parts := make([]string, len(scopes))
++	for i, s := range scopes {
++		parts[i] = s.AsStr()
++	}
++	return strings.Join(parts, " ")
++}
++
++// deserializeOptionalStringOrVecString decodes a JSON value that is either a
++// string or an array of strings (or null) into a []string.
++func deserializeOptionalStringOrVecString(raw json.RawMessage) ([]string, bool, error) {
++	trimmed := bytes.TrimSpace(raw)
++	if len(trimmed) == 0 || string(trimmed) == "null" {
++		return nil, false, nil
++	}
++	if trimmed[0] == '"' {
++		var s string
++		if err := json.Unmarshal(trimmed, &s); err != nil {
++			return nil, false, err
++		}
++		return []string{s}, true, nil
++	}
++	var list []string
++	if err := json.Unmarshal(trimmed, &list); err != nil {
++		return nil, false, err
++	}
++	return list, true, nil
++}
++
++// deserializeCaseInsensitiveLowercase returns the lowercased JSON string value,
++// used to implement case-insensitive enum decoding.
++func deserializeCaseInsensitiveLowercase(raw json.RawMessage) (string, error) {
++	var s string
++	if err := json.Unmarshal(raw, &s); err != nil {
++		return "", err
++	}
++	return strings.ToLower(s), nil
++}
++
++// VariantName returns the canonical name of an enum-like value. For the
++// string-backed types used by this package this is simply the string value.
++func VariantName(v any) string {
++	switch t := v.(type) {
++	case interface{ TokenTypeString() string }:
++		return t.TokenTypeString()
++	case interface{ ErrorTypeString() string }:
++		return t.ErrorTypeString()
++	case stringer:
++		return t.value
++	default:
++		return ""
++	}
++}
+diff --git a/oauth2/introspection.go b/oauth2/introspection.go
+new file mode 100644
+index 0000000..f9ee7c3
+--- /dev/null
++++ b/oauth2/introspection.go
+@@ -0,0 +1,276 @@
++package oauth2
++
++import (
++	"context"
++	"encoding/json"
++)
++
++// StandardTokenIntrospectionResponse is the standard OAuth2 token introspection
++// response as defined in Section 2.2 of RFC 7662, extended by EF.
++type StandardTokenIntrospectionResponse[EF ExtraTokenFields, TT TokenType] struct {
++	active      bool
++	scopes      []Scope
++	clientID    *ClientId
++	username    *string
++	tokenType   *TT
++	exp         *int64
++	iat         *int64
++	nbf         *int64
++	sub         *string
++	aud         []string
++	iss         *string
++	jti         *string
++	extraFields EF
++}
++
++// NewStandardTokenIntrospectionResponse instantiates a new token introspection response.
++func NewStandardTokenIntrospectionResponse[EF ExtraTokenFields, TT TokenType](active bool, extraFields EF) *StandardTokenIntrospectionResponse[EF, TT] {
++	return &StandardTokenIntrospectionResponse[EF, TT]{active: active, extraFields: extraFields}
++}
++
++// Active reports whether the presented token is currently active.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Active() bool { return r.active }
++
++// Scopes returns the scopes associated with the token.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Scopes() []Scope { return r.scopes }
++
++// ClientId returns the client identifier for the token.
++func (r StandardTokenIntrospectionResponse[EF, TT]) ClientId() *ClientId { return r.clientID }
++
++// Username returns the human-readable resource owner identifier.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Username() *string { return r.username }
++
++// TokenType returns the token type, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) TokenType() (TokenType, bool) {
++	if r.tokenType == nil {
++		return nil, false
++	}
++	return *r.tokenType, true
++}
++
++// Exp returns the expiration timestamp in seconds, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Exp() *int64 { return r.exp }
++
++// Iat returns the issuance timestamp in seconds, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Iat() *int64 { return r.iat }
++
++// Nbf returns the not-before timestamp in seconds, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Nbf() *int64 { return r.nbf }
++
++// Sub returns the subject of the token, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Sub() *string { return r.sub }
++
++// Aud returns the intended audience(s) of the token, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Aud() []string { return r.aud }
++
++// Iss returns the issuer of the token, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Iss() *string { return r.iss }
++
++// Jti returns the token identifier, if present.
++func (r StandardTokenIntrospectionResponse[EF, TT]) Jti() *string { return r.jti }
++
++// ExtraFields returns the user-defined extra fields.
++func (r StandardTokenIntrospectionResponse[EF, TT]) ExtraFields() EF { return r.extraFields }
++
++// SetActive sets the active field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetActive(active bool) { r.active = active }
++
++// SetScopes sets the scope field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetScopes(scopes []Scope) { r.scopes = scopes }
++
++// SetClientId sets the client_id field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetClientId(clientID *ClientId) {
++	r.clientID = clientID
++}
++
++// SetUsername sets the username field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetUsername(username *string) {
++	r.username = username
++}
++
++// SetTokenType sets the token_type field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetTokenType(tokenType *TT) {
++	r.tokenType = tokenType
++}
++
++// SetExp sets the exp field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetExp(exp *int64) { r.exp = exp }
++
++// SetIat sets the iat field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetIat(iat *int64) { r.iat = iat }
++
++// SetNbf sets the nbf field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetNbf(nbf *int64) { r.nbf = nbf }
++
++// SetSub sets the sub field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetSub(sub *string) { r.sub = sub }
++
++// SetAud sets the aud field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetAud(aud []string) { r.aud = aud }
++
++// SetIss sets the iss field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetIss(iss *string) { r.iss = iss }
++
++// SetJti sets the jti field.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetJti(jti *string) { r.jti = jti }
++
++// SetExtraFields sets the user-defined extra fields.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) SetExtraFields(extra EF) {
++	r.extraFields = extra
++}
++
++// UnmarshalJSON implements space-delimited scopes, case-insensitive token types
++// and string-or-list audiences.
++func (r *StandardTokenIntrospectionResponse[EF, TT]) UnmarshalJSON(data []byte) error {
++	var aux struct {
++		Active    bool            `json:"active"`
++		Scope     *string         `json:"scope"`
++		ClientID  *ClientId       `json:"client_id"`
++		Username  *string         `json:"username"`
++		TokenType json.RawMessage `json:"token_type"`
++		Exp       *int64          `json:"exp"`
++		Iat       *int64          `json:"iat"`
++		Nbf       *int64          `json:"nbf"`
++		Sub       *string         `json:"sub"`
++		Aud       json.RawMessage `json:"aud"`
++		Iss       *string         `json:"iss"`
++		Jti       *string         `json:"jti"`
++	}
++	if err := json.Unmarshal(data, &aux); err != nil {
++		return err
++	}
++	r.active = aux.Active
++	if aux.Scope != nil {
++		r.scopes = deserializeSpaceDelimitedVec(*aux.Scope)
++	}
++	r.clientID = aux.ClientID
++	r.username = aux.Username
++	if len(aux.TokenType) > 0 {
++		lower, err := deserializeCaseInsensitiveLowercase(aux.TokenType)
++		if err != nil {
++			return err
++		}
++		encoded, _ := json.Marshal(lower)
++		var tt TT
++		if err := json.Unmarshal(encoded, &tt); err != nil {
++			return err
++		}
++		r.tokenType = &tt
++	}
++	r.exp = aux.Exp
++	r.iat = aux.Iat
++	r.nbf = aux.Nbf
++	r.sub = aux.Sub
++	if len(aux.Aud) > 0 {
++		aud, _, err := deserializeOptionalStringOrVecString(aux.Aud)
++		if err != nil {
++			return err
++		}
++		r.aud = aud
++	}
++	r.iss = aux.Iss
++	r.jti = aux.Jti
++	var ef EF
++	if err := json.Unmarshal(data, &ef); err != nil {
++		return err
++	}
++	r.extraFields = ef
++	return nil
++}
++
++// MarshalJSON emits the canonical field order and flattens extra fields.
++func (r StandardTokenIntrospectionResponse[EF, TT]) MarshalJSON() ([]byte, error) {
++	var o orderedJSON
++	o.add("active", r.active)
++	if r.scopes != nil {
++		o.add("scope", serializeSpaceDelimitedVec(r.scopes))
++	}
++	if r.clientID != nil {
++		o.add("client_id", r.clientID)
++	}
++	if r.username != nil {
++		o.add("username", *r.username)
++	}
++	if r.tokenType != nil {
++		o.add("token_type", *r.tokenType)
++	}
++	if r.exp != nil {
++		o.add("exp", *r.exp)
++	}
++	if r.iat != nil {
++		o.add("iat", *r.iat)
++	}
++	if r.nbf != nil {
++		o.add("nbf", *r.nbf)
++	}
++	if r.sub != nil {
++		o.add("sub", *r.sub)
++	}
++	if r.aud != nil {
++		o.add("aud", r.aud)
++	}
++	if r.iss != nil {
++		o.add("iss", *r.iss)
++	}
++	if r.jti != nil {
++		o.add("jti", *r.jti)
++	}
++	if raw, err := json.Marshal(r.extraFields); err == nil {
++		kvs, _ := decodeOrderedObject(raw)
++		for _, kv := range kvs {
++			o.addRaw(kv.key, kv.raw)
++		}
++	}
++	return o.bytes(), nil
++}
++
++// IntrospectionRequest is a request to introspect an access token.
++type IntrospectionRequest[TE ErrorResponse, TIR TokenIntrospectionResponse] struct {
++	authType         AuthType
++	clientID         ClientId
++	clientSecret     *ClientSecret
++	extraParams      []param
++	token            *AccessToken
++	tokenTypeHint    *string
++	introspectionURL *IntrospectionUrl
++}
++
++// SetTokenTypeHint sets the optional token_type_hint parameter.
++func (r *IntrospectionRequest[TE, TIR]) SetTokenTypeHint(value string) *IntrospectionRequest[TE, TIR] {
++	r.tokenTypeHint = &value
++	return r
++}
++
++// AddExtraParam appends an extra param to the introspection request.
++func (r *IntrospectionRequest[TE, TIR]) AddExtraParam(name, value string) *IntrospectionRequest[TE, TIR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++func (r *IntrospectionRequest[TE, TIR]) prepareRequest() HTTPRequest {
++	params := []param{{"token", r.token.Secret()}}
++	if r.tokenTypeHint != nil {
++		params = append(params, param{"token_type_hint", *r.tokenTypeHint})
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, nil, r.introspectionURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *IntrospectionRequest[TE, TIR]) Request(client SyncHTTPClient) (TIR, *RequestTokenError) {
++	var zero TIR
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TIR](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *IntrospectionRequest[TE, TIR]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (TIR, *RequestTokenError) {
++	var zero TIR
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TIR](response)
++}
+diff --git a/oauth2/introspection_test.go b/oauth2/introspection_test.go
+new file mode 100644
+index 0000000..5b72638
+--- /dev/null
++++ b/oauth2/introspection_test.go
+@@ -0,0 +1,152 @@
++package oauth2
++
++import "testing"
++
++func TestTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(BasicAuth).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here")).
++		SetIntrospectionURL(mustIntrospectionURL(t, "https://introspection/url"))
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://introspection/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123",
++		response:    newHTTPResponse(200, jsonHeader(), `{"active": true}`),
++	}
++	token := NewAccessToken("access_token_123")
++	request, err := client.Introspect(&token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	response, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	if !response.Active() {
++		t.Fatal("expected active")
++	}
++	if response.Scopes() != nil || response.ClientId() != nil || response.Username() != nil {
++		t.Fatal("expected empty optional fields")
++	}
++	if _, ok := response.TokenType(); ok {
++		t.Fatal("expected no token type")
++	}
++	if response.Exp() != nil || response.Iat() != nil || response.Nbf() != nil {
++		t.Fatal("expected no timestamps")
++	}
++	if response.Sub() != nil || response.Aud() != nil || response.Iss() != nil || response.Jti() != nil {
++		t.Fatal("expected no jwt claims")
++	}
++}
++
++func TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(BasicAuth).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here")).
++		SetIntrospectionURL(mustIntrospectionURL(t, "https://introspection/url"))
++
++	body := `{
++		"active": true,
++		"scope": "email profile",
++		"client_id": "aaa",
++		"username": "demo",
++		"token_type": "bearer",
++		"exp": 1604073517,
++		"iat": 1604073217,
++		"nbf": 1604073317,
++		"sub": "demo",
++		"aud": "demo",
++		"iss": "http://127.0.0.1:8080/auth/realms/test-realm",
++		"jti": "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f"
++	}`
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://introspection/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123&token_type_hint=access_token",
++		response:    newHTTPResponse(200, jsonHeader(), body),
++	}
++	token := NewAccessToken("access_token_123")
++	request, err := client.Introspect(&token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	response, tokenErr := request.SetTokenTypeHint("access_token").Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	if !response.Active() {
++		t.Fatal("expected active")
++	}
++	if len(response.Scopes()) != 2 || response.Scopes()[0].AsStr() != "email" || response.Scopes()[1].AsStr() != "profile" {
++		t.Fatalf("scopes: got %#v", response.Scopes())
++	}
++	if response.ClientId() == nil || response.ClientId().String() != "aaa" {
++		t.Fatalf("client_id: %#v", response.ClientId())
++	}
++	if response.Username() == nil || *response.Username() != "demo" {
++		t.Fatalf("username: %#v", response.Username())
++	}
++	tokenType, ok := response.TokenType()
++	if !ok || tokenType != BasicTokenTypeBearer {
++		t.Fatalf("token_type: %#v %v", tokenType, ok)
++	}
++	if response.Exp() == nil || *response.Exp() != 1604073517 {
++		t.Fatalf("exp: %#v", response.Exp())
++	}
++	if response.Iat() == nil || *response.Iat() != 1604073217 {
++		t.Fatalf("iat: %#v", response.Iat())
++	}
++	if response.Nbf() == nil || *response.Nbf() != 1604073317 {
++		t.Fatalf("nbf: %#v", response.Nbf())
++	}
++	if response.Sub() == nil || *response.Sub() != "demo" {
++		t.Fatalf("sub: %#v", response.Sub())
++	}
++	if len(response.Aud()) != 1 || response.Aud()[0] != "demo" {
++		t.Fatalf("aud: %#v", response.Aud())
++	}
++	if response.Iss() == nil || *response.Iss() != "http://127.0.0.1:8080/auth/realms/test-realm" {
++		t.Fatalf("iss: %#v", response.Iss())
++	}
++	if response.Jti() == nil || *response.Jti() != "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f" {
++		t.Fatalf("jti: %#v", response.Jti())
++	}
++}
++
++func TestTokenIntrospectionWithRequestBodyAuth(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(RequestBody).
++		SetIntrospectionURL(mustIntrospectionURL(t, "https://introspection/url"))
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://introspection/url",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "token=access_token_123&client_id=aaa&client_secret=bbb",
++		response:    newHTTPResponse(200, jsonHeader(), `{"active": true}`),
++	}
++	token := NewAccessToken("access_token_123")
++	request, err := client.Introspect(&token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestTokenIntrospectionMissingEndpoint(t *testing.T) {
++	client := newTestClient(t)
++	token := NewAccessToken("access_token_123")
++	if _, err := client.Introspect(&token); err == nil {
++		t.Fatal("expected missing-URL error")
++	} else if err.Error() != "No introspection endpoint URL specified" {
++		t.Fatalf("got %q", err.Error())
++	}
++}
+diff --git a/oauth2/revocation.go b/oauth2/revocation.go
+new file mode 100644
+index 0000000..927124d
+--- /dev/null
++++ b/oauth2/revocation.go
+@@ -0,0 +1,97 @@
++package oauth2
++
++import (
++	"context"
++)
++
++// RevocationErrorResponseType is the RFC 7009 token revocation error type.
++type RevocationErrorResponseType string
++
++const (
++	// RevocationErrorResponseTypeUnsupportedTokenType indicates the server does
++	// not support revocation of the presented token type.
++	RevocationErrorResponseTypeUnsupportedTokenType RevocationErrorResponseType = "unsupported_token_type"
++)
++
++// ErrorTypeString returns the canonical string for this error type.
++func (t RevocationErrorResponseType) ErrorTypeString() string { return string(t) }
++
++// StandardRevocableToken is a token representation usable with authorization
++// servers that support RFC 7009 token revocation.
++type StandardRevocableToken struct {
++	accessToken  *AccessToken
++	refreshToken *RefreshToken
++}
++
++// NewStandardRevocableTokenFromAccessToken builds a revocable token from an access token.
++func NewStandardRevocableTokenFromAccessToken(token AccessToken) StandardRevocableToken {
++	return StandardRevocableToken{accessToken: &token}
++}
++
++// NewStandardRevocableTokenFromRefreshToken builds a revocable token from a refresh token.
++func NewStandardRevocableTokenFromRefreshToken(token RefreshToken) StandardRevocableToken {
++	return StandardRevocableToken{refreshToken: &token}
++}
++
++// Secret returns the token value to be revoked.
++func (t StandardRevocableToken) Secret() string {
++	if t.accessToken != nil {
++		return t.accessToken.Secret()
++	}
++	if t.refreshToken != nil {
++		return t.refreshToken.Secret()
++	}
++	return ""
++}
++
++// TypeHint returns the RFC 7009 token type hint for the token.
++func (t StandardRevocableToken) TypeHint() string {
++	if t.refreshToken != nil {
++		return "refresh_token"
++	}
++	return "access_token"
++}
++
++// RevocationRequest is a request to revoke a token via an RFC 7009 endpoint.
++type RevocationRequest[RT RevocableToken, TRE ErrorResponse] struct {
++	authType      AuthType
++	clientID      ClientId
++	clientSecret  *ClientSecret
++	extraParams   []param
++	token         RT
++	revocationURL *RevocationUrl
++}
++
++// AddExtraParam appends an extra param to the token revocation request.
++func (r *RevocationRequest[RT, TRE]) AddExtraParam(name, value string) *RevocationRequest[RT, TRE] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++func (r *RevocationRequest[RT, TRE]) prepareRequest() HTTPRequest {
++	params := []param{{"token", r.token.Secret()}}
++	if hint := r.token.TypeHint(); hint != "" {
++		params = append(params, param{"token_type_hint", hint})
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, nil, r.revocationURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response. A nil return
++// value indicates success.
++func (r *RevocationRequest[RT, TRE]) Request(client SyncHTTPClient) *RequestTokenError {
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return newRequestError(err)
++	}
++	return endpointResponseStatusOnly[TRE](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response. A nil
++// return value indicates success.
++func (r *RevocationRequest[RT, TRE]) RequestAsync(ctx context.Context, client AsyncHTTPClient) *RequestTokenError {
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return newRequestError(err)
++	}
++	return endpointResponseStatusOnly[TRE](response)
++}
+diff --git a/oauth2/revocation_test.go b/oauth2/revocation_test.go
+new file mode 100644
+index 0000000..df9d8c9
+--- /dev/null
++++ b/oauth2/revocation_test.go
+@@ -0,0 +1,132 @@
++package oauth2
++
++import "testing"
++
++func TestTokenRevocationWithMissingURL(t *testing.T) {
++	client := newTestClient(t).SetRevocationURLOption(nil)
++	_, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err == nil {
++		t.Fatal("expected missing-URL error")
++	}
++	if err.Error() != "No revocation endpoint URL specified" {
++		t.Fatalf("got %q", err.Error())
++	}
++}
++
++func TestTokenRevocationWithNonHTTPSURL(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "http://revocation/url"))
++	_, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err == nil {
++		t.Fatal("expected insecure-URL error")
++	}
++	if err.Error() != "Scheme for revocation endpoint URL must be HTTPS" {
++		t.Fatalf("got %q", err.Error())
++	}
++}
++
++func TestTokenRevocationWithUnsupportedTokenType(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123&token_type_hint=access_token",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "unsupported_token_type", "error_description": "stuff happened", "error_uri": "https://errors"}`),
++	}
++	request, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err != nil {
++		t.Fatal(err)
++	}
++	tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorServerResponse {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	errorResponse, ok := tokenErr.Response.(BasicRevocationErrorResponse)
++	if !ok {
++		t.Fatalf("unexpected response type %T", tokenErr.Response)
++	}
++	if errorResponse.Error != RevocationErrorResponseTypeUnsupportedTokenType {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++}
++
++func TestTokenRevocationWithAccessTokenAndEmptyJSONResponse(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123&token_type_hint=access_token",
++		response:    newHTTPResponse(200, jsonHeader(), `{}`),
++	}
++	request, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestTokenRevocationWithAccessTokenAndEmptyResponse(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123&token_type_hint=access_token",
++		response:    newHTTPResponse(200, nil, ""),
++	}
++	request, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestTokenRevocationWithAccessTokenAndNonJSONResponse(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=access_token_123&token_type_hint=access_token",
++		response:    newHTTPResponse(200, map[string]string{"Content-Type": "application/octet-stream"}, string([]byte{1, 2, 3})),
++	}
++	request, err := client.RevokeToken(NewStandardRevocableTokenFromAccessToken(NewAccessToken("access_token_123")))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestTokenRevocationWithRefreshToken(t *testing.T) {
++	client := newTestClient(t).SetRevocationURL(mustRevocationURL(t, "https://revocation/url"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://revocation/url",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "token=refresh_token_123&token_type_hint=refresh_token",
++		response:    newHTTPResponse(200, jsonHeader(), `{}`),
++	}
++	request, err := client.RevokeToken(NewStandardRevocableTokenFromRefreshToken(NewRefreshToken("refresh_token_123")))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
+diff --git a/oauth2/tests_support_test.go b/oauth2/tests_support_test.go
+new file mode 100644
+index 0000000..e2ebc0f
+--- /dev/null
++++ b/oauth2/tests_support_test.go
+@@ -0,0 +1,171 @@
++package oauth2
++
++import (
++	"fmt"
++	"reflect"
++	"testing"
++)
++
++// mockHTTPClient asserts the exact request produced by the implementation and
++// returns a scripted response. It mirrors the reference injected fake client.
++type mockHTTPClient struct {
++	t           *testing.T
++	wantMethod  string
++	wantURL     string
++	wantHeaders map[string]string
++	wantBody    string
++	response    HTTPResponse
++	responseErr error
++}
++
++func (m *mockHTTPClient) Call(request HTTPRequest) (HTTPResponse, error) {
++	if request.Method != m.wantMethod {
++		m.t.Errorf("method: got %q, want %q", request.Method, m.wantMethod)
++	}
++	if request.URL != m.wantURL {
++		m.t.Errorf("url: got %q, want %q", request.URL, m.wantURL)
++	}
++	if !reflect.DeepEqual(request.Header, m.wantHeaders) {
++		m.t.Errorf("headers: got %#v, want %#v", request.Header, m.wantHeaders)
++	}
++	if string(request.Body) != m.wantBody {
++		m.t.Errorf("body: got %q, want %q", string(request.Body), m.wantBody)
++	}
++	if m.responseErr != nil {
++		return HTTPResponse{}, m.responseErr
++	}
++	return m.response, nil
++}
++
++func newHTTPResponse(status int, header map[string]string, body string) HTTPResponse {
++	if header == nil {
++		header = map[string]string{}
++	}
++	return HTTPResponse{StatusCode: status, Header: header, Body: []byte(body)}
++}
++
++func jsonHeader() map[string]string {
++	return map[string]string{"Content-Type": "application/json"}
++}
++
++func basicAuthHeaders() map[string]string {
++	return map[string]string{
++		"Accept":        "application/json",
++		"Content-Type":  "application/x-www-form-urlencoded",
++		"Authorization": "Basic YWFhOmJiYg==",
++	}
++}
++
++func bodyAuthHeaders() map[string]string {
++	return map[string]string{
++		"Accept":       "application/json",
++		"Content-Type": "application/x-www-form-urlencoded",
++	}
++}
++
++func newTestClient(t *testing.T) *BasicClient {
++	t.Helper()
++	authURL, err := NewAuthUrl("https://example.com/auth")
++	if err != nil {
++		t.Fatal(err)
++	}
++	tokenURL, err := NewTokenUrl("https://example.com/token")
++	if err != nil {
++		t.Fatal(err)
++	}
++	return NewBasicClient(NewClientId("aaa")).
++		SetAuthURL(authURL).
++		SetTokenURL(tokenURL).
++		SetClientSecret(NewClientSecret("bbb"))
++}
++
++// mockSuccessFailClient returns a scripted sequence of responses: numFailures
++// copies of failure followed by one success.
++type mockSuccessFailClient struct {
++	t          *testing.T
++	wantURL    string
++	wantHeader map[string]string
++	wantBody   string
++	failure    HTTPResponse
++	success    HTTPResponse
++	calls      int
++	numFailure int
++}
++
++func (m *mockSuccessFailClient) Call(request HTTPRequest) (HTTPResponse, error) {
++	if request.Method != "POST" {
++		m.t.Errorf("method: got %q, want POST", request.Method)
++	}
++	if request.URL != m.wantURL {
++		m.t.Errorf("url: got %q, want %q", request.URL, m.wantURL)
++	}
++	if !reflect.DeepEqual(request.Header, m.wantHeader) {
++		m.t.Errorf("headers: got %#v, want %#v", request.Header, m.wantHeader)
++	}
++	if string(request.Body) != m.wantBody {
++		m.t.Errorf("body: got %q, want %q", string(request.Body), m.wantBody)
++	}
++	m.calls++
++	if m.calls <= m.numFailure {
++		return m.failure, nil
++	}
++	return m.success, nil
++}
++
++func mustTokenURL(t *testing.T, raw string) *TokenUrl {
++	t.Helper()
++	u, err := NewTokenUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func mustAuthURL(t *testing.T, raw string) *AuthUrl {
++	t.Helper()
++	u, err := NewAuthUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func mustRedirectURL(t *testing.T, raw string) *RedirectUrl {
++	t.Helper()
++	u, err := NewRedirectUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func mustIntrospectionURL(t *testing.T, raw string) *IntrospectionUrl {
++	t.Helper()
++	u, err := NewIntrospectionUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func mustRevocationURL(t *testing.T, raw string) *RevocationUrl {
++	t.Helper()
++	u, err := NewRevocationUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func mustDeviceAuthURL(t *testing.T, raw string) *DeviceAuthorizationUrl {
++	t.Helper()
++	u, err := NewDeviceAuthorizationUrl(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return u
++}
++
++func tokenResponseBody(accessToken, tokenType string) string {
++	return fmt.Sprintf(`{"access_token": %q, "token_type": %q}`, accessToken, tokenType)
++}
+diff --git a/oauth2/token.go b/oauth2/token.go
+new file mode 100644
+index 0000000..b214b98
+--- /dev/null
++++ b/oauth2/token.go
+@@ -0,0 +1,367 @@
++package oauth2
++
++import (
++	"context"
++	"encoding/json"
++)
++
++// EmptyExtraTokenFields is the default (empty) extra token fields.
++type EmptyExtraTokenFields struct{}
++
++func (EmptyExtraTokenFields) IsExtraTokenFields() {}
++
++// StandardTokenResponse is the standard OAuth2 token response as defined in
++// Section 5.1 of RFC 6749, extended by the EF type parameter.
++type StandardTokenResponse[EF ExtraTokenFields, TT TokenType] struct {
++	accessToken  AccessToken
++	tokenType    TT
++	expiresIn    *uint64
++	refreshToken *RefreshToken
++	scopes       []Scope
++	extraFields  EF
++}
++
++// NewStandardTokenResponse instantiates a new OAuth2 token response.
++func NewStandardTokenResponse[EF ExtraTokenFields, TT TokenType](accessToken AccessToken, tokenType TT, extraFields EF) *StandardTokenResponse[EF, TT] {
++	return &StandardTokenResponse[EF, TT]{
++		accessToken: accessToken,
++		tokenType:   tokenType,
++		extraFields: extraFields,
++	}
++}
++
++// AccessToken returns the access token issued by the authorization server.
++func (r StandardTokenResponse[EF, TT]) AccessToken() AccessToken { return r.accessToken }
++
++// TokenTypeValue returns the type of the token issued.
++func (r StandardTokenResponse[EF, TT]) TokenTypeValue() TokenType { return r.tokenType }
++
++// ExpiresIn returns the lifetime in seconds of the access token, if provided.
++func (r StandardTokenResponse[EF, TT]) ExpiresIn() (uint64, bool) {
++	if r.expiresIn == nil {
++		return 0, false
++	}
++	return *r.expiresIn, true
++}
++
++// RefreshToken returns the refresh token, if any.
++func (r StandardTokenResponse[EF, TT]) RefreshToken() *RefreshToken { return r.refreshToken }
++
++// Scopes returns the scope of the access token, if included.
++func (r StandardTokenResponse[EF, TT]) Scopes() []Scope { return r.scopes }
++
++// ExtraFields returns the user-defined extra fields.
++func (r StandardTokenResponse[EF, TT]) ExtraFields() EF { return r.extraFields }
++
++// SetAccessToken sets the access_token field.
++func (r *StandardTokenResponse[EF, TT]) SetAccessToken(t AccessToken) { r.accessToken = t }
++
++// SetTokenType sets the token_type field.
++func (r *StandardTokenResponse[EF, TT]) SetTokenType(t TT) { r.tokenType = t }
++
++// SetExpiresIn sets the expires_in field.
++func (r *StandardTokenResponse[EF, TT]) SetExpiresIn(seconds uint64) { r.expiresIn = &seconds }
++
++// SetRefreshToken sets the refresh_token field.
++func (r *StandardTokenResponse[EF, TT]) SetRefreshToken(t *RefreshToken) { r.refreshToken = t }
++
++// SetScopes sets the scope field.
++func (r *StandardTokenResponse[EF, TT]) SetScopes(scopes []Scope) { r.scopes = scopes }
++
++// SetExtraFields sets the user-defined extra fields.
++func (r *StandardTokenResponse[EF, TT]) SetExtraFields(extra EF) { r.extraFields = extra }
++
++// UnmarshalJSON implements case-insensitive token types and space-delimited scopes.
++func (r *StandardTokenResponse[EF, TT]) UnmarshalJSON(data []byte) error {
++	var aux struct {
++		AccessToken  AccessToken     `json:"access_token"`
++		TokenType    json.RawMessage `json:"token_type"`
++		ExpiresIn    *uint64         `json:"expires_in"`
++		RefreshToken *RefreshToken   `json:"refresh_token"`
++		Scope        *string         `json:"scope"`
++	}
++	if err := json.Unmarshal(data, &aux); err != nil {
++		return err
++	}
++	r.accessToken = aux.AccessToken
++	if len(aux.TokenType) > 0 {
++		lower, err := deserializeCaseInsensitiveLowercase(aux.TokenType)
++		if err != nil {
++			return err
++		}
++		encoded, _ := json.Marshal(lower)
++		var tt TT
++		if err := json.Unmarshal(encoded, &tt); err != nil {
++			return err
++		}
++		r.tokenType = tt
++	}
++	r.expiresIn = aux.ExpiresIn
++	r.refreshToken = aux.RefreshToken
++	if aux.Scope != nil {
++		r.scopes = deserializeSpaceDelimitedVec(*aux.Scope)
++	}
++	var ef EF
++	if err := json.Unmarshal(data, &ef); err != nil {
++		return err
++	}
++	r.extraFields = ef
++	return nil
++}
++
++// MarshalJSON emits the canonical field order and flattens extra fields.
++func (r StandardTokenResponse[EF, TT]) MarshalJSON() ([]byte, error) {
++	var o orderedJSON
++	o.add("access_token", r.accessToken.Secret())
++	o.add("token_type", r.tokenType)
++	if r.expiresIn != nil {
++		o.add("expires_in", *r.expiresIn)
++	}
++	if r.refreshToken != nil {
++		o.add("refresh_token", r.refreshToken.Secret())
++	}
++	if r.scopes != nil {
++		o.add("scope", serializeSpaceDelimitedVec(r.scopes))
++	}
++	if raw, err := json.Marshal(r.extraFields); err == nil {
++		kvs, _ := decodeOrderedObject(raw)
++		for _, kv := range kvs {
++			o.addRaw(kv.key, kv.raw)
++		}
++	}
++	return o.bytes(), nil
++}
++
++// CodeTokenRequest is a request to exchange an authorization code for an access
++// token.
++type CodeTokenRequest[TE ErrorResponse, TR TokenResponse] struct {
++	authType     AuthType
++	clientID     ClientId
++	clientSecret *ClientSecret
++	code         AuthorizationCode
++	extraParams  []param
++	pkceVerifier *PkceCodeVerifier
++	tokenURL     *TokenUrl
++	redirectURL  *RedirectUrl
++}
++
++// AddExtraParam appends an extra param to the token request.
++func (r *CodeTokenRequest[TE, TR]) AddExtraParam(name, value string) *CodeTokenRequest[TE, TR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// SetPkceVerifier completes the PKCE protocol flow.
++func (r *CodeTokenRequest[TE, TR]) SetPkceVerifier(verifier PkceCodeVerifier) *CodeTokenRequest[TE, TR] {
++	r.pkceVerifier = &verifier
++	return r
++}
++
++// SetRedirectURI overrides the redirect_url.
++func (r *CodeTokenRequest[TE, TR]) SetRedirectURI(redirectURL RedirectUrl) *CodeTokenRequest[TE, TR] {
++	r.redirectURL = &redirectURL
++	return r
++}
++
++func (r *CodeTokenRequest[TE, TR]) prepareRequest() HTTPRequest {
++	params := []param{
++		{"grant_type", "authorization_code"},
++		{"code", r.code.Secret()},
++	}
++	if r.pkceVerifier != nil {
++		params = append(params, param{"code_verifier", r.pkceVerifier.Secret()})
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, r.redirectURL, nil, r.tokenURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *CodeTokenRequest[TE, TR]) Request(client SyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *CodeTokenRequest[TE, TR]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// RefreshTokenRequest is a request to exchange a refresh token for an access
++// token.
++type RefreshTokenRequest[TE ErrorResponse, TR TokenResponse] struct {
++	authType     AuthType
++	clientID     ClientId
++	clientSecret *ClientSecret
++	extraParams  []param
++	refreshToken *RefreshToken
++	scopes       []Scope
++	tokenURL     *TokenUrl
++}
++
++// AddExtraParam appends an extra param to the token request.
++func (r *RefreshTokenRequest[TE, TR]) AddExtraParam(name, value string) *RefreshTokenRequest[TE, TR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// AddScope appends a new scope to the token request.
++func (r *RefreshTokenRequest[TE, TR]) AddScope(scope Scope) *RefreshTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scope)
++	return r
++}
++
++// AddScopes appends a collection of scopes to the token request.
++func (r *RefreshTokenRequest[TE, TR]) AddScopes(scopes []Scope) *RefreshTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scopes...)
++	return r
++}
++
++func (r *RefreshTokenRequest[TE, TR]) prepareRequest() HTTPRequest {
++	params := []param{
++		{"grant_type", "refresh_token"},
++		{"refresh_token", r.refreshToken.Secret()},
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, r.scopes, r.tokenURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *RefreshTokenRequest[TE, TR]) Request(client SyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *RefreshTokenRequest[TE, TR]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// PasswordTokenRequest is a request to exchange resource owner credentials for
++// an access token.
++type PasswordTokenRequest[TE ErrorResponse, TR TokenResponse] struct {
++	authType     AuthType
++	clientID     ClientId
++	clientSecret *ClientSecret
++	extraParams  []param
++	username     *ResourceOwnerUsername
++	password     *ResourceOwnerPassword
++	scopes       []Scope
++	tokenURL     *TokenUrl
++}
++
++// AddExtraParam appends an extra param to the token request.
++func (r *PasswordTokenRequest[TE, TR]) AddExtraParam(name, value string) *PasswordTokenRequest[TE, TR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// AddScope appends a new scope to the token request.
++func (r *PasswordTokenRequest[TE, TR]) AddScope(scope Scope) *PasswordTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scope)
++	return r
++}
++
++// AddScopes appends a collection of scopes to the token request.
++func (r *PasswordTokenRequest[TE, TR]) AddScopes(scopes []Scope) *PasswordTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scopes...)
++	return r
++}
++
++func (r *PasswordTokenRequest[TE, TR]) prepareRequest() HTTPRequest {
++	params := []param{
++		{"grant_type", "password"},
++		{"username", r.username.String()},
++		{"password", r.password.Secret()},
++	}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, r.scopes, r.tokenURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *PasswordTokenRequest[TE, TR]) Request(client SyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *PasswordTokenRequest[TE, TR]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// ClientCredentialsTokenRequest is a request to exchange client credentials for
++// an access token.
++type ClientCredentialsTokenRequest[TE ErrorResponse, TR TokenResponse] struct {
++	authType     AuthType
++	clientID     ClientId
++	clientSecret *ClientSecret
++	extraParams  []param
++	scopes       []Scope
++	tokenURL     *TokenUrl
++}
++
++// AddExtraParam appends an extra param to the token request.
++func (r *ClientCredentialsTokenRequest[TE, TR]) AddExtraParam(name, value string) *ClientCredentialsTokenRequest[TE, TR] {
++	r.extraParams = append(r.extraParams, param{name, value})
++	return r
++}
++
++// AddScope appends a new scope to the token request.
++func (r *ClientCredentialsTokenRequest[TE, TR]) AddScope(scope Scope) *ClientCredentialsTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scope)
++	return r
++}
++
++// AddScopes appends a collection of scopes to the token request.
++func (r *ClientCredentialsTokenRequest[TE, TR]) AddScopes(scopes []Scope) *ClientCredentialsTokenRequest[TE, TR] {
++	r.scopes = append(r.scopes, scopes...)
++	return r
++}
++
++func (r *ClientCredentialsTokenRequest[TE, TR]) prepareRequest() HTTPRequest {
++	params := []param{{"grant_type", "client_credentials"}}
++	return endpointRequest(r.authType, r.clientID, r.clientSecret, r.extraParams, nil, r.scopes, r.tokenURL.URL(), params)
++}
++
++// Request synchronously sends the request and awaits a response.
++func (r *ClientCredentialsTokenRequest[TE, TR]) Request(client SyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
++
++// RequestAsync asynchronously sends the request and awaits a response.
++func (r *ClientCredentialsTokenRequest[TE, TR]) RequestAsync(ctx context.Context, client AsyncHTTPClient) (TR, *RequestTokenError) {
++	var zero TR
++	response, err := client.Call(ctx, r.prepareRequest())
++	if err != nil {
++		return zero, newRequestError(err)
++	}
++	return endpointResponse[TE, TR](response)
++}
+diff --git a/oauth2/token_test.go b/oauth2/token_test.go
+new file mode 100644
+index 0000000..440dc95
+--- /dev/null
++++ b/oauth2/token_test.go
+@@ -0,0 +1,487 @@
++package oauth2
++
++import (
++	"encoding/json"
++	"testing"
++)
++
++type fakeError struct{}
++
++func (fakeError) Error() string { return "error" }
++
++func TestExchangeCodeSuccessfulWithMinimalJSONResponse(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa")).
++		SetClientSecret(NewClientSecret("bbb")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token"))
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response:    newHTTPResponse(200, nil, `{"access_token": "12/34", "token_type": "BEARER"}`),
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++
++	if token.AccessToken().Secret() != "12/34" {
++		t.Fatalf("access token: got %q", token.AccessToken().Secret())
++	}
++	if token.TokenTypeValue() != BasicTokenTypeBearer {
++		t.Fatalf("token type: got %v", token.TokenTypeValue())
++	}
++	if _, ok := token.ExpiresIn(); ok {
++		t.Fatal("expected no expires_in")
++	}
++	if token.RefreshToken() != nil {
++		t.Fatal("expected no refresh token")
++	}
++
++	serialized, err := json.Marshal(token)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if string(serialized) != `{"access_token":"12/34","token_type":"bearer"}` {
++		t.Fatalf("serialized: got %s", serialized)
++	}
++
++	var roundTripped BasicTokenResponse
++	if err := json.Unmarshal([]byte(serialized), &roundTripped); err != nil {
++		t.Fatal(err)
++	}
++	if roundTripped.AccessToken().Secret() != token.AccessToken().Secret() {
++		t.Fatal("round trip access token mismatch")
++	}
++}
++
++func TestExchangeCodeSuccessfulWithCompleteJSONResponse(t *testing.T) {
++	client := newTestClient(t).SetAuthType(RequestBody)
++	body := `{"access_token": "12/34", "token_type": "bearer", "scope": "read write", "expires_in": 3600, "refresh_token": "foobar"}`
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
++		response:    newHTTPResponse(200, jsonHeader(), body),
++	}
++
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++
++	if len(token.Scopes()) != 2 {
++		t.Fatalf("scopes: got %#v", token.Scopes())
++	}
++	if expires, ok := token.ExpiresIn(); !ok || expires != 3600 {
++		t.Fatalf("expires_in: got %v %v", expires, ok)
++	}
++	if token.RefreshToken() == nil || token.RefreshToken().Secret() != "foobar" {
++		t.Fatal("refresh token mismatch")
++	}
++
++	serialized, _ := json.Marshal(token)
++	want := `{"access_token":"12/34","token_type":"bearer","expires_in":3600,"refresh_token":"foobar","scope":"read write"}`
++	if string(serialized) != want {
++		t.Fatalf("serialized: got %s, want %s", serialized, want)
++	}
++}
++
++func TestExchangeClientCredentialsWithBasicAuth(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa/;&")).
++		SetClientSecret(NewClientSecret("bbb/;&")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token")).
++		SetAuthType(BasicAuth)
++
++	headers := map[string]string{
++		"Accept":        "application/json",
++		"Content-Type":  "application/x-www-form-urlencoded",
++		"Authorization": "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==",
++	}
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: headers,
++		wantBody:    "grant_type=client_credentials",
++		response:    newHTTPResponse(200, nil, `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++
++	request, err := client.ExchangeClientCredentials()
++	if err != nil {
++		t.Fatal(err)
++	}
++	token, tokenErr := request.Request(caller)
++	if tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++	if len(token.Scopes()) != 2 {
++		t.Fatalf("scopes: got %#v", token.Scopes())
++	}
++}
++
++func TestExchangeClientCredentialsWithBasicAuthButNoClientSecret(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa/;&")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token")).
++		SetAuthType(BasicAuth)
++
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=client_credentials&client_id=aaa%2F%3B%26",
++		response:    newHTTPResponse(200, nil, `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeClientCredentials()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeClientCredentialsWithBodyAuthAndScope(t *testing.T) {
++	client := newTestClient(t).SetAuthType(RequestBody)
++	caller := &mockHTTPClient{
++		t:          t,
++		wantMethod: "POST",
++		wantURL:    "https://example.com/token",
++		wantHeaders: map[string]string{
++			"Accept":       "application/json",
++			"Content-Type": "application/x-www-form-urlencoded",
++		},
++		wantBody: "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
++		response: newHTTPResponse(200, map[string]string{"Content-Type": "APPLICATION/jSoN"},
++			`{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeClientCredentials()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.AddScope(NewScope("read")).AddScope(NewScope("write")).Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeRefreshTokenWithBasicAuth(t *testing.T) {
++	client := newTestClient(t).SetAuthType(BasicAuth)
++	refresh := NewRefreshToken("ccc")
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=refresh_token&refresh_token=ccc",
++		response:    newHTTPResponse(200, nil, `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeRefreshToken(&refresh)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangePasswordWithJSONResponse(t *testing.T) {
++	client := newTestClient(t)
++	username := NewResourceOwnerUsername("user")
++	password := NewResourceOwnerPassword("pass")
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=password&username=user&password=pass&scope=read+write",
++		response:    newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangePassword(&username, &password)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.AddScope(NewScope("read")).AddScope(NewScope("write")).Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeCodeSuccessfulWithRedirectURL(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(RequestBody).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&redirect_uri=https%3A%2F%2Fredirect%2Fhere",
++		response:    newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeCodeSuccessfulWithRedirectURLOverride(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(RequestBody).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&redirect_uri=https%3A%2F%2Fredirect%2Falternative",
++		response:    newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.SetRedirectURI(*mustRedirectURL(t, "https://redirect/alternative")).Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeCodeSuccessfulWithBasicAuth(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(BasicAuth).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&redirect_uri=https%3A%2F%2Fredirect%2Fhere",
++		response:    newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeCodeSuccessfulWithPKCEAndExtension(t *testing.T) {
++	client := newTestClient(t).
++		SetAuthType(BasicAuth).
++		SetRedirectURL(mustRedirectURL(t, "https://redirect/here"))
++	verifier := NewPkceCodeVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody: "grant_type=authorization_code&code=ccc" +
++			"&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" +
++			"&redirect_uri=https%3A%2F%2Fredirect%2Fhere&foo=bar",
++		response: newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": "bearer", "scope": "read write"}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, tokenErr := request.SetPkceVerifier(verifier).AddExtraParam("foo", "bar").Request(caller); tokenErr != nil {
++		t.Fatalf("unexpected error: %v", tokenErr)
++	}
++}
++
++func TestExchangeCodeWithSimpleJSONError(t *testing.T) {
++	client := newTestClient(t)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error": "invalid_request", "error_description": "stuff happened"}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorServerResponse {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	errorResponse, ok := tokenErr.Response.(BasicErrorResponse)
++	if !ok {
++		t.Fatalf("unexpected response type %T", tokenErr.Response)
++	}
++	if errorResponse.Error != BasicErrorResponseTypeInvalidRequest {
++		t.Fatalf("error: got %v", errorResponse.Error)
++	}
++	if errorResponse.ErrorDescription == nil || *errorResponse.ErrorDescription != "stuff happened" {
++		t.Fatalf("description: %#v", errorResponse.ErrorDescription)
++	}
++	if errorResponse.ErrorURI != nil {
++		t.Fatal("expected no error_uri")
++	}
++	if got := tokenErr.Error(); got != "Server returned error response: invalid_request: stuff happened" {
++		t.Fatalf("error string: got %q", got)
++	}
++	serialized, _ := json.Marshal(errorResponse)
++	if string(serialized) != `{"error":"invalid_request","error_description":"stuff happened"}` {
++		t.Fatalf("serialized: got %s", serialized)
++	}
++}
++
++func TestExchangeCodeWithJSONParseError(t *testing.T) {
++	client := newTestClient(t)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response:    newHTTPResponse(200, jsonHeader(), "broken json"),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorParse {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	if string(tokenErr.RawBody) != "broken json" {
++		t.Fatalf("raw body: got %q", tokenErr.RawBody)
++	}
++}
++
++func TestExchangeCodeWithUnexpectedContentType(t *testing.T) {
++	client := newTestClient(t)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response:    newHTTPResponse(200, map[string]string{"Content-Type": "text/plain"}, "broken json"),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorOther {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	want := "unexpected response Content-Type: \"text/plain\", should be `application/json`"
++	if tokenErr.Error() != "Other error: "+want {
++		t.Fatalf("got %q", tokenErr.Error())
++	}
++}
++
++func TestExchangeCodeWithInvalidTokenType(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa")).
++		SetAuthURL(mustAuthURL(t, "https://example.com/auth")).
++		SetTokenURL(mustTokenURL(t, "https://example.com/token"))
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: bodyAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc&client_id=aaa",
++		response:    newHTTPResponse(200, jsonHeader(), `{"access_token": "12/34", "token_type": 123}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorParse {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++}
++
++func TestExchangeCodeWith400StatusCode(t *testing.T) {
++	client := newTestClient(t)
++	caller := &mockHTTPClient{
++		t:           t,
++		wantMethod:  "POST",
++		wantURL:     "https://example.com/token",
++		wantHeaders: basicAuthHeaders(),
++		wantBody:    "grant_type=authorization_code&code=ccc",
++		response: newHTTPResponse(400, jsonHeader(),
++			`{"error":"invalid_request","error_description":"Expired code."}`),
++	}
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(caller)
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Error() != "Server returned error response: invalid_request: Expired code." {
++		t.Fatalf("got %q", tokenErr.Error())
++	}
++}
++
++func TestExchangeCodeFailsGracefullyOnTransportError(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa")).
++		SetClientSecret(NewClientSecret("bbb")).
++		SetAuthURL(mustAuthURL(t, "https://auth")).
++		SetTokenURL(mustTokenURL(t, "https://token"))
++	request, err := client.ExchangeCode(NewAuthorizationCode("ccc"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	_, tokenErr := request.Request(&mockHTTPClient{t: t, wantMethod: "POST", wantURL: "https://token",
++		wantHeaders: basicAuthHeaders(), wantBody: "grant_type=authorization_code&code=ccc", responseErr: fakeError{}})
++	if tokenErr == nil {
++		t.Fatal("expected error")
++	}
++	if tokenErr.Kind != RequestTokenErrorRequest {
++		t.Fatalf("kind: got %v", tokenErr.Kind)
++	}
++	if _, ok := tokenErr.RequestErr.(fakeError); !ok {
++		t.Fatalf("underlying error type: %T", tokenErr.RequestErr)
++	}
++}
++
++func TestExchangeCodeMissingTokenEndpoint(t *testing.T) {
++	client := NewBasicClient(NewClientId("aaa"))
++	if _, err := client.ExchangeCode(NewAuthorizationCode("ccc")); err == nil {
++		t.Fatal("expected missing-URL error")
++	} else if err.Error() != "No token endpoint URL specified" {
++		t.Fatalf("got %q", err.Error())
++	}
++}
+diff --git a/oauth2/traits.go b/oauth2/traits.go
+new file mode 100644
+index 0000000..db112ce
+--- /dev/null
++++ b/oauth2/traits.go
+@@ -0,0 +1,75 @@
++package oauth2
++
++// ErrorResponseType is implemented by values that can be used as the `error`
++// field of a standard OAuth2 error response. Implementations must serialize to
++// the canonical string defined by the relevant OAuth2 standard.
++type ErrorResponseType interface {
++	ErrorTypeString() string
++}
++
++// ErrorResponse is a server error response. It exists separately from
++// StandardErrorResponse to support customization by clients, such as
++// interoperability with non-standard-compliant OAuth2 providers.
++type ErrorResponse interface {
++	// ErrorString returns a human-readable representation suitable for
++	// printing, e.g. inside a RequestTokenError.
++	ErrorString() string
++}
++
++// TokenType is the type of an OAuth2 access token. Values deserialize
++// case-insensitively and serialize to their canonical strings.
++type TokenType interface {
++	// TokenTypeString returns the canonical string for this token type.
++	TokenTypeString() string
++}
++
++// ExtraTokenFields is implemented by user-defined types that add extra fields
++// to a token response.
++type ExtraTokenFields interface {
++	IsExtraTokenFields()
++}
++
++// TokenResponse is the common interface shared by all token responses.
++type TokenResponse interface {
++	// AccessToken returns the access token issued by the authorization server.
++	AccessToken() AccessToken
++	// TokenType returns the type of the token issued.
++	TokenTypeValue() TokenType
++	// ExpiresIn returns the lifetime in seconds of the access token, if known.
++	ExpiresIn() (uint64, bool)
++	// RefreshToken returns the refresh token, if any.
++	RefreshToken() *RefreshToken
++	// Scopes returns the scope of the access token, if included.
++	Scopes() []Scope
++}
++
++// TokenIntrospectionResponse is the common interface shared by all token
++// introspection responses.
++type TokenIntrospectionResponse interface {
++	Active() bool
++	Scopes() []Scope
++	ClientId() *ClientId
++	Username() *string
++	TokenType() (TokenType, bool)
++	Exp() *int64
++	Iat() *int64
++	Nbf() *int64
++	Sub() *string
++	Aud() []string
++	Iss() *string
++	Jti() *string
++}
++
++// RevocableToken is a token that can be revoked per RFC 7009.
++type RevocableToken interface {
++	// Secret returns the actual token value to be revoked.
++	Secret() string
++	// TypeHint indicates the type of the token being revoked.
++	TypeHint() string
++}
++
++// ExtraDeviceAuthorizationFields is implemented by user-defined types that add
++// extra fields to a device authorization response.
++type ExtraDeviceAuthorizationFields interface {
++	IsExtraDeviceAuthorizationFields()
++}
+diff --git a/oauth2/types.go b/oauth2/types.go
+new file mode 100644
+index 0000000..20a611b
+--- /dev/null
++++ b/oauth2/types.go
+@@ -0,0 +1,347 @@
++package oauth2
++
++import (
++	"crypto/rand"
++	"crypto/sha256"
++	"crypto/subtle"
++	"encoding/base64"
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/url"
++)
++
++// secret is the shared implementation for secret-bearing newtypes. It redacts
++// its content in every formatted representation while exposing the underlying
++// value only through Secret().
++type secret struct {
++	value string
++	name  string
++}
++
++// Secret returns the underlying secret value.
++//
++// Security Warning: leaking this value may compromise the security of the
++// OAuth2 flow.
++func (s secret) Secret() string { return s.value }
++
++func (s secret) String() string { return s.name + "([redacted])" }
++
++func (s secret) Format(f fmt.State, _ rune) {
++	io.WriteString(f, s.name+"([redacted])")
++}
++
++func (s secret) GoString() string { return s.name + "([redacted])" }
++
++func (s secret) MarshalJSON() ([]byte, error) { return json.Marshal(s.value) }
++
++func (s *secret) UnmarshalJSON(b []byte) error {
++	var v string
++	if err := json.Unmarshal(b, &v); err != nil {
++		return err
++	}
++	s.value = v
++	return nil
++}
++
++func newSecret(value, name string) secret { return secret{value: value, name: name} }
++
++// ClientSecret is the client password issued to the client during registration.
++type ClientSecret struct{ secret }
++
++func NewClientSecret(v string) ClientSecret { return ClientSecret{newSecret(v, "ClientSecret")} }
++
++// AccessToken is a token returned by the token endpoint.
++type AccessToken struct{ secret }
++
++func NewAccessToken(v string) AccessToken { return AccessToken{newSecret(v, "AccessToken")} }
++
++// RefreshToken is used to obtain a new access token.
++type RefreshToken struct{ secret }
++
++func NewRefreshToken(v string) RefreshToken { return RefreshToken{newSecret(v, "RefreshToken")} }
++
++// AuthorizationCode is returned from the authorization endpoint.
++type AuthorizationCode struct{ secret }
++
++func NewAuthorizationCode(v string) AuthorizationCode {
++	return AuthorizationCode{newSecret(v, "AuthorizationCode")}
++}
++
++// PkceCodeVerifier is the PKCE code verifier.
++type PkceCodeVerifier struct{ secret }
++
++func NewPkceCodeVerifier(v string) PkceCodeVerifier {
++	return PkceCodeVerifier{newSecret(v, "PkceCodeVerifier")}
++}
++
++// CsrfToken is the value used for CSRF protection via the state parameter.
++type CsrfToken struct{ secret }
++
++func NewCsrfToken(v string) CsrfToken { return CsrfToken{newSecret(v, "CsrfToken")} }
++
++// NewCsrfTokenRandom generates a new random, base64-encoded 128-bit CSRF token.
++func NewCsrfTokenRandom() CsrfToken { return NewCsrfTokenRandomLen(16) }
++
++// NewCsrfTokenRandomLen generates a random CSRF token of the specified byte length.
++func NewCsrfTokenRandomLen(numBytes int) CsrfToken {
++	buf := make([]byte, numBytes)
++	if _, err := rand.Read(buf); err != nil {
++		panic(err)
++	}
++	return CsrfToken{newSecret(base64.RawURLEncoding.EncodeToString(buf), "CsrfToken")}
++}
++
++// ResourceOwnerPassword is the resource owner's password.
++type ResourceOwnerPassword struct{ secret }
++
++func NewResourceOwnerPassword(v string) ResourceOwnerPassword {
++	return ResourceOwnerPassword{newSecret(v, "ResourceOwnerPassword")}
++}
++
++// DeviceCode is returned by the device authorization endpoint.
++type DeviceCode struct{ secret }
++
++func NewDeviceCode(v string) DeviceCode { return DeviceCode{newSecret(v, "DeviceCode")} }
++
++// UserCode is returned by the device authorization endpoint for the user.
++type UserCode struct{ secret }
++
++func NewUserCode(v string) UserCode { return UserCode{newSecret(v, "UserCode")} }
++
++// VerificationUriComplete is the verification URI including the user code.
++type VerificationUriComplete struct{ secret }
++
++func NewVerificationUriComplete(v string) VerificationUriComplete {
++	return VerificationUriComplete{newSecret(v, "VerificationUriComplete")}
++}
++
++// SecretsEqual compares two secret strings in constant time.
++func SecretsEqual(a, b string) bool {
++	ha := sha256.Sum256([]byte(a))
++	hb := sha256.Sum256([]byte(b))
++	return subtle.ConstantTimeCompare(ha[:], hb[:]) == 1
++}
++
++// stringer is the shared implementation for non-secret string newtypes.
++type stringer struct{ value string }
++
++func (s stringer) String() string { return s.value }
++
++func (s stringer) MarshalJSON() ([]byte, error) { return json.Marshal(s.value) }
++
++func (s *stringer) UnmarshalJSON(b []byte) error {
++	var v string
++	if err := json.Unmarshal(b, &v); err != nil {
++		return err
++	}
++	s.value = v
++	return nil
++}
++
++func newStringer(v string) stringer { return stringer{value: v} }
++
++// ClientId is the client identifier issued during registration.
++type ClientId struct{ stringer }
++
++func NewClientId(v string) ClientId { return ClientId{newStringer(v)} }
++
++// ResponseType is the authorization endpoint response (grant) type.
++type ResponseType struct{ stringer }
++
++func NewResponseType(v string) ResponseType { return ResponseType{newStringer(v)} }
++
++// ResourceOwnerUsername is the resource owner's username.
++type ResourceOwnerUsername struct{ stringer }
++
++func NewResourceOwnerUsername(v string) ResourceOwnerUsername {
++	return ResourceOwnerUsername{newStringer(v)}
++}
++
++// Scope is an access token scope.
++type Scope struct{ stringer }
++
++func NewScope(v string) Scope { return Scope{newStringer(v)} }
++
++// AsStr returns the scope as a string.
++func (s Scope) AsStr() string { return s.value }
++
++// PkceCodeChallengeMethod is the method used for PKCE protection.
++type PkceCodeChallengeMethod struct{ stringer }
++
++func NewPkceCodeChallengeMethod(v string) PkceCodeChallengeMethod {
++	return PkceCodeChallengeMethod{newStringer(v)}
++}
++
++// PkceCodeChallenge is the code challenge used for PKCE protection.
++type PkceCodeChallenge struct {
++	codeChallenge       string
++	codeChallengeMethod PkceCodeChallengeMethod
++}
++
++// AsStr returns the PKCE code challenge as a string.
++func (c PkceCodeChallenge) AsStr() string { return c.codeChallenge }
++
++// ChallengeMethod returns the PKCE code challenge method.
++func (c PkceCodeChallenge) ChallengeMethod() PkceCodeChallengeMethod {
++	return c.codeChallengeMethod
++}
++
++func pckeRandomLen(numBytes int) PkceCodeVerifier {
++	// RFC 7636: the code verifier must have a minimum length of 43 characters
++	// and a maximum length of 128 characters, i.e. 32-96 octets of random data.
++	if numBytes < 32 || numBytes > 96 {
++		panic("pkce code verifier length out of range (32..=96 bytes)")
++	}
++	buf := make([]byte, numBytes)
++	if _, err := rand.Read(buf); err != nil {
++		panic(err)
++	}
++	return NewPkceCodeVerifier(base64.RawURLEncoding.EncodeToString(buf))
++}
++
++// NewPkceCodeChallengeRandomSha256 generates a random SHA-256 PKCE code
++// challenge and verifier.
++func NewPkceCodeChallengeRandomSha256() (PkceCodeChallenge, PkceCodeVerifier) {
++	return NewPkceCodeChallengeRandomSha256Len(32)
++}
++
++// NewPkceCodeChallengeRandomSha256Len generates a random SHA-256 PKCE code
++// challenge and verifier using numBytes of random data.
++func NewPkceCodeChallengeRandomSha256Len(numBytes int) (PkceCodeChallenge, PkceCodeVerifier) {
++	verifier := pckeRandomLen(numBytes)
++	return NewPkceCodeChallengeFromVerifierSha256(verifier), verifier
++}
++
++// NewPkceCodeChallengeFromVerifierSha256 derives a SHA-256 PKCE code challenge
++// from the supplied verifier.
++func NewPkceCodeChallengeFromVerifierSha256(verifier PkceCodeVerifier) PkceCodeChallenge {
++	l := len(verifier.Secret())
++	if l < 43 || l > 128 {
++		panic("pkce code verifier length out of range (43..=128 characters)")
++	}
++	digest := sha256.Sum256([]byte(verifier.Secret()))
++	return PkceCodeChallenge{
++		codeChallenge:       base64.RawURLEncoding.EncodeToString(digest[:]),
++		codeChallengeMethod: NewPkceCodeChallengeMethod("S256"),
++	}
++}
++
++// NewPkceCodeChallengeRandomPlain generates a random plain PKCE code challenge
++// and verifier. Use is discouraged unless the endpoint does not support SHA-256.
++func NewPkceCodeChallengeRandomPlain() (PkceCodeChallenge, PkceCodeVerifier) {
++	verifier := pckeRandomLen(32)
++	return NewPkceCodeChallengeFromVerifierPlain(verifier), verifier
++}
++
++// NewPkceCodeChallengeFromVerifierPlain derives a plain PKCE code challenge
++// from the supplied verifier. Use is discouraged unless the endpoint does not
++// support SHA-256.
++func NewPkceCodeChallengeFromVerifierPlain(verifier PkceCodeVerifier) PkceCodeChallenge {
++	l := len(verifier.Secret())
++	if l < 43 || l > 128 {
++		panic("pkce code verifier length out of range (43..=128 characters)")
++	}
++	return PkceCodeChallenge{
++		codeChallenge:       verifier.Secret(),
++		codeChallengeMethod: NewPkceCodeChallengeMethod("plain"),
++	}
++}
++
++// urlType is the shared implementation for URL-backed newtypes. Types created
++// from it enforce during construction that the contained value is a
++// syntactically valid URL.
++type urlType struct {
++	parsed *url.URL
++	raw    string
++}
++
++func newURLType(raw string) (urlType, error) {
++	parsed, err := url.Parse(raw)
++	if err != nil {
++		return urlType{}, err
++	}
++	return urlType{parsed: parsed, raw: raw}, nil
++}
++
++// URL returns the type as a parsed *url.URL.
++func (u urlType) URL() *url.URL { return u.parsed }
++
++func (u urlType) String() string { return u.raw }
++
++// AuthUrl is the authorization endpoint URL.
++type AuthUrl struct{ urlType }
++
++func NewAuthUrl(raw string) (*AuthUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &AuthUrl{u}, nil
++}
++
++// TokenUrl is the token endpoint URL.
++type TokenUrl struct{ urlType }
++
++func NewTokenUrl(raw string) (*TokenUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &TokenUrl{u}, nil
++}
++
++// RedirectUrl is the client's redirection endpoint URL.
++type RedirectUrl struct{ urlType }
++
++func NewRedirectUrl(raw string) (*RedirectUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &RedirectUrl{u}, nil
++}
++
++// IntrospectionUrl is the RFC 7662 token introspection endpoint URL.
++type IntrospectionUrl struct{ urlType }
++
++func NewIntrospectionUrl(raw string) (*IntrospectionUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &IntrospectionUrl{u}, nil
++}
++
++// RevocationUrl is the RFC 7009 token revocation endpoint URL.
++type RevocationUrl struct{ urlType }
++
++func NewRevocationUrl(raw string) (*RevocationUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &RevocationUrl{u}, nil
++}
++
++// DeviceAuthorizationUrl is the device authorization endpoint URL.
++type DeviceAuthorizationUrl struct{ urlType }
++
++func NewDeviceAuthorizationUrl(raw string) (*DeviceAuthorizationUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return nil, err
++	}
++	return &DeviceAuthorizationUrl{u}, nil
++}
++
++// EndUserVerificationUrl is the end-user verification URI.
++type EndUserVerificationUrl struct{ urlType }
++
++func NewEndUserVerificationUrl(raw string) (EndUserVerificationUrl, error) {
++	u, err := newURLType(raw)
++	if err != nil {
++		return EndUserVerificationUrl{}, err
++	}
++	return EndUserVerificationUrl{u}, nil
++}
+diff --git a/oauth2/types_test.go b/oauth2/types_test.go
+new file mode 100644
+index 0000000..d945dfb
+--- /dev/null
++++ b/oauth2/types_test.go
+@@ -0,0 +1,101 @@
++package oauth2
++
++import (
++	"fmt"
++	"testing"
++)
++
++func TestSecretConversion(t *testing.T) {
++	secret := NewCsrfToken("top_secret")
++	if secret.Secret() != "top_secret" {
++		t.Fatalf("Secret(): got %q", secret.Secret())
++	}
++}
++
++func TestSecretRedaction(t *testing.T) {
++	secret := NewClientSecret("top_secret")
++	if got := fmt.Sprintf("%v", secret); got != "ClientSecret([redacted])" {
++		t.Fatalf("got %q", got)
++	}
++	if got := fmt.Sprintf("%s", secret); got != "ClientSecret([redacted])" {
++		t.Fatalf("got %q", got)
++	}
++	if got := fmt.Sprintf("%#v", secret); got != "ClientSecret([redacted])" {
++		t.Fatalf("got %q", got)
++	}
++	if fmt.Sprintf("%v", secret) == "top_secret" {
++		t.Fatal("secret value leaked in formatted output")
++	}
++}
++
++func TestPkceCodeVerifierTooShort(t *testing.T) {
++	defer func() {
++		if recover() == nil {
++			t.Fatal("expected panic for short verifier")
++		}
++	}()
++	NewPkceCodeChallengeRandomSha256Len(31)
++}
++
++func TestPkceCodeVerifierTooLong(t *testing.T) {
++	defer func() {
++		if recover() == nil {
++			t.Fatal("expected panic for long verifier")
++		}
++	}()
++	NewPkceCodeChallengeRandomSha256Len(97)
++}
++
++func TestPkceCodeVerifierMin(t *testing.T) {
++	_, verifier := NewPkceCodeChallengeRandomSha256Len(32)
++	if len(verifier.Secret()) != 43 {
++		t.Fatalf("got len %d, want 43", len(verifier.Secret()))
++	}
++}
++
++func TestPkceCodeVerifierMax(t *testing.T) {
++	_, verifier := NewPkceCodeChallengeRandomSha256Len(96)
++	if len(verifier.Secret()) != 128 {
++		t.Fatalf("got len %d, want 128", len(verifier.Secret()))
++	}
++}
++
++func TestPkceCodeVerifierChallenge(t *testing.T) {
++	// Example from https://tools.ietf.org/html/rfc7636#appendix-B
++	verifier := NewPkceCodeVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
++	challenge := NewPkceCodeChallengeFromVerifierSha256(verifier)
++	if challenge.AsStr() != "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" {
++		t.Fatalf("got %q", challenge.AsStr())
++	}
++	if challenge.ChallengeMethod().String() != "S256" {
++		t.Fatalf("got %q", challenge.ChallengeMethod().String())
++	}
++}
++
++func TestPkcePlainChallenge(t *testing.T) {
++	verifier := NewPkceCodeVerifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
++	challenge := NewPkceCodeChallengeFromVerifierPlain(verifier)
++	if challenge.AsStr() != verifier.Secret() {
++		t.Fatalf("plain challenge: got %q, want %q", challenge.AsStr(), verifier.Secret())
++	}
++	if challenge.ChallengeMethod().String() != "plain" {
++		t.Fatalf("got %q", challenge.ChallengeMethod().String())
++	}
++
++	randomChallenge, randomVerifier := NewPkceCodeChallengeRandomPlain()
++	if randomChallenge.AsStr() != randomVerifier.Secret() {
++		t.Fatal("random plain challenge does not match verifier")
++	}
++	if randomChallenge.ChallengeMethod().String() != "plain" {
++		t.Fatalf("got %q", randomChallenge.ChallengeMethod().String())
++	}
++}
++
++func TestSecretsEqual(t *testing.T) {
++	if !SecretsEqual("abc", "abc") {
++		t.Fatal("equal secrets reported unequal")
++	}
++	if SecretsEqual("abc", "abd") {
++		t.Fatal("unequal secrets reported equal")
++	}
++}

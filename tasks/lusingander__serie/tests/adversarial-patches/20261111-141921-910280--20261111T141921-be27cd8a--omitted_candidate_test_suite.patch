@@ -1,0 +1,1786 @@
+diff --git a/cmd/serie-core/main.go b/cmd/serie-core/main.go
+new file mode 100644
+index 0000000..3abb68a
+--- /dev/null
++++ b/cmd/serie-core/main.go
+@@ -0,0 +1,214 @@
++// Command serie-core exposes the migrated non-UI serie core as a small CLI.
++package main
++
++import (
++	"encoding/json"
++	"flag"
++	"fmt"
++	"io"
++	"os"
++	"strconv"
++	"strings"
++
++	"github.com/lusingander/serie/core"
++)
++
++type optionalInt struct {
++	value int
++	set   bool
++}
++
++func (o *optionalInt) String() string {
++	if !o.set {
++		return ""
++	}
++	return strconv.Itoa(o.value)
++}
++
++func (o *optionalInt) Set(value string) error {
++	n, err := strconv.Atoi(value)
++	if err != nil {
++		return err
++	}
++	if n < 0 {
++		return fmt.Errorf("max-count must not be negative")
++	}
++	o.value = n
++	o.set = true
++	return nil
++}
++
++type optionalOrder struct {
++	value core.SortCommit
++	set   bool
++}
++
++func (o *optionalOrder) String() string {
++	if !o.set {
++		return ""
++	}
++	if o.value == core.SortTopological {
++		return "topo"
++	}
++	return "chrono"
++}
++
++func (o *optionalOrder) Set(value string) error {
++	switch value {
++	case "chrono":
++		o.value = core.SortChronological
++	case "topo":
++		o.value = core.SortTopological
++	default:
++		return fmt.Errorf("invalid order %q (expected chrono or topo)", value)
++	}
++	o.set = true
++	return nil
++}
++
++type optionalBool struct {
++	value bool
++	set   bool
++}
++
++func (o *optionalBool) String() string {
++	if !o.set {
++		return "false"
++	}
++	return strconv.FormatBool(o.value)
++}
++
++func (o *optionalBool) Set(value string) error {
++	v, err := strconv.ParseBool(value)
++	if err != nil {
++		return err
++	}
++	o.value = v
++	o.set = true
++	return nil
++}
++
++// IsBoolFlag lets --mailmap be used without an explicit value.
++func (o *optionalBool) IsBoolFlag() bool { return true }
++
++type cliOptions struct {
++	maxCount optionalInt
++	order    optionalOrder
++	mailmap  optionalBool
++	path     string
++}
++
++// reorderArgs allows the optional repository path to appear before or after
++// flags, which is friendlier for a CLI whose path argument is optional.
++func reorderArgs(args []string) []string {
++	flags := make([]string, 0, len(args))
++	positional := make([]string, 0, len(args))
++	for i := 0; i < len(args); i++ {
++		arg := args[i]
++		if arg == "--" {
++			positional = append(positional, args[i+1:]...)
++			break
++		}
++		if arg == "-n" || arg == "--max-count" || arg == "-o" || arg == "--order" {
++			flags = append(flags, arg)
++			if i+1 < len(args) {
++				i++
++				flags = append(flags, args[i])
++			}
++			continue
++		}
++		if strings.HasPrefix(arg, "-") {
++			flags = append(flags, arg)
++			continue
++		}
++		positional = append(positional, arg)
++	}
++	return append(flags, positional...)
++}
++
++func parseFlags(args []string, output io.Writer) (cliOptions, error) {
++	var opts cliOptions
++	fs := flag.NewFlagSet("serie-core", flag.ContinueOnError)
++	fs.SetOutput(output)
++	fs.Var(&opts.maxCount, "n", "Maximum number of commits to load")
++	fs.Var(&opts.maxCount, "max-count", "Maximum number of commits to load")
++	fs.Var(&opts.order, "o", "Commit ordering algorithm (chrono or topo)")
++	fs.Var(&opts.order, "order", "Commit ordering algorithm (chrono or topo)")
++	fs.Var(&opts.mailmap, "mailmap", "Resolve identities through .mailmap")
++	if err := fs.Parse(reorderArgs(args)); err != nil {
++		return cliOptions{}, err
++	}
++	rest := fs.Args()
++	if len(rest) > 1 {
++		return cliOptions{}, fmt.Errorf("too many arguments")
++	}
++	opts.path = "."
++	if len(rest) == 1 {
++		opts.path = rest[0]
++	}
++	return opts, nil
++}
++
++func resolveOptions(cli cliOptions, config core.Config) (string, core.SortCommit, *int, bool) {
++	order := config.Order
++	if cli.order.set {
++		order = cli.order.value
++	}
++	mailmap := config.Mailmap
++	if cli.mailmap.set {
++		mailmap = cli.mailmap.value
++	}
++	var maxCount *int
++	if cli.maxCount.set {
++		n := cli.maxCount.value
++		maxCount = &n
++	}
++	return cli.path, order, maxCount, mailmap
++}
++
++type jsonResult struct {
++	Commits      []*core.Commit                    `json:"commits"`
++	CommitPosMap map[core.CommitHash]core.Position `json:"commit_pos_map"`
++	Edges        [][]core.Edge                     `json:"edges"`
++	MaxPosX      int                               `json:"max_pos_x"`
++	AllRefs      []core.Ref                        `json:"all_refs"`
++	Head         core.Head                         `json:"head"`
++}
++
++func writeJSONResult(w io.Writer, graph *core.Graph, refs []core.Ref, head core.Head) error {
++	encoder := json.NewEncoder(w)
++	encoder.SetEscapeHTML(false)
++	return encoder.Encode(jsonResult{
++		Commits:      graph.Commits,
++		CommitPosMap: graph.CommitPosMap,
++		Edges:        graph.Edges,
++		MaxPosX:      graph.MaxPosX,
++		AllRefs:      refs,
++		Head:         head,
++	})
++}
++
++func run(args []string, stdout, stderr io.Writer) error {
++	opts, err := parseFlags(args, stderr)
++	if err != nil {
++		return err
++	}
++	config, err := core.LoadConfig()
++	if err != nil {
++		return err
++	}
++	path, order, maxCount, mailmap := resolveOptions(opts, config)
++	repository, err := core.Load(path, order, maxCount, mailmap)
++	if err != nil {
++		return err
++	}
++	graph := core.CalcGraph(repository)
++	return writeJSONResult(stdout, graph, repository.AllRefs(), repository.Head())
++}
++
++func main() {
++	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
++		fmt.Fprintln(os.Stderr, err)
++		os.Exit(1)
++	}
++}
+diff --git a/core/config.go b/core/config.go
+new file mode 100644
+index 0000000..3af4f45
+--- /dev/null
++++ b/core/config.go
+@@ -0,0 +1,308 @@
++package core
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"strconv"
++	"strings"
++)
++
++const (
++	// CoreOptionOrder is the only in-scope core.option key.
++	CoreOptionOrder = "core.option.order"
++	// CoreGitMailmap is the only in-scope core.git key.
++	CoreGitMailmap = "core.git.mailmap"
++
++	configFileEnvName    = "SERIE_CONFIG_FILE"
++	xdgConfigHomeEnvName = "XDG_CONFIG_HOME"
++	defaultConfigDir     = ".config"
++	appDirName           = "serie"
++	configFileName       = "config.toml"
++)
++
++// Config contains the in-scope core configuration values.
++type Config struct {
++	Order   SortCommit
++	Mailmap bool
++}
++
++// DefaultConfig returns the baseline defaults.
++func DefaultConfig() Config {
++	return Config{Order: SortChronological, Mailmap: false}
++}
++
++// LoadConfig reads the baseline config lookup locations. SERIE_CONFIG_FILE has
++// highest priority and is an error when set but missing. XDG_CONFIG_HOME or the
++// home directory fallback is used otherwise. A missing fallback file means the
++// defaults are used.
++func LoadConfig() (Config, error) {
++	path, explicit := configFilePathV2()
++	if path == "" {
++		return DefaultConfig(), nil
++	}
++	if _, err := os.Stat(path); err != nil {
++		if os.IsNotExist(err) {
++			if explicit {
++				return Config{}, fmt.Errorf("Config file specified by $%s environment variable not found: %s", configFileEnvName, path)
++			}
++			return DefaultConfig(), nil
++		}
++		return Config{}, err
++	}
++	return LoadConfigFromFile(path)
++}
++
++// LoadConfigFromFile reads only the in-scope keys from a TOML file.
++func LoadConfigFromFile(path string) (Config, error) {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return Config{}, err
++	}
++	return ParseCoreConfig(string(content))
++}
++
++// ParseCoreConfig extracts core.option.order and core.git.mailmap while
++// tolerating comments, arrays, inline tables, multiline arrays, and sections
++// that are outside the Go core's scope.
++func ParseCoreConfig(content string) (Config, error) {
++	config := DefaultConfig()
++	section := ""
++	depth := 0
++
++	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
++	for _, rawLine := range lines {
++		line := stripTOMLComment(rawLine)
++
++		if depth > 0 {
++			depth += bracketDelta(line)
++			if depth < 0 {
++				depth = 0
++			}
++			continue
++		}
++
++		trimmed := strings.TrimSpace(line)
++		if trimmed == "" {
++			continue
++		}
++
++		if strings.HasPrefix(trimmed, "[") {
++			if end := strings.LastIndex(trimmed, "]"); end > 0 {
++				inner := strings.TrimSpace(trimmed[1:end])
++				inner = strings.Trim(inner, "[]")
++				section = normalizeTOMLKey(inner)
++				continue
++			}
++		}
++
++		eq := topLevelEquals(trimmed)
++		if eq < 0 {
++			depth += bracketDelta(trimmed)
++			if depth < 0 {
++				depth = 0
++			}
++			continue
++		}
++
++		keyPart := strings.TrimSpace(trimmed[:eq])
++		valuePart := strings.TrimSpace(trimmed[eq+1:])
++		key := normalizeTOMLKey(keyPart)
++		if section != "" {
++			key = section + "." + key
++		}
++
++		switch key {
++		case CoreOptionOrder:
++			value, err := parseTOMLString(valuePart)
++			if err != nil {
++				return Config{}, err
++			}
++			switch value {
++			case "chrono":
++				config.Order = SortChronological
++			case "topo":
++				config.Order = SortTopological
++			default:
++				return Config{}, fmt.Errorf("invalid value for core.option.order: %s", value)
++			}
++		case CoreGitMailmap:
++			value := strings.TrimSpace(valuePart)
++			switch value {
++			case "true":
++				config.Mailmap = true
++			case "false":
++				config.Mailmap = false
++			default:
++				return Config{}, fmt.Errorf("invalid value for core.git.mailmap: %s", value)
++			}
++		}
++
++		depth += bracketDelta(valuePart)
++		if depth < 0 {
++			depth = 0
++		}
++	}
++
++	return config, nil
++}
++
++func configFilePathV2() (string, bool) {
++	if path, ok := os.LookupEnv(configFileEnvName); ok {
++		return path, true
++	}
++	if dir, ok := os.LookupEnv(xdgConfigHomeEnvName); ok {
++		return filepath.Join(dir, appDirName, configFileName), false
++	}
++	home, err := os.UserHomeDir()
++	if err != nil {
++		return "", false
++	}
++	return filepath.Join(home, defaultConfigDir, appDirName, configFileName), false
++}
++
++func stripTOMLComment(line string) string {
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '#':
++			return line[:i]
++		}
++	}
++	return line
++}
++
++func bracketDelta(line string) int {
++	delta := 0
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '[', '{':
++			delta++
++		case ']', '}':
++			delta--
++		}
++	}
++	return delta
++}
++
++func topLevelEquals(line string) int {
++	var quote byte
++	escaped := false
++	for i := 0; i < len(line); i++ {
++		c := line[i]
++		if quote != 0 {
++			if quote == '"' && escaped {
++				escaped = false
++				continue
++			}
++			if quote == '"' && c == '\\' {
++				escaped = true
++				continue
++			}
++			if c == quote {
++				quote = 0
++			}
++			continue
++		}
++		switch c {
++		case '"', '\'':
++			quote = c
++		case '=':
++			return i
++		}
++	}
++	return -1
++}
++
++func normalizeTOMLKey(key string) string {
++	parts := strings.Split(key, ".")
++	for i, part := range parts {
++		part = strings.TrimSpace(part)
++		if len(part) >= 2 {
++			if (part[0] == '"' && part[len(part)-1] == '"') || (part[0] == '\'' && part[len(part)-1] == '\'') {
++				part = part[1 : len(part)-1]
++			}
++		}
++		parts[i] = part
++	}
++	return strings.Join(parts, ".")
++}
++
++func parseTOMLString(value string) (string, error) {
++	value = strings.TrimSpace(value)
++	if value == "" {
++		return "", fmt.Errorf("expected a string value")
++	}
++	switch value[0] {
++	case '"':
++		end := -1
++		escaped := false
++		for i := 1; i < len(value); i++ {
++			if escaped {
++				escaped = false
++				continue
++			}
++			if value[i] == '\\' {
++				escaped = true
++				continue
++			}
++			if value[i] == '"' {
++				end = i
++				break
++			}
++		}
++		if end < 0 {
++			return "", fmt.Errorf("unterminated string value")
++		}
++		decoded, err := strconv.Unquote(value[:end+1])
++		if err != nil {
++			return "", err
++		}
++		return decoded, nil
++	case '\'':
++		end := strings.IndexByte(value[1:], '\'')
++		if end < 0 {
++			return "", fmt.Errorf("unterminated string value")
++		}
++		return value[1 : 1+end], nil
++	default:
++		return "", fmt.Errorf("expected a quoted string value")
++	}
++}
+diff --git a/core/gitcmd.go b/core/gitcmd.go
+new file mode 100644
+index 0000000..a9ddc0e
+--- /dev/null
++++ b/core/gitcmd.go
+@@ -0,0 +1,338 @@
++package core
++
++import (
++	"bytes"
++	"fmt"
++	"os/exec"
++	"strconv"
++	"strings"
++	"time"
++)
++
++// runGit executes Git in dir and returns stdout. A non-zero exit status is
++// returned as an error that includes stderr.
++func runGit(dir string, args ...string) ([]byte, error) {
++	cmd := exec.Command("git", args...)
++	cmd.Dir = dir
++	var stdout, stderr bytes.Buffer
++	cmd.Stdout = &stdout
++	cmd.Stderr = &stderr
++	if err := cmd.Run(); err != nil {
++		msg := strings.TrimSpace(stderr.String())
++		if msg == "" {
++			return stdout.Bytes(), fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
++		}
++		return stdout.Bytes(), fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, msg)
++	}
++	return stdout.Bytes(), nil
++}
++
++func checkGitRepository(path string) error {
++	if !isInsideWorkTree(path) && !isBareRepository(path) {
++		return fmt.Errorf("not a git repository (or any of the parent directories)")
++	}
++	return nil
++}
++
++func isInsideWorkTree(path string) bool {
++	out, err := runGit(path, "rev-parse", "--is-inside-work-tree")
++	return err == nil && strings.TrimSpace(string(out)) == "true"
++}
++
++func isBareRepository(path string) bool {
++	out, err := runGit(path, "rev-parse", "--is-bare-repository")
++	return err == nil && strings.TrimSpace(string(out)) == "true"
++}
++
++func currentBranch(path string) string {
++	out, err := runGit(path, "branch", "--show-current")
++	if err != nil {
++		return ""
++	}
++	return strings.TrimRight(strings.TrimSuffix(string(out), "\n"), "\r")
++}
++
++func loadCommitsFormat(mailmap bool) string {
++	fields := []string{"%H", "%an", "%ae", "%ad", "%cn", "%ce", "%cd", "%s", "%b", "%P"}
++	if mailmap {
++		fields = []string{"%H", "%aN", "%aE", "%ad", "%cN", "%cE", "%cd", "%s", "%b", "%P"}
++	}
++	return strings.Join(fields, "%x1f")
++}
++
++func parseISOdate(s string) (time.Time, error) {
++	return time.Parse(time.RFC3339, s)
++}
++
++func parseParentCommitHashes(s string) []CommitHash {
++	if s == "" {
++		return nil
++	}
++	parts := strings.Split(s, " ")
++	hashes := make([]CommitHash, 0, len(parts))
++	for _, p := range parts {
++		hashes = append(hashes, NewCommitHash(p))
++	}
++	return hashes
++}
++
++func parseCommitRecord(record string) (Commit, error) {
++	parts := strings.Split(record, "\x1f")
++	if len(parts) != 10 {
++		return Commit{}, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), record)
++	}
++	authorDate, err := parseISOdate(parts[3])
++	if err != nil {
++		return Commit{}, err
++	}
++	committerDate, err := parseISOdate(parts[6])
++	if err != nil {
++		return Commit{}, err
++	}
++	return Commit{
++		CommitHash:         NewCommitHash(parts[0]),
++		AuthorName:         parts[1],
++		AuthorEmail:        parts[2],
++		AuthorDate:         authorDate,
++		CommitterName:      parts[4],
++		CommitterEmail:     parts[5],
++		CommitterDate:      committerDate,
++		Subject:            parts[7],
++		Body:               parts[8],
++		ParentCommitHashes: parseParentCommitHashes(parts[9]),
++	}, nil
++}
++
++func parseCommitRecords(out []byte) ([]Commit, error) {
++	records := bytes.Split(out, []byte{0})
++	commits := make([]Commit, 0, len(records))
++	for _, record := range records {
++		if len(record) == 0 {
++			continue
++		}
++		commit, err := parseCommitRecord(string(record))
++		if err != nil {
++			return nil, err
++		}
++		commits = append(commits, commit)
++	}
++	return commits, nil
++}
++
++func loadAllCommits(path string, sort SortCommit, head Head, stashes []Commit, maxCount *int, mailmap bool) ([]Commit, error) {
++	args := []string{
++		"log",
++		sort.gitOrder(),
++		fmt.Sprintf("--pretty=%s", loadCommitsFormat(mailmap)),
++		"--date=iso-strict",
++		"-z",
++		"--branches",
++		"--remotes",
++		"--tags",
++	}
++	for _, stash := range stashes {
++		if len(stash.ParentCommitHashes) > 0 {
++			args = append(args, stash.ParentCommitHashes[0].Full)
++		}
++	}
++	if head.Kind != HeadKindNone {
++		args = append(args, "HEAD")
++	}
++	if maxCount != nil {
++		args = append(args, "--max-count", strconv.Itoa(*maxCount))
++	}
++	out, err := runGit(path, args...)
++	if err != nil && len(out) == 0 {
++		// An empty repository makes git log fail. Repository.load turns the
++		// resulting empty commit list into the required no-commits error.
++		return nil, nil
++	}
++	commits, parseErr := parseCommitRecords(out)
++	if parseErr != nil {
++		return nil, parseErr
++	}
++	return commits, nil
++}
++
++func loadAllStashes(path string, mailmap bool) ([]Commit, error) {
++	args := []string{
++		"stash", "list",
++		fmt.Sprintf("--pretty=%s", loadCommitsFormat(mailmap)),
++		"--date=iso-strict",
++		"-z",
++	}
++	out, err := runGit(path, args...)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	commits, parseErr := parseCommitRecords(out)
++	if parseErr != nil {
++		return nil, parseErr
++	}
++	return commits, nil
++}
++
++func loadRefs(path string) (map[CommitHash][]Ref, Head, error) {
++	out, err := runGit(path, "show-ref", "--head", "--dereference")
++	if err != nil && len(out) == 0 {
++		return map[CommitHash][]Ref{}, Head{Kind: HeadKindNone}, nil
++	}
++
++	refMap := make(map[CommitHash][]Ref)
++	tagMap := make(map[string]Ref)
++	head := Head{Kind: HeadKindNone}
++
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, " ")
++		if len(parts) != 2 {
++			return nil, Head{}, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), line)
++		}
++		hash := parts[0]
++		refs := parts[1]
++
++		if refs == "HEAD" {
++			if branch := currentBranch(path); branch != "" {
++				head = Head{Kind: HeadKindBranch, Name: branch}
++			} else {
++				head = Head{Kind: HeadKindDetached, Target: NewCommitHash(hash)}
++			}
++			continue
++		}
++		if r, ok := parseBranchRefs(hash, refs); ok {
++			refMap[r.Target] = append(refMap[r.Target], r)
++			continue
++		}
++		if r, ok := parseTagRefs(hash, refs); ok {
++			// The dereferenced (^{}) line for an annotated tag follows the tag
++			// object line, so it overwrites the tag target.
++			tagMap[r.Name] = r
++		}
++	}
++
++	for _, tag := range tagMap {
++		refMap[tag.Target] = append(refMap[tag.Target], tag)
++	}
++	for hash, refs := range refMap {
++		sortRefs(refs)
++		refMap[hash] = refs
++	}
++	return refMap, head, nil
++}
++
++func loadStashesAsRefs(path string) (map[CommitHash][]Ref, error) {
++	format := []string{"%gd", "%H", "%s"}
++	out, err := runGit(path, "stash", "list", "--format="+strings.Join(format, "%x1f"))
++	if err != nil && len(out) == 0 {
++		return map[CommitHash][]Ref{}, nil
++	}
++
++	refMap := make(map[CommitHash][]Ref)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, "\x1f")
++		if len(parts) != 3 {
++			return nil, fmt.Errorf("unexpected number of parts: %d [%s]", len(parts), line)
++		}
++		hash := NewCommitHash(parts[1])
++		refMap[hash] = append(refMap[hash], Ref{
++			Kind:    RefKindStash,
++			Name:    parts[0],
++			Message: parts[2],
++			Target:  hash,
++		})
++	}
++	return refMap, nil
++}
++
++func mergeRefMaps(dst, src map[CommitHash][]Ref) {
++	for hash, refs := range src {
++		dst[hash] = append(dst[hash], refs...)
++	}
++}
++
++func parseBranchRefs(hash, refs string) (Ref, bool) {
++	if strings.HasPrefix(refs, "refs/heads/") {
++		return Ref{
++			Kind:   RefKindBranch,
++			Name:   strings.TrimPrefix(refs, "refs/heads/"),
++			Target: NewCommitHash(hash),
++		}, true
++	}
++	if strings.HasPrefix(refs, "refs/remotes/") {
++		return Ref{
++			Kind:   RefKindRemoteBranch,
++			Name:   strings.TrimPrefix(refs, "refs/remotes/"),
++			Target: NewCommitHash(hash),
++		}, true
++	}
++	return Ref{}, false
++}
++
++func parseTagRefs(hash, refs string) (Ref, bool) {
++	if !strings.HasPrefix(refs, "refs/tags/") {
++		return Ref{}, false
++	}
++	name := strings.TrimPrefix(refs, "refs/tags/")
++	name = strings.TrimSuffix(name, "^{}")
++	return Ref{Kind: RefKindTag, Name: name, Target: NewCommitHash(hash)}, true
++}
++
++func loadDiffSummary(path string, commitHash CommitHash) ([]FileChange, error) {
++	out, err := runGit(path, "diff", "--name-status", commitHash.Full+"^", commitHash.Full)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	changes := make([]FileChange, 0)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		parts := strings.Split(line, "\t")
++		if len(parts) == 0 || parts[0] == "" {
++			continue
++		}
++		switch parts[0][0] {
++		case 'A':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeAdd, Path: parts[1]})
++			}
++		case 'M':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeModify, Path: parts[1]})
++			}
++		case 'D':
++			if len(parts) > 1 {
++				changes = append(changes, FileChange{Kind: FileChangeDelete, Path: parts[1]})
++			}
++		case 'R':
++			if len(parts) > 2 {
++				changes = append(changes, FileChange{Kind: FileChangeRename, From: parts[1], To: parts[2]})
++			}
++		}
++	}
++	return changes, nil
++}
++
++func loadInitialCommitAdditions(path string, commitHash CommitHash) ([]FileChange, error) {
++	out, err := runGit(path, "ls-tree", "--name-status", "-r", commitHash.Full)
++	if err != nil && len(out) == 0 {
++		return nil, nil
++	}
++	changes := make([]FileChange, 0)
++	lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
++	for _, line := range lines {
++		if line == "" {
++			continue
++		}
++		changes = append(changes, FileChange{Kind: FileChangeAdd, Path: line})
++	}
++	return changes, nil
++}
+diff --git a/core/graph.go b/core/graph.go
+new file mode 100644
+index 0000000..2651203
+--- /dev/null
++++ b/core/graph.go
+@@ -0,0 +1,325 @@
++package core
++
++import "sort"
++
++type wrappedEdge struct {
++	edge           Edge
++	edgeParentHash CommitHash
++}
++
++func newWrappedEdge(edgeType EdgeType, posX, linePosX int, parent CommitHash) wrappedEdge {
++	return wrappedEdge{
++		edge: Edge{
++			EdgeType:           edgeType,
++			PosX:               posX,
++			AssociatedLinePosX: linePosX,
++		},
++		edgeParentHash: parent,
++	}
++}
++
++// CalcGraph calculates commit lanes and edges for a repository.
++func CalcGraph(repository *Repository) *Graph {
++	commits := repository.AllCommits()
++	commitPosMap := calcCommitPositions(commits, repository)
++	graphEdges, maxPosX := calcEdges(commitPosMap, commits, repository)
++
++	return &Graph{
++		Commits:      commits,
++		CommitPosMap: commitPosMap,
++		Edges:        graphEdges,
++		MaxPosX:      maxPosX,
++	}
++}
++
++func calcCommitPositions(commits []*Commit, repository *Repository) map[CommitHash]Position {
++	commitPosMap := make(map[CommitHash]Position)
++	commitLineState := make([]CommitHash, 0)
++
++	for posY, commit := range commits {
++		filtered := filteredChildren(commit, repository)
++		if len(filtered) == 0 {
++			posX := getFirstVacantLine(commitLineState)
++			addCommitLine(commit, &commitLineState, posX)
++			commitPosMap[commit.CommitHash] = Position{PosX: posX, PosY: posY}
++		} else {
++			posX := updateCommitLine(commit, commitLineState, filtered)
++			commitPosMap[commit.CommitHash] = Position{PosX: posX, PosY: posY}
++		}
++	}
++	return commitPosMap
++}
++
++func filteredChildren(commit *Commit, repository *Repository) []CommitHash {
++	children := repository.ChildrenHash(commit.CommitHash)
++	filtered := make([]CommitHash, 0, len(children))
++	for _, childHash := range children {
++		childParents := repository.ParentsHash(childHash)
++		if len(childParents) > 0 && childParents[0] == commit.CommitHash {
++			filtered = append(filtered, childHash)
++		}
++	}
++	return filtered
++}
++
++func getFirstVacantLine(commitLineState []CommitHash) int {
++	for posX, hash := range commitLineState {
++		if hash.Full == "" {
++			return posX
++		}
++	}
++	return len(commitLineState)
++}
++
++func addCommitLine(commit *Commit, commitLineState *[]CommitHash, posX int) {
++	if len(*commitLineState) <= posX {
++		*commitLineState = append(*commitLineState, commit.CommitHash)
++	} else {
++		(*commitLineState)[posX] = commit.CommitHash
++	}
++}
++
++func updateCommitLine(commit *Commit, commitLineState []CommitHash, targetCommitHashes []CommitHash) int {
++	if len(commitLineState) == 0 {
++		return 0
++	}
++	minPosX := len(commitLineState) - 1
++	for _, targetHash := range targetCommitHashes {
++		for posX, commitHash := range commitLineState {
++			if commitHash.Full != "" && commitHash == targetHash {
++				commitLineState[posX] = CommitHash{}
++				if minPosX > posX {
++					minPosX = posX
++				}
++				break
++			}
++		}
++	}
++	commitLineState[minPosX] = commit.CommitHash
++	return minPosX
++}
++
++func calcEdges(commitPosMap map[CommitHash]Position, commits []*Commit, repository *Repository) ([][]Edge, int) {
++	maxPosX := 0
++	edges := make([][]wrappedEdge, len(commits))
++
++	for _, commit := range commits {
++		pos := commitPosMap[commit.CommitHash]
++		hash := commit.CommitHash
++
++		for _, childHash := range repository.ChildrenHash(hash) {
++			childPos := commitPosMap[childHash]
++
++			if pos.PosX == childPos.PosX {
++				// commit
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeUp, pos.PosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeDown, pos.PosX, pos.PosX, hash))
++			} else {
++				child := repository.Commit(childHash)
++				if child == nil || len(child.ParentCommitHashes) == 0 {
++					continue
++				}
++				childFirstParentHash := child.ParentCommitHashes[0]
++				if childFirstParentHash == hash {
++					// branch
++					if pos.PosX < childPos.PosX {
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRight, pos.PosX, childPos.PosX, hash))
++						for x := pos.PosX + 1; x < childPos.PosX; x++ {
++							edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, childPos.PosX, hash))
++						}
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRightBottom, childPos.PosX, childPos.PosX, hash))
++					} else {
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeLeft, pos.PosX, childPos.PosX, hash))
++						for x := childPos.PosX + 1; x < pos.PosX; x++ {
++							edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, childPos.PosX, hash))
++						}
++						edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeLeftBottom, childPos.PosX, childPos.PosX, hash))
++					}
++					for y := childPos.PosY + 1; y < pos.PosY; y++ {
++						edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, childPos.PosX, childPos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeDown, childPos.PosX, childPos.PosX, hash))
++				}
++				// merge edges are handled in the second pass
++			}
++		}
++
++		if maxPosX < pos.PosX {
++			maxPosX = pos.PosX
++		}
++
++		// Draw a continuation if max_count removed the first parent.
++		if len(commit.ParentCommitHashes) > 0 && !repository.HasCommit(commit.ParentCommitHashes[0]) {
++			edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeDown, pos.PosX, pos.PosX, hash))
++			for y := pos.PosY + 1; y < len(commits); y++ {
++				edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++			}
++		}
++	}
++
++	for _, commit := range commits {
++		pos := commitPosMap[commit.CommitHash]
++		hash := commit.CommitHash
++
++		for _, childHash := range repository.ChildrenHash(hash) {
++			childPos := commitPosMap[childHash]
++
++			if pos.PosX == childPos.PosX {
++				continue
++			}
++			child := repository.Commit(childHash)
++			if child == nil || len(child.ParentCommitHashes) == 0 {
++				continue
++			}
++			if child.ParentCommitHashes[0] == hash {
++				continue
++			}
++
++			// merge
++			overlap := false
++			newPosX := pos.PosX
++
++			skipJudgeOverlap := true
++			for y := childPos.PosY + 1; y < pos.PosY; y++ {
++				processingCommitPosX := commitPosMap[commits[y].CommitHash].PosX
++				if processingCommitPosX == newPosX {
++					skipJudgeOverlap = false
++					break
++				}
++				for _, edge := range edges[y] {
++					if edge.edge.PosX == pos.PosX &&
++						edge.edge.EdgeType == EdgeTypeVertical &&
++						edge.edgeParentHash != hash {
++						skipJudgeOverlap = false
++						break
++					}
++				}
++				if !skipJudgeOverlap {
++					break
++				}
++			}
++
++			if !skipJudgeOverlap {
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					processingCommitPosX := commitPosMap[commits[y].CommitHash].PosX
++					if processingCommitPosX == newPosX {
++						overlap = true
++						if newPosX < processingCommitPosX+1 {
++							newPosX = processingCommitPosX + 1
++						}
++					}
++					for _, edge := range edges[y] {
++						if edge.edge.PosX >= newPosX &&
++							edge.edgeParentHash != hash &&
++							edge.edge.EdgeType == EdgeTypeVertical {
++							overlap = true
++							if newPosX < edge.edge.PosX+1 {
++								newPosX = edge.edge.PosX + 1
++							}
++						}
++					}
++				}
++			}
++
++			if overlap {
++				// detour
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRight, pos.PosX, pos.PosX, hash))
++				for x := pos.PosX + 1; x < newPosX; x++ {
++					edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++				}
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeRightBottom, newPosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, newPosX, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRightTop, newPosX, pos.PosX, hash))
++				for x := childPos.PosX + 1; x < newPosX; x++ {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++				}
++				edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRight, childPos.PosX, pos.PosX, hash))
++
++				if maxPosX < newPosX {
++					maxPosX = newPosX
++				}
++			} else {
++				edges[pos.PosY] = append(edges[pos.PosY], newWrappedEdge(EdgeTypeUp, pos.PosX, pos.PosX, hash))
++				for y := childPos.PosY + 1; y < pos.PosY; y++ {
++					edges[y] = append(edges[y], newWrappedEdge(EdgeTypeVertical, pos.PosX, pos.PosX, hash))
++				}
++				if pos.PosX < childPos.PosX {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeLeftTop, pos.PosX, pos.PosX, hash))
++					for x := pos.PosX + 1; x < childPos.PosX; x++ {
++						edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeLeft, childPos.PosX, pos.PosX, hash))
++				} else {
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRightTop, pos.PosX, pos.PosX, hash))
++					for x := childPos.PosX + 1; x < pos.PosX; x++ {
++						edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeHorizontal, x, pos.PosX, hash))
++					}
++					edges[childPos.PosY] = append(edges[childPos.PosY], newWrappedEdge(EdgeTypeRight, childPos.PosX, pos.PosX, hash))
++				}
++			}
++		}
++
++		if maxPosX < pos.PosX {
++			maxPosX = pos.PosX
++		}
++	}
++
++	graphEdges := make([][]Edge, len(edges))
++	for i, es := range edges {
++		row := make([]Edge, len(es))
++		for j := range es {
++			row[j] = es[j].edge
++		}
++		sort.SliceStable(row, func(a, b int) bool {
++			if row[a].AssociatedLinePosX != row[b].AssociatedLinePosX {
++				return row[a].AssociatedLinePosX < row[b].AssociatedLinePosX
++			}
++			if row[a].PosX != row[b].PosX {
++				return row[a].PosX < row[b].PosX
++			}
++			return row[a].EdgeType < row[b].EdgeType
++		})
++		if len(row) > 0 {
++			deduped := row[:1]
++			for _, edge := range row[1:] {
++				if edge != deduped[len(deduped)-1] {
++					deduped = append(deduped, edge)
++				}
++			}
++			row = deduped
++		}
++		graphEdges[i] = row
++	}
++
++	return graphEdges, maxPosX
++}
++
++// SortAndDedupEdges sorts one row by (associated_line_pos_x, pos_x,
++// edge_type) and removes exact duplicates.
++func SortAndDedupEdges(edges []Edge) []Edge {
++	row := append([]Edge(nil), edges...)
++	sort.SliceStable(row, func(a, b int) bool {
++		if row[a].AssociatedLinePosX != row[b].AssociatedLinePosX {
++			return row[a].AssociatedLinePosX < row[b].AssociatedLinePosX
++		}
++		if row[a].PosX != row[b].PosX {
++			return row[a].PosX < row[b].PosX
++		}
++		return row[a].EdgeType < row[b].EdgeType
++	})
++	if len(row) == 0 {
++		return row
++	}
++	deduped := row[:1]
++	for _, edge := range row[1:] {
++		if edge != deduped[len(deduped)-1] {
++			deduped = append(deduped, edge)
++		}
++	}
++	return deduped
++}
+diff --git a/core/repository.go b/core/repository.go
+new file mode 100644
+index 0000000..014cddf
+--- /dev/null
++++ b/core/repository.go
+@@ -0,0 +1,229 @@
++package core
++
++import (
++	"fmt"
++	"sort"
++)
++
++// Repository is a read-only view of a loaded Git repository.
++type Repository struct {
++	path string
++
++	commitMap   map[CommitHash]*Commit
++	parentsMap  map[CommitHash][]CommitHash
++	childrenMap map[CommitHash][]CommitHash
++	refMap      map[CommitHash][]Ref
++	head        Head
++
++	// commitHashes preserves the original git log order (including inserted
++	// stashes).
++	commitHashes []CommitHash
++}
++
++// Load loads a repository from path. sort selects git's commit ordering,
++// maxCount is optional (nil means unlimited), and mailmap enables Git's mailmap
++// identity resolution.
++func Load(path string, sortOrder SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
++	if err := checkGitRepository(path); err != nil {
++		return nil, err
++	}
++
++	refMap, head, err := loadRefs(path)
++	if err != nil {
++		return nil, err
++	}
++
++	stashes, err := loadAllStashes(path, mailmap)
++	if err != nil {
++		return nil, err
++	}
++
++	commits, err := loadAllCommits(path, sortOrder, head, stashes, maxCount, mailmap)
++	if err != nil {
++		return nil, err
++	}
++	if len(commits) == 0 {
++		return nil, fmt.Errorf("no commits in the repository")
++	}
++
++	commits = mergeStashesToCommits(commits, stashes)
++	commitHashes := make([]CommitHash, len(commits))
++	for i := range commits {
++		commitHashes[i] = commits[i].CommitHash
++	}
++
++	parentsMap, childrenMap := buildCommitsMaps(commits)
++	commitMap := toCommitMap(commits)
++
++	stashRefMap, err := loadStashesAsRefs(path)
++	if err != nil {
++		return nil, err
++	}
++	mergeRefMaps(refMap, stashRefMap)
++
++	return &Repository{
++		path:         path,
++		commitMap:    commitMap,
++		parentsMap:   parentsMap,
++		childrenMap:  childrenMap,
++		refMap:       refMap,
++		head:         head,
++		commitHashes: commitHashes,
++	}, nil
++}
++
++// LoadRepository is an alias for Load.
++func LoadRepository(path string, sortOrder SortCommit, maxCount *int, mailmap bool) (*Repository, error) {
++	return Load(path, sortOrder, maxCount, mailmap)
++}
++
++// Commit returns a commit, or nil if it is not present in the loaded set.
++func (r *Repository) Commit(commitHash CommitHash) *Commit {
++	return r.commitMap[normalizeHash(commitHash)]
++}
++
++// HasCommit reports whether the commit is present in the loaded set.
++func (r *Repository) HasCommit(commitHash CommitHash) bool {
++	_, ok := r.commitMap[normalizeHash(commitHash)]
++	return ok
++}
++
++// AllCommits returns commits in repository commit order.
++func (r *Repository) AllCommits() []*Commit {
++	commits := make([]*Commit, 0, len(r.commitHashes))
++	for _, hash := range r.commitHashes {
++		if commit, ok := r.commitMap[hash]; ok {
++			commits = append(commits, commit)
++		}
++	}
++	return commits
++}
++
++// ParentsHash returns the parent hashes of a commit.
++func (r *Repository) ParentsHash(commitHash CommitHash) []CommitHash {
++	return append([]CommitHash(nil), r.parentsMap[normalizeHash(commitHash)]...)
++}
++
++// ChildrenHash returns the child hashes of a commit in repository commit order.
++func (r *Repository) ChildrenHash(commitHash CommitHash) []CommitHash {
++	return append([]CommitHash(nil), r.childrenMap[normalizeHash(commitHash)]...)
++}
++
++// Refs returns references for a commit in tag, branch, remote branch, stash
++// order. Multiple stashes retain git stash list order.
++func (r *Repository) Refs(commitHash CommitHash) []Ref {
++	return append([]Ref(nil), r.refMap[normalizeHash(commitHash)]...)
++}
++
++// AllRefs returns every loaded reference in a deterministic global order.
++func (r *Repository) AllRefs() []Ref {
++	refs := make([]Ref, 0)
++	for _, rs := range r.refMap {
++		refs = append(refs, rs...)
++	}
++	sort.SliceStable(refs, func(i, j int) bool {
++		return CompareRefs(refs[i], refs[j]) < 0
++	})
++	return refs
++}
++
++// Head returns the current HEAD state.
++func (r *Repository) Head() Head {
++	return r.head
++}
++
++// Path returns the repository path used for loading.
++func (r *Repository) Path() string {
++	return r.path
++}
++
++// CommitDetail returns a commit together with its file changes.
++func (r *Repository) CommitDetail(commitHash CommitHash) (Commit, []FileChange) {
++	commitHash = normalizeHash(commitHash)
++	commit := r.commitMap[commitHash]
++	if commit == nil {
++		return Commit{}, nil
++	}
++	var changes []FileChange
++	var err error
++	if len(commit.ParentCommitHashes) == 0 {
++		changes, err = loadInitialCommitAdditions(r.path, commitHash)
++	} else {
++		changes, err = loadDiffSummary(r.path, commitHash)
++	}
++	if err != nil {
++		changes = nil
++	}
++	return *commit, changes
++}
++
++// CommitDetailWithError is CommitDetail with explicit error reporting.
++func (r *Repository) CommitDetailWithError(commitHash CommitHash) (Commit, []FileChange, error) {
++	commitHash = normalizeHash(commitHash)
++	commit := r.commitMap[commitHash]
++	if commit == nil {
++		return Commit{}, nil, fmt.Errorf("commit not found: %s", commitHash.Full)
++	}
++	if len(commit.ParentCommitHashes) == 0 {
++		changes, err := loadInitialCommitAdditions(r.path, commitHash)
++		return *commit, changes, err
++	}
++	changes, err := loadDiffSummary(r.path, commitHash)
++	return *commit, changes, err
++}
++
++func buildCommitsMaps(commits []Commit) (map[CommitHash][]CommitHash, map[CommitHash][]CommitHash) {
++	parentsMap := make(map[CommitHash][]CommitHash)
++	childrenMap := make(map[CommitHash][]CommitHash)
++	for i := range commits {
++		commit := &commits[i]
++		hash := commit.CommitHash
++		for _, parentHash := range commit.ParentCommitHashes {
++			parentsMap[hash] = append(parentsMap[hash], parentHash)
++			childrenMap[parentHash] = append(childrenMap[parentHash], hash)
++		}
++	}
++	return parentsMap, childrenMap
++}
++
++func toCommitMap(commits []Commit) map[CommitHash]*Commit {
++	commitMap := make(map[CommitHash]*Commit, len(commits))
++	for i := range commits {
++		commitMap[commits[i].CommitHash] = &commits[i]
++	}
++	return commitMap
++}
++
++func mergeStashesToCommits(commits []Commit, stashes []Commit) []Commit {
++	stashMap := make(map[CommitHash][]Commit)
++	for _, stash := range stashes {
++		if len(stash.ParentCommitHashes) == 0 {
++			continue
++		}
++		parent := stash.ParentCommitHashes[0]
++		stashMap[parent] = append(stashMap[parent], stash)
++	}
++
++	ret := make([]Commit, 0, len(commits)+len(stashes))
++	for _, commit := range commits {
++		if stashes, ok := stashMap[commit.CommitHash]; ok {
++			ret = append(ret, stashes...)
++			delete(stashMap, commit.CommitHash)
++		}
++		ret = append(ret, commit)
++	}
++	return ret
++}
++
++func normalizeHash(commitHash CommitHash) CommitHash {
++	if commitHash.Short == "" && commitHash.Full != "" {
++		return NewCommitHash(commitHash.Full)
++	}
++	return commitHash
++}
++
++func sortRefs(refs []Ref) {
++	sort.SliceStable(refs, func(i, j int) bool {
++		return CompareRefs(refs[i], refs[j]) < 0
++	})
++}
+diff --git a/core/serie.go b/core/serie.go
+new file mode 100644
+index 0000000..c1ddd24
+--- /dev/null
++++ b/core/serie.go
+@@ -0,0 +1,327 @@
++// Package core implements serie's non-UI Git repository and commit graph logic.
++//
++// The package deliberately shells out to Git for repository data and only uses
++// the Go standard library.
++package core
++
++import (
++	"encoding/json"
++	"fmt"
++	"strings"
++	"time"
++)
++
++// CommitHash is a Git commit hash. Full contains the complete hash and Short is
++// the first seven characters. In JSON a commit hash is represented by its full
++// hash string.
++type CommitHash struct {
++	Full  string `json:"full"`
++	Short string `json:"short"`
++}
++
++// NewCommitHash creates a CommitHash with the required seven-character short
++// form.
++func NewCommitHash(full string) CommitHash {
++	short := full
++	if len(short) > 7 {
++		short = short[:7]
++	}
++	return CommitHash{Full: full, Short: short}
++}
++
++// String returns the full hash.
++func (h CommitHash) String() string { return h.Full }
++
++// AsString returns the full hash.
++func (h CommitHash) AsString() string { return h.Full }
++
++// AsShortHash returns the seven-character short hash.
++func (h CommitHash) AsShortHash() string { return h.Short }
++
++// MarshalJSON encodes a commit hash as its full hash string.
++func (h CommitHash) MarshalJSON() ([]byte, error) { return json.Marshal(h.Full) }
++
++// UnmarshalJSON decodes a commit hash from a string.
++func (h *CommitHash) UnmarshalJSON(data []byte) error {
++	var full string
++	if err := json.Unmarshal(data, &full); err != nil {
++		return err
++	}
++	*h = NewCommitHash(full)
++	return nil
++}
++
++// MarshalText makes CommitHash usable as a JSON object key.
++func (h CommitHash) MarshalText() ([]byte, error) { return []byte(h.Full), nil }
++
++// UnmarshalText decodes a commit hash from text.
++func (h *CommitHash) UnmarshalText(data []byte) error {
++	*h = NewCommitHash(string(data))
++	return nil
++}
++
++// Commit is the public commit record. Dates retain the fixed offset reported by
++// Git and are serialized as RFC3339 timestamps.
++type Commit struct {
++	CommitHash         CommitHash   `json:"commit_hash"`
++	AuthorName         string       `json:"author_name"`
++	AuthorEmail        string       `json:"author_email"`
++	AuthorDate         time.Time    `json:"author_date"`
++	CommitterName      string       `json:"committer_name"`
++	CommitterEmail     string       `json:"committer_email"`
++	CommitterDate      time.Time    `json:"committer_date"`
++	Subject            string       `json:"subject"`
++	Body               string       `json:"body"`
++	ParentCommitHashes []CommitHash `json:"parent_commit_hashes"`
++}
++
++// RefKind distinguishes the supported reference kinds.
++type RefKind string
++
++const (
++	RefKindTag          RefKind = "tag"
++	RefKindBranch       RefKind = "branch"
++	RefKindRemoteBranch RefKind = "remote_branch"
++	RefKindStash        RefKind = "stash"
++
++	// Short aliases for callers that prefer Ref<Kind> names.
++	RefTag          = RefKindTag
++	RefBranch       = RefKindBranch
++	RefRemoteBranch = RefKindRemoteBranch
++	RefStash        = RefKindStash
++)
++
++func (k RefKind) order() int {
++	switch k {
++	case RefKindTag:
++		return 0
++	case RefKindBranch:
++		return 1
++	case RefKindRemoteBranch:
++		return 2
++	case RefKindStash:
++		return 3
++	default:
++		return 4
++	}
++}
++
++// Ref is a tag, local branch, remote branch, or stash reference. Message is set
++// for stashes.
++type Ref struct {
++	Kind    RefKind    `json:"kind"`
++	Name    string     `json:"name"`
++	Target  CommitHash `json:"target"`
++	Message string     `json:"message,omitempty"`
++}
++
++// RefName returns the reference name.
++func (r Ref) RefName() string { return r.Name }
++
++// RefTarget returns the commit targeted by the reference.
++func (r Ref) RefTarget() CommitHash { return r.Target }
++
++// HeadKind distinguishes the HEAD states.
++type HeadKind string
++
++const (
++	HeadKindBranch   HeadKind = "branch"
++	HeadKindDetached HeadKind = "detached"
++	HeadKindNone     HeadKind = "none"
++
++	// Short aliases for callers that prefer Head<State> names.
++	HeadBranch   = HeadKindBranch
++	HeadDetached = HeadKindDetached
++	HeadNone     = HeadKindNone
++)
++
++// Head describes the current HEAD.
++type Head struct {
++	Kind   HeadKind   `json:"kind"`
++	Name   string     `json:"name,omitempty"`
++	Target CommitHash `json:"target,omitempty"`
++}
++
++// IsNone reports whether the repository has no HEAD.
++func (h Head) IsNone() bool { return h.Kind == HeadKindNone }
++
++// MarshalJSON emits only the fields meaningful for the current HEAD state.
++func (h Head) MarshalJSON() ([]byte, error) {
++	switch h.Kind {
++	case HeadKindBranch:
++		return json.Marshal(struct {
++			Kind HeadKind `json:"kind"`
++			Name string   `json:"name"`
++		}{Kind: h.Kind, Name: h.Name})
++	case HeadKindDetached:
++		return json.Marshal(struct {
++			Kind   HeadKind   `json:"kind"`
++			Target CommitHash `json:"target"`
++		}{Kind: h.Kind, Target: h.Target})
++	default:
++		return json.Marshal(struct {
++			Kind HeadKind `json:"kind"`
++		}{Kind: h.Kind})
++	}
++}
++
++// SortCommit selects the commit ordering passed to git log.
++type SortCommit int
++
++const (
++	// SortChronological corresponds to git log --date-order.
++	SortChronological SortCommit = iota
++	// SortTopological corresponds to git log --topo-order.
++	SortTopological
++
++	// Short aliases.
++	Chronological = SortChronological
++	Topological   = SortTopological
++)
++
++func (s SortCommit) gitOrder() string {
++	if s == SortTopological {
++		return "--topo-order"
++	}
++	return "--date-order"
++}
++
++// FileChangeKind distinguishes commit-detail file changes.
++type FileChangeKind string
++
++const (
++	FileChangeAdd    FileChangeKind = "add"
++	FileChangeModify FileChangeKind = "modify"
++	FileChangeDelete FileChangeKind = "delete"
++	FileChangeRename FileChangeKind = "rename"
++
++	// FileChangeMove is an alias for FileChangeRename.
++	FileChangeMove = FileChangeRename
++)
++
++// FileChange is a file change in a commit. Rename changes use From and To;
++// other changes use Path.
++type FileChange struct {
++	Kind FileChangeKind `json:"kind"`
++	Path string         `json:"path,omitempty"`
++	From string         `json:"from,omitempty"`
++	To   string         `json:"to,omitempty"`
++}
++
++// EdgeType is the visual type of a graph edge.
++type EdgeType int
++
++const (
++	EdgeTypeVertical EdgeType = iota
++	EdgeTypeHorizontal
++	EdgeTypeUp
++	EdgeTypeDown
++	EdgeTypeLeft
++	EdgeTypeRight
++	EdgeTypeRightTop
++	EdgeTypeRightBottom
++	EdgeTypeLeftTop
++	EdgeTypeLeftBottom
++)
++
++var edgeTypeNames = [...]string{
++	"vertical",
++	"horizontal",
++	"up",
++	"down",
++	"left",
++	"right",
++	"right_top",
++	"right_bottom",
++	"left_top",
++	"left_bottom",
++}
++
++// String returns the stable wire name of an edge type.
++func (t EdgeType) String() string {
++	if int(t) >= 0 && int(t) < len(edgeTypeNames) {
++		return edgeTypeNames[t]
++	}
++	return fmt.Sprintf("edge_type_%d", int(t))
++}
++
++// MarshalJSON encodes an edge type with its stable name.
++func (t EdgeType) MarshalJSON() ([]byte, error) { return json.Marshal(t.String()) }
++
++// UnmarshalJSON decodes an edge type from its stable name or numeric value.
++func (t *EdgeType) UnmarshalJSON(data []byte) error {
++	var name string
++	if err := json.Unmarshal(data, &name); err == nil {
++		for i, n := range edgeTypeNames {
++			if n == name {
++				*t = EdgeType(i)
++				return nil
++			}
++		}
++		return fmt.Errorf("unknown edge type %q", name)
++	}
++	var value int
++	if err := json.Unmarshal(data, &value); err != nil {
++		return err
++	}
++	*t = EdgeType(value)
++	return nil
++}
++
++// Edge is one graph drawing operation.
++type Edge struct {
++	EdgeType           EdgeType `json:"edge_type"`
++	PosX               int      `json:"pos_x"`
++	AssociatedLinePosX int      `json:"associated_line_pos_x"`
++}
++
++// Position is a commit's zero-based graph position.
++type Position struct {
++	PosX int `json:"pos_x"`
++	PosY int `json:"pos_y"`
++}
++
++// Graph is the result of calculating commit lanes and edges.
++type Graph struct {
++	Commits      []*Commit               `json:"commits"`
++	CommitPosMap map[CommitHash]Position `json:"commit_pos_map"`
++	Edges        [][]Edge                `json:"edges"`
++	MaxPosX      int                     `json:"max_pos_x"`
++}
++
++// CommitAt returns the commit at a row.
++func (g *Graph) CommitAt(posY int) *Commit {
++	if posY < 0 || posY >= len(g.Commits) {
++		return nil
++	}
++	return g.Commits[posY]
++}
++
++// Position returns a commit's graph position, normalizing a hash that was
++// constructed with only its Full field set.
++func (g *Graph) Position(commitHash CommitHash) (Position, bool) {
++	position, ok := g.CommitPosMap[normalizeHash(commitHash)]
++	return position, ok
++}
++
++// EdgeKey is used internally for deterministic sorting/deduplication.
++func (e Edge) EdgeKey() string {
++	return fmt.Sprintf("%d/%d/%d", e.AssociatedLinePosX, e.PosX, e.EdgeType)
++}
++
++// CompareRefs compares references by kind then name, target, and stash message.
++func CompareRefs(a, b Ref) int {
++	if ka, kb := a.Kind.order(), b.Kind.order(); ka != kb {
++		if ka < kb {
++			return -1
++		}
++		return 1
++	}
++	if a.Name != b.Name {
++		return strings.Compare(a.Name, b.Name)
++	}
++	if a.Target.Full != b.Target.Full {
++		return strings.Compare(a.Target.Full, b.Target.Full)
++	}
++	return strings.Compare(a.Message, b.Message)
++}
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..fd96f13
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,3 @@
++module github.com/lusingander/serie
++
++go 1.24.0

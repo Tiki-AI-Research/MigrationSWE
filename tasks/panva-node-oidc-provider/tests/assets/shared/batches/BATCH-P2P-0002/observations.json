@@ -1,0 +1,239 @@
+{
+  "schema_version": "migration-p2p-observations:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "observations": [
+    {
+      "observation_id": "P2P-035",
+      "atomic_claim": "Preserve observable behavior for test:test/device_code/device_authorization_endpoint.test.js#does not require PAR for clients with require_pushed_authorization_requests",
+      "covered_surface": "test:test/device_code/device_authorization_endpoint.test.js#does not require PAR for clients with require_pushed_authorization_requests",
+      "projection": "return-value",
+      "projection_signature": "sha256:68d0c88aeee21ced6d3717597f62522525046f4a361ed1764d8a5525c235e51b",
+      "fingerprint": "sha256:d5719eb2e707ff1afcc213f92ca85abbec581cc970f0e7f25ee59a9c24d2e191",
+      "requirement_ids": [
+        "R001",
+        "R003",
+        "R004",
+        "R006",
+        "R007",
+        "R009",
+        "R014",
+        "R016",
+        "R017",
+        "R018",
+        "R019",
+        "R020",
+        "R021",
+        "R024",
+        "R028"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-040",
+      "atomic_claim": "Preserve observable behavior for test:test/helpers/grants.test.js#${name} rejects a mismatched provider",
+      "covered_surface": "test:test/helpers/grants.test.js#${name} rejects a mismatched provider",
+      "projection": "return-value",
+      "projection_signature": "sha256:39c9e3a4f8c05bf47549cba76149b179008447b9d84e70527046dd6a56477eb1",
+      "fingerprint": "sha256:ff5582af06ac0e676d9c6c461165a00a51a88693cdd07982ca2ef23a865c7d0d",
+      "requirement_ids": [
+        "R001",
+        "R003",
+        "R004",
+        "R009",
+        "R011",
+        "R020",
+        "R021",
+        "R022",
+        "R026",
+        "R028",
+        "R030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-025",
+      "atomic_claim": "The public test suites under test/ (including test/router/router_parity.test.js, test/cors/cors_parity.test.js, and test/body_parser/raw_body_parity.test.js), their fixtures, and the public exports of lib/index.js retain their assertions, coverage, and comparisons.",
+      "covered_surface": "protected public test suites and lib/index.js exports",
+      "projection": "observable-result",
+      "projection_signature": "sha256:2f99bf7dc7bafdefa669b484b4fa7604eaaa5970d81ea6f5762c09f5be3381af",
+      "fingerprint": "sha256:a33d3eaf90593a6af49896438bd01341275a8981b0a055b2833124d113858eff",
+      "requirement_ids": [
+        "R028"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-026",
+      "atomic_claim": "For GET and POST /auth the checks run in the order assignDefaults, checkPrompt, checkScope, checkOpenidScope, checkRedirectUri, checkPKCE, checkClaims, checkRar, checkResource, checkMaxAge, checkRequestedExpiry, checkCibaContext, checkIdTokenHint, checkDpopJkt, checkExtraParams, loadAccount, loadGrant, interactions, respond, observable as the first failing check determining the error.",
+      "covered_surface": "authorization endpoint protocol-check pipeline",
+      "projection": "observable-result",
+      "projection_signature": "sha256:ba0703c2d31d714007f205a932dad200fd146bec8227fe0660e1f62cf851e6c0",
+      "fingerprint": "sha256:aa8bff5853fce67053b03ff01634fdb68700b96afe11b931afdbb9843798e6d5",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-027",
+      "atomic_claim": "Reading ctx.cookies returns the request cookies and writing through ctx.cookies (for example the _interaction, _interaction_resume and _session cookies) emits a signed Set-Cookie through the Fastify reply, with ctx.cookies and ctx.oidc.cookies observing the same jar.",
+      "covered_surface": "interaction and session cookie reading and writing",
+      "projection": "observable-result",
+      "projection_signature": "sha256:386f210daaa3a71537376d4e8849e31f96229cf6e02ccd6642d48cc701c5eb53",
+      "fingerprint": "sha256:b26829af7d4e7180f67a68a50f94d30d3e08207fc7b1efa2125af3a8a9bc7052",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-028",
+      "atomic_claim": "The public checks are not satisfied by skipping checks, removing assertions, weakening comparisons, or hardcoding evaluation inputs.",
+      "covered_surface": "integrity of the public checks",
+      "projection": "observable-result",
+      "projection_signature": "sha256:dcc243d75b5286deaa29a08b6985790820b70527155ebf6581cbeecf67bbbf71",
+      "fingerprint": "sha256:b568db7c6c05e8b0958c4a31e55a5cb5853d44ffddeaf93e89247b028f084c27",
+      "requirement_ids": [
+        "R029"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-029",
+      "atomic_claim": "The repository's public test suite still passes on the candidate (shared P2P suite signal; change-footprint R026 is enforced separately by test integrity and migration scope).",
+      "covered_surface": "change footprint",
+      "projection": "observable-result",
+      "projection_signature": "sha256:4dc1fa3c1fa6fa92890febec22826c706c9d7c3df0974664f1bc6b3d8e057989",
+      "fingerprint": "sha256:b56d3919abc9eb8423a8352630f8714c192e1eea6c6559e9ac314ee7b9421f40",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-030",
+      "atomic_claim": "The open, challenge, userinfo, client, clientWithDPoP, and credential CORS profiles keep their current Access-Control-Allow-Methods and Access-Control-Expose-Headers values, and the exposed set still includes DPoP-Nonce, OAuth-Client-Attestation-Challenge, and WWW-Authenticate where previously present.",
+      "covered_surface": "per-profile CORS header values and exposed headers",
+      "projection": "observable-result",
+      "projection_signature": "sha256:40edee5551a97d2d6b1d256d59aded621c210fc35c523605dd6a2c19a302ced8",
+      "fingerprint": "sha256:bbc568ea5ef16619bc808daad135680fe1c173105a691fa2ee894b1cb540985a",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-031",
+      "atomic_claim": "When provider.proxy is true, a request with X-Forwarded-Proto: https is treated as secure, so the discovery document and other absolute URLs are emitted with the https scheme.",
+      "covered_surface": "proxy-aware secure detection for absolute URLs",
+      "projection": "observable-result",
+      "projection_signature": "sha256:fccb2227b1d816e573dde91839b3c64531121e87b6154516fc46667c9e6cec35",
+      "fingerprint": "sha256:cc2fe702f828e0f180f7fbf0810f50f072a7419c1bce14a3d68b4a3385b03b8c",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-032",
+      "atomic_claim": "Error responses keep their per-endpoint body and WWW-Authenticate header, including the Bearer realm=\"...\" value, SessionNotFound handling, and the generic body {error: 'server_error', error_description: 'oops! something went wrong'}.",
+      "covered_surface": "per-endpoint error bodies and WWW-Authenticate header construction",
+      "projection": "observable-result",
+      "projection_signature": "sha256:fe73afa7d7045b8cd872a4adf07911bc45c8e943a36645daa64e1bdf018dd645",
+      "fingerprint": "sha256:ccf0ff6a59be8378c3047d73e794368da3023a97fc113f74be8dc48b7dff59e5",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-033",
+      "atomic_claim": "provider.callback() returns a Node (req, res) handler that can be passed to http.createServer and mounted in an Express, Fastify, or Hapi host, and provider.listen(...) starts a server that serves the provider.",
+      "covered_surface": "provider.callback() and provider.listen()",
+      "projection": "observable-result",
+      "projection_signature": "sha256:9d072036e51bafb3347722fe43bd556d5d10b8c71cb83ad9c4f431c94191d610",
+      "fingerprint": "sha256:d17b62cebb20db26fb4023fa9f35fa0f9f02e5d28b9ff89f8313eaf415e255e3",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-034",
+      "atomic_claim": "Provider#use(ctx, next), the static Provider.ctx, provider.createContext, provider.keys, provider.middleware, koa-mount-derived ctx.mountPath, the deprecated .app getter, and the server-rendered interaction templates and browser assets remain available/unmigrated rather than being replaced by Fastify equivalents.",
+      "covered_surface": "out-of-scope Koa-typed extension surface and server-rendered views",
+      "projection": "observable-result",
+      "projection_signature": "sha256:1ebc16872ca20d0c218403bbe67997eae47033d6505d6ef223c6a9c024a5f9b4",
+      "fingerprint": "sha256:d2b954504527c004559f84c5c116592c1ca79d1e0e8d6e43bf1a961a490dcb68",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-036",
+      "atomic_claim": "A request to each configured endpoint path and method (GET /auth, POST /auth when enabled, GET /auth/:uid, GET/POST /me, POST /token, GET /jwks, the two well-known discovery paths, POST /reg, GET/PUT/DELETE /reg/:clientId, POST /token/revocation, POST /token/introspection, GET/POST /session/end, POST /session/end/confirm, GET /session/end/success, POST /device/auth, GET/POST /device, GET /device/:uid, POST /request, POST /backchannel, POST /credential, POST /challenge, and GET/POST /interaction/:uid) is matched and dispatched by the Fastify instance, not by a Koa middleware.",
+      "covered_surface": "public HTTP routing for every registered provider endpoint",
+      "projection": "observable-result",
+      "projection_signature": "sha256:69570dc3ec18b735315756b3b1076a94b2a59e7dc75083d02fc22d6ffba6f9b5",
+      "fingerprint": "sha256:d89df3e3094088246f9c1d7477f10c841e6a87b5a063d3a8097a0afb2d15ba38",
+      "requirement_ids": [
+        "R001"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-037",
+      "atomic_claim": "For an incoming request the action context exposes method, path, url, query, querystring, host, hostname, protocol, secure, ip, href, and header/headers from the Fastify request, and writing ctx.status, ctx.body, ctx.type, ctx.length, and ctx.set/append/remove/vary reaches the Fastify reply.",
+      "covered_surface": "ctx request and response access used by the endpoint actions",
+      "projection": "observable-result",
+      "projection_signature": "sha256:8b9b0c4575ea0d5a4799d8d37d3e10abd8460484b51b55d1d251b123a63d1a31",
+      "fingerprint": "sha256:e12f926aceecfb45eac645f18ac814700642bee7e9b4bc14caf351a4650462f5",
+      "requirement_ids": [
+        "R002"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-038",
+      "atomic_claim": "new Provider(issuer, configuration) constructs without Koa: Provider is not an instance or subclass of a Koa application, and no production file in the migration scope imports Koa in order to serve a request.",
+      "covered_surface": "Provider class identity and production module graph",
+      "projection": "observable-result",
+      "projection_signature": "sha256:d4486cd530c36953218b8818234ece9c5c09c1b433900a0a69828d8323b82bde",
+      "fingerprint": "sha256:e52fe68d5918d058ec73e0daea3e4ea9aadbfa0afc1ac57cf3a36cec671af844",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-039",
+      "atomic_claim": "Uncaught errors raised by an endpoint action are rendered by Fastify's error handler and an unmatched method/path is answered by Fastify's not-found handler, producing the same status/body the Koa onerror path produced.",
+      "covered_surface": "error rendering for thrown action errors and unmatched requests",
+      "projection": "observable-result",
+      "projection_signature": "sha256:21d1d8ef19f1c1ea77b64b806697e8049fe1c7e11cded77dd8c2a63f3046f600",
+      "fingerprint": "sha256:e93b24096719ece4b8702c62edc1963cb7d2b15ffac810eeae03ef501f9f6082",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    }
+  ]
+}

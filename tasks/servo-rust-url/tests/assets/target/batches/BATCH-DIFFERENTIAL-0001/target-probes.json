@@ -1,0 +1,39 @@
+{
+  "schema_version": "migration-asset-probes:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "scope": "target",
+  "target_root": "/input/target",
+  "language": {"name": "Go", "language_name": "Go", "version": "1.23.0", "language_version": "1.23.0"},
+  "execution": {
+    "executed": true,
+    "target_real": true,
+    "command": ["go", "test", "-count=1", "./..."],
+    "probe_module": "http://localhost/probe (replace github.com/servo/rust-url => /input/target)",
+    "environment": {
+      "GOPROXY": "off",
+      "GOTOOLCHAIN": "local",
+      "GOCACHE": "/tmp/gocache",
+      "GOPATH": "/tmp/gopath"
+    },
+    "result": "PASS",
+    "notes": "Each DIFF observation was compiled and executed as a Go probe against the reference target at /input/target (via a local replace directive, without copying target code into public assets). All sixteen probes passed; the target was pre-verified to build with only the Go standard library."
+  },
+  "probes": [
+    {"observation_id": "DIFF-001", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-002", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-003", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-004", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-005", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-006", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-007", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-008", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-009", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-010", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-011", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-012", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-013", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-014", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-015", "kind": "unit", "target_expectation": "PASS", "observed": "PASS"},
+    {"observation_id": "DIFF-016", "kind": "compile", "target_expectation": "PASS", "observed": "PASS"}
+  ]
+}

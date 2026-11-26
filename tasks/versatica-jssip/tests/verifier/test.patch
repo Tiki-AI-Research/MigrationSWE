@@ -1,0 +1,1660 @@
+diff --git a/src/test/migration-verifier/run-checks.cjs b/src/test/migration-verifier/run-checks.cjs
+new file mode 100644
+index 0000000..f2dc261
+--- /dev/null
++++ b/src/test/migration-verifier/run-checks.cjs
+@@ -0,0 +1,1531 @@
++#!/usr/bin/env node
++'use strict';
++
++// DeepSWE migration verifier harness for versatica/JsSIP pegjs -> peggy.
++// Runs static migration checks and behavior checks against a candidate repo.
++
++const fs = require('fs');
++const path = require('path');
++const childProcess = require('child_process');
++
++// Capture evaluator-owned primitives before any candidate module is required.
++// A candidate can monkey-patch fs/JSON/process globals after it loads, but it
++// must not be able to alter the answer material read, the comparisons, or the
++// authenticated result write.
++const readFileSync = fs.readFileSync;
++const writeSync = fs.writeSync;
++const ftruncateSync = fs.ftruncateSync;
++const closeSync = fs.closeSync;
++const stringify = JSON.stringify;
++const parseJson = JSON.parse;
++const FunctionCtor = Function;
++const processExit = process.exit.bind(process);
++const execPath = process.execPath;
++const spawnSyncCaptured = childProcess.spawnSync;
++
++const args = {};
++for (const arg of process.argv.slice(2)) {
++	const m = /^--([^=]+)=(.*)$/.exec(arg);
++	if (m) {
++		args[m[1]] = m[2];
++	}
++}
++const repo = path.resolve(args.repo || '/workspace/repo');
++const dump = args.dump === '1';
++
++// The verifier supplies references/expectations and a per-run nonce on stdin.
++// The harness consumes stdin before loading any candidate module and then uses
++// an out-of-band, pre-opened result descriptor; stdout is never trusted.
++const runPayload = dump ? null : parseJson(readFileSync(0, 'utf8'));
++const referenceSource = dump
++	? (args.reference ? readFileSync(path.resolve(args.reference), 'utf8') : null)
++	: (runPayload && runPayload.reference);
++const envelopeNonce = runPayload ? String(runPayload.nonce || '') : '';
++const resultFd = args['result-fd'] !== undefined ? Number(args['result-fd']) : null;
++
++function read(rel) {
++	return readFileSync(path.join(repo, rel), 'utf8');
++}
++function readJson(rel) {
++	return parseJson(read(rel));
++}
++function generatorSources() {
++	const queue = [path.join(repo, 'npm-scripts.mjs')];
++	const script = (readJson('package.json').scripts || {}).grammar;
++	if (typeof script === 'string') {
++		const entry = /^\s*node\s+(?:['"]([^'"]+)['"]|([^\s]+))/.exec(script);
++		if (entry) queue.push(path.resolve(repo, entry[1] || entry[2]));
++	}
++	const visited = new Set();
++	const sources = [];
++	while (queue.length) {
++		const filename = queue.pop();
++		const relative = path.relative(repo, filename);
++		if (relative.startsWith('..') || path.isAbsolute(relative) || visited.has(filename)) continue;
++		let source;
++		try {
++			source = readFileSync(filename, 'utf8');
++		} catch {
++			continue;
++		}
++		visited.add(filename);
++		sources.push(source);
++		const imports = /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)|\bfrom\s+['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)|\bimport\s*['"]([^'"]+)['"]/g;
++		for (const match of source.matchAll(imports)) {
++			const specifier = match[1] || match[2] || match[3] || match[4];
++			if (!specifier.startsWith('.')) continue;
++			const base = path.resolve(path.dirname(filename), specifier);
++			const candidates = [base, ...['.js', '.cjs', '.mjs', '.ts'].map(extension => base + extension)];
++			candidates.push(...['.js', '.cjs', '.mjs', '.ts'].map(extension => path.join(base, 'index' + extension)));
++			for (const candidate of candidates) {
++				try {
++					readFileSync(candidate, 'utf8');
++					queue.push(candidate);
++					break;
++				} catch {
++					continue;
++				}
++			}
++		}
++	}
++	return sources.join('\n');
++}
++function runTypeScript(rel) {
++	const tsc = path.join(repo, 'node_modules/typescript/bin/tsc');
++	const result = spawnSyncCaptured(execPath, [
++		tsc,
++		'--noEmit',
++		'--strict',
++		'--skipLibCheck',
++		'--module',
++		'commonjs',
++		'--target',
++		'es2020',
++		'--moduleResolution',
++		'node',
++		path.join(repo, rel),
++	], { cwd: repo, encoding: 'utf8' });
++	if (result.error) {
++		throw result.error;
++	}
++	if (result.status !== 0) {
++		throw new Error(`tsc failed for ${rel}:\n${result.stdout || ''}\n${result.stderr || ''}`);
++	}
++	return true;
++}
++function ser(value, seen) {
++	if (value === null || value === undefined) {
++		return value;
++	}
++	const t = typeof value;
++	if (t === 'string' || t === 'number' || t === 'boolean') {
++		return value;
++	}
++	if (t === 'function') {
++		return '[function]';
++	}
++	if (t === 'object') {
++		seen = seen || new Set();
++		if (seen.has(value)) {
++			return '[circular]';
++		}
++		seen.add(value);
++		if (Array.isArray(value)) {
++			return value.map(item => ser(item, seen));
++		}
++		const out = { __type: value.constructor && value.constructor.name };
++		for (const key of Object.keys(value).sort()) {
++			out[key] = ser(value[key], seen);
++		}
++		return out;
++	}
++	return String(value);
++}
++function stable(value) {
++	return stringify(ser(value));
++}
++
++let Grammar = null;
++let URI = null;
++let NameAddrHeader = null;
++let Parser = null;
++function loadModules() {
++	if (Grammar) {
++		return;
++	}
++	Grammar = require(path.join(repo, 'src/Grammar.js'));
++	URI = require(path.join(repo, 'src/URI.js'));
++	NameAddrHeader = require(path.join(repo, 'src/NameAddrHeader.js'));
++	Parser = require(path.join(repo, 'src/Parser.js'));
++}
++
++function loadReference() {
++	if (!referenceSource) {
++		throw new Error('reference parser is unavailable');
++	}
++	const code = referenceSource;
++	const module = { exports: {} };
++	const customRequire = name => {
++		if (name === './URI') {
++			return require(path.join(repo, 'src/URI.js'));
++		}
++		if (name === './NameAddrHeader') {
++			return require(path.join(repo, 'src/NameAddrHeader.js'));
++		}
++		return require(name);
++	};
++	// eslint-disable-next-line no-new-func
++	const factory = new FunctionCtor('require', 'module', 'exports', code);
++	factory(customRequire, module, module.exports);
++	return module.exports;
++}
++
++function mulberry32(seed) {
++	return function () {
++		seed |= 0;
++		seed = (seed + 0x6d2b79f5) | 0;
++		let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
++		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
++		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++	};
++}
++
++const START_RULES = [
++	'SIP_URI', 'Request_Response', 'absoluteURI', 'host', 'quoted_string', 'uuid',
++	'Contact', 'Via', 'CSeq', 'challenge', 'Event', 'Session_Expires', 'Reason',
++	'Refer_To', 'Replaces', 'Status_Line', 'Name_Addr_Header', 'Content_Type',
++	'Subscription_State', 'token', 'word',
++];
++
++const BASELINE_START_RULES = [
++	'CRLF', 'DIGIT', 'ALPHA', 'HEXDIG', 'WSP', 'OCTET',
++	'DQUOTE', 'SP', 'HTAB', 'alphanum', 'reserved', 'unreserved',
++	'mark', 'escaped', 'LWS', 'SWS', 'HCOLON', 'TEXT_UTF8_TRIM',
++	'TEXT_UTF8char', 'UTF8_NONASCII', 'UTF8_CONT', 'LHEX', 'token', 'token_nodot',
++	'separators', 'word', 'STAR', 'SLASH', 'EQUAL', 'LPAREN',
++	'RPAREN', 'RAQUOT', 'LAQUOT', 'COMMA', 'SEMI', 'COLON',
++	'LDQUOT', 'RDQUOT', 'comment', 'ctext', 'quoted_string', 'quoted_string_clean',
++	'qdtext', 'quoted_pair', 'SIP_URI_noparams', 'SIP_URI', 'uri_scheme', 'uri_scheme_sips',
++	'uri_scheme_sip', 'userinfo', 'user', 'user_unreserved', 'password', 'hostport',
++	'host', 'hostname', 'domainlabel', 'toplabel', 'IPv6reference', 'IPv6address',
++	'h16', 'ls32', 'IPv4address', 'dec_octet', 'port', 'uri_parameters',
++	'uri_parameter', 'transport_param', 'user_param', 'method_param', 'ttl_param', 'maddr_param',
++	'lr_param', 'other_param', 'pname', 'pvalue', 'paramchar', 'param_unreserved',
++	'headers', 'header', 'hname', 'hvalue', 'hnv_unreserved', 'Request_Response',
++	'Request_Line', 'Request_URI', 'absoluteURI', 'hier_part', 'net_path', 'abs_path',
++	'opaque_part', 'uric', 'uric_no_slash', 'path_segments', 'segment', 'param',
++	'pchar', 'scheme', 'authority', 'srvr', 'reg_name', 'query',
++	'SIP_Version', 'INVITEm', 'ACKm', 'OPTIONSm', 'BYEm', 'CANCELm',
++	'REGISTERm', 'SUBSCRIBEm', 'NOTIFYm', 'REFERm', 'Method', 'Status_Line',
++	'Status_Code', 'extension_code', 'Reason_Phrase', 'Allow_Events', 'Call_ID', 'Contact',
++	'contact_param', 'name_addr', 'display_name', 'contact_params', 'c_p_q', 'c_p_expires',
++	'delta_seconds', 'qvalue', 'generic_param', 'gen_value', 'Content_Disposition', 'disp_type',
++	'disp_param', 'handling_param', 'Content_Encoding', 'Content_Length', 'Content_Type', 'media_type',
++	'm_type', 'discrete_type', 'composite_type', 'extension_token', 'x_token', 'm_subtype',
++	'm_parameter', 'm_value', 'CSeq', 'CSeq_value', 'Expires', 'Event',
++	'event_type', 'From', 'from_param', 'tag_param', 'Max_Forwards', 'Min_Expires',
++	'Name_Addr_Header', 'Proxy_Authenticate', 'challenge', 'other_challenge', 'auth_param', 'digest_cln',
++	'realm', 'realm_value', 'domain', 'URI', 'nonce', 'nonce_value',
++	'opaque', 'stale', 'algorithm', 'qop_options', 'qop_value', 'Proxy_Require',
++	'Record_Route', 'rec_route', 'Reason', 'reason_param', 'reason_cause', 'Require',
++	'Route', 'route_param', 'Subscription_State', 'substate_value', 'subexp_params', 'event_reason_value',
++	'Subject', 'Supported', 'To', 'to_param', 'Via', 'via_param',
++	'via_params', 'via_ttl', 'via_maddr', 'via_received', 'via_branch', 'response_port',
++	'rport', 'sent_protocol', 'protocol_name', 'transport', 'sent_by', 'via_host',
++	'via_port', 'ttl', 'WWW_Authenticate', 'Session_Expires', 's_e_expires', 's_e_params',
++	's_e_refresher', 'extension_header', 'header_value', 'message_body', 'uuid_URI', 'uuid',
++	'hex4', 'hex8', 'hex12', 'Refer_To', 'Replaces', 'call_id',
++	'replaces_param', 'to_tag', 'from_tag', 'early_flag',
++];
++
++function parseRule(rule, input) {
++	loadModules();
++	return Grammar.parse(input, rule);
++}
++
++function expectPlainError(invoke, message) {
++	let threw = false;
++	let error = null;
++	let value;
++	try {
++		value = invoke();
++	} catch (caught) {
++		threw = true;
++		error = caught;
++	}
++	if (!threw) {
++		throw new Error(`expected invalid-rule error, got ${stringify(value)}`);
++	}
++	if (!(error instanceof Error) || error.constructor !== Error) {
++		throw new Error(`expected plain Error, got ${error && error.constructor && error.constructor.name}`);
++	}
++	if (Object.keys(error).length !== 0) {
++		throw new Error(`expected no own properties on the error, got ${stringify(Object.keys(error))}`);
++	}
++	if (error.message !== message) {
++		throw new Error(`expected ${stringify(message)}, got ${stringify(error.message)}`);
++	}
++	return message;
++}
++
++// String call shape only: the two-shape requirement is a contract of its own.
++function expectInvalidRule(name, message) {
++	loadModules();
++	return expectPlainError(() => Grammar.parse('x', name), message);
++}
++
++// Both historical call shapes, asserted once for the shape contract itself.
++function expectInvalidRuleBothShapes(name, message) {
++	loadModules();
++	expectPlainError(() => Grammar.parse('x', name), message);
++	expectPlainError(() => Grammar.parse('x', { startRule: name }), message);
++}
++
++// A start-rule value that is not a string is reported through String().
++function expectInvalidRuleValue(value, message) {
++	loadModules();
++	return expectPlainError(() => Grammar.parse('x', { startRule: value }), message);
++}
++
++// The observable outcome of a call, including how it failed.
++function outcomeOf(invoke) {
++	try {
++		return 'VALUE:' + stable(invoke());
++	} catch (error) {
++		return 'THROW:' + (error && error.constructor && error.constructor.name) + ':' + String(error && error.message);
++	}
++}
++
++// An options object that selects nothing must behave exactly like omitting it.
++function expectEquivalentToOmitted(label, makeOptions) {
++	loadModules();
++	for (const input of ['', 'x', 'sip:alice@example.com', '%%%']) {
++		const omitted = outcomeOf(() => Grammar.parse(input));
++		const explicit = outcomeOf(() => Grammar.parse(input, makeOptions()));
++		if (explicit !== omitted) {
++			throw new Error(`${label} ${stringify(input)}: ${explicit} vs ${omitted}`);
++		}
++	}
++}
++
++const CASES = [
++	// ---- static migration checks (F2P) ----
++	{
++		id: 'f2p-package-declares-peggy', group: 'F2P',
++		run() {
++			const pkg = readJson('package.json');
++			const spec = pkg.devDependencies && pkg.devDependencies.peggy;
++			if (typeof spec !== 'string' || !/^4\.2\.0$/.test(spec.trim())) {
++				throw new Error(`peggy devDependency is ${stringify(spec)}`);
++			}
++			return spec;
++		},
++	},
++	{
++		id: 'f2p-package-drops-pegjs', group: 'F2P',
++		run() {
++			const pkg = readJson('package.json');
++			const all = Object.assign({}, pkg.dependencies, pkg.devDependencies);
++			if (Object.prototype.hasOwnProperty.call(all, 'pegjs')) {
++				throw new Error(`pegjs still declared: ${all.pegjs}`);
++			}
++			return 'absent';
++		},
++	},
++	{
++		id: 'f2p-lock-declares-peggy', group: 'F2P',
++		run() {
++			const lock = readJson('package-lock.json');
++			const rootSpec = lock.packages && lock.packages[''] && lock.packages[''].devDependencies
++				&& lock.packages[''].devDependencies.peggy;
++			const entry = lock.packages && lock.packages['node_modules/peggy'];
++			if (typeof rootSpec !== 'string' || !/^4\.2\.0$/.test(rootSpec.trim())) {
++				throw new Error(`lock root peggy is ${stringify(rootSpec)}`);
++			}
++			if (!entry || entry.version !== '4.2.0') {
++				throw new Error(`lock node_modules/peggy is ${stringify(entry && entry.version)}`);
++			}
++			return entry.version;
++		},
++	},
++	{
++		id: 'f2p-lock-drops-pegjs', group: 'F2P',
++		run() {
++			const lock = readJson('package-lock.json');
++			const packages = lock.packages || {};
++			const offenders = Object.keys(packages).filter(k => /(^|\/)pegjs$/.test(k));
++			if (offenders.length) {
++				throw new Error(`lock still contains pegjs: ${offenders.join(', ')}`);
++			}
++			const all = Object.assign({}, lock.dependencies);
++			if (Object.prototype.hasOwnProperty.call(all, 'pegjs')) {
++				throw new Error('lock still contains pegjs dependency');
++			}
++			return 'absent';
++		},
++	},
++	{
++		id: 'f2p-npm-scripts-uses-peggy', group: 'F2P',
++		run() {
++			const source = generatorSources();
++			if (!/peggy/i.test(source)) {
++				throw new Error('grammar build sources do not reference peggy');
++			}
++			return 'peggy';
++		},
++	},
++	{
++		id: 'f2p-npm-scripts-drops-pegjs', group: 'F2P',
++		run() {
++			const source = generatorSources();
++			if (/\.bin\/pegjs\b/.test(source) || /from\s+['"]pegjs['"]/.test(source)) {
++				throw new Error('npm-scripts.mjs still invokes the pegjs generator');
++			}
++			return 'absent';
++		},
++	},
++	{
++		id: 'f2p-grammar-js-generated-by-peggy', group: 'F2P',
++		run() {
++			const source = read('src/Grammar.js');
++			if (!/Generated by Peggy/i.test(source)) {
++				throw new Error('src/Grammar.js is not marked as generated by Peggy');
++			}
++			return 'peggy';
++		},
++	},
++	{
++		id: 'f2p-grammar-js-not-pegjs-generated', group: 'F2P',
++		run() {
++			const source = read('src/Grammar.js');
++			// Historical comments and a copied quoting helper do not retain a
++			// parser. Provenance and the structural fingerprint run in U4/U5.
++			const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
++			if (/\b(?:parseFunctions|parseCache|rightmostFailures|cleanupExpected)\b/.test(code)) {
++				throw new Error('src/Grammar.js still contains the PEG.js runtime');
++			}
++			return 'absent';
++		},
++	},
++	{
++		id: 'f2p-grammar-js-peggy-runtime', group: 'F2P',
++		run() {
++			const source = read('src/Grammar.js');
++			for (const marker of ['peg$SyntaxError', 'peg$parse', 'module.exports']) {
++				if (!source.includes(marker)) {
++					throw new Error(`src/Grammar.js missing peggy runtime marker ${marker}`);
++				}
++			}
++			if (source.includes('parseFunctions')) {
++				throw new Error('src/Grammar.js still looks like the PEG.js 0.7 runtime');
++			}
++			return 'peggy-runtime';
++		},
++	},
++	{
++		id: 'f2p-grammar-module-surface', group: 'F2P',
++		run() {
++			loadModules();
++			const keys = Object.getOwnPropertyNames(Grammar).sort();
++			const expectedKeys = ['StartRules', 'SyntaxError', 'parse'];
++			if (stringify(keys) !== stringify(expectedKeys)) {
++				throw new Error(`unexpected exports: ${stringify(keys)}`);
++			}
++			if (Object.getOwnPropertySymbols(Grammar).length !== 0) {
++				throw new Error('parser exports symbol-keyed members');
++			}
++			if ('toSource' in Grammar || typeof Grammar.parse !== 'function'
++				|| typeof Grammar.SyntaxError !== 'function') {
++				throw new Error('unexpected parser members');
++			}
++			const error = new Grammar.SyntaxError('boom', 'x', 0, {
++				start: { offset: 0, line: 1, column: 1 },
++				end: { offset: 0, line: 1, column: 1 },
++			});
++			if (!(error instanceof Grammar.SyntaxError) || !(error instanceof Error)
++				|| error.name !== 'SyntaxError') {
++				throw new Error('SyntaxError is not an Error subclass named SyntaxError');
++			}
++			const declaration = read('src/Grammar.d.ts');
++			if (/toSource/.test(declaration)) {
++				throw new Error('Grammar.d.ts declares toSource');
++			}
++			for (const member of expectedKeys) {
++				if (!new RegExp(`\\b${member}\\b`).test(declaration)) {
++					throw new Error(`Grammar.d.ts does not declare ${member}`);
++				}
++			}
++			return 'module-surface';
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rules-count', group: 'F2P',
++		run() {
++			loadModules();
++			if (!Array.isArray(Grammar.StartRules)) {
++				throw new Error('StartRules is not an array');
++			}
++			if (Grammar.StartRules.length !== BASELINE_START_RULES.length) {
++				throw new Error(`StartRules has ${Grammar.StartRules.length} entries, expected ${BASELINE_START_RULES.length}`);
++			}
++			if (new Set(Grammar.StartRules).size !== Grammar.StartRules.length) {
++				throw new Error('StartRules contains duplicate names');
++			}
++			return Grammar.StartRules.length;
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rules-set', group: 'F2P',
++		run() {
++			loadModules();
++			if (!Array.isArray(Grammar.StartRules)) {
++				throw new Error('StartRules is not an array');
++			}
++			const actual = new Set(Grammar.StartRules);
++			const expected = new Set(BASELINE_START_RULES);
++			for (const name of BASELINE_START_RULES) {
++				if (!actual.has(name)) {
++					throw new Error(`StartRules is missing ${name}`);
++				}
++			}
++			for (const name of actual) {
++				if (!expected.has(name)) {
++					throw new Error(`StartRules has unexpected entry ${name}`);
++				}
++			}
++			return 'start-rules-set';
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rules-selectable', group: 'F2P',
++		run() {
++			loadModules();
++			if (!Array.isArray(Grammar.StartRules)) {
++				throw new Error('StartRules is not an exported array');
++			}
++			for (const name of BASELINE_START_RULES) {
++				for (const [shape, invoke] of [
++					['startRule', () => Grammar.parse('', name)],
++					['options', () => Grammar.parse('', { startRule: name })],
++				]) {
++					try {
++						invoke();
++					} catch (error) {
++						if (/Invalid rule name|Can't start parsing/.test(String(error && error.message))) {
++							throw new Error(`start rule ${name} is not selectable through ${shape}: ${error.message}`);
++						}
++					}
++				}
++			}
++			return BASELINE_START_RULES.length;
++		},
++	},
++	{
++		id: 'f2p-grammar-unknown-rule-basic', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes('bogus', 'Invalid rule name: "bogus".');
++			expectInvalidRuleBothShapes('', 'Invalid rule name: "".');
++			return 'invalid-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-escape-quote', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes('has"quote', 'Invalid rule name: "has\\"quote".');
++			expectInvalidRuleBothShapes('back\\slash', 'Invalid rule name: "back\\\\slash".');
++			return 'quote-escape';
++		},
++	},
++	{
++		id: 'f2p-grammar-escape-control', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes('line\nfeed', 'Invalid rule name: "line\\nfeed".');
++			expectInvalidRuleBothShapes('tab\there', 'Invalid rule name: "tab\\there".');
++			expectInvalidRuleBothShapes('back\bspace', 'Invalid rule name: "back\\bspace".');
++			expectInvalidRuleBothShapes('form\ffeed', 'Invalid rule name: "form\\ffeed".');
++			expectInvalidRuleBothShapes('carriage\rreturn', 'Invalid rule name: "carriage\\rreturn".');
++			expectInvalidRuleBothShapes('nul\u0000byte', 'Invalid rule name: "nul%00byte".');
++			expectInvalidRuleBothShapes('bel\u0007', 'Invalid rule name: "bel%07".');
++			expectInvalidRuleBothShapes('vt\u000B', 'Invalid rule name: "vt%0B".');
++			expectInvalidRuleBothShapes('unit\u001F', 'Invalid rule name: "unit%1F".');
++			return 'control-escape';
++		},
++	},
++	{
++		id: 'f2p-grammar-escape-nonascii', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes('ñame', 'Invalid rule name: "%F1ame".');
++			expectInvalidRuleBothShapes('lat\u00A0', 'Invalid rule name: "lat%A0".');
++			expectInvalidRuleBothShapes('lat\u00FF', 'Invalid rule name: "lat%FF".');
++			expectInvalidRuleBothShapes('u\u0100', 'Invalid rule name: "u%u0100".');
++			expectInvalidRuleBothShapes('u\u2028', 'Invalid rule name: "u%u2028".');
++			expectInvalidRuleBothShapes('u\uFFFF', 'Invalid rule name: "u%uFFFF".');
++			expectInvalidRuleBothShapes('emoji\u{1F600}', 'Invalid rule name: "emoji%uD83D%uDE00".');
++			expectInvalidRuleBothShapes('percent%41', 'Invalid rule name: "percent%41".');
++			return 'nonascii-escape';
++		},
++	},
++	{
++		id: 'f2p-grammar-declared-only-membership', group: 'F2P',
++		run() {
++			for (const name of [
++				'constructor', 'toString', 'hasOwnProperty', 'valueOf', '__defineGetter__',
++				'__proto__', 'isPrototypeOf', 'toLocaleString', 'propertyIsEnumerable',
++			]) {
++				expectInvalidRule(name, `Invalid rule name: "${name}".`);
++			}
++			return 'declared-members-only';
++		},
++	},
++	{
++		id: 'f2p-grammar-rule-name-coercion', group: 'F2P',
++		run() {
++			expectInvalidRuleValue(Symbol('x'), 'Invalid rule name: "Symbol(x)".');
++			expectInvalidRuleValue(0, 'Invalid rule name: "0".');
++			expectInvalidRuleValue(true, 'Invalid rule name: "true".');
++			expectInvalidRuleValue(null, 'Invalid rule name: "null".');
++			expectInvalidRuleValue({}, 'Invalid rule name: "[object Object]".');
++			return 'coerced-rule-name';
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rules-inert', group: 'F2P',
++		run() {
++			loadModules();
++			if (!Array.isArray(Grammar.StartRules)) {
++				throw new Error('StartRules is not an array');
++			}
++			const original = Grammar.StartRules.slice();
++			const defaultInputs = ['', 'x', 'sip:alice@example.com'];
++			const defaultCalls = input => [
++				() => Grammar.parse(input),
++				() => Grammar.parse(input, null),
++				() => Grammar.parse(input, {}),
++				() => Grammar.parse(input, { startRule: undefined }),
++			];
++			const defaults = defaultInputs.map(input => defaultCalls(input).map(outcomeOf));
++			const assertDefaultsUnchanged = () => {
++				const actual = defaultInputs.map(input => defaultCalls(input).map(outcomeOf));
++				if (stringify(actual) !== stringify(defaults)) {
++					throw new Error('mutating StartRules changed a default parse result or error');
++				}
++			};
++			// A snapshot may be mutable or frozen.  The contract only requires
++			// that mutating the returned array cannot change which rules parse
++			// accepts, so an immutable snapshot is a valid implementation and
++			// its rejected mutations must be tolerated here.
++			const attempt = (mutation) => {
++				try {
++					mutation();
++					return true;
++				} catch (error) {
++					if (error instanceof TypeError) {
++						return false;
++					}
++					throw error;
++				}
++			};
++			const assertDeclaredStillSelectable = (after) => {
++				let value;
++				try {
++					value = Grammar.parse('sip:a@b', 'SIP_URI');
++				} catch (error) {
++					throw new Error(`a declared rule stopped being selectable ${after}: ${error && error.message}`);
++				}
++				if (value === -1) {
++					throw new Error(`a declared rule stopped parsing ${after}`);
++				}
++			};
++			try {
++				attempt(() => Grammar.StartRules.push('bogus'));
++				expectInvalidRule('bogus', 'Invalid rule name: "bogus".');
++				assertDeclaredStillSelectable('after append');
++				assertDefaultsUnchanged();
++				attempt(() => {
++					Grammar.StartRules[0] = 'bogus';
++				});
++				expectInvalidRule('bogus', 'Invalid rule name: "bogus".');
++				assertDeclaredStillSelectable('after replacement');
++				assertDefaultsUnchanged();
++				attempt(() => Grammar.StartRules.splice(0, Grammar.StartRules.length));
++				expectInvalidRule('bogus', 'Invalid rule name: "bogus".');
++				assertDeclaredStillSelectable('after removal');
++				assertDefaultsUnchanged();
++			} finally {
++				try {
++					Grammar.StartRules.splice(0, Grammar.StartRules.length, ...original);
++				} catch (error) {
++					if (!(error instanceof TypeError)) {
++						throw error;
++					}
++				}
++			}
++			return 'start-rules-inert';
++		},
++	},
++	{
++		id: 'f2p-grammar-null-second-argument', group: 'F2P',
++		run() {
++			loadModules();
++			const omitted = stable(Grammar.parse('x'));
++			let explicit;
++			try {
++				explicit = Grammar.parse('x', null);
++			} catch (error) {
++				throw new Error(`parse(input, null) threw ${error && error.constructor && error.constructor.name}: ${error && error.message}`);
++			}
++			if (stable(explicit) !== omitted) {
++				throw new Error(`parse(input, null) returned ${stable(explicit)}, parse(input) returned ${omitted}`);
++			}
++			return 'null-is-omitted';
++		},
++	},
++	{
++		id: 'f2p-grammar-escape-printable', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes("it's", 'Invalid rule name: "it\'s".');
++			expectInvalidRuleBothShapes('a`b', 'Invalid rule name: "a`b".');
++			expectInvalidRuleBothShapes('$d{ef}~ !?%', 'Invalid rule name: "$d{ef}~ !?%".');
++			return 'printable-escape';
++		},
++	},
++	{
++		id: 'f2p-grammar-escape-boundaries', group: 'F2P',
++		run() {
++			expectInvalidRuleBothShapes('a\u0001', 'Invalid rule name: "a%01".');
++			expectInvalidRuleBothShapes('b\u0002', 'Invalid rule name: "b%02".');
++			expectInvalidRuleBothShapes('c\u001E', 'Invalid rule name: "c%1E".');
++			expectInvalidRuleBothShapes('x\u07FF', 'Invalid rule name: "x%u07FF".');
++			expectInvalidRuleBothShapes('y\u0800', 'Invalid rule name: "y%u0800".');
++			expectInvalidRuleBothShapes('z\uFFFD', 'Invalid rule name: "z%uFFFD".');
++			expectInvalidRuleBothShapes('\uD800', 'Invalid rule name: "%uD800".');
++			expectInvalidRuleBothShapes('\uDC00', 'Invalid rule name: "%uDC00".');
++			expectInvalidRuleBothShapes('a"b\nc\u00E9\u2028d', 'Invalid rule name: "a\\"b\\nc%E9%u2028d".');
++			return 'boundary-escape';
++		},
++	},
++	{
++		id: 'f2p-grammar-coercion-error-propagates', group: 'F2P',
++		run() {
++			loadModules();
++			const outcome = outcomeOf(() => Grammar.parse('x', {
++				startRule: { toString() { throw new RangeError('boom'); } },
++			}));
++			if (outcome !== 'THROW:RangeError:boom') {
++				throw new Error(`expected the coercion error to propagate, got ${outcome}`);
++			}
++			return 'coercion-error-propagates';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-empty', group: 'F2P',
++		run() {
++			expectEquivalentToOmitted('{}', () => ({}));
++			expectEquivalentToOmitted('{other:1}', () => ({ other: 1 }));
++			expectEquivalentToOmitted('frozen {}', () => Object.freeze({}));
++			return 'empty-options-omitted';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-exotic-empty', group: 'F2P',
++		run() {
++			expectEquivalentToOmitted('null prototype', () => Object.create(null));
++			expectEquivalentToOmitted('class instance', () => new (class Options {})());
++			return 'exotic-empty-options-omitted';
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rule-undefined', group: 'F2P',
++		run() {
++			expectEquivalentToOmitted('{startRule:undefined}', () => ({ startRule: undefined }));
++			return 'undefined-start-rule-omitted';
++		},
++	},
++	{
++		id: 'f2p-grammar-start-rule-nonenumerable-accessor', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const hidden = {};
++			Object.defineProperty(hidden, 'startRule', { value: 'SIP_URI', enumerable: false });
++			const hiddenOutcome = outcomeOf(() => Grammar.parse('sip:alice@example.com', hidden));
++			if (hiddenOutcome !== expected) {
++				throw new Error(`non-enumerable startRule: ${hiddenOutcome} vs ${expected}`);
++			}
++			const accessor = { get startRule() { return 'SIP_URI'; } };
++			const accessorOutcome = outcomeOf(() => Grammar.parse('sip:alice@example.com', accessor));
++			if (accessorOutcome !== expected) {
++				throw new Error(`accessor startRule: ${accessorOutcome} vs ${expected}`);
++			}
++			return 'start-rule-hidden-shapes';
++		},
++	},
++	{
++		id: 'f2p-grammar-coerced-declared-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			for (const value of [
++				new String('SIP_URI'),
++				{ toString() { return 'SIP_URI'; } },
++			]) {
++				const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', { startRule: value }));
++				if (actual !== expected) {
++					throw new Error(`coerced startRule ${Object.prototype.toString.call(value)}: ${actual} vs ${expected}`);
++				}
++			}
++			return 'coerced-declared-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-ignore-peggy-library', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const withLibrary = outcomeOf(() => Grammar.parse('sip:alice@example.com', {
++				startRule: 'SIP_URI',
++				peg$library: true,
++			}));
++			if (withLibrary !== expected) {
++				throw new Error(`peg$library changed the parse result: ${withLibrary} vs ${expected}`);
++			}
++			const omitted = outcomeOf(() => Grammar.parse(''));
++			const libraryOnly = outcomeOf(() => Grammar.parse('', { peg$library: true }));
++			if (libraryOnly !== omitted) {
++				throw new Error(`peg$library without startRule: ${libraryOnly} vs ${omitted}`);
++			}
++			return 'peggy-library-ignored';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-ignore-peggy-position', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			for (const options of [
++				{ startRule: 'SIP_URI', peg$currPos: 5 },
++				{ startRule: 'SIP_URI', peg$maxFailExpected: [{ type: 'literal', text: 'x' }] },
++				{ startRule: 'SIP_URI', peg$silentFails: 1 },
++			]) {
++				const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', options));
++				if (actual !== expected) {
++					throw new Error(`Peggy internal option changed the parse result: ${actual} vs ${expected}`);
++				}
++			}
++			return 'peggy-internal-options-ignored';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-inherited-start-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const inherited = Object.create({ startRule: 'SIP_URI' });
++			const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', inherited));
++			if (actual !== expected) {
++				throw new Error(`inherited startRule: ${actual} vs ${expected}`);
++			}
++			return 'inherited-start-rule-selected';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-inherited-invalid', group: 'F2P',
++		run() {
++			loadModules();
++			for (const [value, message] of [
++				['bogus', 'Invalid rule name: "bogus".'],
++				[0, 'Invalid rule name: "0".'],
++				[null, 'Invalid rule name: "null".'],
++			]) {
++				const options = Object.create({ startRule: value });
++				const actual = outcomeOf(() => Grammar.parse('x', options));
++				const expected = `THROW:Error:${message}`;
++				if (actual !== expected) {
++					throw new Error(`inherited startRule ${String(value)}: ${actual} vs ${expected}`);
++				}
++			}
++			return 'inherited-invalid-start-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-boxed-string-start-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', new String('SIP_URI')));
++			if (actual !== expected) {
++				throw new Error(`boxed String startRule: ${actual} vs ${expected}`);
++			}
++			const withProperty = new String('SIP_URI');
++			withProperty.startRule = 'bogus';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('sip:alice@example.com', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`boxed String with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'boxed-string-start-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-boxed-number-start-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = 'THROW:Error:Invalid rule name: "5".';
++			const actual = outcomeOf(() => Grammar.parse('', new Number(5)));
++			if (actual !== expected) {
++				throw new Error(`boxed Number startRule: ${actual} vs ${expected}`);
++			}
++			const withProperty = new Number(5);
++			withProperty.startRule = 'SIP_URI';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`boxed Number with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'boxed-number-start-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-boxed-boolean-start-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = 'THROW:Error:Invalid rule name: "true".';
++			const actual = outcomeOf(() => Grammar.parse('', new Boolean(true)));
++			if (actual !== expected) {
++				throw new Error(`boxed Boolean startRule: ${actual} vs ${expected}`);
++			}
++			const withProperty = new Boolean(true);
++			withProperty.startRule = 'SIP_URI';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`boxed Boolean with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'boxed-boolean-start-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-function-start-rule', group: 'F2P',
++		run() {
++			loadModules();
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const coercible = function () {};
++			coercible.toString = () => 'SIP_URI';
++			const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', coercible));
++			if (actual !== expected) {
++				throw new Error(`function startRule coercion: ${actual} vs ${expected}`);
++			}
++			const withProperty = function () {};
++			withProperty.startRule = 'SIP_URI';
++			const invalid = 'THROW:Error:Invalid rule name: "function () {}".';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('', withProperty));
++			if (actualWithProperty !== invalid) {
++				throw new Error(`function with startRule property: ${actualWithProperty} vs ${invalid}`);
++			}
++			return 'function-start-rule';
++		},
++	},
++	{
++		id: 'f2p-grammar-cross-realm-boxed-string', group: 'F2P',
++		run() {
++			loadModules();
++			const vm = require('vm');
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const boxed = vm.runInNewContext('new String("SIP_URI")');
++			const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', boxed));
++			if (actual !== expected) {
++				throw new Error(`cross-realm boxed String: ${actual} vs ${expected}`);
++			}
++			const withProperty = vm.runInNewContext('new String("SIP_URI")');
++			withProperty.startRule = 'bogus';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('sip:alice@example.com', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`cross-realm boxed String with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'cross-realm-boxed-string';
++		},
++	},
++	{
++		id: 'f2p-grammar-cross-realm-boxed-number', group: 'F2P',
++		run() {
++			loadModules();
++			const vm = require('vm');
++			const expected = 'THROW:Error:Invalid rule name: "5".';
++			const boxed = vm.runInNewContext('new Number(5)');
++			const actual = outcomeOf(() => Grammar.parse('', boxed));
++			if (actual !== expected) {
++				throw new Error(`cross-realm boxed Number: ${actual} vs ${expected}`);
++			}
++			const withProperty = vm.runInNewContext('new Number(5)');
++			withProperty.startRule = 'SIP_URI';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`cross-realm boxed Number with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'cross-realm-boxed-number';
++		},
++	},
++	{
++		id: 'f2p-grammar-cross-realm-boxed-boolean', group: 'F2P',
++		run() {
++			loadModules();
++			const vm = require('vm');
++			const expected = 'THROW:Error:Invalid rule name: "true".';
++			const boxed = vm.runInNewContext('new Boolean(true)');
++			const actual = outcomeOf(() => Grammar.parse('', boxed));
++			if (actual !== expected) {
++				throw new Error(`cross-realm boxed Boolean: ${actual} vs ${expected}`);
++			}
++			const withProperty = vm.runInNewContext('new Boolean(true)');
++			withProperty.startRule = 'SIP_URI';
++			const actualWithProperty = outcomeOf(() => Grammar.parse('', withProperty));
++			if (actualWithProperty !== expected) {
++				throw new Error(`cross-realm boxed Boolean with startRule property: ${actualWithProperty} vs ${expected}`);
++			}
++			return 'cross-realm-boxed-boolean';
++		},
++	},
++	{
++		id: 'f2p-grammar-boxed-null-prototype-coercion', group: 'P2P',
++		run() {
++			loadModules();
++			const expected = 'THROW:TypeError:Cannot convert object to primitive value';
++			for (const box of [new String('SIP_URI'), new Number(5), new Boolean(true)]) {
++				Object.setPrototypeOf(box, null);
++				const actual = outcomeOf(() => Grammar.parse('', box));
++				if (actual !== expected) {
++					throw new Error(`boxed null-prototype coercion: ${actual} vs ${expected}`);
++				}
++			}
++			return 'boxed-null-prototype-coercion';
++		},
++	},
++	{
++		id: 'f2p-grammar-non-boxed-prototype-object', group: 'F2P',
++		run() {
++			loadModules();
++			const expectedParse = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			for (const proto of [String.prototype, Number.prototype, Boolean.prototype]) {
++				const fake = Object.create(proto);
++				const noRule = outcomeOf(() => Grammar.parse('', fake));
++				if (noRule !== 'VALUE:-1') {
++					throw new Error(`non-boxed prototype object: ${noRule} vs VALUE:-1`);
++				}
++				const withRule = Object.create(proto);
++				withRule.startRule = 'SIP_URI';
++				const parsed = outcomeOf(() => Grammar.parse('sip:alice@example.com', withRule));
++				if (parsed !== expectedParse) {
++					throw new Error(`non-boxed prototype object with startRule: ${parsed} vs ${expectedParse}`);
++				}
++			}
++			return 'non-boxed-prototype-object';
++		},
++	},
++	{
++		id: 'f2p-grammar-spoofed-to-string-tag-is-options', group: 'F2P',
++		run() {
++			loadModules();
++			const expectedParse = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			for (const tag of ['String', 'Number', 'Boolean']) {
++				const fake = { [Symbol.toStringTag]: tag };
++				const noRule = outcomeOf(() => Grammar.parse('', fake));
++				if (noRule !== 'VALUE:-1') {
++					throw new Error(`spoofed ${tag} toStringTag: ${noRule} vs VALUE:-1`);
++				}
++				fake.startRule = 'SIP_URI';
++				const parsed = outcomeOf(() => Grammar.parse('sip:alice@example.com', fake));
++				if (parsed !== expectedParse) {
++					throw new Error(`spoofed ${tag} toStringTag with startRule: ${parsed} vs ${expectedParse}`);
++				}
++			}
++			// The internal slots also survive an overridden toStringTag. It
++			// must not select the options shape or consult a getter for the tag.
++			for (const [make, expected] of [
++				[() => new String('SIP_URI'), expectedParse],
++				[() => new Number(5), 'THROW:Error:Invalid rule name: "5".'],
++				[() => new Boolean(true), 'THROW:Error:Invalid rule name: "true".'],
++			]) {
++				for (const tag of ['Object', 'String', 'Number', 'Boolean']) {
++					const box = make();
++					Object.defineProperty(box, Symbol.toStringTag, { value: tag });
++					box.startRule = 'bogus';
++					const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', box));
++					if (actual !== expected) {
++						throw new Error(`genuine box with ${tag} toStringTag: ${actual} vs ${expected}`);
++					}
++				}
++				const box = make();
++				Object.defineProperty(box, Symbol.toStringTag, {
++					get() { throw new RangeError('toStringTag must not be read'); },
++				});
++				if (outcomeOf(() => Grammar.parse('sip:alice@example.com', box)) !== expected) {
++					throw new Error('boxed primitive recognition read toStringTag');
++				}
++			}
++			const options = { startRule: 'SIP_URI' };
++			Object.defineProperty(options, Symbol.toStringTag, {
++				get() { throw new RangeError('toStringTag must not be read'); },
++			});
++			if (outcomeOf(() => Grammar.parse('sip:alice@example.com', options)) !== expectedParse) {
++				throw new Error('options recognition read toStringTag');
++			}
++			return 'spoofed-to-string-tag-is-options';
++		},
++	},
++	{
++		id: 'f2p-grammar-proxy-boxed-primitive-is-options', group: 'F2P',
++		run() {
++			loadModules();
++			const expectedParse = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			for (const target of [new String('SIP_URI'), new Number(5), new Boolean(true)]) {
++				const proxy = new Proxy(target, {});
++				const noRule = outcomeOf(() => Grammar.parse('', proxy));
++				if (noRule !== 'VALUE:-1') {
++					throw new Error(`proxy around boxed primitive: ${noRule} vs VALUE:-1`);
++				}
++				const withRule = new Proxy(target, {});
++				withRule.startRule = 'SIP_URI';
++				const parsed = outcomeOf(() => Grammar.parse('sip:alice@example.com', withRule));
++				if (parsed !== expectedParse) {
++					throw new Error(`proxy around boxed primitive with startRule: ${parsed} vs ${expectedParse}`);
++				}
++			}
++			return 'proxy-boxed-primitive-is-options';
++		},
++	},
++	{
++		id: 'f2p-grammar-options-getter-read-once', group: 'F2P',
++		run() {
++			loadModules();
++			let reads = 0;
++			const options = {};
++			Object.defineProperty(options, 'startRule', {
++				get() {
++					reads += 1;
++					return reads === 1 ? 'SIP_URI' : 'bogus';
++				},
++				configurable: true,
++			});
++			const expected = outcomeOf(() => Grammar.parse('sip:alice@example.com', 'SIP_URI'));
++			const actual = outcomeOf(() => Grammar.parse('sip:alice@example.com', options));
++			if (actual !== expected) {
++				throw new Error(`startRule getter value: ${actual} vs ${expected}`);
++			}
++			if (reads !== 1) {
++				throw new Error(`startRule getter read ${reads} times`);
++			}
++			return 'options-getter-read-once';
++		},
++	},
++	{
++		id: 'f2p-grammar-types-parse-inputs', group: 'F2P',
++		run() {
++			runTypeScript('src/test/migration-verifier/types/type-parse-inputs.ts');
++			return 'types-parse-inputs';
++		},
++	},
++	{
++		id: 'f2p-grammar-types-syntax-error', group: 'F2P',
++		run() {
++			runTypeScript('src/test/migration-verifier/types/type-syntax-error.ts');
++			return 'types-syntax-error';
++		},
++	},
++	{
++		id: 'f2p-grammar-types-negative-api', group: 'P2P',
++		run() {
++			runTypeScript('src/test/migration-verifier/types/type-negative.ts');
++			return 'types-negative-api';
++		},
++	},
++
++	// ---- behavior checks (P2P): candidate must match the frozen baseline ----
++	{
++		id: 'p2p-behavior-uri-sip-basic', group: 'P2P',
++		run() {
++			loadModules();
++			const uri = URI.parse('sip:alice@example.com');
++			return { scheme: uri.scheme, user: uri.user, host: uri.host, port: uri.port, aor: uri.toAor() };
++		},
++	},
++	{
++		id: 'p2p-behavior-uri-params-headers', group: 'P2P',
++		run() {
++			loadModules();
++			const uri = URI.parse('SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2');
++			return {
++				scheme: uri.scheme, user: uri.user, host: uri.host, port: uri.port,
++				transport: uri.getParam('transport'), foo: uri.getParam('foo'),
++				baz: uri.getParam('baz'), xheader: uri.getHeader('x-header-1'),
++				toString: uri.toString(), aor: uri.toAor(),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-uri-invalid', group: 'P2P',
++		run() {
++			loadModules();
++			return {
++				plain: URI.parse('not a uri'),
++				schemeOnly: URI.parse('sip:'),
++				spaces: URI.parse('hello world'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-grammar-invalid-minus-one', group: 'P2P',
++		run() {
++			return {
++				uri: parseRule('SIP_URI', '::::'),
++				host: parseRule('host', ''),
++				status: parseRule('Status_Line', 'not a status line'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-nameaddr-quoted', group: 'P2P',
++		run() {
++			loadModules();
++			const na = NameAddrHeader.parse('"Iñaki" <sip:alice@example.com:6060;transport=tcp>;tag=abc;expires=3600');
++			return {
++				display: na.display_name, host: na.uri.host, port: na.uri.port,
++				tag: na.getParam('tag'), expires: na.getParam('expires'), toString: na.toString(),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-nameaddr-token', group: 'P2P',
++		run() {
++			loadModules();
++			const na = NameAddrHeader.parse('Bob <sip:bob@example.com>;foo=bar;baz');
++			return { display: na.display_name, host: na.uri.host, foo: na.getParam('foo'), baz: na.getParam('baz') };
++		},
++	},
++	{
++		id: 'p2p-behavior-contact-multiple', group: 'P2P',
++		run() {
++			const parsed = parseRule('Contact', '"A" <sip:a@b.com>;expires=1, "B" <sip:b@c.com>;q=0.5');
++			return parsed.map(item => {
++				const header = item.parsed;
++				return { display: header.display_name, host: header.uri.host, expires: header.getParam('expires'), q: header.getParam('q') };
++			});
++		},
++	},
++	{
++		id: 'p2p-behavior-record-route-multiple', group: 'P2P',
++		run() {
++			const parsed = parseRule('Record_Route', '<sip:a@b.com;lr>, <sip:c@d.com;lr>');
++			return parsed.map(item => {
++				const header = item.parsed;
++				return { host: header.uri.host, lr: header.getParam('lr') };
++			});
++		},
++	},
++	{
++		id: 'p2p-behavior-via-multiple', group: 'P2P',
++		run() {
++			const parsed = parseRule('Via', 'SIP /  3.0 \r\n / UDP [1:ab::FF]:6060 ;\r\n  BRanch=1234;rport=1111;Param1=Foo;paRAM2;param3=Bar');
++			return { protocol: parsed.protocol, transport: parsed.transport, host: parsed.host, host_type: parsed.host_type, port: parsed.port, branch: parsed.branch, rport: parsed.rport, params: parsed.params };
++		},
++	},
++	{
++		id: 'p2p-behavior-cseq', group: 'P2P',
++		run() {
++			const parsed = parseRule('CSeq', '1 INVITE');
++			return { value: parsed.value, method: parsed.method };
++		},
++	},
++	{
++		id: 'p2p-behavior-from', group: 'P2P',
++		run() {
++			const parsed = parseRule('From', '"Alice" <sip:alice@example.com>;tag=1928301774');
++			return { display: parsed.display_name, host: parsed.uri.host, tag: parsed.getParam('tag') };
++		},
++	},
++	{
++		id: 'p2p-behavior-to', group: 'P2P',
++		run() {
++			const parsed = parseRule('To', 'Bob <sip:bob@example.com>');
++			return { display: parsed.display_name, host: parsed.uri.host, tag: parsed.getParam('tag') };
++		},
++	},
++	{
++		id: 'p2p-behavior-content-type', group: 'P2P',
++		run() {
++			return {
++				plain: parseRule('Content_Type', 'application/sdp'),
++				params: parseRule('Content_Type', 'text/plain;charset=utf-8'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-content-length', group: 'P2P',
++		run() {
++			return { n: parseRule('Content_Length', '123'), zero: parseRule('Content_Length', '0') };
++		},
++	},
++	{
++		id: 'p2p-behavior-event', group: 'P2P',
++		run() {
++			return parseRule('Event', 'Presence;id=1');
++		},
++	},
++	{
++		id: 'p2p-behavior-session-expires', group: 'P2P',
++		run() {
++			return {
++				basic: parseRule('Session_Expires', '1800'),
++				refresher: parseRule('Session_Expires', '1800;refresher=uac'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-subscription-state', group: 'P2P',
++		run() {
++			return {
++				basic: parseRule('Subscription_State', 'active;expires=3600;reason=timeout'),
++				pending: parseRule('Subscription_State', 'pending;retry_after=5'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-reason', group: 'P2P',
++		run() {
++			return {
++				detailed: parseRule('Reason', 'SIP ;cause=200 ;text="Call completed"'),
++				simple: parseRule('Reason', 'SIP;cause=486'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-refer-to', group: 'P2P',
++		run() {
++			const parsed = parseRule('Refer_To', 'Refer-To: <sip:carol@example.com?Replaces=abc%3Bto-tag%3D1>'.slice('Refer-To: '.length));
++			return { host: parsed.uri.host, user: parsed.uri.user };
++		},
++	},
++	{
++		id: 'p2p-behavior-replaces', group: 'P2P',
++		run() {
++			return parseRule('Replaces', 'abc123;to-tag=1;from-tag=2;early-only');
++		},
++	},
++	{
++		id: 'p2p-behavior-status-line', group: 'P2P',
++		run() {
++			return [
++				parseRule('Status_Line', 'SIP/2.0 200 OK'),
++				parseRule('Status_Line', 'SIP/2.0 404 Not Found'),
++			];
++		},
++	},
++	{
++		id: 'p2p-behavior-host-types', group: 'P2P',
++		run() {
++			return {
++				domain: parseRule('host', 'example.com'),
++				ipv4: parseRule('host', '192.168.0.1'),
++				ipv6: parseRule('host', '[2001:db8::1]'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-content-disposition', group: 'P2P',
++		run() {
++			return {
++				render: parseRule('Content_Disposition', 'render;handling=optional'),
++				session: parseRule('Content_Disposition', 'session'),
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-uuid', group: 'P2P',
++		run() {
++			return parseRule('uuid', 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6');
++		},
++	},
++	{
++		id: 'p2p-behavior-digest-challenge', group: 'P2P',
++		run() {
++			const parsed = parseRule('challenge', 'Digest realm="testrealm@host.com", qop="auth,auth-int", nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093", opaque="5ccc069c403ebaf9f0171e9517f40e41"');
++			return { realm: parsed.realm, nonce: parsed.nonce, opaque: parsed.opaque, algorithm: parsed.algorithm, qop: parsed.qop };
++		},
++	},
++	{
++		id: 'p2p-behavior-max-forwards', group: 'P2P',
++		run() {
++			return { value: parseRule('Max_Forwards', '70'), zero: parseRule('Max_Forwards', '0') };
++		},
++	},
++	{
++		id: 'p2p-behavior-call-id', group: 'P2P',
++		run() {
++			return { value: parseRule('Call_ID', 'a84b4c76e66710@pc33.atlanta.com') };
++		},
++	},
++	{
++		id: 'p2p-behavior-expires', group: 'P2P',
++		run() {
++			return { value: parseRule('Expires', '3600') };
++		},
++	},
++	{
++		id: 'p2p-behavior-parse-message-request', group: 'P2P',
++		run() {
++			loadModules();
++			const raw = [
++				'INVITE sip:bob@biloxi.com SIP/2.0',
++				'Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds',
++				'To: Bob <sip:bob@biloxi.com>',
++				'From: Alice <sip:alice@atlanta.com>;tag=1928301774',
++				'Call-ID: a84b4c76e66710@pc33.atlanta.com',
++				'CSeq: 314159 INVITE',
++				'Contact: <sip:alice@pc33.atlanta.com>',
++				'Content-Type: application/sdp',
++				'Content-Length: 5',
++				'',
++				'v=0\r\n',
++			].join('\r\n');
++			const message = Parser.parseMessage(raw, {});
++			return {
++				method: message.method, status: message.status_code,
++				callId: message.call_id, cseq: message.cseq,
++				fromTag: message.from_tag, toHost: message.to.uri.host,
++				contentType: message.getHeader('content-type'), body: message.body,
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-parse-message-response', group: 'P2P',
++		run() {
++			loadModules();
++			const raw = [
++				'SIP/2.0 200 OK',
++				'Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds',
++				'To: Bob <sip:bob@biloxi.com>;tag=a6c85cf',
++				'From: Alice <sip:alice@atlanta.com>;tag=1928301774',
++				'Call-ID: a84b4c76e66710@pc33.atlanta.com',
++				'CSeq: 314159 INVITE',
++				'Content-Length: 0',
++				'',
++				'',
++			].join('\r\n');
++			const message = Parser.parseMessage(raw);
++			return {
++				method: message.method, status: message.status_code,
++				reason: message.reason_phrase, callId: message.call_id,
++				toTag: message.to_tag, cseq: message.cseq,
++			};
++		},
++	},
++	{
++		id: 'p2p-behavior-differential-fuzz', group: 'differential',
++		run() {
++			if (!referenceSource) {
++				return { skipped: 'no reference' };
++			}
++			loadModules();
++			const refGrammar = loadReference();
++			const random = mulberry32(20260923);
++			const alphabet = 'abcXYZ0129:/@;=?,&%<>[]"() ._-+*\'\\\t\r\nñü$!~`{}';
++			let checked = 0;
++			for (let i = 0; i < 4000; i++) {
++				const length = Math.floor(random() * 26);
++				let input = '';
++				for (let j = 0; j < length; j++) {
++					input += alphabet[Math.floor(random() * alphabet.length)];
++				}
++				const rule = START_RULES[Math.floor(random() * START_RULES.length)];
++				let actual;
++				let expected;
++				try {
++					actual = stable(Grammar.parse(input, rule));
++				} catch (error) {
++					actual = 'ERR:' + (error && error.message);
++				}
++				try {
++					expected = stable(refGrammar.parse(input, rule));
++				} catch (error) {
++					expected = 'ERR:' + (error && error.message);
++				}
++				if (actual !== expected) {
++					throw new Error(`differential mismatch rule=${rule} input=${stringify(input)}\n candidate=${actual}\n reference=${expected}`);
++				}
++				checked++;
++			}
++			return { checked };
++		},
++	},
++];
++
++function main() {
++	if (dump) {
++		// Freeze the behavior expectations from the trusted baseline.  Every
++		// non-F2P node (P2P and differential) is compared against expected.json
++		// at run time, so the dump must collect the same node set.
++		const out = {};
++		for (const testCase of CASES) {
++			if (testCase.group === 'F2P') {
++				continue;
++			}
++			try {
++				out[testCase.id] = stable(testCase.run());
++			} catch (error) {
++				out[testCase.id] = 'THROW:' + (error && error.message);
++			}
++		}
++		process.stdout.write(stringify(out, null, 2));
++		return 0;
++	}
++	const EXPECTED = runPayload
++		? runPayload.expected
++		: parseJson(readFileSync(path.resolve(args.expected), 'utf8'));
++	if (!EXPECTED || typeof EXPECTED !== 'object') {
++		throw new Error('expected-value payload is unavailable');
++	}
++	const results = [];
++	for (const testCase of CASES) {
++		const started = Date.now();
++		let status = 'passed';
++		let message = '';
++		try {
++			if (testCase.group === 'F2P') {
++				// Fail-to-pass nodes are migration predicates: the base
++				// repository throws, a migrated repository returns normally.
++				testCase.run();
++			} else {
++				const actual = stable(testCase.run());
++				const expected = EXPECTED[testCase.id];
++				if (expected === undefined) {
++					throw new Error('no frozen expectation for node');
++				}
++				if (actual !== expected) {
++					throw new Error(`expected ${expected} but got ${actual}`);
++				}
++			}
++		} catch (error) {
++			status = 'failed';
++			message = String((error && error.message) || error);
++		}
++		results.push({
++			testId: testCase.id,
++			name: testCase.id,
++			group: testCase.group,
++			status,
++			duration: Date.now() - started,
++			message: message.slice(0, 2000),
++		});
++	}
++	const envelope = stringify({
++		version: 'deepswe-hidden/v1',
++		nonce: envelopeNonce,
++		complete: true,
++		results,
++	});
++	if (!Number.isInteger(resultFd) || resultFd < 0) {
++		throw new Error('authenticated result descriptor is unavailable');
++	}
++	ftruncateSync(resultFd, 0);
++	writeSync(resultFd, envelope, 0, 'utf8');
++	closeSync(resultFd);
++	return 0;
++}
++
++processExit(main());
+diff --git a/src/test/migration-verifier/types/type-negative.ts b/src/test/migration-verifier/types/type-negative.ts
+new file mode 100644
+index 0000000..89fd3f4
+--- /dev/null
++++ b/src/test/migration-verifier/types/type-negative.ts
+@@ -0,0 +1,10 @@
++import * as Grammar from '../../../Grammar';
++
++// @ts-expect-error input must be a string
++Grammar.parse(123, 'SIP_URI');
++
++// @ts-expect-error a third argument is not part of the public API
++Grammar.parse('sip:alice@example.com', 'SIP_URI', 'extra');
++
++// @ts-expect-error a third argument is not part of the public API
++Grammar.parse('sip:alice@example.com', { startRule: 'SIP_URI' }, 'extra');
+diff --git a/src/test/migration-verifier/types/type-parse-inputs.ts b/src/test/migration-verifier/types/type-parse-inputs.ts
+new file mode 100644
+index 0000000..d919512
+--- /dev/null
++++ b/src/test/migration-verifier/types/type-parse-inputs.ts
+@@ -0,0 +1,22 @@
++import * as Grammar from '../../../Grammar';
++
++Grammar.parse('sip:alice@example.com', 'SIP_URI');
++Grammar.parse('sip:alice@example.com', 123);
++Grammar.parse('sip:alice@example.com', true);
++Grammar.parse('sip:alice@example.com', 1n);
++Grammar.parse('sip:alice@example.com', Symbol('SIP_URI'));
++Grammar.parse('sip:alice@example.com', function () {});
++Grammar.parse('sip:alice@example.com', new String('SIP_URI'));
++Grammar.parse('sip:alice@example.com', new Number(5));
++Grammar.parse('sip:alice@example.com', new Boolean(true));
++Grammar.parse('sip:alice@example.com', null);
++Grammar.parse('sip:alice@example.com', undefined);
++Grammar.parse('sip:alice@example.com', { startRule: 'SIP_URI' });
++Grammar.parse('sip:alice@example.com', { startRule: 'SIP_URI', extra: 1 });
++const nullPrototype: object = Object.create(null);
++Grammar.parse('sip:alice@example.com', nullPrototype);
++
++const rules: string[] = Grammar.StartRules;
++const readonlyRules: readonly string[] = Grammar.StartRules;
++void rules;
++void readonlyRules;
+diff --git a/src/test/migration-verifier/types/type-syntax-error.ts b/src/test/migration-verifier/types/type-syntax-error.ts
+new file mode 100644
+index 0000000..d2ce011
+--- /dev/null
++++ b/src/test/migration-verifier/types/type-syntax-error.ts
+@@ -0,0 +1,73 @@
++import * as Grammar from '../../../Grammar';
++
++type SyntaxErrorExpectation =
++	| { readonly type: 'literal'; readonly text: string; readonly ignoreCase: boolean }
++	| {
++			readonly type: 'class';
++			readonly parts: readonly (string | readonly [string, string])[];
++			readonly inverted: boolean;
++			readonly ignoreCase: boolean;
++	  }
++	| { readonly type: 'any' }
++	| { readonly type: 'end' }
++	| { readonly type: 'other'; readonly description: string };
++type IsAny<T> = 0 extends 1 & T ? true : false;
++type AssertFalse<T extends false> = T;
++type SyntaxErrorExpectedIsNotAny = AssertFalse<
++	IsAny<Grammar.SyntaxError['expected']>
++>;
++type SyntaxErrorExpectedElement = NonNullable<
++	Grammar.SyntaxError['expected']
++> extends readonly (infer Item)[]
++	? Item
++	: never;
++type SyntaxErrorExpectedElementIsNotAny = AssertFalse<
++	IsAny<SyntaxErrorExpectedElement>
++>;
++type ClassExpectation = Extract<SyntaxErrorExpectedElement, { type: 'class' }>;
++type ClassParts = ClassExpectation['parts'];
++type ClassPartsIsNotAny = AssertFalse<IsAny<ClassParts>>;
++type ClassPartIsNotAny = AssertFalse<IsAny<ClassParts[number]>>;
++
++const classExpectation: ClassExpectation = {
++	type: 'class',
++	parts: ['a', ['a', 'z']],
++	inverted: false,
++	ignoreCase: false,
++};
++
++// Peggy class ranges contain exactly a start and an end character.
++// @ts-expect-error a three-element range is not part of the public API
++const invalidClassExpectation: ClassExpectation = { type: 'class', parts: [['a', 'z', 'extra']], inverted: false, ignoreCase: false };
++
++const syntaxErrorConstructor: typeof Grammar.SyntaxError = Grammar.SyntaxError;
++const error = {} as Grammar.SyntaxError;
++const expected: readonly SyntaxErrorExpectation[] | null | undefined =
++	error.expected;
++const found: unknown = error.found;
++const location: unknown = error.location;
++const message: string = Grammar.SyntaxError.buildMessage([], null);
++// @ts-expect-error buildMessage requires an array of expectations
++Grammar.SyntaxError.buildMessage(null, null);
++const formatted: string = error.format([]);
++const constructed = new Grammar.SyntaxError(
++	'boom',
++	[],
++	null,
++	{
++		source: 'input',
++		start: { offset: 0, line: 1, column: 1 },
++		end: { offset: 0, line: 1, column: 1 },
++	}
++);
++const constructedError: Grammar.SyntaxError = constructed;
++void syntaxErrorConstructor;
++void classExpectation;
++void invalidClassExpectation;
++void expected;
++void found;
++void location;
++void message;
++void formatted;
++void constructed;
++void constructedError;

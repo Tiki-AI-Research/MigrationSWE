@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/js-joda__js-joda"
+description = "Upgrade @js-joda/core from 6.1.0 to 6.3.2."
+
+[metadata]
+category = "Version_upgrade"
+language = "javascript"
+repository_id = "2613e597-0de3-4b5f-b2c8-f010bbc6ceb9"
+task_id = "tp-6d71fce365579a7103acf6ee3e8bc2d5"
+repository_url = "https://github.com/js-joda/js-joda"
+base_commit_hash = "ce4665b0930da4d7e0bf0b18b97799206c960c9c"
+
+[metadata.tests]
+fail_to_pass_count = 71
+pass_to_pass_count = 40
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:js-joda__js-joda-verifier-image-20261126"
+image_digest = "sha256:c12028d60c2ebaba64eaee30abba3f2aee7da6aa6893fdedf72e841a6220f8e6"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached ce4665b0930da4d7e0bf0b18b97799206c960c9c > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:js-joda__js-joda-task-image-20261126"
+image_digest = "sha256:e3a4ec9b4eba8232d0e0147063be7ee45070b9eabdf2c68ba4b881fbedb21783"

@@ -1,0 +1,83 @@
+{
+  "schema_version": "shared-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "family": "shared-case-corpus",
+  "normalization": "Compare a stable JSON projection of each observed response or static contract; volatile values such as timestamps, ports, and absolute paths are excluded.",
+  "fixtures": {
+    "watchdog_log": "fixtures/batches/BATCH-DIFFERENTIAL-0002/watchdog-log.txt",
+    "public_route_table": "fixtures/batches/BATCH-DIFFERENTIAL-0002/public-route-table.json",
+    "protected_tests": "fixtures/batches/BATCH-DIFFERENTIAL-0002/protected-tests.json"
+  },
+  "cases": [
+    {
+      "id": "DIFF-033",
+      "requirement_ids": ["R035"],
+      "expected": {
+        "loginStatus": 200,
+        "loginBody": { "ok": true },
+        "cookieHttpOnly": true,
+        "readTailArg": 1024,
+        "status": 200,
+        "contentType": "text/plain; charset=utf-8",
+        "body": "[watchdog] probe line one\n[watchdog] probe line two\n"
+      }
+    },
+    {
+      "id": "DIFF-034",
+      "requirement_ids": ["R036"],
+      "paths": [
+        "/api/watchdog/terminal/ws",
+        "/api/ws/chat",
+        "/openclaw/x"
+      ],
+      "expected": {
+        "results": [
+          { "path": "/api/watchdog/terminal/ws", "status": 401, "connection": "close", "body": "Unauthorized" },
+          { "path": "/api/ws/chat", "status": 401, "connection": "close", "body": "Unauthorized" },
+          { "path": "/openclaw/x", "status": 401, "connection": "close", "body": "Unauthorized" }
+        ],
+        "bridgeCalls": { "terminal": 0, "chat": 0, "gateway": 0 }
+      }
+    },
+    {
+      "id": "DIFF-035",
+      "requirement_ids": ["R037"],
+      "expected": {
+        "matchesReference": true,
+        "routeCount": 177,
+        "routeHash": "sha256:7610ed164c0faeb954ec42787aaa072ec4754ae77623b7ce3ca703fa24acd05a",
+        "missing": [],
+        "extra": [],
+        "families": {
+          "health": true,
+          "auth": true,
+          "setup-ui": true,
+          "watchdog": true,
+          "sse": true,
+          "openclaw": true,
+          "assets": true,
+          "hooks": true,
+          "webhook": true,
+          "oauth": true,
+          "v1": true,
+          "gmail-pubsub": true,
+          "api": true
+        }
+      }
+    },
+    {
+      "id": "DIFF-036",
+      "requirement_ids": ["R041"],
+      "expected": {
+        "missingBaselineTests": [],
+        "assertionCountRegressions": [],
+        "skippedMarkers": [],
+        "weakenedMarkers": [],
+        "fixtureMismatches": [],
+        "servingRuntimeGuardValid": true,
+        "directFrameworkDependencyValid": true,
+        "testScript": "vitest run"
+      }
+    }
+  ]
+}

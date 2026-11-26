@@ -1,0 +1,11 @@
+diff --git a/src/bridge.js b/src/bridge.js
+new file mode 100644
+index 0000000..6cdbe8a
+--- /dev/null
++++ b/src/bridge.js
+@@ -0,0 +1,5 @@
++import { execFileSync } from 'node:child_process';
++
++export function callLegacySerializer(payload) {
++	return execFileSync('node', ['legacy-devalue.js', payload], { encoding: 'utf8' });
++}

@@ -1,0 +1,114 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index bef81c5..ca5fa60 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -17,7 +17,7 @@ repos:
+     rev: 1.32.0
+     hooks:
+       - id: django-upgrade
+-        args: [--target-version, "3.2"]
++        args: [--target-version, "5.2"]
+   - repo: https://github.com/astral-sh/ruff-pre-commit
+     rev: "v0.16.6"
+     hooks:
+diff --git a/feincms/admin/filters.py b/feincms/admin/filters.py
+index 7ae5bdc..b7c16af 100644
+--- a/feincms/admin/filters.py
++++ b/feincms/admin/filters.py
+@@ -6,7 +6,6 @@
+ 
+ from operator import itemgetter
+ 
+-import django
+ from django.contrib.admin.filters import ChoicesFieldListFilter
+ from django.db.models import Count
+ from django.utils.encoding import smart_str
+@@ -55,11 +54,7 @@ class ParentFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+@@ -103,11 +98,7 @@ class CategoryFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+diff --git a/feincms/extensions/datepublisher.py b/feincms/extensions/datepublisher.py
+index 2f2dc00..fa7300d 100644
+--- a/feincms/extensions/datepublisher.py
++++ b/feincms/extensions/datepublisher.py
+@@ -10,7 +10,6 @@ the page's manager to determine which entries are to be considered active.
+ 
+ from datetime import datetime
+ 
+-import django
+ from django.db import models
+ from django.db.models import Q
+ from django.utils import timezone
+@@ -56,10 +55,7 @@ def granular_now(n=None, default_tz=None):
+ 
+     rounded_minute = (n.minute // 5) * 5
+     d = datetime(n.year, n.month, n.day, n.hour, rounded_minute)
+-    if django.VERSION < (5,):
+-        return timezone.make_aware(d, default_tz, is_dst=True)
+-    else:
+-        return timezone.make_aware(d, default_tz)
++    return timezone.make_aware(d, default_tz)
+ 
+ 
+ # ------------------------------------------------------------------------
+diff --git a/setup.cfg b/setup.cfg
+index 742512e..947fbaa 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -30,7 +30,7 @@ classifiers =
+ [options]
+ packages = find:
+ install_requires =
+-    Django>=3.2
++    Django>=5.2
+     Pillow>=2.0.0
+     django-mptt>=0.7.1
+ python_requires = >=3.10
+diff --git a/tox.ini b/tox.ini
+index ddc7152..c1c9ac4 100644
+--- a/tox.ini
++++ b/tox.ini
+@@ -1,7 +1,6 @@
+ [tox]
+ envlist =
+-    py{310,311}-dj{32,41,42,50,51,52}
+-    py{312,313}-dj{42,50,51,52,main}
++    py{310,311,312,313}-dj52
+ 
+ [testenv]
+ usedevelop = true
+@@ -10,13 +9,8 @@ commands =
+     python -Wd {envbindir}/coverage run tests/manage.py test -v2 --keepdb {posargs:testapp}
+     coverage report -m
+ deps =
+-    dj32: Django>=3.2,<4.0
+-    dj41: Django>=4.1,<4.2
+-    dj42: Django>=4.2,<5.0
+-    dj50: Django>=5.0,<5.1
+-    dj51: Django>=5.1,<5.2
++    djold: Django>=3.2,<4.0
+     dj52: Django>=5.2,<5.3
+-    djmain: https://github.com/django/django/archive/main.tar.gz
+ 
+ [testenv:e2e]
+ usedevelop = true

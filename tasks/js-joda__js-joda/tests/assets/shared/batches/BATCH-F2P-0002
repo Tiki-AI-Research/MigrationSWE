@@ -1,0 +1,436 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const MIGRATION = Object.freeze({
+  name: 'js-joda',
+  category: 'version_upgrade',
+  sourceVersion: '6.1.0',
+  targetVersion: '6.3.2',
+  corePackage: '@js-joda/core',
+});
+
+const SRC_ENTRY = Object.freeze({
+  core: 'src/js-joda.js',
+  timezone: 'src/js-joda-timezone.js',
+  locale: 'src/js-joda-locale.js',
+  extra: 'src/js-joda-extra.js',
+});
+
+const CORE_EXPORTS = Object.freeze([
+  'ZonedDateTime', 'LocalDate', 'LocalDateTime', 'LocalTime', 'Duration',
+  'Period', 'ChronoUnit', 'ZoneOffset', 'ZoneId', 'Instant', 'Year', 'Month',
+  'DayOfWeek', 'MonthDay', 'YearMonth', 'OffsetDateTime', 'OffsetTime',
+  'DateTimeFormatter',
+]);
+
+const PACKAGE_ENTRY_FIELDS = Object.freeze(['main', 'module', 'typings']);
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function exists(file) {
+  try {
+    fs.accessSync(file);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function packageDir(repoRoot, name) {
+  return path.join(repoRoot, 'packages', name);
+}
+
+function manifest(repoRoot, name) {
+  return readJson(path.join(packageDir(repoRoot, name), 'package.json'));
+}
+
+function declaredCoreVersion(repoRoot) {
+  try {
+    return manifest(repoRoot, 'core').version;
+  } catch (e) {
+    return null;
+  }
+}
+
+function lockFilePaths(repoRoot) {
+  const out = [];
+  const packagesRoot = path.join(repoRoot, 'packages');
+  if (!exists(packagesRoot)) {
+    return out;
+  }
+  for (const name of fs.readdirSync(packagesRoot)) {
+    const lock = path.join(packagesRoot, name, 'package-lock.json');
+    if (exists(lock)) {
+      out.push(lock);
+    }
+  }
+  return out;
+}
+
+function resolvedCoreVersions(repoRoot) {
+  const versions = [];
+  for (const lockPath of lockFilePaths(repoRoot)) {
+    let lock;
+    try {
+      lock = readJson(lockPath);
+    } catch (e) {
+      continue;
+    }
+    const packages = lock.packages || {};
+    for (const key of Object.keys(packages)) {
+      const entry = packages[key];
+      if (!entry) {
+        continue;
+      }
+      const isCore = entry.name === MIGRATION.corePackage || /(^|\/)@js-joda\/core$/.test(key);
+      if (isCore && isSemver(entry.version)) {
+        versions.push(entry.version);
+      }
+    }
+    const dependencies = lock.dependencies || {};
+    const legacy = dependencies[MIGRATION.corePackage];
+    if (legacy && isSemver(legacy.version)) {
+      versions.push(legacy.version);
+    }
+  }
+  return versions;
+}
+
+let babelRegistered = false;
+
+function registerBabel() {
+  if (babelRegistered) {
+    return;
+  }
+  babelRegistered = true;
+  try {
+    const register = require('@babel/register');
+    register({
+      presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
+      ignore: [/node_modules/],
+      extensions: ['.js'],
+      cache: false,
+    });
+  } catch (e) {
+    babelRegistered = false;
+  }
+}
+
+function loadPackage(repoRoot, name) {
+  const dir = packageDir(repoRoot, name);
+  if (!exists(dir)) {
+    return null;
+  }
+  let pkg;
+  try {
+    pkg = readJson(path.join(dir, 'package.json'));
+  } catch (e) {
+    return null;
+  }
+  const mainAbs = path.join(dir, pkg.main || '');
+  if (pkg.main && exists(mainAbs)) {
+    try {
+      return require(mainAbs);
+    } catch (e) {
+      return null;
+    }
+  }
+  if (pkg.module && exists(path.join(dir, pkg.module))) {
+    try {
+      return require(path.join(dir, pkg.module));
+    } catch (e) {
+      return null;
+    }
+  }
+  registerBabel();
+  const srcAbs = path.join(dir, SRC_ENTRY[name] || 'index.js');
+  if (exists(srcAbs)) {
+    try {
+      return require(srcAbs);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function loadCore(repoRoot) {
+  return loadPackage(repoRoot, 'core');
+}
+
+function throws(fn) {
+  try {
+    fn();
+    return false;
+  } catch (e) {
+    return true;
+  }
+}
+
+function isSemver(value) {
+  return typeof value === 'string' && /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-.]+)?$/.test(value);
+}
+
+function targetTechInEffect(repoRoot) {
+  if (declaredCoreVersion(repoRoot) !== MIGRATION.targetVersion) {
+    return false;
+  }
+  const resolved = resolvedCoreVersions(repoRoot);
+  if (resolved.length > 0 && resolved.some((version) => version !== MIGRATION.targetVersion)) {
+    return false;
+  }
+  return true;
+}
+
+function durationNegative(repoRoot) {
+  const core = loadCore(repoRoot);
+  const Duration = core && core.Duration;
+  if (!Duration) {
+    return false;
+  }
+  return Duration.ofSeconds(-60, 500000000).toString() === 'PT-59.5S'
+    && Duration.ofSeconds(-120, 1).toString() === 'PT-1M-59.999999999S'
+    && Duration.ofSeconds(-3601, 500000000).toString() === 'PT-1H-0.5S';
+}
+
+function durationJson(repoRoot) {
+  const core = loadCore(repoRoot);
+  const Duration = core && core.Duration;
+  if (!Duration) {
+    return false;
+  }
+  const value = Duration.ofSeconds(-120, 1);
+  return value.toJSON() === 'PT-1M-59.999999999S'
+    && value.toJSON() === value.toString();
+}
+
+function instantOffsetAndTruncation(repoRoot) {
+  const core = loadCore(repoRoot);
+  const Instant = core && core.Instant;
+  const ChronoUnit = core && core.ChronoUnit;
+  if (!Instant || !ChronoUnit) {
+    return false;
+  }
+  return Instant.parse('2024-03-07T15:30:00+08:00').toString() === '2024-03-07T07:30:00Z'
+    && Instant.parse('2024-03-07T07:30:00-00:00').toString() === '2024-03-07T07:30:00Z'
+    && Instant.ofEpochSecond(-1, -1000000).truncatedTo(ChronoUnit.SECONDS).equals(Instant.ofEpochSecond(-2))
+    && Instant.ofEpochSecond(0, -1000000).truncatedTo(ChronoUnit.SECONDS).equals(Instant.ofEpochSecond(-1));
+}
+
+function instantInputValidation(repoRoot) {
+  const core = loadCore(repoRoot);
+  const Instant = core && core.Instant;
+  if (!Instant) {
+    return false;
+  }
+  return throws(() => Instant.parse('1970-01-01T00:00:00'))
+    && throws(() => Instant.parse('1970-01-01T00:00:0Z'));
+}
+
+function zoneIdPrefixedFixed(repoRoot) {
+  const core = loadCore(repoRoot);
+  if (!core) {
+    return false;
+  }
+  const ZoneIdFactory = core.ZoneIdFactory || core.ZoneId;
+  const ZoneOffset = core.ZoneOffset;
+  if (!ZoneIdFactory || !ZoneOffset) {
+    return false;
+  }
+  return ZoneIdFactory.of('UTC+01:00').rules().equals(ZoneOffset.ofHours(1).rules());
+}
+
+function coreExportsPreserved(repoRoot) {
+  const core = loadCore(repoRoot);
+  if (!core) {
+    return false;
+  }
+  return CORE_EXPORTS.every((name) => typeof core[name] !== 'undefined');
+}
+
+function entryPointsPreserved(repoRoot) {
+  const wanted = {
+    core: { main: 'dist/js-joda.js', module: 'dist/js-joda.esm.js', typings: 'typings/js-joda.d.ts' },
+    timezone: { main: 'dist/js-joda-timezone.js', module: 'dist/js-joda-timezone.esm.js', typings: 'typings/js-joda-timezone.d.ts' },
+    locale: { main: 'dist/js-joda-locale.js', module: 'dist/js-joda-locale.esm.js', typings: 'typings/js-joda-locale.d.ts' },
+    extra: { main: 'dist/js-joda-extra.js', module: 'dist/js-joda-extra.esm.js', typings: 'typings/js-joda-extra.d.ts' },
+  };
+  return Object.keys(wanted).every((name) => {
+    let pkg;
+    try {
+      pkg = manifest(repoRoot, name);
+    } catch (e) {
+      return false;
+    }
+    return PACKAGE_ENTRY_FIELDS.every((field) => pkg[field] === wanted[name][field]);
+  });
+}
+
+function noExternalDelegation(repoRoot) {
+  const core = loadCore(repoRoot);
+  if (!core) {
+    return false;
+  }
+  const original = require('child_process').execFileSync;
+  require('child_process').execFileSync = function forbidden() {
+    throw new Error('external process delegation is not allowed');
+  };
+  try {
+    return core.Instant.parse('2024-03-07T15:30:00+08:00').toString() === '2024-03-07T07:30:00Z';
+  } finally {
+    require('child_process').execFileSync = original;
+  }
+}
+
+function localeUsGermanText(repoRoot) {
+  const locale = loadPackage(repoRoot, 'locale');
+  const core = loadCore(repoRoot);
+  if (!locale || !core) {
+    return targetTechInEffect(repoRoot);
+  }
+  const Locale = locale.Locale;
+  const DateTimeFormatter = core.DateTimeFormatter;
+  const LocalDate = core.LocalDate;
+  if (!Locale || !DateTimeFormatter || !LocalDate) {
+    return targetTechInEffect(repoRoot);
+  }
+  const date = LocalDate.of(2020, 1, 15);
+  const formatter = DateTimeFormatter.ofPattern('MMMM');
+  return formatter.withLocale(Locale.US).format(date) === 'January'
+    && formatter.withLocale(Locale.GERMANY).format(date) === 'Januar';
+}
+
+function prebuiltLocaleRegistration(repoRoot) {
+  const core = loadCore(repoRoot);
+  const locale = loadPackage(repoRoot, 'locale');
+  if (!core || !locale) {
+    return targetTechInEffect(repoRoot);
+  }
+  let prebuilt = null;
+  try {
+    prebuilt = require(path.join(repoRoot, 'packages', 'locale', 'packages', 'de', 'dist', 'index.js'));
+  } catch (e) {
+    prebuilt = loadPackage(repoRoot, path.join('locale', 'packages', 'de'));
+  }
+  if (!prebuilt) {
+    return localeUsGermanText(repoRoot);
+  }
+  const Locale = locale.Locale;
+  const DateTimeFormatter = core.DateTimeFormatter;
+  const LocalDate = core.LocalDate;
+  if (!Locale || !DateTimeFormatter || !LocalDate) {
+    return targetTechInEffect(repoRoot);
+  }
+  try {
+    return DateTimeFormatter.ofPattern('MMMM').withLocale(Locale.GERMANY).format(LocalDate.of(2020, 1, 15)) === 'Januar';
+  } catch (e) {
+    return false;
+  }
+}
+
+function timezoneRegistration(repoRoot) {
+  const timezone = loadPackage(repoRoot, 'timezone');
+  const core = loadCore(repoRoot);
+  if (!timezone || !core) {
+    return targetTechInEffect(repoRoot);
+  }
+  const ZoneId = core.ZoneId;
+  const Instant = core.Instant;
+  if (!ZoneId || !Instant) {
+    return targetTechInEffect(repoRoot);
+  }
+  const rules = ZoneId.of('America/New_York').rules();
+  return rules.offset(Instant.parse('2016-06-21T00:00:00Z')).equals(core.ZoneOffset.ofHours(-4))
+    && rules.offset(Instant.parse('2016-12-21T00:00:00Z')).equals(core.ZoneOffset.ofHours(-5));
+}
+
+function resolvedSingleCore(repoRoot) {
+  if (!targetTechInEffect(repoRoot)) {
+    return false;
+  }
+  const resolved = resolvedCoreVersions(repoRoot).filter((v) => v === MIGRATION.targetVersion);
+  return resolved.length > 0;
+}
+
+function observed(requirementIds, surface, sourcePath, check) {
+  return Object.freeze({ requirement_ids: requirementIds, surface, source_path: sourcePath, check });
+}
+
+const OBSERVATIONS = Object.freeze([
+  { id: 'F2P-025', meta: observed(['R005'], 'Duration.toString() for negative durations on a whole-minute boundary', 'packages/core/src/Duration.js', durationNegative) },
+  { id: 'F2P-037', meta: observed(['R040'], 'Instant.parse input validation', 'packages/core/src/Instant.js', instantInputValidation) },
+  { id: 'F2P-042', meta: observed(['R004', 'R006'], 'Instant.parse(String) accepting a UTC offset', 'packages/core/src/Instant.js', instantOffsetAndTruncation) },
+  { id: 'F2P-026', meta: observed(['R014'], 'core package-lock resolved @js-joda/core version', 'packages/core/package-lock.json', resolvedSingleCore) },
+  { id: 'F2P-027', meta: observed(['R037'], 'locale module named exports', 'packages/locale/src/js-joda-locale.js', localeUsGermanText) },
+  { id: 'F2P-028', meta: observed(['R037'], 'locale formatting output per locale', 'packages/locale/src/temporal/WeekFields.js', localeUsGermanText) },
+  { id: 'F2P-029', meta: observed(['R037'], 'CLDR and prebuilt locale data semantics', 'packages/locale/src/plug.js', localeUsGermanText) },
+  { id: 'F2P-031', meta: observed(['R014'], 'timezone package-lock resolved @js-joda/core version', 'packages/timezone/package-lock.json', resolvedSingleCore) },
+  { id: 'F2P-034', meta: observed(['R038'], 'prebuilt locale package side-effect registration', 'packages/locale/packages/de/package.json', prebuiltLocaleRegistration) },
+  { id: 'F2P-035', meta: observed(['R037'], 'locale formatting output per locale', 'packages/locale/src/js-joda-locale.js', localeUsGermanText) },
+  { id: 'F2P-039', meta: observed(['R002'], 'workspace resolved @js-joda/core version from examples lockfile', 'packages/examples/package-lock.json', resolvedSingleCore) },
+  { id: 'F2P-041', meta: observed(['R037'], 'locale formatting output per locale', 'packages/locale/src/Locale.js', localeUsGermanText) },
+  { id: 'F2P-046', meta: observed(['R026'], 'in-process core implementation locality plus timezone registration', 'packages/timezone/package-lock.json', timezoneRegistration) },
+  { id: 'F2P-030', meta: observed(['R014'], 'timezone, locale and extra package entry points', 'packages/timezone/package-lock.json', entryPointsPreserved) },
+  { id: 'F2P-032', meta: observed(['R027'], 'resolved core package identity and behavior', 'packages/core/package-lock.json', (r) => resolvedSingleCore(r) && instantOffsetAndTruncation(r)) },
+  { id: 'F2P-033', meta: observed(['R014'], 'core manifest declared version', 'packages/core/package.json', (r) => targetTechInEffect(r) && declaredCoreVersion(r) === MIGRATION.targetVersion) },
+  { id: 'F2P-036', meta: observed(['R002'], 'core module named exports', 'packages/core/src/js-joda.js', coreExportsPreserved) },
+  { id: 'F2P-038', meta: observed(['R014'], 'locale package-lock resolved @js-joda/core version', 'packages/locale/package-lock.json', resolvedSingleCore) },
+  { id: 'F2P-040', meta: observed(['R014'], 'packaged IANA time zone data presence', 'packages/timezone/package-lock.json', (r) => targetTechInEffect(r) && exists(path.join(r, 'packages', 'timezone', 'data', 'packed'))) },
+  { id: 'F2P-043', meta: observed(['R014'], 'location of produced changes', 'packages/core/package-lock.json', (r) => targetTechInEffect(r) && path.isAbsolute(r) && exists(r)) },
+  { id: 'F2P-044', meta: observed(['R001'], 'core package manifest version field', 'packages/core/package.json', (r) => targetTechInEffect(r) && declaredCoreVersion(r) === MIGRATION.targetVersion) },
+  { id: 'F2P-045', meta: observed(['R002'], 'distribution build artifacts declared by core manifest', 'packages/core/package.json', (r) => targetTechInEffect(r) && !!manifest(r, 'core').scripts && typeof manifest(r, 'core').scripts['build-dist'] === 'string') },
+  { id: 'F2P-047', meta: observed(['R026'], 'in-process core implementation locality', 'packages/timezone/package-lock.json', noExternalDelegation) },
+  { id: 'F2P-048', meta: observed(['R027'], 'resolved core package identity plus named exports', 'packages/core/package-lock.json', (r) => coreExportsPreserved(r) && resolvedSingleCore(r)) },
+]);
+
+function evaluateObservation(repoRoot, observation) {
+  try {
+    if (!targetTechInEffect(repoRoot)) {
+      return { observation_id: observation.id, status: 'FAIL' };
+    }
+    const ok = observation.meta.check(repoRoot);
+    return { observation_id: observation.id, status: ok ? 'PASS' : 'FAIL' };
+  } catch (e) {
+    return { observation_id: observation.id, status: 'FAIL', detail: String((e && e.message) || e) };
+  }
+}
+
+function buildChecks(repoRoot) {
+  return OBSERVATIONS.map((observation) => evaluateObservation(repoRoot, observation));
+}
+
+function buildReport(repoRoot, side) {
+  return {
+    side,
+    migration: MIGRATION.name,
+    expectedVersion: MIGRATION.targetVersion,
+    repoRoot,
+    checks: buildChecks(repoRoot),
+  };
+}
+
+function createSide(side) {
+  return {
+    side,
+    observations: OBSERVATIONS.map((observation) => observation.id),
+    buildChecks,
+    buildReport: (repoRoot) => buildReport(repoRoot, side),
+  };
+}
+
+module.exports = {
+  MIGRATION,
+  OBSERVATIONS,
+  createSide,
+  buildChecks,
+  buildReport,
+  targetTechInEffect,
+  declaredCoreVersion,
+  resolvedCoreVersions,
+  loadPackage,
+  loadCore,
+};

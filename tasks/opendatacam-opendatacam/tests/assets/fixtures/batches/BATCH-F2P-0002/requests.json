@@ -1,0 +1,41 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "requests": [
+    { "id": "GET /status", "method": "GET", "path": "/status" },
+    { "id": "GET /config", "method": "GET", "path": "/config" },
+    { "id": "GET /files", "method": "GET", "path": "/files" },
+    { "id": "GET /api/doc", "method": "GET", "path": "/api/doc" },
+    { "id": "GET /api/doc/index.html", "method": "GET", "path": "/api/doc/index.html" },
+    { "id": "GET /start", "method": "GET", "path": "/start" },
+    { "id": "GET /recording/start", "method": "GET", "path": "/recording/start" },
+    { "id": "GET /recording/stop", "method": "GET", "path": "/recording/stop" },
+    { "id": "POST /counter/areas ok", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": { "countingAreas": {} } },
+    { "id": "POST /ui small", "method": "POST", "path": "/ui", "content_type": "application/json", "body": { "counterEnabled": true } },
+    { "id": "GET /recording/:id/counter empty", "method": "GET", "path": "/recording/f2p-probe-id/counter" },
+    { "id": "GET unknown page", "method": "GET", "path": "/a-page-that-does-not-exist" }
+  ],
+  "payloads": {
+    "json_90kb": { "generator": "pad", "approx_bytes": 92160, "form": { "pad": "<string of approx 90 kB>" } },
+    "json_110kb": { "generator": "pad", "approx_bytes": 112640, "form": { "pad": "<string of approx 110 kB>" } },
+    "malformed_json": "{\"",
+    "multipart_video": { "field": "video", "filename": "demo.mp4", "content_type": "video/mp4" },
+    "multipart_wrong_field": { "field": "file", "filename": "demo.mp4", "content_type": "video/mp4" },
+    "multipart_wrong_name": { "field": "video", "filename": "demo.txt", "content_type": "text/plain" }
+  },
+  "apidoc_fixture": {
+    "path": ".build/apidoc/index.html",
+    "content": "<!doctype html><html><body>apidoc-index</body></html>"
+  },
+  "thresholds": {
+    "body_limit_bytes": 102400,
+    "malformed_status": 400,
+    "side_effect_body": "OK",
+    "side_effect_content_type_prefix": "text/plain",
+    "counter_empty_status": 404,
+    "counter_empty_body": "Not Found",
+    "counter_failure_status": 500,
+    "counter_failure_body": "Internal Server Error",
+    "upload_invalid_status": 500
+  }
+}

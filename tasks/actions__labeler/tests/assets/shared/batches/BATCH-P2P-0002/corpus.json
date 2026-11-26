@@ -1,0 +1,196 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "shared_corpus_required": true,
+  "reuses_fixtures_from": "BATCH-SKELETON-0001",
+  "projection": "equal_after_normalization",
+  "executable_projection": {
+    "source": {
+      "kind": "jest",
+      "manifest": "source/batches/BATCH-P2P-0002/manifest.json",
+      "harness": "source/batches/BATCH-P2P-0002/run_source_tests.sh",
+      "normalize": "exit_status"
+    },
+    "target": {
+      "kind": "go-test",
+      "manifest": "target/batches/BATCH-P2P-0002/manifest.json",
+      "harness": "target/batches/BATCH-P2P-0002/run_target_tests.sh",
+      "normalize": "exit_status"
+    }
+  },
+  "observations": [
+    {
+      "id": "P2P-030",
+      "surface": "test:__tests__/labeler.test.ts#throws error for decimal string",
+      "input_class": "invalid",
+      "projection": "exception",
+      "source_probe": {"file": "__tests__/labeler.test.ts", "case": "throws error for decimal string"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestInvalidDecimalLimitFails"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-034",
+      "surface": "test:__tests__/labeler.test.ts#when multiple MatchConfigs are supplied",
+      "input_class": "valid",
+      "projection": "return-value",
+      "source_probe": {"file": "__tests__/labeler.test.ts", "case": "when multiple MatchConfigs are supplied"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestMultipleMatchConfigs"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-028",
+      "surface": "public capabilities and contracts",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/main.test.ts", "case": "run"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestPublicCapabilitiesEndToEnd"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-032",
+      "surface": "test:__tests__/labeler.test.ts#returns false when config has empty changed-files array",
+      "input_class": "boundary",
+      "projection": "return-value",
+      "source_probe": {"file": "__tests__/labeler.test.ts", "case": "returns false when config has empty changed-files array"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestEmptyChangedFilesArray"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-035",
+      "surface": "action.yml output definitions",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "action.yml", "case": "outputs new-labels and all-labels"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestActionYMLOutputsPreserved"},
+      "normalize": "identifier_set",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-025",
+      "surface": "label set mutation",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/main.test.ts", "case": "does not lose a label added concurrently with matching labels"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestUnconfiguredLabelsPreserved"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-026",
+      "surface": "changed-file glob and branch pattern matching",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/changedFiles.test.ts", "case": "checkAnyChangedFiles"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestGlobAndBranchSemantics"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-027",
+      "surface": "action.yml input definitions",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "action.yml", "case": "inputs repo-token configuration-path sync-labels dot pr-number"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestActionYMLInputsPreserved"},
+      "normalize": "identifier_set",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-029",
+      "surface": "label addition failure handling",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/add-labels.test.ts", "case": "accepts a server error when every requested label was committed"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestAddLabelsServerErrorRecovery"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-031",
+      "surface": "bulk label removal failure",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/labeler.test.ts", "case": "reports the configured labels when a bulk removal fails"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestBulkRemovalFailure"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-033",
+      "surface": "label configuration YAML schema accepted by the action",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/labeler.test.ts", "case": "returns a MatchConfig"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestFullConfigSchemaAccepted"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-036",
+      "surface": "invalid pr-number warning text",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/main.test.ts", "case": "(with pr-number: string with ANSI escape sequence) sanitizes ESC byte as \\x1b in warning"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestPRNumberEscape"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-037",
+      "surface": "unfetchable or empty pull requests",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/main.test.ts", "case": "does not add labels to PRs that have no changed files"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestNoChangedFilesSkipped"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    },
+    {
+      "id": "P2P-038",
+      "surface": "applied label cap and warning",
+      "input_class": "valid",
+      "projection": "observable-result",
+      "source_probe": {"file": "__tests__/main.test.ts", "case": "(with sync-labels: false) it only logs the excess labels"},
+      "target_probe": {"kind": "go-test", "package": "./batches/BATCH-P2P-0002", "test": "TestLabelCapAt100"},
+      "normalize": "exit_status",
+      "relation": "equal_after_normalization",
+      "expectation": "PASS"
+    }
+  ],
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "timeout_seconds": 300,
+    "exclude_privileged_or_blocking_cases": true,
+    "source_test_command": ["timeout", "300", "npm", "test", "--", "--runInBand"],
+    "target_test_command": ["timeout", "300", "go", "test", "-count=1", "./batches/BATCH-P2P-0002/..."],
+    "target_build_command": ["timeout", "300", "go", "build", "./..."],
+    "source_harness": "source/batches/BATCH-P2P-0002/run_source_tests.sh",
+    "target_harness": "target/batches/BATCH-P2P-0002/run_target_tests.sh"
+  }
+}

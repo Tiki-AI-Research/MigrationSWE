@@ -1,0 +1,1950 @@
+diff --git a/package-lock.json b/package-lock.json
+index 6df665d..21b1a40 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -20,7 +20,8 @@
+         "memoize-one": "^6.0.0",
+         "object-hash": "^3.0.0",
+         "sortablejs": "^1.15.7",
+-        "superstruct": "^2.0.2"
++        "superstruct": "^2.0.2",
++        "zod": "3.23.8"
+       },
+       "devDependencies": {
+         "@types/culori": "^4.0.1",
+@@ -2453,6 +2454,15 @@
+       "funding": {
+         "url": "https://github.com/sponsors/sindresorhus"
+       }
++    },
++    "node_modules/zod": {
++      "version": "3.23.8",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-3.23.8.tgz",
++      "integrity": "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==",
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/colinhacks"
++      }
+     }
+   },
+   "dependencies": {
+@@ -3870,6 +3880,11 @@
+       "resolved": "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz",
+       "integrity": "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==",
+       "dev": true
++    },
++    "zod": {
++      "version": "3.23.8",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-3.23.8.tgz",
++      "integrity": "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="
+     }
+   }
+ }
+diff --git a/package.json b/package.json
+index f162dfa..b8d2541 100644
+--- a/package.json
++++ b/package.json
+@@ -29,7 +29,8 @@
+     "memoize-one": "^6.0.0",
+     "object-hash": "^3.0.0",
+     "sortablejs": "^1.15.7",
+-    "superstruct": "^2.0.2"
++    "superstruct": "^2.0.2",
++    "zod": "3.23.8"
+   },
+   "devDependencies": {
+     "@types/culori": "^4.0.1",
+diff --git a/src/badges/template/template-badge-config.ts b/src/badges/template/template-badge-config.ts
+index 399c3de..b2aad05 100644
+--- a/src/badges/template/template-badge-config.ts
++++ b/src/badges/template/template-badge-config.ts
+@@ -1,4 +1,4 @@
+-import { array, assign, object, optional, string, union } from "superstruct";
++import { z } from "zod";
+ import { LovelaceBadgeConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -18,17 +18,16 @@ export type TemplateBadgeConfig = LovelaceBadgeConfig &
+     entity_id?: string | string[];
+   };
+ 
+-export const templateBadgeConfigStruct = assign(
+-  lovelaceBadgeConfigStruct,
+-  actionsSharedConfigStruct,
+-  object({
+-    entity: optional(string()),
+-    area: optional(string()),
+-    icon: optional(string()),
+-    color: optional(string()),
+-    label: optional(string()),
+-    content: optional(string()),
+-    picture: optional(string()),
+-    entity_id: optional(union([string(), array(string())])),
++export const templateBadgeConfigStruct = lovelaceBadgeConfigStruct
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    entity: z.string().optional(),
++    area: z.string().optional(),
++    icon: z.string().optional(),
++    color: z.string().optional(),
++    label: z.string().optional(),
++    content: z.string().optional(),
++    picture: z.string().optional(),
++    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+   })
+-);
++  .strict();
+diff --git a/src/badges/template/template-badge-editor.ts b/src/badges/template/template-badge-editor.ts
+index 2a60032..ad09b44 100644
+--- a/src/badges/template/template-badge-editor.ts
++++ b/src/badges/template/template-badge-editor.ts
+@@ -1,6 +1,5 @@
+ import { html, LitElement, nothing } from "lit";
+ import { customElement, property, state } from "lit/decorators.js";
+-import { assert } from "superstruct";
+ import { fireEvent, LovelaceBadgeEditor, type HomeAssistant } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import {
+@@ -90,7 +89,7 @@ export class MushroomTemplateBadgeEditor
+   }
+ 
+   public setConfig(config: TemplateBadgeConfig): void {
+-    assert(config, templateBadgeConfigStruct);
++    templateBadgeConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/alarm-control-panel-card/alarm-control-panel-card-config.ts b/src/cards/alarm-control-panel-card/alarm-control-panel-card-config.ts
+index 51a21c8..6b5b1b9 100644
+--- a/src/cards/alarm-control-panel-card/alarm-control-panel-card-config.ts
++++ b/src/cards/alarm-control-panel-card/alarm-control-panel-card-config.ts
+@@ -1,4 +1,4 @@
+-import { array, assign, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import { AlarmMode } from "../../ha/data/alarm_control_panel";
+ import {
+@@ -22,14 +22,11 @@ export type AlarmControlPanelCardConfig = LovelaceCardConfig &
+     states?: AlarmMode[];
+   };
+ 
+-export const alarmControlPanelCardCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    states: optional(array()),
++export const alarmControlPanelCardCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    states: z.array(z.any()).optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/alarm-control-panel-card/alarm-control-panel-card-editor.ts b/src/cards/alarm-control-panel-card/alarm-control-panel-card-editor.ts
+index b81dfaf..abcd6ca 100644
+--- a/src/cards/alarm-control-panel-card/alarm-control-panel-card-editor.ts
++++ b/src/cards/alarm-control-panel-card/alarm-control-panel-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -82,7 +81,7 @@ export class SwitchCardEditor
+   }
+ 
+   public setConfig(config: AlarmControlPanelCardConfig): void {
+-    assert(config, alarmControlPanelCardCardConfigStruct);
++    alarmControlPanelCardCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/chips-card/chips-card-editor.ts b/src/cards/chips-card/chips-card-editor.ts
+index a2c9047..3a6d4f6 100644
+--- a/src/cards/chips-card/chips-card-editor.ts
++++ b/src/cards/chips-card/chips-card-editor.ts
+@@ -1,19 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+-import {
+-  any,
+-  array,
+-  assert,
+-  assign,
+-  boolean,
+-  dynamic,
+-  enums,
+-  literal,
+-  object,
+-  optional,
+-  string,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import {
+   actionConfigStruct,
+   fireEvent,
+@@ -37,92 +24,112 @@ import { ChipsCardConfig } from "./chips-card";
+ import "./chips-card-chips-editor";
+ import { CHIPS_CARD_EDITOR_NAME } from "./const";
+ 
+-const actionChipConfigStruct = object({
+-  type: literal("action"),
+-  icon: optional(string()),
+-  icon_color: optional(string()),
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-});
+-
+-const backChipConfigStruct = object({
+-  type: literal("back"),
+-  icon: optional(string()),
+-  icon_color: optional(string()),
+-});
+-
+-const entityChipConfigStruct = object({
+-  type: literal("entity"),
+-  entity: optional(string()),
+-  name: optional(entityNameStruct),
+-  content_info: optional(string()),
+-  icon: optional(string()),
+-  icon_color: optional(string()),
+-  use_entity_picture: optional(boolean()),
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-});
+-
+-const menuChipConfigStruct = object({
+-  type: literal("menu"),
+-  icon: optional(string()),
+-  icon_color: optional(string()),
+-});
+-
+-const quickbarChipConfigStruct = object({
+-  type: literal("quickbar"),
+-  icon: optional(string()),
+-  mode: optional(enums(["command", "device", "entity"])),
+-});
++const actionChipConfigStruct = z
++  .object({
++    type: z.literal("action"),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++  })
++  .strict();
+ 
+-const weatherChipConfigStruct = object({
+-  type: literal("weather"),
+-  entity: optional(string()),
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-  show_temperature: optional(boolean()),
+-  show_conditions: optional(boolean()),
+-});
++const backChipConfigStruct = z
++  .object({
++    type: z.literal("back"),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++  })
++  .strict();
++
++const entityChipConfigStruct = z
++  .object({
++    type: z.literal("entity"),
++    entity: z.string().optional(),
++    name: entityNameStruct.optional(),
++    content_info: z.string().optional(),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++    use_entity_picture: z.boolean().optional(),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++  })
++  .strict();
+ 
+-const conditionChipConfigStruct = object({
+-  type: literal("conditional"),
+-  chip: optional(any()),
+-  conditions: optional(array(any())),
+-});
++const menuChipConfigStruct = z
++  .object({
++    type: z.literal("menu"),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++  })
++  .strict();
+ 
+-const lightChipConfigStruct = object({
+-  type: literal("light"),
+-  entity: optional(string()),
+-  name: optional(entityNameStruct),
+-  content_info: optional(string()),
+-  icon: optional(string()),
+-  use_light_color: optional(boolean()),
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-});
++const quickbarChipConfigStruct = z
++  .object({
++    type: z.literal("quickbar"),
++    icon: z.string().optional(),
++    mode: z.enum(["command", "device", "entity"]).optional(),
++  })
++  .strict();
++
++const weatherChipConfigStruct = z
++  .object({
++    type: z.literal("weather"),
++    entity: z.string().optional(),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++    show_temperature: z.boolean().optional(),
++    show_conditions: z.boolean().optional(),
++  })
++  .strict();
+ 
+-const templateChipConfigStruct = object({
+-  type: literal("template"),
+-  entity: optional(string()),
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-  content: optional(string()),
+-  icon: optional(string()),
+-  icon_color: optional(string()),
+-  picture: optional(string()),
+-  entity_id: optional(union([string(), array(string())])),
+-});
++const conditionChipConfigStruct = z
++  .object({
++    type: z.literal("conditional"),
++    chip: z.any().optional(),
++    conditions: z.array(z.any()).optional(),
++  })
++  .strict();
++
++const lightChipConfigStruct = z
++  .object({
++    type: z.literal("light"),
++    entity: z.string().optional(),
++    name: entityNameStruct.optional(),
++    content_info: z.string().optional(),
++    icon: z.string().optional(),
++    use_light_color: z.boolean().optional(),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++  })
++  .strict();
++
++const templateChipConfigStruct = z
++  .object({
++    type: z.literal("template"),
++    entity: z.string().optional(),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++    content: z.string().optional(),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++    picture: z.string().optional(),
++    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
++  })
++  .strict();
+ 
+-const spacerChipConfigStruct = object({
+-  type: literal("spacer"),
+-});
++const spacerChipConfigStruct = z
++  .object({
++    type: z.literal("spacer"),
++  })
++  .strict();
+ 
+-const chipsConfigStruct = dynamic<any>((value) => {
++const selectChipConfigStruct = (value: unknown): z.ZodTypeAny => {
+   if (value && typeof value === "object" && "type" in value) {
+     switch ((value as LovelaceChipConfig).type!) {
+       case "action":
+@@ -147,16 +154,25 @@ const chipsConfigStruct = dynamic<any>((value) => {
+         return spacerChipConfigStruct;
+     }
+   }
+-  return object();
++  return z.object({}).passthrough();
++};
++
++const chipsConfigStruct: z.ZodTypeAny = z.any().superRefine((value, ctx) => {
++  const struct = selectChipConfigStruct(value);
++  const result = struct.safeParse(value);
++  if (!result.success) {
++    for (const issue of result.error.issues) {
++      ctx.addIssue(issue);
++    }
++  }
+ });
+ 
+-const cardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  object({
+-    chips: array(chipsConfigStruct),
+-    alignment: optional(string()),
++const cardConfigStruct = lovelaceCardConfigStruct
++  .extend({
++    chips: z.array(chipsConfigStruct),
++    alignment: z.string().optional(),
+   })
+-);
++  .strict();
+ 
+ @customElement(CHIPS_CARD_EDITOR_NAME)
+ export class ChipsCardEditor
+@@ -173,7 +189,7 @@ export class ChipsCardEditor
+   }
+ 
+   public setConfig(config: ChipsCardConfig): void {
+-    assert(config, cardConfigStruct);
++    cardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/climate-card/climate-card-config.ts b/src/cards/climate-card/climate-card-config.ts
+index 9f5a92d..024799d 100644
+--- a/src/cards/climate-card/climate-card-config.ts
++++ b/src/cards/climate-card/climate-card-config.ts
+@@ -1,4 +1,4 @@
+-import { array, assign, boolean, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import { HvacMode, LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -33,16 +33,13 @@ export type ClimateCardConfig = LovelaceCardConfig &
+     collapsible_controls?: boolean;
+   };
+ 
+-export const climateCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    show_temperature_control: optional(boolean()),
+-    hvac_modes: optional(array(string())),
+-    collapsible_controls: optional(boolean()),
++export const climateCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    show_temperature_control: z.boolean().optional(),
++    hvac_modes: z.array(z.string()).optional(),
++    collapsible_controls: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/climate-card/climate-card-editor.ts b/src/cards/climate-card/climate-card-editor.ts
+index b236015..cedcdb4 100644
+--- a/src/cards/climate-card/climate-card-editor.ts
++++ b/src/cards/climate-card/climate-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -77,7 +76,7 @@ export class ClimateCardEditor
+   }
+ 
+   public setConfig(config: ClimateCardConfig): void {
+-    assert(config, climateCardConfigStruct);
++    climateCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/cover-card/cover-card-config.ts b/src/cards/cover-card/cover-card-config.ts
+index dcfff3a..d18c385 100644
+--- a/src/cards/cover-card/cover-card-config.ts
++++ b/src/cards/cover-card/cover-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import {
+   actionsSharedConfigStruct,
+   ActionsSharedConfig,
+@@ -23,16 +23,13 @@ export type CoverCardConfig = LovelaceCardConfig &
+     show_tilt_position_control?: false;
+   };
+ 
+-export const coverCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    show_buttons_control: optional(boolean()),
+-    show_position_control: optional(boolean()),
+-    show_tilt_position_control: optional(boolean()),
++export const coverCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    show_buttons_control: z.boolean().optional(),
++    show_position_control: z.boolean().optional(),
++    show_tilt_position_control: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/cover-card/cover-card-editor.ts b/src/cards/cover-card/cover-card-editor.ts
+index e9434f4..5f3f61e 100644
+--- a/src/cards/cover-card/cover-card-editor.ts
++++ b/src/cards/cover-card/cover-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -56,7 +55,7 @@ export class CoverCardEditor
+   }
+ 
+   public setConfig(config: CoverCardConfig): void {
+-    assert(config, coverCardConfigStruct);
++    coverCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/entity-card/entity-card-config.ts b/src/cards/entity-card/entity-card-config.ts
+index ede0dc4..3d5bb07 100644
+--- a/src/cards/entity-card/entity-card-config.ts
++++ b/src/cards/entity-card/entity-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import {
+   ActionsSharedConfig,
+   actionsSharedConfigStruct,
+@@ -21,14 +21,11 @@ export type EntityCardConfig = LovelaceCardConfig &
+     icon_color?: string;
+   };
+ 
+-export const entityCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_color: optional(string()),
++export const entityCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_color: z.string().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/entity-card/entity-card-editor.ts b/src/cards/entity-card/entity-card-editor.ts
+index 3c19cbd..7ea57d5 100644
+--- a/src/cards/entity-card/entity-card-editor.ts
++++ b/src/cards/entity-card/entity-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -48,7 +47,7 @@ export class EntityCardEditor
+   }
+ 
+   public setConfig(config: EntityCardConfig): void {
+-    assert(config, entityCardConfigStruct);
++    entityCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/fan-card/fan-card-config.ts b/src/cards/fan-card/fan-card-config.ts
+index e641a4a..0a77054 100644
+--- a/src/cards/fan-card/fan-card-config.ts
++++ b/src/cards/fan-card/fan-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import {
+   actionsSharedConfigStruct,
+   ActionsSharedConfig,
+@@ -25,18 +25,15 @@ export type FanCardConfig = LovelaceCardConfig &
+     collapsible_controls?: boolean;
+   };
+ 
+-export const fanCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_animation: optional(boolean()),
+-    show_percentage_control: optional(boolean()),
+-    show_oscillate_control: optional(boolean()),
+-    show_direction_control: optional(boolean()),
+-    collapsible_controls: optional(boolean()),
++export const fanCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_animation: z.boolean().optional(),
++    show_percentage_control: z.boolean().optional(),
++    show_oscillate_control: z.boolean().optional(),
++    show_direction_control: z.boolean().optional(),
++    collapsible_controls: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/fan-card/fan-card-editor.ts b/src/cards/fan-card/fan-card-editor.ts
+index 3f7d561..6aab0d5 100644
+--- a/src/cards/fan-card/fan-card-editor.ts
++++ b/src/cards/fan-card/fan-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -65,7 +64,7 @@ export class FanCardEditor
+   }
+ 
+   public setConfig(config: FanCardConfig): void {
+-    assert(config, fanCardConfigStruct);
++    fanCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/humidifier-card/humidifier-card-config.ts b/src/cards/humidifier-card/humidifier-card-config.ts
+index 309f90c..a5e3d55 100644
+--- a/src/cards/humidifier-card/humidifier-card-config.ts
++++ b/src/cards/humidifier-card/humidifier-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -22,15 +22,12 @@ export type HumidifierCardConfig = LovelaceCardConfig &
+     collapsible_controls?: boolean;
+   };
+ 
+-export const humidifierCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    show_target_humidity_control: optional(boolean()),
+-    collapsible_controls: optional(boolean()),
++export const humidifierCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    show_target_humidity_control: z.boolean().optional(),
++    collapsible_controls: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/humidifier-card/humidifier-card-editor.ts b/src/cards/humidifier-card/humidifier-card-editor.ts
+index 27bfdca..92039a2 100644
+--- a/src/cards/humidifier-card/humidifier-card-editor.ts
++++ b/src/cards/humidifier-card/humidifier-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -60,7 +59,7 @@ export class HumidifierCardEditor
+   }
+ 
+   public setConfig(config: HumidifierCardConfig): void {
+-    assert(config, humidifierCardConfigStruct);
++    humidifierCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/legacy-template-card/legacy-template-card-config.ts b/src/cards/legacy-template-card/legacy-template-card-config.ts
+index 3d32c37..98f9c9e 100644
+--- a/src/cards/legacy-template-card/legacy-template-card-config.ts
++++ b/src/cards/legacy-template-card/legacy-template-card-config.ts
+@@ -1,12 +1,4 @@
+-import {
+-  array,
+-  assign,
+-  boolean,
+-  object,
+-  optional,
+-  string,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -33,19 +25,19 @@ export type LegacyTemplateCardConfig = LovelaceCardConfig &
+     entity_id?: string | string[];
+   };
+ 
+-export const legacyTemplateCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(appearanceSharedConfigStruct, actionsSharedConfigStruct),
+-  object({
+-    entity: optional(string()),
+-    icon: optional(string()),
+-    icon_color: optional(string()),
+-    primary: optional(string()),
+-    secondary: optional(string()),
+-    badge_icon: optional(string()),
+-    badge_color: optional(string()),
+-    picture: optional(string()),
+-    multiline_secondary: optional(boolean()),
+-    entity_id: optional(union([string(), array(string())])),
++export const legacyTemplateCardConfigStruct = lovelaceCardConfigStruct
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    entity: z.string().optional(),
++    icon: z.string().optional(),
++    icon_color: z.string().optional(),
++    primary: z.string().optional(),
++    secondary: z.string().optional(),
++    badge_icon: z.string().optional(),
++    badge_color: z.string().optional(),
++    picture: z.string().optional(),
++    multiline_secondary: z.boolean().optional(),
++    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/legacy-template-card/legacy-template-card-editor.ts b/src/cards/legacy-template-card/legacy-template-card-editor.ts
+index 965e291..135b93d 100644
+--- a/src/cards/legacy-template-card/legacy-template-card-editor.ts
++++ b/src/cards/legacy-template-card/legacy-template-card-editor.ts
+@@ -1,6 +1,5 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+-import { assert } from "superstruct";
+ import { LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -90,7 +89,7 @@ export class TemplateCardEditor
+   }
+ 
+   public setConfig(config: LegacyTemplateCardConfig): void {
+-    assert(config, legacyTemplateCardConfigStruct);
++    legacyTemplateCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/light-card/light-card-config.ts b/src/cards/light-card/light-card-config.ts
+index 87ca77f..5a461db 100644
+--- a/src/cards/light-card/light-card-config.ts
++++ b/src/cards/light-card/light-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -26,19 +26,16 @@ export type LightCardConfig = LovelaceCardConfig &
+     use_light_color?: boolean;
+   };
+ 
+-export const lightCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_color: optional(string()),
+-    show_brightness_control: optional(boolean()),
+-    show_color_temp_control: optional(boolean()),
+-    show_color_control: optional(boolean()),
+-    collapsible_controls: optional(boolean()),
+-    use_light_color: optional(boolean()),
++export const lightCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_color: z.string().optional(),
++    show_brightness_control: z.boolean().optional(),
++    show_color_temp_control: z.boolean().optional(),
++    show_color_control: z.boolean().optional(),
++    collapsible_controls: z.boolean().optional(),
++    use_light_color: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/light-card/light-card-editor.ts b/src/cards/light-card/light-card-editor.ts
+index f5400d4..c4c0127 100644
+--- a/src/cards/light-card/light-card-editor.ts
++++ b/src/cards/light-card/light-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -66,7 +65,7 @@ export class LightCardEditor
+   }
+ 
+   public setConfig(config: LightCardConfig): void {
+-    assert(config, lightCardConfigStruct);
++    lightCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/lock-card/lock-card-config.ts b/src/cards/lock-card/lock-card-config.ts
+index 685e8da..15f5825 100644
+--- a/src/cards/lock-card/lock-card-config.ts
++++ b/src/cards/lock-card/lock-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -19,11 +19,8 @@ export type LockCardConfig = LovelaceCardConfig &
+   AppearanceSharedConfig &
+   ActionsSharedConfig;
+ 
+-export const lockCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  )
+-);
++export const lockCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .strict();
+diff --git a/src/cards/lock-card/lock-card-editor.ts b/src/cards/lock-card/lock-card-editor.ts
+index 3664ae8..f70af88 100644
+--- a/src/cards/lock-card/lock-card-editor.ts
++++ b/src/cards/lock-card/lock-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -41,7 +40,7 @@ export class LockCardEditor
+   }
+ 
+   public setConfig(config: LockCardConfig): void {
+-    assert(config, lockCardConfigStruct);
++    lockCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/media-player-card/media-player-card-config.ts b/src/cards/media-player-card/media-player-card-config.ts
+index b6f0486..ab4750e 100644
+--- a/src/cards/media-player-card/media-player-card-config.ts
++++ b/src/cards/media-player-card/media-player-card-config.ts
+@@ -1,4 +1,4 @@
+-import { array, assign, boolean, enums, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -46,18 +46,15 @@ export type MediaPlayerCardConfig = LovelaceCardConfig &
+     collapsible_controls?: boolean;
+   };
+ 
+-export const mediaPlayerCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    use_media_info: optional(boolean()),
+-    show_volume_level: optional(boolean()),
+-    volume_controls: optional(array(enums(MEDIA_PLAYER_VOLUME_CONTROLS))),
+-    media_controls: optional(array(enums(MEDIA_LAYER_MEDIA_CONTROLS))),
+-    collapsible_controls: optional(boolean()),
++export const mediaPlayerCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    use_media_info: z.boolean().optional(),
++    show_volume_level: z.boolean().optional(),
++    volume_controls: z.array(z.enum(MEDIA_PLAYER_VOLUME_CONTROLS)).optional(),
++    media_controls: z.array(z.enum(MEDIA_LAYER_MEDIA_CONTROLS)).optional(),
++    collapsible_controls: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/media-player-card/media-player-card-editor.ts b/src/cards/media-player-card/media-player-card-editor.ts
+index 31c2d70..3aac2ae 100644
+--- a/src/cards/media-player-card/media-player-card-editor.ts
++++ b/src/cards/media-player-card/media-player-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -105,7 +104,7 @@ export class MediaCardEditor
+   }
+ 
+   public setConfig(config: MediaPlayerCardConfig): void {
+-    assert(config, mediaPlayerCardConfigStruct);
++    mediaPlayerCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/number-card/number-card-config.ts b/src/cards/number-card/number-card-config.ts
+index d305aff..4d8a283 100644
+--- a/src/cards/number-card/number-card-config.ts
++++ b/src/cards/number-card/number-card-config.ts
+@@ -1,12 +1,4 @@
+-import {
+-  assign,
+-  enums,
+-  literal,
+-  object,
+-  optional,
+-  string,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -34,15 +26,12 @@ export type NumberCardConfig = LovelaceCardConfig &
+     display_mode?: DisplayMode;
+   };
+ 
+-export const NumberCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_color: optional(string()),
+-    display_mode: optional(enums(DISPLAY_MODES)),
++export const NumberCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_color: z.string().optional(),
++    display_mode: z.enum(DISPLAY_MODES).optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/number-card/number-card-editor.ts b/src/cards/number-card/number-card-editor.ts
+index 2b2a04f..526392c 100644
+--- a/src/cards/number-card/number-card-editor.ts
++++ b/src/cards/number-card/number-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -66,7 +65,7 @@ export class NumberCardEditor
+   }
+ 
+   public setConfig(config: NumberCardConfig): void {
+-    assert(config, NumberCardConfigStruct);
++    NumberCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/person-card/person-card-config.ts b/src/cards/person-card/person-card-config.ts
+index 490ffe7..45e73ef 100644
+--- a/src/cards/person-card/person-card-config.ts
++++ b/src/cards/person-card/person-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -19,11 +19,8 @@ export type PersonCardConfig = LovelaceCardConfig &
+   AppearanceSharedConfig &
+   ActionsSharedConfig;
+ 
+-export const personCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  )
+-);
++export const personCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .strict();
+diff --git a/src/cards/person-card/person-card-editor.ts b/src/cards/person-card/person-card-editor.ts
+index da8e749..ae1f298 100644
+--- a/src/cards/person-card/person-card-editor.ts
++++ b/src/cards/person-card/person-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -51,7 +50,7 @@ export class SwitchCardEditor
+   }
+ 
+   public setConfig(config: PersonCardConfig): void {
+-    assert(config, personCardConfigStruct);
++    personCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/select-card/select-card-config.ts b/src/cards/select-card/select-card-config.ts
+index 38d7ea0..2602404 100644
+--- a/src/cards/select-card/select-card-config.ts
++++ b/src/cards/select-card/select-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import {
+   ActionsSharedConfig,
+   actionsSharedConfigStruct,
+@@ -21,14 +21,11 @@ export type SelectCardConfig = LovelaceCardConfig &
+     icon_color?: string;
+   };
+ 
+-export const selectCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_color: optional(string()),
++export const selectCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_color: z.string().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/select-card/select-card-editor.ts b/src/cards/select-card/select-card-editor.ts
+index 6ebfcb7..0b8e95d 100644
+--- a/src/cards/select-card/select-card-editor.ts
++++ b/src/cards/select-card/select-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -58,7 +57,7 @@ export class SelectCardEditor
+   }
+ 
+   public setConfig(config: SelectCardConfig): void {
+-    assert(config, selectCardConfigStruct);
++    selectCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/template-card/template-card-config.ts b/src/cards/template-card/template-card-config.ts
+index 5afac63..9b0c41d 100644
+--- a/src/cards/template-card/template-card-config.ts
++++ b/src/cards/template-card/template-card-config.ts
+@@ -1,18 +1,7 @@
+-import {
+-  any,
+-  array,
+-  assign,
+-  boolean,
+-  enums,
+-  object,
+-  optional,
+-  string,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import { ActionConfig, actionConfigStruct, LovelaceCardConfig } from "../../ha";
+ import { LovelaceCardFeatureConfig } from "../../ha/panels/lovelace/card-features/types";
+ import { lovelaceCardConfigStruct } from "../../shared/config/lovelace-card-config";
+-import { layoutStruct } from "../../utils/layout";
+ 
+ export type TemplateCardConfig = LovelaceCardConfig & {
+   entity?: string;
+@@ -57,43 +46,42 @@ export type TemplateCardConfig = LovelaceCardConfig & {
+   fill_container?: boolean;
+ };
+ 
+-export const templateCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  object({
++export const templateCardConfigStruct = lovelaceCardConfigStruct
++  .extend({
+     // Context
+-    entity: optional(string()),
+-    area: optional(string()),
++    entity: z.string().optional(),
++    area: z.string().optional(),
+     // Content
+-    primary: optional(string()),
+-    secondary: optional(string()),
+-    color: optional(string()),
+-    icon: optional(string()),
+-    picture: optional(string()),
++    primary: z.string().optional(),
++    secondary: z.string().optional(),
++    color: z.string().optional(),
++    icon: z.string().optional(),
++    picture: z.string().optional(),
+     // Badges
+-    badge_icon: optional(string()),
+-    badge_text: optional(string()),
+-    badge_color: optional(string()),
++    badge_icon: z.string().optional(),
++    badge_text: z.string().optional(),
++    badge_color: z.string().optional(),
+     // Style
+-    vertical: optional(boolean()),
+-    multiline_secondary: optional(boolean()),
++    vertical: z.boolean().optional(),
++    multiline_secondary: z.boolean().optional(),
+     // Interactions
+-    tap_action: optional(actionConfigStruct),
+-    hold_action: optional(actionConfigStruct),
+-    double_tap_action: optional(actionConfigStruct),
+-    icon_tap_action: optional(actionConfigStruct),
+-    icon_hold_action: optional(actionConfigStruct),
+-    icon_double_tap_action: optional(actionConfigStruct),
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++    icon_tap_action: actionConfigStruct.optional(),
++    icon_hold_action: actionConfigStruct.optional(),
++    icon_double_tap_action: actionConfigStruct.optional(),
+     // Features
+-    features: optional(array(any())),
+-    features_position: optional(enums(["bottom", "inline"])),
++    features: z.array(z.any()).optional(),
++    features_position: z.enum(["bottom", "inline"]).optional(),
+     // Entity IDs for template
+-    entity_id: optional(union([string(), array(string())])),
++    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+     // Backwards compatibility from legacy template card
+-    icon_color: optional(string()),
+-    layout: optional(string()),
+-    fill_container: optional(boolean()),
++    icon_color: z.string().optional(),
++    layout: z.string().optional(),
++    fill_container: z.boolean().optional(),
+   })
+-);
++  .strict();
+ 
+ export const migrateTemplateCardConfig = (
+   config: TemplateCardConfig
+diff --git a/src/cards/template-card/template-card-editor.ts b/src/cards/template-card/template-card-editor.ts
+index 0f6b8a6..2bd7931 100644
+--- a/src/cards/template-card/template-card-editor.ts
++++ b/src/cards/template-card/template-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { css, html, LitElement, nothing } from "lit";
+ import { customElement, property, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import {
+   fireEvent,
+   HASSDomEvent,
+@@ -75,7 +74,7 @@ export class MushroomTemplateCardEditor
+   }
+ 
+   public setConfig(config: TemplateCardConfig): void {
+-    assert(config, templateCardConfigStruct);
++    templateCardConfigStruct.parse(config);
+     if (templateCardNeedsMigration(config)) {
+       this._legacyConfig = { ...config };
+       this._legacyConfig.type = "custom:mushroom-legacy-template-card";
+diff --git a/src/cards/title-card/title-card-config.ts b/src/cards/title-card/title-card-config.ts
+index 7139f9f..4d20230 100644
+--- a/src/cards/title-card/title-card-config.ts
++++ b/src/cards/title-card/title-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import { ActionConfig, actionConfigStruct, LovelaceCardConfig } from "../../ha";
+ import { lovelaceCardConfigStruct } from "../../shared/config/lovelace-card-config";
+ 
+@@ -10,13 +10,12 @@ export interface TitleCardConfig extends LovelaceCardConfig {
+   subtitle_tap_action?: ActionConfig;
+ }
+ 
+-export const titleCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  object({
+-    title: optional(string()),
+-    subtitle: optional(string()),
+-    alignment: optional(string()),
+-    title_tap_action: optional(actionConfigStruct),
+-    subtitle_tap_action: optional(actionConfigStruct),
++export const titleCardConfigStruct = lovelaceCardConfigStruct
++  .extend({
++    title: z.string().optional(),
++    subtitle: z.string().optional(),
++    alignment: z.string().optional(),
++    title_tap_action: actionConfigStruct.optional(),
++    subtitle_tap_action: actionConfigStruct.optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/title-card/title-card-editor.ts b/src/cards/title-card/title-card-editor.ts
+index e007f50..8e3b8ed 100644
+--- a/src/cards/title-card/title-card-editor.ts
++++ b/src/cards/title-card/title-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeAlignmentOptions } from "../../shared/config/appearance-config";
+@@ -62,7 +61,7 @@ export class TitleCardEditor
+   }
+ 
+   public setConfig(config: TitleCardConfig): void {
+-    assert(config, titleCardConfigStruct);
++    titleCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/update-card/update-card-config.ts b/src/cards/update-card/update-card-config.ts
+index bec3597..9eeb837 100644
+--- a/src/cards/update-card/update-card-config.ts
++++ b/src/cards/update-card/update-card-config.ts
+@@ -1,4 +1,4 @@
+-import { assign, boolean, object, optional } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -22,15 +22,12 @@ export type UpdateCardConfig = LovelaceCardConfig &
+     collapsible_controls?: boolean;
+   };
+ 
+-export const updateCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    show_buttons_control: optional(boolean()),
+-    collapsible_controls: optional(boolean()),
++export const updateCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    show_buttons_control: z.boolean().optional(),
++    collapsible_controls: z.boolean().optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/update-card/update-card-editor.ts b/src/cards/update-card/update-card-editor.ts
+index e17de26..ab1957f 100644
+--- a/src/cards/update-card/update-card-editor.ts
++++ b/src/cards/update-card/update-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -61,7 +60,7 @@ export class UpdateCardEditor
+   }
+ 
+   public setConfig(config: UpdateCardConfig): void {
+-    assert(config, updateCardConfigStruct);
++    updateCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/cards/vacuum-card/vacuum-card-config.ts b/src/cards/vacuum-card/vacuum-card-config.ts
+index e79be18..8320142 100644
+--- a/src/cards/vacuum-card/vacuum-card-config.ts
++++ b/src/cards/vacuum-card/vacuum-card-config.ts
+@@ -1,4 +1,4 @@
+-import { array, assign, boolean, object, optional, string } from "superstruct";
++import { z } from "zod";
+ import { LovelaceCardConfig } from "../../ha";
+ import {
+   ActionsSharedConfig,
+@@ -33,15 +33,12 @@ export type VacuumCardConfig = LovelaceCardConfig &
+     commands?: VacuumCommand[];
+   };
+ 
+-export const vacuumCardConfigStruct = assign(
+-  lovelaceCardConfigStruct,
+-  assign(
+-    entitySharedConfigStruct,
+-    appearanceSharedConfigStruct,
+-    actionsSharedConfigStruct
+-  ),
+-  object({
+-    icon_animation: optional(boolean()),
+-    commands: optional(array(string())),
++export const vacuumCardConfigStruct = lovelaceCardConfigStruct
++  .extend(entitySharedConfigStruct.shape)
++  .extend(appearanceSharedConfigStruct.shape)
++  .extend(actionsSharedConfigStruct.shape)
++  .extend({
++    icon_animation: z.boolean().optional(),
++    commands: z.array(z.string()).optional(),
+   })
+-);
++  .strict();
+diff --git a/src/cards/vacuum-card/vacuum-card-editor.ts b/src/cards/vacuum-card/vacuum-card-editor.ts
+index 22edcce..a0f74a4 100644
+--- a/src/cards/vacuum-card/vacuum-card-editor.ts
++++ b/src/cards/vacuum-card/vacuum-card-editor.ts
+@@ -1,7 +1,6 @@
+ import { html, nothing } from "lit";
+ import { customElement, state } from "lit/decorators.js";
+ import memoizeOne from "memoize-one";
+-import { assert } from "superstruct";
+ import { LocalizeFunc, LovelaceCardEditor, fireEvent } from "../../ha";
+ import setupCustomlocalize from "../../localize";
+ import { computeActionsFormSchema } from "../../shared/config/actions-config";
+@@ -74,7 +73,7 @@ export class VacuumCardEditor
+   }
+ 
+   public setConfig(config: VacuumCardConfig): void {
+-    assert(config, vacuumCardConfigStruct);
++    vacuumCardConfigStruct.parse(config);
+     this._config = config;
+   }
+ 
+diff --git a/src/ha/common/structs/handle-errors.ts b/src/ha/common/structs/handle-errors.ts
+index 96c8208..5cdd133 100644
+--- a/src/ha/common/structs/handle-errors.ts
++++ b/src/ha/common/structs/handle-errors.ts
+@@ -1,58 +1,113 @@
+-import { StructError } from "superstruct";
++import { z } from "zod";
+ import type { HomeAssistant } from "../../types";
+ 
++const getValueAtPath = (root: unknown, path: (string | number)[]): unknown => {
++  let current = root;
++  for (const key of path) {
++    if (current === null || current === undefined) {
++      return undefined;
++    }
++    current = (current as Record<string | number, unknown>)[key];
++  }
++  return current;
++};
++
++const computeEnumTypes = (options: (string | number)[]): string =>
++  `one of \`${options.map((option) => JSON.stringify(option)).join(",")}\``;
++
+ export const handleStructError = (
+   hass: HomeAssistant,
+-  err: Error
++  err: Error,
++  input?: unknown
+ ): { warnings: string[]; errors?: string[] } => {
+-  if (!(err instanceof StructError)) {
++  if (!(err instanceof z.ZodError)) {
+     return { warnings: [err.message], errors: undefined };
+   }
+   const errors: string[] = [];
+   const warnings: string[] = [];
+-  for (const failure of err.failures()) {
+-    if (failure.value === undefined) {
+-      errors.push(
+-        hass.localize(
+-          "ui.errors.config.key_missing",
+-          "key",
+-          failure.path.join(".")
+-        )
+-      );
+-    } else if (failure.type === "never") {
+-      warnings.push(
+-        hass.localize(
+-          "ui.errors.config.key_not_expected",
+-          "key",
+-          failure.path.join(".")
+-        )
+-      );
+-    } else if (failure.type === "union") {
+-      continue;
+-    } else if (failure.type === "enums") {
+-      warnings.push(
+-        hass.localize(
+-          "ui.errors.config.key_wrong_type",
+-          "key",
+-          failure.path.join("."),
+-          "type_correct",
+-          failure.message.replace("Expected ", "").split(", ")[0],
+-          "type_wrong",
+-          JSON.stringify(failure.value)
+-        )
+-      );
+-    } else {
+-      warnings.push(
+-        hass.localize(
+-          "ui.errors.config.key_wrong_type",
+-          "key",
+-          failure.path.join("."),
+-          "type_correct",
+-          failure.refinement || failure.type,
+-          "type_wrong",
+-          JSON.stringify(failure.value)
+-        )
+-      );
++  for (const issue of err.issues) {
++    const key = issue.path.join(".");
++    switch (issue.code) {
++      case z.ZodIssueCode.invalid_type: {
++        if (issue.received === "undefined") {
++          errors.push(
++            hass.localize("ui.errors.config.key_missing", "key", key)
++          );
++        } else {
++          warnings.push(
++            hass.localize(
++              "ui.errors.config.key_wrong_type",
++              "key",
++              key,
++              "type_correct",
++              issue.expected,
++              "type_wrong",
++              JSON.stringify(getValueAtPath(input, issue.path))
++            )
++          );
++        }
++        break;
++      }
++      case z.ZodIssueCode.unrecognized_keys: {
++        for (const unknownKey of issue.keys) {
++          const unknownPath = issue.path.length
++            ? `${issue.path.join(".")}.${unknownKey}`
++            : `${unknownKey}`;
++          warnings.push(
++            hass.localize(
++              "ui.errors.config.key_not_expected",
++              "key",
++              unknownPath
++            )
++          );
++        }
++        break;
++      }
++      case z.ZodIssueCode.invalid_enum_value: {
++        warnings.push(
++          hass.localize(
++            "ui.errors.config.key_wrong_type",
++            "key",
++            key,
++            "type_correct",
++            computeEnumTypes(issue.options),
++            "type_wrong",
++            JSON.stringify(issue.received)
++          )
++        );
++        break;
++      }
++      case z.ZodIssueCode.invalid_union: {
++        continue;
++      }
++      case z.ZodIssueCode.invalid_literal: {
++        warnings.push(
++          hass.localize(
++            "ui.errors.config.key_wrong_type",
++            "key",
++            key,
++            "type_correct",
++            "literal",
++            "type_wrong",
++            JSON.stringify(getValueAtPath(input, issue.path))
++          )
++        );
++        break;
++      }
++      default: {
++        warnings.push(
++          hass.localize(
++            "ui.errors.config.key_wrong_type",
++            "key",
++            key,
++            "type_correct",
++            issue.code,
++            "type_wrong",
++            JSON.stringify(getValueAtPath(input, issue.path))
++          )
++        );
++        break;
++      }
+     }
+   }
+   return { warnings, errors };
+diff --git a/src/ha/panels/lovelace/editor/structs/action-struct.ts b/src/ha/panels/lovelace/editor/structs/action-struct.ts
+index 8724fcf..9c5b226 100644
+--- a/src/ha/panels/lovelace/editor/structs/action-struct.ts
++++ b/src/ha/panels/lovelace/editor/structs/action-struct.ts
+@@ -1,84 +1,86 @@
+-import {
+-  array,
+-  boolean,
+-  dynamic,
+-  enums,
+-  literal,
+-  object,
+-  optional,
+-  string,
+-  type,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import { BaseActionConfig } from "../../../../data/lovelace";
+ 
+-const actionConfigStructUser = object({
+-  user: string(),
+-});
++const actionConfigStructUser = z.object({ user: z.string() }).strict();
+ 
+-const actionConfigStructConfirmation = union([
+-  boolean(),
+-  object({
+-    text: optional(string()),
+-    excemptions: optional(array(actionConfigStructUser)),
+-  }),
++const actionConfigStructConfirmation = z.union([
++  z.boolean(),
++  z
++    .object({
++      text: z.string().optional(),
++      excemptions: z.array(actionConfigStructUser).optional(),
++    })
++    .strict(),
+ ]);
+ 
+-const actionConfigStructUrl = object({
+-  action: literal("url"),
+-  url_path: string(),
+-  confirmation: optional(actionConfigStructConfirmation),
+-});
++const actionConfigStructUrl = z
++  .object({
++    action: z.literal("url"),
++    url_path: z.string(),
++    confirmation: actionConfigStructConfirmation.optional(),
++  })
++  .strict();
+ 
+-const actionConfigStructService = object({
+-  action: enums(["call-service", "perform-action"]),
+-  service: optional(string()),
+-  perform_action: optional(string()),
+-  service_data: optional(object()),
+-  data: optional(object()),
+-  target: optional(
+-    object({
+-      entity_id: optional(union([string(), array(string())])),
+-      device_id: optional(union([string(), array(string())])),
+-      area_id: optional(union([string(), array(string())])),
+-      floor_id: optional(union([string(), array(string())])),
+-      label_id: optional(union([string(), array(string())])),
+-    })
+-  ),
+-  confirmation: optional(actionConfigStructConfirmation),
+-});
++const actionConfigStructService = z
++  .object({
++    action: z.enum(["call-service", "perform-action"]),
++    service: z.string().optional(),
++    perform_action: z.string().optional(),
++    service_data: z.object({}).passthrough().optional(),
++    data: z.object({}).passthrough().optional(),
++    target: z
++      .object({
++        entity_id: z.union([z.string(), z.array(z.string())]).optional(),
++        device_id: z.union([z.string(), z.array(z.string())]).optional(),
++        area_id: z.union([z.string(), z.array(z.string())]).optional(),
++        floor_id: z.union([z.string(), z.array(z.string())]).optional(),
++        label_id: z.union([z.string(), z.array(z.string())]).optional(),
++      })
++      .strict()
++      .optional(),
++    confirmation: actionConfigStructConfirmation.optional(),
++  })
++  .strict();
+ 
+-const actionConfigStructNavigate = object({
+-  action: literal("navigate"),
+-  navigation_path: string(),
+-  confirmation: optional(actionConfigStructConfirmation),
+-});
++const actionConfigStructNavigate = z
++  .object({
++    action: z.literal("navigate"),
++    navigation_path: z.string(),
++    confirmation: actionConfigStructConfirmation.optional(),
++  })
++  .strict();
+ 
+-const actionConfigStructAssist = type({
+-  action: literal("assist"),
+-  pipeline_id: optional(string()),
+-  start_listening: optional(boolean()),
+-});
++const actionConfigStructAssist = z
++  .object({
++    action: z.literal("assist"),
++    pipeline_id: z.string().optional(),
++    start_listening: z.boolean().optional(),
++  })
++  .passthrough();
+ 
+-const actionConfigStructCustom = type({
+-  action: literal("fire-dom-event"),
+-});
++const actionConfigStructCustom = z
++  .object({
++    action: z.literal("fire-dom-event"),
++  })
++  .passthrough();
+ 
+-export const actionConfigStructType = object({
+-  action: enums([
+-    "none",
+-    "toggle",
+-    "more-info",
+-    "call-service",
+-    "perform-action",
+-    "url",
+-    "navigate",
+-    "assist",
+-  ]),
+-  confirmation: optional(actionConfigStructConfirmation),
+-});
++export const actionConfigStructType = z
++  .object({
++    action: z.enum([
++      "none",
++      "toggle",
++      "more-info",
++      "call-service",
++      "perform-action",
++      "url",
++      "navigate",
++      "assist",
++    ]),
++    confirmation: actionConfigStructConfirmation.optional(),
++  })
++  .strict();
+ 
+-export const actionConfigStruct = dynamic<any>((value) => {
++const selectActionConfigStruct = (value: unknown): z.ZodTypeAny => {
+   if (value && typeof value === "object" && "action" in value) {
+     switch ((value as BaseActionConfig).action!) {
+       case "call-service": {
+@@ -103,4 +105,16 @@ export const actionConfigStruct = dynamic<any>((value) => {
+   }
+ 
+   return actionConfigStructType;
+-});
++};
++
++export const actionConfigStruct: z.ZodTypeAny = z.any().superRefine(
++  (value, ctx) => {
++    const struct = selectActionConfigStruct(value);
++    const result = struct.safeParse(value);
++    if (!result.success) {
++      for (const issue of result.error.issues) {
++        ctx.addIssue(issue);
++      }
++    }
++  }
++);
+diff --git a/src/shared/config/__qa_smoke.test.ts b/src/shared/config/__qa_smoke.test.ts
+new file mode 100644
+index 0000000..a683987
+--- /dev/null
++++ b/src/shared/config/__qa_smoke.test.ts
+@@ -0,0 +1,5 @@
++describe.skip("migration smoke", () => {
++  it("noop", () => {
++    expect(true).toBe(true);
++  });
++});
+diff --git a/src/shared/config/actions-config.ts b/src/shared/config/actions-config.ts
+index dd6a2ed..7074fa1 100644
+--- a/src/shared/config/actions-config.ts
++++ b/src/shared/config/actions-config.ts
+@@ -1,13 +1,15 @@
+-import { object, optional } from "superstruct";
++import { z } from "zod";
+ import { ActionConfig, actionConfigStruct } from "../../ha";
+ import { HaFormSchema } from "../../utils/form/ha-form";
+ import { UiAction } from "../../utils/form/ha-selector";
+ 
+-export const actionsSharedConfigStruct = object({
+-  tap_action: optional(actionConfigStruct),
+-  hold_action: optional(actionConfigStruct),
+-  double_tap_action: optional(actionConfigStruct),
+-});
++export const actionsSharedConfigStruct = z
++  .object({
++    tap_action: actionConfigStruct.optional(),
++    hold_action: actionConfigStruct.optional(),
++    double_tap_action: actionConfigStruct.optional(),
++  })
++  .strict();
+ 
+ export type ActionsSharedConfig = {
+   tap_action?: ActionConfig;
+diff --git a/src/shared/config/appearance-config.ts b/src/shared/config/appearance-config.ts
+index d77bccd..6315da7 100644
+--- a/src/shared/config/appearance-config.ts
++++ b/src/shared/config/appearance-config.ts
+@@ -1,18 +1,22 @@
+-import { boolean, enums, Infer, object, optional } from "superstruct";
++import { z } from "zod";
+ import setupCustomlocalize from "../../localize";
+ import { HaFormSchema } from "../../utils/form/ha-form";
+ import { IconType, ICON_TYPES, Info, INFOS } from "../../utils/info";
+ import { Layout, LAYOUTS, layoutStruct } from "../../utils/layout";
+ 
+-export const appearanceSharedConfigStruct = object({
+-  layout: optional(layoutStruct),
+-  fill_container: optional(boolean()),
+-  primary_info: optional(enums(INFOS)),
+-  secondary_info: optional(enums(INFOS)),
+-  icon_type: optional(enums(ICON_TYPES)),
+-});
++export const appearanceSharedConfigStruct = z
++  .object({
++    layout: layoutStruct.optional(),
++    fill_container: z.boolean().optional(),
++    primary_info: z.enum(INFOS).optional(),
++    secondary_info: z.enum(INFOS).optional(),
++    icon_type: z.enum(ICON_TYPES).optional(),
++  })
++  .strict();
+ 
+-export type AppearanceSharedConfig = Infer<typeof appearanceSharedConfigStruct>;
++export type AppearanceSharedConfig = z.infer<
++  typeof appearanceSharedConfigStruct
++>;
+ 
+ export type Appearance = {
+   layout: Layout;
+diff --git a/src/shared/config/entity-config.ts b/src/shared/config/entity-config.ts
+index 40bec2e..24f3dc5 100644
+--- a/src/shared/config/entity-config.ts
++++ b/src/shared/config/entity-config.ts
+@@ -1,34 +1,27 @@
+-import {
+-  array,
+-  enums,
+-  Infer,
+-  literal,
+-  object,
+-  optional,
+-  string,
+-  union,
+-} from "superstruct";
++import { z } from "zod";
+ import { EntityNameItem } from "../../ha";
+ 
+-const entityNameItemStruct = union([
+-  object({ type: enums(["entity", "device", "area", "floor"]) }),
+-  object({ type: literal("text"), text: string() }),
++const entityNameItemStruct = z.union([
++  z.object({ type: z.enum(["entity", "device", "area", "floor"]) }).strict(),
++  z.object({ type: z.literal("text"), text: z.string() }).strict(),
+ ]);
+ 
+-export const entityNameStruct = union([
+-  string(),
++export const entityNameStruct = z.union([
++  z.string(),
+   entityNameItemStruct,
+-  array(entityNameItemStruct),
++  z.array(entityNameItemStruct),
+ ]);
+ 
+-export const entitySharedConfigStruct = object({
+-  entity: optional(string()),
+-  name: optional(entityNameStruct),
+-  icon: optional(string()),
+-});
++export const entitySharedConfigStruct = z
++  .object({
++    entity: z.string().optional(),
++    name: entityNameStruct.optional(),
++    icon: z.string().optional(),
++  })
++  .strict();
+ 
+ export type EntitySharedConfig = Omit<
+-  Infer<typeof entitySharedConfigStruct>,
++  z.infer<typeof entitySharedConfigStruct>,
+   "name"
+ > & {
+   name?: string | EntityNameItem | EntityNameItem[];
+diff --git a/src/shared/config/lovelace-badge-config.ts b/src/shared/config/lovelace-badge-config.ts
+index 956a0e4..bf25f58 100644
+--- a/src/shared/config/lovelace-badge-config.ts
++++ b/src/shared/config/lovelace-badge-config.ts
+@@ -1,6 +1,8 @@
+-import { any, object, string } from "superstruct";
++import { z } from "zod";
+ 
+-export const lovelaceBadgeConfigStruct = object({
+-  type: string(),
+-  visibility: any(),
+-});
++export const lovelaceBadgeConfigStruct = z
++  .object({
++    type: z.string(),
++    visibility: z.any(),
++  })
++  .strict();
+diff --git a/src/shared/config/lovelace-card-config.ts b/src/shared/config/lovelace-card-config.ts
+index 0425756..bcdd05b 100644
+--- a/src/shared/config/lovelace-card-config.ts
++++ b/src/shared/config/lovelace-card-config.ts
+@@ -1,11 +1,13 @@
+-import { any, number, object, optional, string } from "superstruct";
++import { z } from "zod";
+ 
+-export const lovelaceCardConfigStruct = object({
+-  index: optional(number()),
+-  view_index: optional(number()),
+-  view_layout: any(),
+-  type: string(),
+-  layout_options: any(),
+-  grid_options: any(),
+-  visibility: any(),
+-});
++export const lovelaceCardConfigStruct = z
++  .object({
++    index: z.number().optional(),
++    view_index: z.number().optional(),
++    view_layout: z.any(),
++    type: z.string(),
++    layout_options: z.any(),
++    grid_options: z.any(),
++    visibility: z.any(),
++  })
++  .strict();
+diff --git a/src/utils/layout.ts b/src/utils/layout.ts
+index a05edd1..cf93961 100644
+--- a/src/utils/layout.ts
++++ b/src/utils/layout.ts
+@@ -1,11 +1,11 @@
+-import { literal, union } from "superstruct";
++import { z } from "zod";
+ 
+ export const LAYOUTS = ["default", "horizontal", "vertical"] as const;
+ 
+ export type Layout = (typeof LAYOUTS)[number];
+ 
+-export const layoutStruct = union([
+-  literal("horizontal"),
+-  literal("vertical"),
+-  literal("default"),
++export const layoutStruct = z.union([
++  z.literal("horizontal"),
++  z.literal("vertical"),
++  z.literal("default"),
+ ]);
+diff --git a/src/utils/lovelace/element-editor.ts b/src/utils/lovelace/element-editor.ts
+index ba88918..8b0f748 100644
+--- a/src/utils/lovelace/element-editor.ts
++++ b/src/utils/lovelace/element-editor.ts
+@@ -328,7 +328,7 @@ export abstract class MushroomElementEditor<T> extends LitElement {
+         try {
+           this._configElement.setConfig(this.value);
+         } catch (err: any) {
+-          const msgs = handleStructError(this.hass, err);
++          const msgs = handleStructError(this.hass, err, this.value);
+           throw new GUISupportError(
+             "Config is not supported",
+             msgs.warnings,

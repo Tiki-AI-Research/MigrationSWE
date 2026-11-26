@@ -1,0 +1,174 @@
+{
+  "schema_version": "deepswe-verifier-config/v2",
+  "reward_mode": "VERIFIER_ONLY",
+  "task_id": "versatica-jssip-20260923013559-f093ae",
+  "base_commit": "7a963d16ae5c17b430b57b307d3f3ba74c0cbb1f",
+  "test_patch_sha256": "02948483f3873793d4ae61510717b3a20fb3348a063380795a920042f475cdc0",
+  "suite": "versatica-jssip-20260923013559-f093ae",
+  "migration_type": "framework",
+  "source_technology": "PEG.js 0.7.0",
+  "target_technology": "Peggy 4.2.0",
+  "persistent_state_involved": false,
+  "hard_gate_order": [
+    "candidate_valid",
+    "target_build_valid",
+    "migration_integrity_preserved",
+    "p2p_regression_preserved",
+    "test_integrity",
+    "evaluation_environment_integrity"
+  ],
+  "f2p": [
+    "f2p-package-declares-peggy",
+    "f2p-package-drops-pegjs",
+    "f2p-lock-declares-peggy",
+    "f2p-lock-drops-pegjs",
+    "f2p-npm-scripts-uses-peggy",
+    "f2p-npm-scripts-drops-pegjs",
+    "f2p-grammar-js-generated-by-peggy",
+    "f2p-grammar-js-not-pegjs-generated",
+    "f2p-grammar-js-peggy-runtime",
+    "f2p-grammar-module-surface",
+    "f2p-grammar-start-rules-count",
+    "f2p-grammar-start-rules-set",
+    "f2p-grammar-start-rules-selectable",
+    "f2p-grammar-unknown-rule-basic",
+    "f2p-grammar-escape-quote",
+    "f2p-grammar-escape-control",
+    "f2p-grammar-escape-nonascii",
+    "f2p-grammar-declared-only-membership",
+    "f2p-grammar-rule-name-coercion",
+    "f2p-grammar-start-rules-inert",
+    "f2p-grammar-null-second-argument",
+    "f2p-grammar-escape-printable",
+    "f2p-grammar-escape-boundaries",
+    "f2p-grammar-coercion-error-propagates",
+    "f2p-grammar-options-empty",
+    "f2p-grammar-options-exotic-empty",
+    "f2p-grammar-start-rule-undefined",
+    "f2p-grammar-start-rule-nonenumerable-accessor",
+    "f2p-grammar-coerced-declared-rule",
+    "f2p-grammar-options-ignore-peggy-library",
+    "f2p-grammar-options-ignore-peggy-position",
+    "f2p-grammar-options-inherited-start-rule",
+    "f2p-grammar-options-inherited-invalid",
+    "f2p-grammar-boxed-string-start-rule",
+    "f2p-grammar-boxed-number-start-rule",
+    "f2p-grammar-boxed-boolean-start-rule",
+    "f2p-grammar-function-start-rule",
+    "f2p-grammar-cross-realm-boxed-string",
+    "f2p-grammar-cross-realm-boxed-number",
+    "f2p-grammar-cross-realm-boxed-boolean",
+    "f2p-grammar-non-boxed-prototype-object",
+    "f2p-grammar-spoofed-to-string-tag-is-options",
+    "f2p-grammar-proxy-boxed-primitive-is-options",
+    "f2p-grammar-options-getter-read-once",
+    "f2p-grammar-types-parse-inputs",
+    "f2p-grammar-types-syntax-error"
+  ],
+  "p2p": [
+    "p2p-behavior-uri-sip-basic",
+    "p2p-behavior-uri-params-headers",
+    "p2p-behavior-uri-invalid",
+    "p2p-behavior-grammar-invalid-minus-one",
+    "p2p-behavior-nameaddr-quoted",
+    "p2p-behavior-nameaddr-token",
+    "p2p-behavior-contact-multiple",
+    "p2p-behavior-record-route-multiple",
+    "p2p-behavior-via-multiple",
+    "p2p-behavior-cseq",
+    "p2p-behavior-from",
+    "p2p-behavior-to",
+    "p2p-behavior-content-type",
+    "p2p-behavior-content-length",
+    "p2p-behavior-content-disposition",
+    "p2p-behavior-event",
+    "p2p-behavior-session-expires",
+    "p2p-behavior-subscription-state",
+    "p2p-behavior-reason",
+    "p2p-behavior-refer-to",
+    "p2p-behavior-replaces",
+    "p2p-behavior-status-line",
+    "p2p-behavior-host-types",
+    "p2p-behavior-expires",
+    "p2p-behavior-max-forwards",
+    "p2p-behavior-call-id",
+    "p2p-behavior-uuid",
+    "p2p-behavior-digest-challenge",
+    "p2p-behavior-parse-message-request",
+    "p2p-behavior-parse-message-response",
+    "f2p-grammar-boxed-null-prototype-coercion",
+    "f2p-grammar-types-negative-api"
+  ],
+  "differential": [
+    "p2p-behavior-differential-fuzz"
+  ],
+  "migration_units": [
+    {
+      "id": "U1",
+      "type": "dependency",
+      "description": "package.json declares peggy 4.2.0 and drops pegjs",
+      "check": "manifest"
+    },
+    {
+      "id": "U2",
+      "type": "lockfile",
+      "description": "package-lock.json resolves peggy 4.2.0 and drops pegjs",
+      "check": "lockfile"
+    },
+    {
+      "id": "U3",
+      "type": "build_script",
+      "description": "npm-scripts.mjs invokes the peggy generator instead of pegjs",
+      "check": "generator"
+    },
+    {
+      "id": "U4",
+      "type": "generated_parser",
+      "description": "src/Grammar.js is a Peggy-generated runtime",
+      "check": "grammar"
+    },
+    {
+      "id": "U5",
+      "type": "residual_scan",
+      "description": "no residual PEG.js runtime or generator reference remains",
+      "check": "residual"
+    }
+  ],
+  "allowed_change_paths": [
+    "**"
+  ],
+  "asset_manifest": "assets/assets-manifest.json",
+  "protected_paths": [
+    "tests/**",
+    "src/test/migration-verifier/**"
+  ],
+  "weights": {
+    "test": 1.0
+  },
+  "missing_is_failure": true,
+  "skip_is_failure": true,
+  "duplicate_is_failure": true,
+  "reward_policy": "deterministic_verifier_only",
+  "hard_gate": {
+    "compile_paths": [
+      "src/Grammar.js",
+      "src/Parser.js",
+      "src/URI.js",
+      "src/NameAddrHeader.js",
+      "src/SIPMessage.js",
+      "npm-scripts.mjs"
+    ],
+    "cheat_penalty": -1.0
+  },
+  "reports": {
+    "ctrf": "/logs/verifier/ctrf.json",
+    "reward_details": "/logs/verifier/reward-details.json",
+    "reward": "/logs/verifier/reward.json"
+  },
+  "diagnostics": {
+    "node_report": "/logs/verifier/reports/nodes.json",
+    "hard_gate": "/logs/verifier/hard-gate.json",
+    "verifier": "/logs/verifier/verifier-result.json",
+    "gate_reward": "/logs/verifier/gate-reward.json"
+  }
+}

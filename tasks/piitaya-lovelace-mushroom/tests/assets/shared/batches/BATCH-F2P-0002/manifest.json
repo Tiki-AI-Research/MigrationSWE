@@ -1,0 +1,96 @@
+{
+  "schema_version": "migration-asset-batch-manifest:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "role": "Fail-to-pass probes for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation migration.",
+  "migration": {
+    "source": { "name": "Superstruct", "version": "2.0.2", "language_name": "TypeScript" },
+    "target": { "name": "Zod", "version": "3.23.8", "language_name": "TypeScript" }
+  },
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "consumes": {
+    "dependency_manifest": "/assets/dependencies/dependency-manifest.json",
+    "skeleton_batch": "BATCH-AUTHOR-BATCH-SKELETON-0001"
+  },
+  "observations": [
+    "F2P-027",
+    "F2P-029",
+    "F2P-030",
+    "F2P-037",
+    "F2P-038",
+    "F2P-044",
+    "F2P-047",
+    "F2P-040",
+    "F2P-025",
+    "F2P-026",
+    "F2P-028",
+    "F2P-031",
+    "F2P-032",
+    "F2P-033",
+    "F2P-034",
+    "F2P-035",
+    "F2P-036",
+    "F2P-039",
+    "F2P-041",
+    "F2P-042",
+    "F2P-043",
+    "F2P-045",
+    "F2P-046",
+    "F2P-048"
+  ],
+  "predicate_by_observation": {
+    "F2P-027": "P-R017",
+    "F2P-029": "P-R001",
+    "F2P-030": "P-S007",
+    "F2P-037": "P-S008",
+    "F2P-038": "P-S002",
+    "F2P-044": "P-S004",
+    "F2P-047": "P-S002",
+    "F2P-040": "P-R017",
+    "F2P-025": "P-R001",
+    "F2P-026": "P-S001",
+    "F2P-028": "P-S010",
+    "F2P-031": "P-S002",
+    "F2P-032": "P-R001",
+    "F2P-033": "P-S004",
+    "F2P-034": "P-S001",
+    "F2P-035": "P-R017",
+    "F2P-036": "P-R017",
+    "F2P-039": "P-S004",
+    "F2P-041": "P-S001",
+    "F2P-042": "P-S001",
+    "F2P-043": "P-R017",
+    "F2P-045": "P-R017",
+    "F2P-046": "P-S010",
+    "F2P-048": "P-S001"
+  },
+  "predicates": {
+    "P-R001": "entityCardConfigStruct parses a bound card config and a wrong-typed entity yields a z.ZodError that handleStructError converts into ui.errors.config.* messages (R001).",
+    "P-S001": "handleStructError detects a z.ZodError and returns populated warnings/errors instead of the non-validation passthrough (S001).",
+    "P-S004": "handleStructError reports the offending value for a wrong-typed key of the validated configuration (S004).",
+    "P-S002": "entitySharedConfigStruct strictly rejects an unexpected key and it is reported as ui.errors.config.key_not_expected (S002).",
+    "P-S008": "entityCardConfigStruct, composed through Zod, stays strict and rejects an unexpected key (S008).",
+    "P-S007": "actionConfigStruct dispatches on the action discriminator (url requires url_path, none succeeds) (S007).",
+    "P-S010": "handleStructError passes non-validation errors through but does not pass a real z.ZodError through (S010).",
+    "P-R017": "Calling entityCardConfigStruct.safeParse executes Zod in-process and importing the migrated modules neither requires nor dynamically loads superstruct (R017)."
+  },
+  "harness": {
+    "source_probe": "source/batches/BATCH-F2P-0002/probe.cjs",
+    "target_probe": "target/batches/BATCH-F2P-0002/probe.cjs",
+    "shared_loader": "shared/batches/BATCH-F2P-0002/load-repo.cjs",
+    "fixtures": "fixtures/batches/BATCH-F2P-0002/fixtures.json",
+    "note": "source/runner and target/runner.js are created only by the INTEGRATION batch; this batch declares neither."
+  },
+  "authoring_execution": {
+    "target": {
+      "repo": "/input/target",
+      "command": "DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules node target/batches/BATCH-F2P-0002/probe.cjs /input/target",
+      "status": "PASS"
+    },
+    "source": {
+      "repo": "/input/source",
+      "command": "DEPS_NODE_MODULES=/opt/migration/dependencies/node_modules node source/batches/BATCH-F2P-0002/probe.cjs /input/source",
+      "status": "FAIL"
+    }
+  }
+}

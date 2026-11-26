@@ -1,0 +1,150 @@
+{
+  "schema_version": "migration-p2p-projection:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "relation": "equal_after_normalization",
+  "notes": [
+    "Both the TypeScript source side and the native Rust target side emit this projection.",
+    "After whitespace, key-order and collection-order normalization the two projections must be equal.",
+    "Behavior observations (P2P-025/027/028/030/031/032/033/034/035/038) are produced by running the repository's own behavior tests on each side: vitest packages/core/src/tests/utils.test.ts on source and cargo test crates/stepperize-core/tests/utils.rs on target.",
+    "Out-of-scope artifact observations (P2P-026/029/036/037) are produced by the executable probe shared/batches/BATCH-P2P-0002/p2p_probe.py, which is run on both sides. The probed artifacts (packages/react, apps/docs, the protected packages/core reference) are byte-identical on both sides, so the concrete projection is stable and equal.",
+    "Error wording is part of the protected public contract (R030/R042), so the exact messages are asserted here."
+  ],
+  "projection": {
+    "P2P-025": {
+      "operation": "getStepStatus",
+      "current_index": 1,
+      "statuses": {
+        "first": "previous",
+        "second": "active",
+        "third": "upcoming"
+      }
+    },
+    "P2P-026": {
+      "package": "@stepperize/react",
+      "export": "./primitives",
+      "present": true
+    },
+    "P2P-027": {
+      "operation": "parseStep",
+      "results": {
+        "second": "second",
+        "missing": null,
+        "null": null,
+        "undefined": null,
+        "42": null
+      }
+    },
+    "P2P-028": {
+      "operation": "getInitialStepIndex",
+      "results": {
+        "second": 1,
+        "absent": 0,
+        "missing": 0
+      }
+    },
+    "P2P-029": {
+      "operation": "docs.registry.blocks",
+      "block_count": 28,
+      "registry_item_count": 28,
+      "all_items_present": true,
+      "all_have_inline_content": true,
+      "all_have_stepperize_dependency": true,
+      "orphan_registry_items": []
+    },
+    "P2P-030": {
+      "operation": "StepMap.get",
+      "results": {
+        "second": "second",
+        "missing": null
+      }
+    },
+    "P2P-031": {
+      "surface": "runtime scenarios documented by packages/core/src/tests/utils.test.ts",
+      "result": "PASS"
+    },
+    "P2P-032": {
+      "operation": "StepMap.first/last",
+      "results": {
+        "first": "first",
+        "last": "third",
+        "empty_first": null,
+        "empty_last": null
+      }
+    },
+    "P2P-033": {
+      "operation": "matchStep unknown id",
+      "error": "Step \"missing\" not found."
+    },
+    "P2P-034": {
+      "operation": "validateStep rejected value",
+      "success": false,
+      "first_issue_message": "Required"
+    },
+    "P2P-035": {
+      "operation": "validateStep without schema",
+      "success": true,
+      "data_preserved": true
+    },
+    "P2P-036": {
+      "package": "@stepperize/react",
+      "export": ".",
+      "present": true
+    },
+    "P2P-037": {
+      "operation": "protected.artifacts",
+      "reference_test_present": true,
+      "protected_error_wording_present": true,
+      "standard_schema_boundary_present": true,
+      "named_exports_present": true
+    },
+    "P2P-038": {
+      "operation": "StepMap.indexOf",
+      "results": {
+        "third": 2,
+        "missing": -1
+      }
+    }
+  },
+  "probe": {
+    "path": "shared/batches/BATCH-P2P-0002/p2p_probe.py",
+    "argv": [
+      "timeout",
+      "300",
+      "python3",
+      "shared/batches/BATCH-P2P-0002/p2p_probe.py",
+      "--repo",
+      ".",
+      "--observation",
+      "P2P-026",
+      "--observation",
+      "P2P-029",
+      "--observation",
+      "P2P-036",
+      "--observation",
+      "P2P-037"
+    ],
+    "observations": [
+      "P2P-026",
+      "P2P-029",
+      "P2P-036",
+      "P2P-037"
+    ]
+  },
+  "observations": [
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-028",
+    "P2P-029",
+    "P2P-030",
+    "P2P-031",
+    "P2P-032",
+    "P2P-033",
+    "P2P-034",
+    "P2P-035",
+    "P2P-036",
+    "P2P-037",
+    "P2P-038"
+  ]
+}

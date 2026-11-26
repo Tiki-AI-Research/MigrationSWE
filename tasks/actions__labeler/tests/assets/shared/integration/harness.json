@@ -1,0 +1,6826 @@
+{
+  "schema": "migration-integration-harness:v2",
+  "batch_id": "BATCH-INTEGRATION-0001",
+  "migration": {
+    "category": "language",
+    "source": {
+      "language_name": "TypeScript",
+      "version": "6.0.3"
+    },
+    "target": {
+      "language_name": "Go",
+      "version": "1.24.0"
+    }
+  },
+  "observation_ids": [
+    "P2P-030",
+    "P2P-008",
+    "P2P-034",
+    "P2P-002",
+    "P2P-005",
+    "P2P-006",
+    "P2P-010",
+    "P2P-028",
+    "P2P-032",
+    "P2P-035",
+    "P2P-004",
+    "P2P-007",
+    "P2P-009",
+    "P2P-012",
+    "P2P-013",
+    "P2P-014",
+    "P2P-017",
+    "P2P-018",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-029",
+    "P2P-031",
+    "P2P-033",
+    "P2P-036",
+    "P2P-037",
+    "P2P-038",
+    "P2P-001",
+    "P2P-003",
+    "P2P-011",
+    "P2P-015",
+    "P2P-016",
+    "F2P-001",
+    "F2P-002",
+    "F2P-003",
+    "F2P-004",
+    "F2P-005",
+    "F2P-010",
+    "F2P-013",
+    "F2P-018",
+    "F2P-024",
+    "F2P-035",
+    "F2P-057",
+    "F2P-068",
+    "F2P-069",
+    "F2P-070",
+    "F2P-071",
+    "F2P-072",
+    "F2P-025",
+    "F2P-028",
+    "F2P-029",
+    "F2P-030",
+    "F2P-032",
+    "F2P-033",
+    "F2P-034",
+    "F2P-039",
+    "F2P-040",
+    "F2P-041",
+    "F2P-052",
+    "F2P-054",
+    "F2P-058",
+    "F2P-060",
+    "F2P-063",
+    "DIFF-006",
+    "DIFF-009",
+    "CONTRACT-001",
+    "CONTRACT-002",
+    "CONTRACT-003",
+    "CONTRACT-004",
+    "CONTRACT-005",
+    "CONTRACT-006",
+    "CONTRACT-007",
+    "CONTRACT-008",
+    "CONTRACT-009",
+    "CONTRACT-010",
+    "CONTRACT-011",
+    "CONTRACT-012",
+    "CONTRACT-013",
+    "CONTRACT-014",
+    "CONTRACT-015",
+    "CONTRACT-016",
+    "CONTRACT-017",
+    "CONTRACT-018",
+    "CONTRACT-019",
+    "CONTRACT-020",
+    "CONTRACT-021",
+    "CONTRACT-022",
+    "CONTRACT-023",
+    "CONTRACT-024",
+    "CONTRACT-025",
+    "CONTRACT-026",
+    "CONTRACT-027"
+  ],
+  "observations": {
+    "P2P-030": {
+      "id": "P2P-030",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R003",
+        "R008",
+        "R009",
+        "R010",
+        "R011",
+        "R016",
+        "R017",
+        "R019",
+        "R021",
+        "R023",
+        "R024",
+        "R025",
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "invalid",
+        "projection": "exception",
+        "scenario": "error",
+        "surface": "test:__tests__/labeler.test.ts#throws error for decimal string"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestInvalidDecimalLimitFails$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-008": {
+      "id": "P2P-008",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R009",
+        "R013",
+        "R026",
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/main.test.ts#can support multiple branches by batching"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "does not add labels to PRs that do not match our glob patterns|can support multiple branches by batching",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-head-branches"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-034": {
+      "id": "P2P-034",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R014",
+        "R016",
+        "R020",
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/labeler.test.ts#when multiple MatchConfigs are supplied"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestMultipleMatchConfigs$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-002": {
+      "id": "P2P-002",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R012",
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/branch.test.ts#when there are no branch keys in the config"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/branch.test.ts",
+        "case": "toBranchMatchConfig when there are no branch keys in the config returns an empty object",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-no-branches"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-005": {
+      "id": "P2P-005",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/main.test.ts#should fetch configuration file from API if it does not exist locally",
+        "behavior_case": "config-loading"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run should fetch configuration file from API if it does not exist locally",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-006": {
+      "id": "P2P-006",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "max-files-changed gating",
+        "behavior_case": "source-limits"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run max-files-changed skips file-based labels when changed files exceed limit",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "max-files"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-010": {
+      "id": "P2P-010",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "repository change surface"
+      },
+      "source": {
+        "type": "policy",
+        "name": "policy:changed-scope",
+        "timeout": 60
+      },
+      "target": {
+        "type": "policy",
+        "name": "policy:changed-scope",
+        "timeout": 60
+      }
+    },
+    "P2P-028": {
+      "id": "P2P-028",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R027"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "public capabilities and contracts"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestPublicCapabilitiesEndToEnd$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-032": {
+      "id": "P2P-032",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "boundary",
+        "projection": "return-value",
+        "scenario": "boundary",
+        "surface": "test:__tests__/labeler.test.ts#returns false when config has empty changed-files array"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestEmptyChangedFilesArray$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-035": {
+      "id": "P2P-035",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "action.yml output definitions"
+      },
+      "source": {
+        "type": "file-exists",
+        "file": "action.yml",
+        "timeout": 60
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestActionYMLOutputsPreserved$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-004": {
+      "id": "P2P-004",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "pr-number input parsing"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run \\(with pr-number: mix of valid and invalid\\) processes valid, skips invalid with warning",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-007": {
+      "id": "P2P-007",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R017"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "changed-files label classification",
+        "behavior_case": "source-limits"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "case": "configUsesChangedFiles returns true when config has mixed branch and changed-files patterns",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "label-classification"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-009": {
+      "id": "P2P-009",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R006"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "GitHub Actions runtime environment contract"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run \\(with pr-number: array of one item, uses the PR number specified in the parameters",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "runtime-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-012": {
+      "id": "P2P-012",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "configuration validation",
+        "behavior_case": "source-config"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "case": "getLabelConfigResultFromObject throws error for negative changed-files-labels-limit value",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-config"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-013": {
+      "id": "P2P-013",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "action failure and warning behavior"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "case": "labeler error handling throws a custom error for HttpError 403 with \"unauthorized\" message",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "permission-errors"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-014": {
+      "id": "P2P-014",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "configuration fetch failure"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run should warn if configuration file could not be fetched through the API, log error and fail the action",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-missing"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-017": {
+      "id": "P2P-017",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "changed-files-labels-limit gating",
+        "behavior_case": "source-limits"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run changed-files-labels-limit skips changed-files labels when count exceeds limit",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "labels-limit"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-018": {
+      "id": "P2P-018",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "test and evaluation integrity"
+      },
+      "source": {
+        "type": "policy",
+        "name": "policy:test-integrity",
+        "timeout": 60
+      },
+      "target": {
+        "type": "policy",
+        "name": "policy:test-integrity",
+        "timeout": 60
+      }
+    },
+    "P2P-019": {
+      "id": "P2P-019",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "configuration loading path",
+        "behavior_case": "config-loading"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run should use local configuration file if it exists",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-020": {
+      "id": "P2P-020",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "changed-files rule evaluation",
+        "behavior_case": "source-files"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/changedFiles.test.ts",
+        "case": "checkAllChangedFiles when all given glob pattern configs matched returns true",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-files"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-021": {
+      "id": "P2P-021",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "new-labels and all-labels outputs",
+        "behavior_case": "source-outputs"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run \\(with dot: false\\) adds labels to PRs that match our glob patterns",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-022": {
+      "id": "P2P-022",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "GitHub REST and GraphQL calls issued by the action"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/add-labels.test.ts",
+        "case": "addLabels does not verify a successful addition",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "api-requests"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-023": {
+      "id": "P2P-023",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "any/all rule aggregation",
+        "behavior_case": "source-aggregation"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "case": "checkMatchConfigs when multiple MatchConfigs are supplied returns true when only both config matches",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-aggregation"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-024": {
+      "id": "P2P-024",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label removal on sync",
+        "behavior_case": "source-outputs"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "case": "run removes stale configured labels in one mutation",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "sync-labels"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-025": {
+      "id": "P2P-025",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label set mutation"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestUnconfiguredLabelsPreserved$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-026": {
+      "id": "P2P-026",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "changed-file glob and branch pattern matching"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/changedFiles.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGlobAndBranchSemantics$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-027": {
+      "id": "P2P-027",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "action.yml input definitions"
+      },
+      "source": {
+        "type": "file-exists",
+        "file": "action.yml",
+        "timeout": 60
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestActionYMLInputsPreserved$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-029": {
+      "id": "P2P-029",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label addition failure handling"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/add-labels.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsServerErrorRecovery$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-031": {
+      "id": "P2P-031",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R024"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "bulk label removal failure"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestBulkRemovalFailure$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-033": {
+      "id": "P2P-033",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R005"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label configuration YAML schema accepted by the action"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/labeler.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestFullConfigSchemaAccepted$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-036": {
+      "id": "P2P-036",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "invalid pr-number warning text"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestPRNumberEscape$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-037": {
+      "id": "P2P-037",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "unfetchable or empty pull requests"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestNoChangedFilesSkipped$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-038": {
+      "id": "P2P-038",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0002",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "applied label cap and warning"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/main.test.ts",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestLabelCapAt100$",
+          "./batches/BATCH-P2P-0002/"
+        ],
+        "materialize": [
+          {
+            "from": "target/batches/BATCH-P2P-0002",
+            "to": "batches/BATCH-P2P-0002"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-001": {
+      "id": "P2P-001",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R008",
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/changedFiles.test.ts#checkIfAllGlobsMatchAllFiles",
+        "behavior_case": "source-files"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/changedFiles.test.ts",
+        "case": "checkIfAllGlobsMatchAllFiles",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-files"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-003": {
+      "id": "P2P-003",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "boundary",
+        "projection": "return-value",
+        "scenario": "boundary",
+        "surface": "test:__tests__/changedFiles.test.ts#returns an empty object",
+        "behavior_case": "source-file-parser"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/changedFiles.test.ts",
+        "case": "toChangedFilesMatchConfig when there is no 'changed-files' key in the config returns an empty object",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-file-parser"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-011": {
+      "id": "P2P-011",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R005",
+        "R008",
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/branch.test.ts#returns the base branch name"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/branch.test.ts",
+        "case": "getBranchName when the pull requests base branch is requested returns the base branch name",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-base-branches"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-015": {
+      "id": "P2P-015",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "invalid",
+        "projection": "exception",
+        "scenario": "error",
+        "surface": "test:__tests__/add-labels.test.ts#checks subsequent pages after a committed server error"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/add-labels.test.ts",
+        "case": "addLabels checks subsequent pages after a committed server error",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "recovery-pagination"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "P2P-016": {
+      "id": "P2P-016",
+      "kind": "P2P",
+      "batch_id": "BATCH-P2P-0001",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "invalid",
+        "projection": "exception",
+        "scenario": "error",
+        "surface": "test:__tests__/add-labels.test.ts#preserves the server error when verification fails"
+      },
+      "source": {
+        "type": "jest",
+        "file": "__tests__/add-labels.test.ts",
+        "case": "addLabels preserves the server error when verification fails",
+        "timeout": 600
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "recovery-verification-error"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-001": {
+      "id": "F2P-001",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::action.yml output definitions"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "bulk-sync"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-002": {
+      "id": "F2P-002",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R033"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "branch pattern matching"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-002"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-003": {
+      "id": "F2P-003",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::action failure and warning behavior"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-003"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-004": {
+      "id": "F2P-004",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "label addition error recovery"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "add-labels-recovery"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-005": {
+      "id": "F2P-005",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R001"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "dist/index.js::new-labels and all-labels outputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-007": {
+      "id": "F2P-007",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::configuration validation"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-007"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-041"
+    },
+    "F2P-008": {
+      "id": "F2P-008",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "max-files-changed and changed-files-labels-limit interaction"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-008"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-035"
+    },
+    "F2P-010": {
+      "id": "F2P-010",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-entry",
+        "projection": "target-entry-identity",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/index.ts::runtime entry"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-010"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-013": {
+      "id": "F2P-013",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R037"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/labeler.ts::label set mutation"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-013"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-018": {
+      "id": "F2P-018",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/get-inputs/get-inputs.ts::invalid pr-number warning text"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-018"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-024": {
+      "id": "F2P-024",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R032"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/branch.ts::changed-file glob and branch pattern matching"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "minimatch-contract"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-035": {
+      "id": "F2P-035",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R045"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/labeler.ts::max-files-changed gating",
+        "behavior_case": "source-limits"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-limits"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-057": {
+      "id": "F2P-057",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R042"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "dependency-execution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "dependency-policy",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "package-lock.json::repository change surface"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P057_GoModDependencyPolicy",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-068": {
+      "id": "F2P-068",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R038"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/labeler.ts::changed-files-labels-limit gating"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-068"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-069": {
+      "id": "F2P-069",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R043"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-dependency",
+        "projection": "target-dependency-resolution",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "action.yml::dependency manifest"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P069_ActionRuntimeIsDocker",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-070": {
+      "id": "F2P-070",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R002"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-entry",
+        "projection": "target-entry-identity",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "dist/index.js::runtime entry"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P070_GoBinaryIsEntrypoint",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-071": {
+      "id": "F2P-071",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R028"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "migrated production source dependency graph"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P071_NoTypeScriptOrActionsImports",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-072": {
+      "id": "F2P-072",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R029"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-runtime",
+        "projection": "target-condition",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "migrated production runtime dependencies"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P072_NoSubprocessDelegation",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-006": {
+      "id": "F2P-006",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-label-configs.ts::action.yml output definitions"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-006"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-009": {
+      "id": "F2P-009",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-label-configs.ts::GET /repos/{owner}/{repo}/contents/{path}"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-009"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-011": {
+      "id": "F2P-011",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::GET /repos/{owner}/{repo}/contents/{path}"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-011"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-001"
+    },
+    "F2P-012": {
+      "id": "F2P-012",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::configuration validation"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-012"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-063"
+    },
+    "F2P-014": {
+      "id": "F2P-014",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::action.yml output definitions"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-014"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-004"
+    },
+    "F2P-015": {
+      "id": "F2P-015",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-content.ts::GET /repos/{owner}/{repo}/contents/{path}"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-015"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-004"
+    },
+    "F2P-016": {
+      "id": "F2P-016",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-label-configs.ts::configuration fetch failure"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-016"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-001"
+    },
+    "F2P-017": {
+      "id": "F2P-017",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::action.yml input definitions"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-017"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-004"
+    },
+    "F2P-019": {
+      "id": "F2P-019",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::action.yml output definitions"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-019"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-020": {
+      "id": "F2P-020",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::configuration loading path"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-020"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-004"
+    },
+    "F2P-021": {
+      "id": "F2P-021",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::configuration fetch failure"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-021"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-010"
+    },
+    "F2P-022": {
+      "id": "F2P-022",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::unfetchable or empty pull requests"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-022"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-010"
+    },
+    "F2P-023": {
+      "id": "F2P-023",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0001",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/index.ts::unfetchable or empty pull requests"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-023"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-010"
+    },
+    "F2P-025": {
+      "id": "F2P-025",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-label-configs.ts::unfetchable or empty pull requests",
+        "behavior_case": "source-skips"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-skips"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-026": {
+      "id": "F2P-026",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::GET /repos/{owner}/{repo}/pulls/{n}/files",
+        "behavior_case": "F2P-003"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-003"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-027": {
+      "id": "F2P-027",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::GET /repos/{owner}/{repo}/contents/{path}",
+        "behavior_case": "config-loading"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-030"
+    },
+    "F2P-028": {
+      "id": "F2P-028",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-content.ts::action.yml input definitions",
+        "behavior_case": "source-inputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "runtime-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-029": {
+      "id": "F2P-029",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "changed-files container validation",
+        "behavior_case": "config-invalid"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-file-structure"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-030": {
+      "id": "F2P-030",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::configuration loading path",
+        "behavior_case": "config-loading"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-031": {
+      "id": "F2P-031",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/index.ts::configuration loading path",
+        "behavior_case": "config-loading"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-030"
+    },
+    "F2P-032": {
+      "id": "F2P-032",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "glob pattern value validation",
+        "behavior_case": "config-invalid"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-glob-types"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-033": {
+      "id": "F2P-033",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::action failure and warning behavior",
+        "behavior_case": "source-errors"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "permission-errors"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-034": {
+      "id": "F2P-034",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::configuration fetch failure",
+        "behavior_case": "config-missing"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-missing"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-036": {
+      "id": "F2P-036",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::action.yml input definitions",
+        "behavior_case": "source-inputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-060"
+    },
+    "F2P-037": {
+      "id": "F2P-037",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::GET /repos/{owner}/{repo}/pulls/{n}/files",
+        "behavior_case": "F2P-003"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-003"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-038": {
+      "id": "F2P-038",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::unfetchable or empty pull requests",
+        "behavior_case": "source-skips"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-skips"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-025"
+    },
+    "F2P-039": {
+      "id": "F2P-039",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-content.ts::action.yml output definitions",
+        "behavior_case": "source-outputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-040": {
+      "id": "F2P-040",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R032"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/branch.ts::any/all rule aggregation",
+        "behavior_case": "source-aggregation"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-aggregation"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-041": {
+      "id": "F2P-041",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "limit value validation",
+        "behavior_case": "config-invalid"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-limit-validation"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-042": {
+      "id": "F2P-042",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::GET /repos/{owner}/{repo}/pulls/{n}/files",
+        "behavior_case": "F2P-003"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-003"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-043": {
+      "id": "F2P-043",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::GET /repos/{owner}/{repo}/pulls/{n}",
+        "behavior_case": "source-skips"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-skips"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-025"
+    },
+    "F2P-044": {
+      "id": "F2P-044",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::action.yml output definitions",
+        "behavior_case": "source-outputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-039"
+    },
+    "F2P-045": {
+      "id": "F2P-045",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/index.ts::POST /repos/{owner}/{repo}/issues/{n}/labels",
+        "behavior_case": "F2P-005"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-005"
+    },
+    "F2P-046": {
+      "id": "F2P-046",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::POST /repos/{owner}/{repo}/issues/{n}/labels",
+        "behavior_case": "F2P-005"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-005"
+    },
+    "F2P-047": {
+      "id": "F2P-047",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::action.yml output definitions",
+        "behavior_case": "source-outputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-039"
+    },
+    "F2P-048": {
+      "id": "F2P-048",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0002",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::action failure and warning behavior",
+        "behavior_case": "source-errors"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-errors"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-033"
+    },
+    "F2P-049": {
+      "id": "F2P-049",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::POST /repos/{owner}/{repo}/issues/{n}/labels",
+        "behavior_case": "F2P-005"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-005"
+    },
+    "F2P-050": {
+      "id": "F2P-050",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::unfetchable or empty pull requests",
+        "behavior_case": "source-skips"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-skips"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-025"
+    },
+    "F2P-051": {
+      "id": "F2P-051",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::configuration fetch failure",
+        "behavior_case": "config-missing"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-missing"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-034"
+    },
+    "F2P-052": {
+      "id": "F2P-052",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/labeler.ts::bulk label removal failure",
+        "behavior_case": "removal-error"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "removal-error"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-053": {
+      "id": "F2P-053",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-content.ts::configuration fetch failure",
+        "behavior_case": "config-missing"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-missing"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-034"
+    },
+    "F2P-054": {
+      "id": "F2P-054",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "changed-files rule schema and empty blocks",
+        "behavior_case": "config-invalid"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-file-parser"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-055": {
+      "id": "F2P-055",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R035"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-files.ts::GET /repos/{owner}/{repo}/pulls/{n}"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-055"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-056": {
+      "id": "F2P-056",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/types.ts::POST /repos/{owner}/{repo}/issues/{n}/labels",
+        "behavior_case": "F2P-005"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-005"
+    },
+    "F2P-058": {
+      "id": "F2P-058",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R045"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "declared Go packages and exported identifiers"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-run",
+          "^TestGoPublicSurface$",
+          "./target/contracts/surface/"
+        ],
+        "materialize": [
+          {
+            "from": "target/contracts",
+            "to": "target/contracts"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-059": {
+      "id": "F2P-059",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R039"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/labeler.ts::label addition failure handling",
+        "behavior_case": "source-api"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-api"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-004"
+    },
+    "F2P-060": {
+      "id": "F2P-060",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R040"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/get-inputs/get-inputs.ts::pr-number input parsing",
+        "behavior_case": "source-inputs"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-061": {
+      "id": "F2P-061",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::GET /repos/{owner}/{repo}/pulls/{n}",
+        "behavior_case": "source-skips"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-skips"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-025"
+    },
+    "F2P-062": {
+      "id": "F2P-062",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R036"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/remove-labels.ts::GET /repos/{owner}/{repo}/contents/{path}",
+        "behavior_case": "config-loading"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-030"
+    },
+    "F2P-063": {
+      "id": "F2P-063",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R044"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "unknown configuration option handling",
+        "behavior_case": "config-invalid"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-unknown"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      }
+    },
+    "F2P-064": {
+      "id": "F2P-064",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::action failure and warning behavior",
+        "behavior_case": "source-errors"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-errors"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-033"
+    },
+    "F2P-065": {
+      "id": "F2P-065",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/index.ts::GET /repos/{owner}/{repo}/pulls/{n}/files",
+        "behavior_case": "F2P-003"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-003"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-003"
+    },
+    "F2P-066": {
+      "id": "F2P-066",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R041"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/get-changed-pull-requests.ts::POST /repos/{owner}/{repo}/issues/{n}/labels",
+        "behavior_case": "F2P-005"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "F2P-005"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-005"
+    },
+    "F2P-067": {
+      "id": "F2P-067",
+      "kind": "F2P",
+      "batch_id": "BATCH-F2P-0003",
+      "requirement_ids": [
+        "R034"
+      ],
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared-behavior",
+        "projection": "target-execution-path",
+        "required_technology": {
+          "language_name": "Go",
+          "language_version": "1.24.0",
+          "name": "Go",
+          "version": "1.24.0"
+        },
+        "scenario": "target-postcondition",
+        "source_technology": {
+          "language_name": "TypeScript",
+          "language_version": "6.0.3",
+          "name": "TypeScript",
+          "version": "6.0.3"
+        },
+        "surface": "src/api/add-labels.ts::configuration loading path",
+        "behavior_case": "config-loading"
+      },
+      "predicate": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300
+      },
+      "alias_of": "F2P-030"
+    },
+    "DIFF-001": {
+      "id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action.yml input definitions"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-002": {
+      "id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action.yml output definitions"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-003": {
+      "id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R005"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label configuration YAML schema accepted by the action"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-004": {
+      "id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R006"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "GitHub Actions runtime environment contract"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-005": {
+      "id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "GitHub REST and GraphQL calls issued by the action"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-006": {
+      "id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "per-case-boolean-results",
+        "scenario": "shared-case-corpus",
+        "surface": "minimatch compatibility corpus"
+      },
+      "source": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "minimatch-contract",
+          "--runtime",
+          "source"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300,
+        "projection": "json-line"
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "minimatch-contract"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300,
+        "projection": "json-line"
+      }
+    },
+    "DIFF-007": {
+      "id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "action failure and warning behavior"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-008": {
+      "id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files rule evaluation"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-009": {
+      "id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "per-case-boolean-results",
+        "scenario": "shared-case-corpus",
+        "surface": "any/all grouping corpus"
+      },
+      "source": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-aggregation",
+          "--runtime",
+          "source"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300,
+        "projection": "json-line"
+      },
+      "target": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-aggregation"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout": 300,
+        "projection": "json-line"
+      }
+    },
+    "DIFF-010": {
+      "id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label removal on sync"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-011": {
+      "id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label set mutation"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-012": {
+      "id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "applied label cap and warning"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-013": {
+      "id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "max-files-changed gating"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-014": {
+      "id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files-labels-limit gating"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-015": {
+      "id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R017"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "changed-files label classification"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-016": {
+      "id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration loading path"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-017": {
+      "id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration validation"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-018": {
+      "id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "pr-number input parsing"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-019": {
+      "id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "invalid pr-number warning text"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-020": {
+      "id": "DIFF-020",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "unfetchable or empty pull requests"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-021": {
+      "id": "DIFF-021",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "label addition failure handling"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-022": {
+      "id": "DIFF-022",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R024"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "bulk label removal failure"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-023": {
+      "id": "DIFF-023",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "configuration fetch failure"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-024": {
+      "id": "DIFF-024",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "new-labels and all-labels outputs"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-025": {
+      "id": "DIFF-025",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R027"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "public capabilities and contracts"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-026": {
+      "id": "DIFF-026",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "repository change surface"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "DIFF-027": {
+      "id": "DIFF-027",
+      "kind": "DIFFERENTIAL",
+      "batch_id": "BATCH-DIFFERENTIAL-0001",
+      "requirement_ids": [
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "normalized-result",
+        "scenario": "shared-case-corpus",
+        "surface": "test and evaluation integrity"
+      },
+      "source": {
+        "type": "script",
+        "script": "source/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 120
+      },
+      "target": {
+        "type": "script",
+        "script": "target/batches/BATCH-DIFFERENTIAL-0001/probe.sh",
+        "timeout": 900
+      }
+    },
+    "CONTRACT-001": {
+      "id": "CONTRACT-001",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "action.yml input definitions"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "yaml-field",
+        "surface": "action.yml input definitions",
+        "source_entry": "action.yml",
+        "expected": "inputs:repo-token=${{ github.token }};configuration-path=.github/labeler.yml;sync-labels=false;dot=true;pr-number=<multiline>",
+        "timeout": 60
+      },
+      "target": {
+        "type": "contract",
+        "method": "yaml-field",
+        "surface": "action.yml input definitions",
+        "target_entry": "action.yml",
+        "expected": "inputs:repo-token=${{ github.token }};configuration-path=.github/labeler.yml;sync-labels=false;dot=true;pr-number=<multiline>",
+        "timeout": 60,
+        "go_test": "TestActionInputs"
+      }
+    },
+    "CONTRACT-002": {
+      "id": "CONTRACT-002",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R004"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "action.yml output definitions"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "yaml-field",
+        "surface": "action.yml output definitions",
+        "source_entry": "action.yml",
+        "expected": "outputs:new-labels,all-labels",
+        "timeout": 60
+      },
+      "target": {
+        "type": "contract",
+        "method": "yaml-field",
+        "surface": "action.yml output definitions",
+        "target_entry": "action.yml",
+        "expected": "outputs:new-labels,all-labels",
+        "timeout": 60,
+        "go_test": "TestActionOutputs"
+      }
+    },
+    "CONTRACT-003": {
+      "id": "CONTRACT-003",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R005"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "label configuration YAML schema accepted by the action"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "config-accept",
+        "surface": "label configuration YAML schema accepted by the action",
+        "source_entry": "src/api/get-label-configs.ts",
+        "expected": "accepted",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-file-parser",
+          "source-config"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "config-accept",
+        "surface": "label configuration YAML schema accepted by the action",
+        "target_entry": "internal/config/config.go",
+        "expected": "accepted",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-file-parser",
+          "source-config"
+        ]
+      }
+    },
+    "CONTRACT-004": {
+      "id": "CONTRACT-004",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R006"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "GitHub Actions runtime environment contract"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "env-contract",
+        "surface": "GitHub Actions runtime environment contract",
+        "source_entry": "src/get-inputs/get-inputs.ts",
+        "expected": "read INPUT_*;read GITHUB_EVENT_PATH;append GITHUB_OUTPUT",
+        "timeout": 60,
+        "behavior_cases": [
+          "runtime-inputs"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "env-contract",
+        "surface": "GitHub Actions runtime environment contract",
+        "target_entry": "internal/core/core.go",
+        "expected": "read INPUT_*;read GITHUB_EVENT_PATH;append GITHUB_OUTPUT",
+        "timeout": 60,
+        "behavior_cases": [
+          "runtime-inputs"
+        ]
+      }
+    },
+    "CONTRACT-005": {
+      "id": "CONTRACT-005",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "GitHub REST and GraphQL calls issued by the action"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "api-request-log",
+        "surface": "GitHub REST and GraphQL calls issued by the action",
+        "source_entry": "src/api/get-content.ts",
+        "expected": "POST /repos/{owner}/{repo}/issues/{n}/labels;GET /repos/{owner}/{repo}/pulls/{n}/files;GET /repos/{owner}/{repo}/pulls/{n};GET /repos/{owner}/{repo}/contents/{path};GraphQL removeLabelsFromLabelable",
+        "timeout": 60,
+        "behavior_cases": [
+          "api-requests",
+          "bulk-sync"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "api-request-log",
+        "surface": "GitHub REST and GraphQL calls issued by the action",
+        "target_entry": "internal/githubapi/client.go",
+        "expected": "POST /repos/{owner}/{repo}/issues/{n}/labels;GET /repos/{owner}/{repo}/pulls/{n}/files;GET /repos/{owner}/{repo}/pulls/{n};GET /repos/{owner}/{repo}/contents/{path};GraphQL removeLabelsFromLabelable",
+        "timeout": 60,
+        "behavior_cases": [
+          "api-requests",
+          "bulk-sync"
+        ]
+      }
+    },
+    "CONTRACT-006": {
+      "id": "CONTRACT-006",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R008"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "changed-file glob and branch pattern matching"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "matcher",
+        "surface": "changed-file glob and branch pattern matching",
+        "source_entry": "src/changedFiles.ts",
+        "expected": "dot-false-hidden=false;dot-true-hidden=true;github-glob=true;negate=true;branch-regex=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "minimatch-contract",
+          "F2P-002"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "matcher",
+        "surface": "changed-file glob and branch pattern matching",
+        "target_entry": "internal/minimatch/minimatch.go",
+        "expected": "dot-false-hidden=false;dot-true-hidden=true;github-glob=true;negate=true;branch-regex=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "minimatch-contract",
+          "F2P-002"
+        ]
+      }
+    },
+    "CONTRACT-007": {
+      "id": "CONTRACT-007",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "action failure and warning behavior"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "exit-status",
+        "surface": "action failure and warning behavior",
+        "source_entry": "src/labeler.ts",
+        "expected": "unexpected=failed;403-unauthorized=failed+permission;resource-not-accessible=warning+failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "permission-errors"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "exit-status",
+        "surface": "action failure and warning behavior",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "unexpected=failed;403-unauthorized=failed+permission;resource-not-accessible=warning+failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "permission-errors"
+        ]
+      }
+    },
+    "CONTRACT-008": {
+      "id": "CONTRACT-008",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "changed-files rule evaluation"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "changed-files rule evaluation",
+        "source_entry": "src/changedFiles.ts",
+        "expected": "any-glob-to-any-file=true;any-glob-to-all-files=true;all-globs-to-any-file=true;all-globs-to-all-files=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-files"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "changed-files rule evaluation",
+        "target_entry": "internal/match/changedfiles.go",
+        "expected": "any-glob-to-any-file=true;any-glob-to-all-files=true;all-globs-to-any-file=true;all-globs-to-all-files=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-files"
+        ]
+      }
+    },
+    "CONTRACT-009": {
+      "id": "CONTRACT-009",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "any/all rule aggregation"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "any/all rule aggregation",
+        "source_entry": "src/labeler.ts",
+        "expected": "any=at-least-one;all=every;label=conjunction-of-matchobjects",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-aggregation"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "any/all rule aggregation",
+        "target_entry": "internal/match/match.go",
+        "expected": "any=at-least-one;all=every;label=conjunction-of-matchobjects",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-aggregation"
+        ]
+      }
+    },
+    "CONTRACT-010": {
+      "id": "CONTRACT-010",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "label removal on sync"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "api-request-log",
+        "surface": "label removal on sync",
+        "source_entry": "src/api/remove-labels.ts",
+        "expected": "sync-labels-true=1 removeLabelsFromLabelable;sync-labels-false=0",
+        "timeout": 60,
+        "behavior_cases": [
+          "sync-labels"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "api-request-log",
+        "surface": "label removal on sync",
+        "target_entry": "internal/githubapi/client.go",
+        "expected": "sync-labels-true=1 removeLabelsFromLabelable;sync-labels-false=0",
+        "timeout": 60,
+        "behavior_cases": [
+          "sync-labels"
+        ]
+      }
+    },
+    "CONTRACT-011": {
+      "id": "CONTRACT-011",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "label set mutation"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "label set mutation",
+        "source_entry": "src/labeler.ts",
+        "expected": "non-config-label=kept;concurrent-label=kept",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-outputs"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "label set mutation",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "non-config-label=kept;concurrent-label=kept",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-outputs"
+        ]
+      }
+    },
+    "CONTRACT-012": {
+      "id": "CONTRACT-012",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R014"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "applied label cap and warning"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "applied label cap and warning",
+        "source_entry": "src/labeler.ts",
+        "expected": "applied-first=100;excess-warning=count",
+        "timeout": 60,
+        "behavior_cases": [
+          "F2P-013"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "applied label cap and warning",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "applied-first=100;excess-warning=count",
+        "timeout": 60,
+        "behavior_cases": [
+          "F2P-013"
+        ]
+      }
+    },
+    "CONTRACT-013": {
+      "id": "CONTRACT-013",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "max-files-changed gating"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "max-files-changed gating",
+        "source_entry": "src/labeler.ts",
+        "expected": "changed-files-skipped=true;branch-labels-active=true;existing-left=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "max-files"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "max-files-changed gating",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "changed-files-skipped=true;branch-labels-active=true;existing-left=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "max-files"
+        ]
+      }
+    },
+    "CONTRACT-014": {
+      "id": "CONTRACT-014",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R016"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "changed-files-labels-limit gating"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "changed-files-labels-limit gating",
+        "source_entry": "src/labeler.ts",
+        "expected": "exceeds-limit=skipped;equal-to-limit=applied;max-files-changed-first=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "labels-limit"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "changed-files-labels-limit gating",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "exceeds-limit=skipped;equal-to-limit=applied;max-files-changed-first=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "labels-limit"
+        ]
+      }
+    },
+    "CONTRACT-015": {
+      "id": "CONTRACT-015",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R017"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "changed-files label classification"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "changed-files label classification",
+        "source_entry": "src/api/get-label-configs.ts",
+        "expected": "has-changed-files-rule=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "label-classification"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "changed-files label classification",
+        "target_entry": "internal/config/config.go",
+        "expected": "has-changed-files-rule=true",
+        "timeout": 60,
+        "behavior_cases": [
+          "label-classification"
+        ]
+      }
+    },
+    "CONTRACT-016": {
+      "id": "CONTRACT-016",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "configuration loading path"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "configuration loading path",
+        "source_entry": "src/api/get-label-configs.ts",
+        "expected": "local-exists=disk;local-missing=contents-api+base64-decoded",
+        "timeout": 60,
+        "behavior_cases": [
+          "config-loading"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "configuration loading path",
+        "target_entry": "internal/config/config.go",
+        "expected": "local-exists=disk;local-missing=contents-api+base64-decoded",
+        "timeout": 60,
+        "behavior_cases": [
+          "config-loading"
+        ]
+      }
+    },
+    "CONTRACT-017": {
+      "id": "CONTRACT-017",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "configuration validation"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "error-type",
+        "surface": "configuration validation",
+        "source_entry": "src/api/get-label-configs.ts",
+        "expected": "unknown-key=info+ignored;negative-limit=error",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-config"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "error-type",
+        "surface": "configuration validation",
+        "target_entry": "internal/config/config.go",
+        "expected": "unknown-key=info+ignored;negative-limit=error;malformed-changed-files=error",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-file-parser",
+          "config-file-structure",
+          "config-glob-types",
+          "config-limit-validation",
+          "config-unknown"
+        ]
+      }
+    },
+    "CONTRACT-018": {
+      "id": "CONTRACT-018",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "pr-number input parsing"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "pr-number input parsing",
+        "source_entry": "src/get-inputs/get-pr-numbers.ts",
+        "expected": "trim=true;blank-ignored=true;positive-int=accepted;invalid=warned+skipped;empty=event-pr",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-inputs"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "pr-number input parsing",
+        "target_entry": "internal/inputs/inputs.go",
+        "expected": "trim=true;blank-ignored=true;positive-int=accepted;invalid=warned+skipped;empty=event-pr",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-inputs"
+        ]
+      }
+    },
+    "CONTRACT-019": {
+      "id": "CONTRACT-019",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R021"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "invalid pr-number warning text"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "warning-normalized",
+        "surface": "invalid pr-number warning text",
+        "source_entry": "src/get-inputs/get-pr-numbers.ts",
+        "expected": "bel-0x07=\\x07",
+        "timeout": 60,
+        "behavior_cases": [
+          "F2P-018"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "warning-normalized",
+        "surface": "invalid pr-number warning text",
+        "target_entry": "internal/inputs/inputs.go",
+        "expected": "bel-0x07=\\x07",
+        "timeout": 60,
+        "behavior_cases": [
+          "F2P-018"
+        ]
+      }
+    },
+    "CONTRACT-020": {
+      "id": "CONTRACT-020",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "unfetchable or empty pull requests"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "unfetchable or empty pull requests",
+        "source_entry": "src/api/get-changed-pull-requests.ts",
+        "expected": "unfetchable=warned+skipped;empty=warned+skipped",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-skips"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "unfetchable or empty pull requests",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "unfetchable=warned+skipped;empty=warned+skipped",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-skips"
+        ]
+      }
+    },
+    "CONTRACT-021": {
+      "id": "CONTRACT-021",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "label addition failure handling"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "behavior",
+        "surface": "label addition failure handling",
+        "source_entry": "src/api/add-labels.ts",
+        "expected": "5xx-then-listed=success;5xx-not-listed=failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "add-labels-recovery"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "behavior",
+        "surface": "label addition failure handling",
+        "target_entry": "internal/githubapi/client.go",
+        "expected": "5xx-then-listed=success;5xx-not-listed=failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "add-labels-recovery"
+        ]
+      }
+    },
+    "CONTRACT-022": {
+      "id": "CONTRACT-022",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R024"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "bulk label removal failure"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "error-type",
+        "surface": "bulk label removal failure",
+        "source_entry": "src/labeler.ts",
+        "expected": "failed-naming-configured-labels-and-pr",
+        "timeout": 60,
+        "behavior_cases": [
+          "removal-error"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "error-type",
+        "surface": "bulk label removal failure",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "failed-naming-configured-labels-and-pr",
+        "timeout": 60,
+        "behavior_cases": [
+          "removal-error"
+        ]
+      }
+    },
+    "CONTRACT-023": {
+      "id": "CONTRACT-023",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R025"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "configuration fetch failure"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "exit-status",
+        "surface": "configuration fetch failure",
+        "source_entry": "src/api/get-label-configs.ts",
+        "expected": "warned-missing-file-and-access;failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "config-missing"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "exit-status",
+        "surface": "configuration fetch failure",
+        "target_entry": "internal/config/config.go",
+        "expected": "warned-missing-file-and-access;failed",
+        "timeout": 60,
+        "behavior_cases": [
+          "config-missing"
+        ]
+      }
+    },
+    "CONTRACT-024": {
+      "id": "CONTRACT-024",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "new-labels and all-labels outputs"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "outputs",
+        "surface": "new-labels and all-labels outputs",
+        "source_entry": "src/labeler.ts",
+        "expected": "new-labels=added-only;all-labels=capped-100;preexisting-first;config-order-appended;comma-separated",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-outputs"
+        ]
+      },
+      "target": {
+        "type": "contract",
+        "method": "outputs",
+        "surface": "new-labels and all-labels outputs",
+        "target_entry": "internal/labeler/labeler.go",
+        "expected": "new-labels=added-only;all-labels=capped-100;preexisting-first;config-order-appended;comma-separated",
+        "timeout": 60,
+        "behavior_cases": [
+          "source-outputs"
+        ]
+      }
+    },
+    "CONTRACT-025": {
+      "id": "CONTRACT-025",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R027"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "public capabilities and contracts"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "inventory",
+        "surface": "public capabilities and contracts",
+        "source_entry": "README.md",
+        "expected": "provided=preserved;removed=0;changed-outside-goal=0",
+        "timeout": 60
+      },
+      "target": {
+        "type": "contract",
+        "method": "inventory",
+        "surface": "public capabilities and contracts",
+        "target_entry": "README.md",
+        "expected": "provided=preserved;removed=0;changed-outside-goal=0",
+        "timeout": 60,
+        "go_test": "TestGoPublicSurface",
+        "go_package": "./target/contracts/surface/"
+      }
+    },
+    "CONTRACT-026": {
+      "id": "CONTRACT-026",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "repository change surface"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "inventory",
+        "surface": "repository change surface",
+        "source_entry": "package.json",
+        "expected": "unrelated-files-untouched=true",
+        "timeout": 60
+      },
+      "target": {
+        "type": "contract",
+        "method": "inventory",
+        "surface": "repository change surface",
+        "target_entry": "go.mod",
+        "expected": "unrelated-files-untouched=true",
+        "timeout": 60
+      }
+    },
+    "CONTRACT-027": {
+      "id": "CONTRACT-027",
+      "kind": "CONTRACT",
+      "batch_id": "BATCH-CONTRACT-0001",
+      "requirement_ids": [
+        "R031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "coverage": {
+        "input_class": "declared",
+        "projection": "contract-value",
+        "scenario": "public-contract",
+        "surface": "test and evaluation integrity"
+      },
+      "source": {
+        "type": "contract-source",
+        "method": "inventory",
+        "surface": "test and evaluation integrity",
+        "source_entry": "jest.config.ts",
+        "expected": "assertions-retained=true;comparisons-not-weakened=true;no-hardcoded-io=true",
+        "timeout": 60
+      },
+      "target": {
+        "type": "contract",
+        "method": "inventory",
+        "surface": "test and evaluation integrity",
+        "target_entry": "internal/labeler/golden_test.go",
+        "expected": "assertions-retained=true;comparisons-not-weakened=true;no-hardcoded-io=true",
+        "timeout": 60
+      }
+    }
+  },
+  "f2p_predicate": "shared-target-technology",
+  "target_technology": {
+    "language_name": "Go",
+    "version": "1.24.0"
+  },
+  "behavior_contract_revision": "labeler-behavior-v4",
+  "observation_aliases": {
+    "F2P-011": "F2P-001",
+    "F2P-016": "F2P-001",
+    "F2P-006": "F2P-003",
+    "F2P-009": "F2P-003",
+    "F2P-019": "F2P-003",
+    "F2P-026": "F2P-003",
+    "F2P-037": "F2P-003",
+    "F2P-042": "F2P-003",
+    "F2P-055": "F2P-003",
+    "F2P-065": "F2P-003",
+    "F2P-014": "F2P-004",
+    "F2P-015": "F2P-004",
+    "F2P-017": "F2P-004",
+    "F2P-020": "F2P-004",
+    "F2P-059": "F2P-004",
+    "F2P-045": "F2P-005",
+    "F2P-046": "F2P-005",
+    "F2P-049": "F2P-005",
+    "F2P-056": "F2P-005",
+    "F2P-066": "F2P-005",
+    "F2P-021": "F2P-010",
+    "F2P-022": "F2P-010",
+    "F2P-023": "F2P-010",
+    "F2P-038": "F2P-025",
+    "F2P-043": "F2P-025",
+    "F2P-050": "F2P-025",
+    "F2P-061": "F2P-025",
+    "F2P-027": "F2P-030",
+    "F2P-031": "F2P-030",
+    "F2P-062": "F2P-030",
+    "F2P-067": "F2P-030",
+    "F2P-048": "F2P-033",
+    "F2P-064": "F2P-033",
+    "F2P-051": "F2P-034",
+    "F2P-053": "F2P-034",
+    "F2P-008": "F2P-035",
+    "F2P-044": "F2P-039",
+    "F2P-047": "F2P-039",
+    "F2P-007": "F2P-041",
+    "F2P-036": "F2P-060",
+    "F2P-012": "F2P-063"
+  }
+}

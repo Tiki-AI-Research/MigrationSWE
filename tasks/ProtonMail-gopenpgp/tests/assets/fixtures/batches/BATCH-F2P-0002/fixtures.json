@@ -1,0 +1,50 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "fixtures": [
+    {
+      "id": "mime-iso-8859-1",
+      "origin": "inline in target probe",
+      "description": "text/plain part with charset=iso-8859-1 carrying the single byte 0xE9; exercises R024 charset decoding through the go-message/charset registration",
+      "used_by": ["F2P-025", "F2P-027", "F2P-033", "F2P-043", "F2P-045"]
+    },
+    {
+      "id": "mime-unknown-charset-mixed",
+      "origin": "inline in target probe",
+      "description": "multipart/mixed whose first part declares charset=x-unknown followed by a base64 application/octet-stream attachment; exercises R025 tolerance of message.IsUnknownCharset",
+      "used_by": ["F2P-037", "F2P-038", "F2P-042", "F2P-046"]
+    },
+    {
+      "id": "mime-unknown-encoding-mixed",
+      "origin": "inline in target probe",
+      "description": "multipart/mixed whose first part declares Content-Transfer-Encoding: x-unknown followed by a base64 attachment; exercises R026 tolerance of message.IsUnknownEncoding",
+      "used_by": ["F2P-031", "F2P-040"]
+    },
+    {
+      "id": "mime-alternative-html-plain",
+      "origin": "inline in target probe",
+      "description": "multipart/alternative with text/plain 'plain' and text/html '<p>html</p>'; exercises R027 html-over-plain body selection",
+      "used_by": ["F2P-026", "F2P-032", "F2P-036", "F2P-048"]
+    },
+    {
+      "id": "mime-content-disposition-attachment",
+      "origin": "inline in target probe",
+      "description": "multipart/mixed with a text/plain Content-Disposition: attachment; filename=a.txt part, a base64 application/octet-stream part and a plain text/plain part; exercises R028 header serialization and R030 disposition detection",
+      "used_by": ["F2P-028", "F2P-030", "F2P-035", "F2P-041"]
+    },
+    {
+      "id": "mime-multipart-signed-raw",
+      "origin": "inline in target probe",
+      "description": "multipart/signed body whose signed part is quoted-printable; exercises R029 raw transfer-encoded extraction through go-message textproto",
+      "used_by": ["F2P-029", "F2P-034"]
+    }
+  ],
+  "retained_testdata": [
+    "mime/testdata/mime/decryption-key.asc",
+    "mime/testdata/mime/verification-key.asc",
+    "mime/testdata/mime/scenario_00.asc",
+    "mime/testdata/mime/scenario_11.asc",
+    "mime/testdata/mime/scenario_13.asc",
+    "mime/testdata/mime_pgpMessage"
+  ]
+}

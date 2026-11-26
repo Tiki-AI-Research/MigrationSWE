@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "status": "ready",
+  "task_id": "versatica-jssip-20260923013559-f093ae",
+  "reference_paths_relative_to": "tests/",
+  "source": {
+    "base_commit": "7a963d16ae5c17b430b57b307d3f3ba74c0cbb1f",
+    "base_tree_hash": "c91ed3499a434baf7835782d3abc947499921539",
+    "source_image": "docker.io/tikiaiteam/migration:versatica-jssip-verifier-base-image-20261126@sha256:ec3c94bfa1038f9ab5f1b270e43431346474864cc7c5c24e0aacfdadabe11374",
+    "base_repo_archive": {
+      "path": "assets/base-repo.tar.gz",
+      "sha256": "29d9f40880663cd7eb33583bb62736b28a4032cfe6a3603ebb3da8f69c754f46",
+      "file_count": 85,
+      "excludes": [
+        ".git",
+        "node_modules"
+      ]
+    }
+  },
+  "protected_paths": [
+    {
+      "path": "tests/**",
+      "owner": "evaluator",
+      "reason": "Contains hidden P2P/F2P payloads, frozen expected values, the verifier, hard gates, and scoring configuration. Candidate changes here would alter measurement.",
+      "enforced_by": "verifier/hardgate.py:_protected_path_check via evaluation_environment_integrity"
+    },
+    {
+      "path": "src/test/migration-verifier/**",
+      "owner": "evaluator",
+      "reason": "The hidden harness run-checks.cjs is injected from verifier/test.patch into the evaluation workspace; it must never be candidate-editable.",
+      "enforced_by": "verifier/hardgate.py:_protected_path_check via evaluation_environment_integrity"
+    }
+  ],
+  "allowed_change_paths": [
+    "**"
+  ],
+  "allowed_change_paths_note": "Matches tests/config.json. Protected paths take precedence: any candidate modification under a protected path fails evaluation_environment_integrity (policy violation, reward -1).",
+  "frozen_files": [
+    {
+      "path": "verifier/test.patch",
+      "sha256": "4d59727761d415741ec5adfa6480f6fc816b74f23f6396f8c5f452159d66e4e7",
+      "role": "hidden P2P/F2P payload; defines 46 F2P and 33 P2P nodes (32 P2P + 1 differential)",
+      "size_bytes": 59799
+    },
+    {
+      "path": "verifier/reference-grammar.js",
+      "sha256": "8fc107d49142abaf09d863bc56656cdc3f36e7b254394ddcc72daa7ef1521d1b",
+      "role": "frozen baseline parser used as the P2P reference; byte-identical to baseline src/Grammar.js"
+    },
+    {
+      "path": "verifier/expected.json",
+      "sha256": "4307ebb59d8c396402ff67c2cf3e1f1a2ed6e1287ebbf832d683d256fec9d262",
+      "role": "frozen expected values for the 33 P2P nodes (32 P2P + 1 differential)"
+    }
+  ],
+  "evaluator_implementation": {
+    "note": "Evaluator implementation files (config.json, test.sh, Dockerfile, docker-compose.yaml, grader.py and verifier/*.py other than the frozen payload) are not candidate-contract inputs. They are covered by the tests/** protected path but intentionally not hash-frozen here while the evaluation work package is still under construction.",
+    "path_globs": [
+      "config.json",
+      "test.sh",
+      "Dockerfile",
+      "docker-compose.yaml",
+      "grader.py",
+      "verifier/*.py"
+    ]
+  },
+  "assets": [
+    {
+      "path": "assets/migration-contract.json",
+      "sha256": "3bd1b38f24de3128f16f5aaac37def4889b543164326a349ca6d11f1ca021a66",
+      "role": "mechanically extracted migration contract for U1-U5"
+    },
+    {
+      "path": "assets/baseline-measurement.json",
+      "sha256": "edd19a3eaa56d12c3668f4e171e68b5a675e41b710faceb45751dc0c9090ecc3",
+      "role": "frozen baseline measurement (original offline suite plus a direct incremental source probe; P2P 33/33 and F2P 0/46)"
+    },
+    {
+      "path": "assets/base-source-files.json",
+      "sha256": "3623bf7cb40a8d1945ba217128d127b1b020703f8efb1973c5b70226ae2cdb69",
+      "role": "per-file mode/size/sha256 manifest of the authoritative baseline tree"
+    },
+    {
+      "path": "assets/base-repo.tar.gz",
+      "sha256": "29d9f40880663cd7eb33583bb62736b28a4032cfe6a3603ebb3da8f69c754f46",
+      "role": "deterministic baseline archive (sorted names, zero mtime/owner, no .git or node_modules)"
+    }
+  ],
+  "integrity_rules": {
+    "hash_algorithm": "sha256",
+    "protected_paths_must_be_byte_identical": true,
+    "candidate_patch_must_not_touch_protected_paths": true,
+    "test_patch_is_evaluator_owned": true,
+    "reference_and_expected_are_frozen_at_baseline": true,
+    "asset_scope": "These hashes are preparation-time freeze records. tests/verifier/asset_integrity.py verifies the tests/assets manifest entries before any asset is consumed; hardgate.py enforces protected paths against the candidate diff. test.patch, reference-grammar.js and expected.json are consumed from verifier/."
+  }
+}

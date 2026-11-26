@@ -1,0 +1,396 @@
+{
+  "schema_version": "differential-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "description": "Language-agnostic differential case corpus for the omg-mcp-server TypeScript-to-Python migration. The same corpus is executed by the source probe (source/batches/BATCH-DIFFERENTIAL-0001/probe.mjs against /input/source) and the target probe (target/batches/BATCH-DIFFERENTIAL-0001/probe.py against /input/target). Each case emits a normalized observation keyed by its observation id; the grader asserts source result == target result (relation equal_after_normalization).",
+  "normalization": {
+    "mask_keys": ["updated_at", "created_at", "phase_started_at", "completed_at"],
+    "mask_timestamp_regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+    "mask_timestamp_replacement": "<TS>",
+    "mask_id_regex": "^story-[0-9a-f]{8}$",
+    "mask_id_replacement": "story-<ID>",
+    "mask_path_replacement": "<WS>",
+    "sort_lists_by_key": { "active_modes": "mode", "remaining": null }
+  },
+  "setup_root": ".omc",
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "requirement_ids": ["R002"],
+      "surface": "root repository tree outside `mcp-server/`",
+      "steps": [
+        {
+          "hash_paths": ["index.ts", "package.json", "schemas.ts", "tsconfig.json", "tools", "stateless"]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-002",
+      "requirement_ids": ["R003"],
+      "surface": "state file read-modify-write ordering",
+      "steps": [
+        { "tool": "omg_write_state", "args": { "mode": "ralph", "state": "{\"a\":1}" } },
+        { "tool": "omg_write_state", "args": { "mode": "ralph", "state": "{\"b\":2}" } },
+        { "read": ".omc/state/ralph-state.json" }
+      ]
+    },
+    {
+      "id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "surface": "`tools/list` result of the stdio server",
+      "steps": [ { "tools": true } ]
+    },
+    {
+      "id": "DIFF-004",
+      "requirement_ids": ["R005"],
+      "surface": "MCP CallToolResult envelope of every tool",
+      "steps": [
+        { "tool": "omg_list_active", "args": {} },
+        { "tool": "omg_read_state", "args": { "mode": "../../etc" } }
+      ]
+    },
+    {
+      "id": "DIFF-005",
+      "requirement_ids": ["R009"],
+      "surface": "`omg_read_state` result text",
+      "steps": [
+        { "tool": "omg_read_state", "args": { "mode": "ralph" } },
+        {
+          "setup": [{ "dest": ".omc/state/ralph-state.json", "content": { "x": 1 } }],
+          "tool": "omg_read_state",
+          "args": { "mode": "ralph" }
+        },
+        { "tool": "omg_read_state", "args": { "mode": "../../etc" } }
+      ]
+    },
+    {
+      "id": "DIFF-006",
+      "requirement_ids": ["R010"],
+      "surface": "`omg_write_state` result text and persisted file",
+      "steps": [
+        { "tool": "omg_write_state", "args": { "mode": "ralph", "state": "{\"a\":1}" } },
+        { "tool": "omg_write_state", "args": { "mode": "ralph", "state": "{\"b\":2}" } },
+        { "read": ".omc/state/ralph-state.json" },
+        {
+          "setup": [{ "dest": ".omc/state/ralph-state.json", "raw": "not-json" }],
+          "tool": "omg_write_state",
+          "args": { "mode": "ralph", "state": "{\"c\":3}" }
+        },
+        { "read": ".omc/state/ralph-state.json" },
+        { "tool": "omg_write_state", "args": { "mode": "ralph", "state": "not json" } }
+      ]
+    },
+    {
+      "id": "DIFF-007",
+      "requirement_ids": ["R011"],
+      "surface": "`omg_clear_state` result text and file deletion",
+      "steps": [
+        { "tool": "omg_clear_state", "args": {} },
+        {
+          "setup": [
+            { "dest": ".omc/state/ralph-state.json", "content": { "active": true } },
+            { "dest": ".omc/state/team-state.json", "content": { "active": true } }
+          ],
+          "tool": "omg_clear_state",
+          "args": { "mode": "ralph" }
+        },
+        { "read_dir": ".omc/state" },
+        { "tool": "omg_clear_state", "args": {} },
+        { "read_dir": ".omc/state" }
+      ]
+    },
+    {
+      "id": "DIFF-008",
+      "requirement_ids": ["R012"],
+      "surface": "`omg_list_active` result text",
+      "steps": [
+        { "tool": "omg_list_active", "args": {} },
+        {
+          "setup": [
+            { "dest": ".omc/state/ralph-state.json", "content": { "active": true, "current_phase": 1, "updated_at": "2020-01-01T00:00:00.000Z" } },
+            { "dest": ".omc/state/team-state.json", "content": { "active": false, "current_phase": 2 } }
+          ],
+          "tool": "omg_list_active",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "DIFF-009",
+      "requirement_ids": ["R013"],
+      "surface": "`omg_read_prd` result text",
+      "steps": [
+        { "tool": "omg_read_prd", "args": {} },
+        {
+          "setup": [{ "fixture": "prd.json", "dest": ".omc/prd.json" }],
+          "tool": "omg_read_prd",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "DIFF-010",
+      "requirement_ids": ["R014"],
+      "surface": "`omg_create_prd` result text and persisted story defaults",
+      "steps": [
+        { "tool": "omg_create_prd", "args": { "title": "T", "stories": [{ "title": "S" }] } },
+        { "read": ".omc/prd.json" }
+      ]
+    },
+    {
+      "id": "DIFF-011",
+      "requirement_ids": ["R015"],
+      "surface": "`omg_update_story` result text",
+      "steps": [
+        { "tool": "omg_update_story", "args": { "story_id": "s1", "passes": true } },
+        {
+          "setup": [{ "fixture": "prd.json", "dest": ".omc/prd.json" }],
+          "tool": "omg_update_story",
+          "args": { "story_id": "missing", "passes": true }
+        },
+        { "tool": "omg_update_story", "args": { "story_id": "story-fixed01", "passes": true, "evidence": "proof" } },
+        { "read": ".omc/prd.json" }
+      ]
+    },
+    {
+      "id": "DIFF-012",
+      "requirement_ids": ["R016"],
+      "surface": "`omg_verify_story` result text",
+      "steps": [
+        { "tool": "omg_verify_story", "args": {} },
+        {
+          "setup": [{ "fixture": "prd.json", "dest": ".omc/prd.json" }],
+          "tool": "omg_verify_story",
+          "args": {}
+        },
+        {
+          "setup": [{ "fixture": "prd-all-passing.json", "dest": ".omc/prd.json" }],
+          "tool": "omg_verify_story",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "DIFF-013",
+      "requirement_ids": ["R017"],
+      "surface": "autopilot phase table exposed by `omg_get_phase_info`",
+      "steps": [ { "tool": "omg_get_phase_info", "args": {} } ]
+    },
+    {
+      "id": "DIFF-014",
+      "requirement_ids": ["R018"],
+      "surface": "`omg_next_phase` result text and persisted state",
+      "steps": [
+        { "tool": "omg_next_phase", "args": { "current_phase": 0 } },
+        {
+          "setup": [{ "fixture": "state/omg-autopilot-state.json", "dest": ".omc/state/omg-autopilot-state.json" }],
+          "tool": "omg_next_phase",
+          "args": { "current_phase": 4 }
+        },
+        { "read": ".omc/state/omg-autopilot-state.json" },
+        {
+          "setup": [{ "dest": ".omc/state/omg-autopilot-state.json", "content": { "active": true, "current_phase": 2 } }],
+          "tool": "omg_next_phase",
+          "args": { "current_phase": 5 }
+        },
+        {
+          "setup": [{ "dest": ".omc/state/omg-autopilot-state.json", "content": { "active": true, "current_phase": 5 } }],
+          "tool": "omg_next_phase",
+          "args": { "current_phase": 5 }
+        },
+        { "read": ".omc/state/omg-autopilot-state.json" }
+      ]
+    },
+    {
+      "id": "DIFF-015",
+      "requirement_ids": ["R019"],
+      "surface": "`omg_check_completion` result text",
+      "steps": [
+        { "tool": "omg_check_completion", "args": {} },
+        {
+          "setup": [
+            { "dest": ".omc/state/ralph-state.json", "content": { "active": true } },
+            { "dest": ".omc/state/team-state.json", "content": { "active": true, "current_phase": true } },
+            { "dest": ".omc/state/ultraqa-state.json", "content": { "active": true, "current_cycle": 2 } }
+          ],
+          "tool": "omg_check_completion",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "DIFF-016",
+      "requirement_ids": ["R020"],
+      "surface": "`omg_get_phase_info` result text",
+      "steps": [
+        { "tool": "omg_get_phase_info", "args": { "phase": 100 } },
+        { "tool": "omg_get_phase_info", "args": { "phase": 2 } },
+        { "tool": "omg_get_phase_info", "args": {} }
+      ]
+    },
+    {
+      "id": "DIFF-017",
+      "requirement_ids": ["R021"],
+      "surface": "`omg_read_memory` result text",
+      "steps": [
+        { "tool": "omg_read_memory", "args": {} },
+        {
+          "setup": [{ "fixture": "project-memory.json", "dest": ".omc/project-memory.json" }],
+          "tool": "omg_read_memory",
+          "args": {}
+        },
+        { "tool": "omg_read_memory", "args": { "category": "user" } },
+        { "tool": "omg_read_memory", "args": { "key": "alpha" } }
+      ]
+    },
+    {
+      "id": "DIFF-018",
+      "requirement_ids": ["R022"],
+      "surface": "`omg_write_memory` result text",
+      "steps": [
+        { "tool": "omg_write_memory", "args": { "key": "k", "value": "v" } },
+        { "tool": "omg_write_memory", "args": { "key": "k", "value": "v2" } },
+        { "tool": "omg_write_memory", "args": { "key": "long", "value": "<oversize>" } },
+        { "tool": "omg_write_memory", "args": { "key": "newkey", "value": "x" }, "preset_full_store": true }
+      ]
+    },
+    {
+      "id": "DIFF-019",
+      "requirement_ids": ["R023"],
+      "surface": "`omg_delete_memory` result text",
+      "steps": [
+        { "tool": "omg_delete_memory", "args": { "key": "missing" } },
+        {
+          "setup": [{ "fixture": "project-memory.json", "dest": ".omc/project-memory.json" }],
+          "tool": "omg_delete_memory",
+          "args": { "key": "alpha" }
+        }
+      ]
+    },
+    {
+      "id": "DIFF-020",
+      "requirement_ids": ["R024"],
+      "surface": "`omg_select_model` result shape",
+      "steps": [
+        { "tool": "omg_select_model", "args": { "task": "quick fix" } },
+        { "tool": "omg_select_model", "args": { "task": "architect a migration" } }
+      ]
+    },
+    {
+      "id": "DIFF-021",
+      "requirement_ids": ["R025"],
+      "surface": "complexity score/tier of `omg_select_model`",
+      "steps": [
+        { "tool": "omg_select_model", "args": { "task": "please refactor this" } },
+        { "tool": "omg_select_model", "args": { "task": "add a feature" } },
+        { "tool": "omg_select_model", "args": { "task": "do work", "file_count": 10 } },
+        { "tool": "omg_select_model", "args": { "task": "x", "file_count": 5 } }
+      ]
+    },
+    {
+      "id": "DIFF-022",
+      "requirement_ids": ["R026"],
+      "surface": "agent-type override behavior of `omg_select_model`",
+      "steps": [
+        { "tool": "omg_select_model", "args": { "task": "quick fix", "agent_type": "architect" } },
+        { "tool": "omg_select_model", "args": { "task": "architect a migration", "agent_type": "writer" } }
+      ]
+    },
+    {
+      "id": "DIFF-023",
+      "requirement_ids": ["R027"],
+      "surface": "recommendation payload of `omg_select_model`",
+      "steps": [
+        { "tool": "omg_select_model", "args": { "task": "architect a migration" } },
+        { "tool": "omg_select_model", "args": { "task": "please refactor this" } },
+        { "tool": "omg_select_model", "args": { "task": "quick fix" } }
+      ]
+    },
+    {
+      "id": "DIFF-024",
+      "requirement_ids": ["R028"],
+      "surface": "mode validation error message",
+      "steps": [
+        { "module": "validate_mode", "args": ["omg-autopilot"] },
+        { "module": "validate_mode", "args": ["mode name"] },
+        { "module": "validate_mode", "args": ["foo/bar"] },
+        { "module": "validate_mode", "args": [""] },
+        { "module": "validate_mode", "args": ["__proto__"] }
+      ]
+    },
+    {
+      "id": "DIFF-025",
+      "requirement_ids": ["R029"],
+      "surface": "`safe_read_file` content for symlinks/oversize files",
+      "steps": [
+        { "module": "safe_read_file", "args": ["<missing>"] },
+        { "module": "safe_read_file", "args": ["<symlink>"] },
+        { "module": "safe_read_file", "args": ["<oversize>"] },
+        { "module": "safe_read_file", "args": ["<regular>"] }
+      ]
+    },
+    {
+      "id": "DIFF-026",
+      "requirement_ids": ["R030"],
+      "surface": "`safe_write_file` symlink refusal",
+      "steps": [
+        { "module": "safe_write_file", "args": ["<symlink>", "new"] },
+        { "module": "safe_write_file", "args": ["<newfile>", "created"] },
+        { "module": "safe_read_file", "args": ["<newfile>"] }
+      ]
+    },
+    {
+      "id": "DIFF-027",
+      "requirement_ids": ["R031"],
+      "surface": "`safe_json_parse` object-only parsing and key stripping",
+      "steps": [
+        { "module": "safe_json_parse", "args": ["{\"a\":1}"] },
+        { "module": "safe_json_parse", "args": ["[1,2,3]"] },
+        { "module": "safe_json_parse", "args": ["\"str\""] },
+        { "module": "safe_json_parse", "args": ["null"] },
+        { "module": "safe_json_parse", "args": ["{\"__proto__\":{\"x\":1},\"safe\":\"yes\"}"] }
+      ]
+    },
+    {
+      "id": "DIFF-028",
+      "requirement_ids": ["R032"],
+      "surface": "`generate_id` output",
+      "steps": [
+        { "module": "generate_id", "args": [], "repeat": 20, "capture": "length_and_uniqueness" }
+      ]
+    },
+    {
+      "id": "DIFF-029",
+      "requirement_ids": ["R033"],
+      "surface": "public capability set",
+      "steps": [
+        { "identity": true },
+        { "tools": true }
+      ]
+    },
+    {
+      "id": "DIFF-030",
+      "requirement_ids": ["R037"],
+      "surface": "protected public artifacts",
+      "steps": [
+        { "identity": true },
+        { "tools": true },
+        { "tool": "omg_get_phase_info", "args": {} }
+      ]
+    },
+    {
+      "id": "DIFF-031",
+      "requirement_ids": ["R038"],
+      "surface": "ported test assertions",
+      "static": true,
+      "note": "Verified by executing the ported target suite (mcp-server/tests/test_run_tests.py) and confirming it still asserts mode validation, JSON safety, id generation, symlink read/write refusal, oversize/missing reads, and .omc state paths; not part of the runtime corpus."
+    },
+    {
+      "id": "DIFF-032",
+      "requirement_ids": ["R039"],
+      "surface": "ported test suite `mcp-server/tests/`",
+      "static": true,
+      "note": "Verified by executing the ported target suite and confirming each test allocates and removes its unique temporary directory; not part of the runtime corpus."
+    }
+  ]
+}

@@ -1,0 +1,649 @@
+{
+  "schema": "migration-side-p2p-manifest:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "side": "target",
+  "language": "Go",
+  "probe_root": "/input/target",
+  "adapter": "go-test",
+  "runner": {
+    "command": [
+      "timeout",
+      "900",
+      "go",
+      "test",
+      "./..."
+    ],
+    "timeout_seconds": 900
+  },
+  "test_command": [
+    "timeout",
+    "900",
+    "go",
+    "test",
+    "./..."
+  ],
+  "shared_corpus": "shared/batches/BATCH-P2P-0001/corpus.json",
+  "observations": [
+    {
+      "observation_id": "P2P-008",
+      "test": "internal/match#TestCheckAnyBranch",
+      "requirement_ids": [
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R009",
+        "R013",
+        "R026",
+        "R031"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestCheckAnyBranch$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "test": "internal/match#TestToBranchMatchConfig",
+      "requirement_ids": [
+        "R012",
+        "R019"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestToBranchMatchConfig$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-005",
+      "test": "blackbox#config-loading",
+      "requirement_ids": [
+        "R018"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "config-loading"
+    },
+    {
+      "observation_id": "P2P-006",
+      "test": "blackbox#source-limits",
+      "requirement_ids": [
+        "R015"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-limits"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-limits"
+    },
+    {
+      "observation_id": "P2P-010",
+      "test": "policy:changed-scope",
+      "requirement_ids": [
+        "R030"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-004",
+      "test": "internal/inputs#TestGetPRNumbersMix",
+      "requirement_ids": [
+        "R020"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetPRNumbersMix$",
+          "./internal/inputs"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-007",
+      "test": "blackbox#source-limits",
+      "requirement_ids": [
+        "R017"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-limits"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-limits"
+    },
+    {
+      "observation_id": "P2P-009",
+      "test": "internal/inputs#TestGetPRNumbersFromPayload",
+      "requirement_ids": [
+        "R006"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetPRNumbersFromPayload$",
+          "./internal/inputs"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "test": "blackbox#source-config",
+      "requirement_ids": [
+        "R019"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-config"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-config"
+    },
+    {
+      "observation_id": "P2P-013",
+      "test": "internal/labeler#TestAddLabelsForbidden",
+      "requirement_ids": [
+        "R009"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsForbidden$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "test": "internal/labeler#TestConfigFetchFailure",
+      "requirement_ids": [
+        "R025"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestConfigFetchFailure$",
+          "./internal/labeler"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "test": "blackbox#source-limits",
+      "requirement_ids": [
+        "R016"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-limits"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-limits"
+    },
+    {
+      "observation_id": "P2P-018",
+      "test": "policy:test-integrity",
+      "requirement_ids": [
+        "R031"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "test": "blackbox#config-loading",
+      "requirement_ids": [
+        "R018"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-loading"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "config-loading"
+    },
+    {
+      "observation_id": "P2P-020",
+      "test": "blackbox#source-files",
+      "requirement_ids": [
+        "R010"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-files"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-files"
+    },
+    {
+      "observation_id": "P2P-021",
+      "test": "blackbox#source-outputs",
+      "requirement_ids": [
+        "R026"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-outputs"
+    },
+    {
+      "observation_id": "P2P-022",
+      "test": "internal/githubapi#TestAddLabelsSuccess",
+      "requirement_ids": [
+        "R007"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsSuccess$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "test": "blackbox#source-aggregation",
+      "requirement_ids": [
+        "R011"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-aggregation"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-aggregation"
+    },
+    {
+      "observation_id": "P2P-024",
+      "test": "blackbox#source-outputs",
+      "requirement_ids": [
+        "R012"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-outputs"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-outputs"
+    },
+    {
+      "observation_id": "P2P-001",
+      "test": "blackbox#source-files",
+      "requirement_ids": [
+        "R008",
+        "R031"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-files"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-files"
+    },
+    {
+      "observation_id": "P2P-003",
+      "test": "blackbox#source-file-parser",
+      "requirement_ids": [
+        "R011"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-file-parser"
+        ],
+        "timeout_seconds": 300,
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ]
+      },
+      "behavior_case": "source-file-parser"
+    },
+    {
+      "observation_id": "P2P-011",
+      "test": "internal/match#TestGetBranchName",
+      "requirement_ids": [
+        "R005",
+        "R008",
+        "R019"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestGetBranchName$",
+          "./internal/match"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "test": "internal/githubapi#TestAddLabelsServerErrorPagination",
+      "requirement_ids": [
+        "R023"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsServerErrorPagination$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "test": "internal/githubapi#TestAddLabelsVerificationFails",
+      "requirement_ids": [
+        "R023"
+      ],
+      "expect": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "invocation": {
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "^TestAddLabelsVerificationFails$",
+          "./internal/githubapi"
+        ],
+        "timeout_seconds": 300
+      }
+    }
+  ]
+}

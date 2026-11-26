@@ -1,0 +1,442 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "projection": "equal_after_normalization",
+  "normalizer": "status_wrapper",
+  "suites": {
+    "js": {
+      "cwd": ".",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@cua-sample/runner",
+        "exec",
+        "vitest",
+        "run",
+        "--reporter=json",
+        "--testTimeout=15000"
+      ],
+      "reporter": "vitest-json"
+    },
+    "labs": {
+      "cwd": ".",
+      "command": [
+        "pnpm",
+        "--filter",
+        "cua-sample-labs",
+        "exec",
+        "vitest",
+        "run",
+        "--reporter=json"
+      ],
+      "reporter": "vitest-json"
+    },
+    "contracts": {
+      "cwd": ".",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@cua-sample/contracts",
+        "exec",
+        "vitest",
+        "run",
+        "--reporter=json"
+      ],
+      "reporter": "vitest-json"
+    },
+    "python": {
+      "cwd": "python-app",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "tests/test_runner.py",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "fallback": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/test_runner.py",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "reporter": "pytest-junit"
+    }
+  },
+  "observations": [
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "replays a persisted terminal run with allowed-origin SSE headers"
+        }
+      ],
+      "id": "P2P-001",
+      "requirement_ids": [
+        "R014",
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "labs",
+          "file": "tests/shared/paint-engine.test.js",
+          "title": "restores saved state and discards the redo branch on a new edit"
+        }
+      ],
+      "id": "P2P-002",
+      "requirement_ids": [
+        "R014",
+        "R015"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "labs",
+          "file": "tests/integration/runner-labs.test.ts",
+          "title": "fails the kanban executor honestly when the API key is missing"
+        }
+      ],
+      "id": "P2P-003",
+      "requirement_ids": [
+        "R029",
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/javascript-process.test.ts",
+          "title": "does not give the worker the runner API key or env-file startup flags"
+        }
+      ],
+      "id": "P2P-004",
+      "requirement_ids": [
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/workspace-lab-server.test.ts",
+          "title": "closes active slow readers and supports repeated close calls"
+        }
+      ],
+      "id": "P2P-005",
+      "requirement_ids": [
+        "R014",
+        "R029"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "python",
+          "name": "test_malformed_current_replay_returns_not_found"
+        }
+      ],
+      "id": "P2P-006",
+      "requirement_ids": [
+        "R014",
+        "R029",
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/javascript-process.test.ts",
+          "title": "fails closed on a mismatched IPC response ID"
+        }
+      ],
+      "id": "P2P-007",
+      "requirement_ids": [
+        "R014",
+        "R015",
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "rejects encoded traversal before accessing run artifacts"
+        }
+      ],
+      "id": "P2P-008",
+      "requirement_ids": [
+        "R011"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "rejects unknown fields before calling the runner"
+        },
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "returns malformed JSON as a client error"
+        }
+      ],
+      "id": "P2P-009",
+      "requirement_ids": [
+        "R017"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/backend-lease.test.ts",
+          "title": "refuses an occupied lease without disturbing its owner"
+        }
+      ],
+      "id": "P2P-010",
+      "requirement_ids": [
+        "R015"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "serves the validated scenario registry"
+        }
+      ],
+      "id": "P2P-011",
+      "requirement_ids": [
+        "R004"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "replays a persisted terminal run with allowed-origin SSE headers"
+        }
+      ],
+      "id": "P2P-012",
+      "requirement_ids": [
+        "R012"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/capabilities.test.ts",
+          "title": "publishes JavaScript capabilities and configured model"
+        }
+      ],
+      "id": "P2P-013",
+      "requirement_ids": [
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R009",
+        "R010",
+        "R011",
+        "R012",
+        "R013",
+        "R014",
+        "R015",
+        "R016",
+        "R017",
+        "R018",
+        "R019",
+        "R020",
+        "R021",
+        "R022",
+        "R023",
+        "R024",
+        "R025",
+        "R026",
+        "R029",
+        "R031",
+        "R032",
+        "R033"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/capabilities.test.ts",
+          "title": "publishes JavaScript capabilities and configured model"
+        }
+      ],
+      "id": "P2P-014",
+      "requirement_ids": [
+        "R003"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "reports health"
+        },
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "logs unexpected failures while returning the generic error envelope"
+        }
+      ],
+      "id": "P2P-015",
+      "requirement_ids": [
+        "R001"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "scope": "suite"
+        }
+      ],
+      "id": "P2P-016",
+      "requirement_ids": [
+        "R029"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "allows the shared console origin and denies foreign origins before execution"
+        },
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "supports explicit additional operator origins"
+        }
+      ],
+      "id": "P2P-017",
+      "requirement_ids": [
+        "R016"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "replays a persisted terminal run with allowed-origin SSE headers"
+        },
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "ends live SSE clients when the server closes"
+        }
+      ],
+      "id": "P2P-018",
+      "requirement_ids": [
+        "R020"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "labs",
+          "file": "tests/shared/paint-engine.test.js",
+          "title": "maps the same point across zoom, pan, and CSS display sizes"
+        }
+      ],
+      "id": "P2P-019",
+      "requirement_ids": [
+        "R014",
+        "R015",
+        "R029",
+        "R031"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "reports health"
+        }
+      ],
+      "id": "P2P-020",
+      "requirement_ids": [
+        "R002"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "contracts",
+          "scope": "suite"
+        }
+      ],
+      "id": "P2P-021",
+      "requirement_ids": [
+        "R031"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/server.test.ts",
+          "title": "rejects encoded traversal before accessing run artifacts"
+        }
+      ],
+      "id": "P2P-022",
+      "requirement_ids": [
+        "R019"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "file": "tests/backend-lease.test.ts",
+          "title": "refuses an occupied lease without disturbing its owner"
+        }
+      ],
+      "id": "P2P-023",
+      "requirement_ids": [
+        "R025"
+      ]
+    },
+    {
+      "checks": [
+        {
+          "suite": "js",
+          "scope": "suite"
+        }
+      ],
+      "id": "P2P-024",
+      "requirement_ids": [
+        "R033"
+      ]
+    }
+  ]
+}

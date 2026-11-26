@@ -1,0 +1,665 @@
+{
+  "schema": "migration-f2p-corpus:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "shared_corpus_required": true,
+  "fixtures": {
+    "label_config": "fixtures/batches/BATCH-F2P-0001/labeler.yml",
+    "event_pull_request": "fixtures/batches/BATCH-F2P-0001/event.json",
+    "changed_files": "fixtures/batches/BATCH-F2P-0001/changed_files.json"
+  },
+  "probe": {
+    "package": "github.com/actions/labeler/f2pprobe",
+    "files": [
+      "shared/batches/BATCH-F2P-0001/probes/doc.go",
+      "shared/batches/BATCH-F2P-0001/probes/probe_test.go"
+    ],
+    "same_semantic_predicate_both_sides": true
+  },
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "timeout_wrapper": "timeout",
+    "timeout_sec": 300,
+    "target_harness": "target/batches/BATCH-F2P-0001/harness.sh",
+    "source_harness": "source/batches/BATCH-F2P-0001/harness.sh",
+    "target_build_command": [
+      "timeout",
+      "300",
+      "go",
+      "build",
+      "./..."
+    ],
+    "target_test_command": [
+      "timeout",
+      "300",
+      "go",
+      "test",
+      "./f2pprobe/",
+      "-count=1",
+      "-timeout",
+      "240s"
+    ],
+    "source_test_command": [
+      "timeout",
+      "300",
+      "go",
+      "test",
+      "./f2pprobe/",
+      "-count=1",
+      "-timeout",
+      "240s"
+    ],
+    "exclude_privileged_or_blocking_cases": true,
+    "network": "loopback-only (httptest servers; no external network required)"
+  },
+  "observations": [
+    {
+      "id": "F2P-001",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-files.ts::action.yml output definitions",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-files.ts; surface: action.yml output definitions. Behavior: action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.. Required postcondition: With sync-labels true and one stale configured label that has a node_id, the client sends one POST to GITHUB_GRAPHQL_URL whose body contains `removeLabelsFromLabelable` with the labelableId and the stale labelIds; a REST DELETE /issues/{n}/labels call fails this check.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P001RemoveLabelsUsesGraphQLMutation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-002",
+      "requirement_ids": [
+        "R033"
+      ],
+      "family": "target-runtime",
+      "projection": "target-condition",
+      "surface": "branch pattern matching",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Given head ref `release/1.2.3` and pattern `^release/\\d+\\.\\d+$` the matcher returns true, and for ref `main` returns false; a Go RE2-only regex implementation that cannot evaluate JavaScript ECMAScript patterns fails.",
+      "probe": "TestF2P002BranchECMAScriptPattern",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-003",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/remove-labels.ts::action failure and warning behavior",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/remove-labels.ts; surface: action failure and warning behavior. Behavior: An unexpected error is logged and fails the step with its message; a 403 unauthorized label update surfaces the issues: write permission hint; a `Resource not accessible by integration` error is downgraded to a warning plus a failed step.. Required postcondition: When the first GET /pulls/{n}/files response carries a Link header with rel=next, ListChangedFiles requests page=2 and concatenates both pages; a single-page implementation returns only the first 100 files and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P003ListChangedFilesPagination",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-004",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "projection": "target-condition",
+      "surface": "label addition error recovery",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "When POST /issues/{n}/labels returns 500 but a follow-up label listing shows all requested labels already present, AddLabels returns success; returning the 500 error fails.",
+      "probe": "TestF2P004AddLabelsServerErrorRecovered",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-005",
+      "requirement_ids": [
+        "R001"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "dist/index.js::new-labels and all-labels outputs",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: dist/index.js; surface: new-labels and all-labels outputs. Behavior: new-labels lists only labels added by the run; all-labels lists the resulting label set capped at 100; both are written to GITHUB_OUTPUT comma-separated with existing labels first and newly matched labels appended in configuration order.. Required postcondition: Given a pull request event, a label config, and changed files, running the Go action writes new-labels and all-labels to GITHUB_OUTPUT equal to the TypeScript action results; a solution that keeps executing dist/index.js emits no Go-produced outputs.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P005ActionWritesOutputs",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-007",
+      "requirement_ids": [
+        "R044"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-pull-requests.ts::configuration validation",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-pull-requests.ts; surface: configuration validation. Behavior: Unknown configuration keys produce an informational message and are ignored, while a negative or non-integer limit or a malformed changed-files block fails with a descriptive error.. Required postcondition: Given changed-files-labels-limit set to -1, LoadConfig returns an error stating the value must be a non-negative integer; given an unknown key `foo: bar`, it is ignored with an informational message rather than failing.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P007NegativeLimitRejected",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-008",
+      "requirement_ids": [
+        "R039"
+      ],
+      "family": "target-runtime",
+      "projection": "target-condition",
+      "surface": "max-files-changed and changed-files-labels-limit interaction",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "With max-files-changed=1 and changed-files-labels-limit=2, two changed files, and one newly matching changed-files label, file-based labeling is skipped so the label is not added; evaluating changed-files-labels-limit first would add it and fails.",
+      "probe": "TestF2P008MaxFilesChangedSkipsFileLabels",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-010",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "projection": "target-entry-identity",
+      "surface": "src/api/index.ts::runtime entry",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Start or instantiate this entry and inspect its actual target technology identity/version. Scope: src/api/index.ts; surface: runtime entry. Behavior: REST/GraphQL API calls, config loading/validation, core runtime helpers, and event parsing are reimplemented in internal/githubapi, internal/config, internal/core, and internal/event.. Required postcondition: Given a contents API response with content `aGVsbG8=` and encoding `base64`, GetContent returns `hello` after stripping the newline and base64-decoding; returning the raw encoded string or an empty value fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P010GetContentDecodesBase64",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-013",
+      "requirement_ids": [
+        "R037"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/labeler.ts::label set mutation",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/labeler.ts; surface: label set mutation. Behavior: Labels not present in the configuration are never removed, and labels concurrently added by another actor remain present in all-labels.. Required postcondition: Given 150 applicable labels, all-labels contains exactly the first 100 and a warning lists the remaining 50; applying all 150 fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P013AllLabelsCappedAt100",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-018",
+      "requirement_ids": [
+        "R040"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/get-inputs/get-inputs.ts::invalid pr-number warning text",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/get-inputs/get-inputs.ts; surface: invalid pr-number warning text. Behavior: An invalid pr-number containing a non-printable character is reported with the character escaped as \\xNN in the warning.. Required postcondition: For a pr-number input containing a BEL (0x07) byte, the warning prints the value with the byte escaped as \\x07; emitting the raw control byte fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P018EscapeNonPrintable",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-024",
+      "requirement_ids": [
+        "R032"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/branch.ts::changed-file glob and branch pattern matching",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/branch.ts; surface: changed-file glob and branch pattern matching. Behavior: With dot=false a glob `**/*.ts` does not match `.hidden/x.ts` while a glob `.github/**` matches `.github/workflows/x.yml`; a `!docs/**` pattern negates; a branch pattern `^feature/.*$` is evaluated as a JavaScript regular expression.. Required postcondition: With dot=false a glob `**/*.ts` does not match `.hidden/x.ts` while with dot=true it does, and a negated pattern `!docs/**` matches `src/a.ts` but does not match `docs/a.md`; a Go filepath.Match implementation without dot/negation semantics fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P024MinimatchDotAndNegation",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-006",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-label-configs.ts::action.yml output definitions",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-label-configs.ts; surface: action.yml output definitions. Behavior: action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.. Required postcondition: When the first GET /pulls/{n}/files response carries a Link header with rel=next, ListChangedFiles requests page=2 and concatenates both pages; a single-page implementation returns only the first 100 files and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P006ListChangedFilesRequestsNextPage",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-009",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-label-configs.ts::GET /repos/{owner}/{repo}/contents/{path}",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-label-configs.ts; surface: GET /repos/{owner}/{repo}/contents/{path}. Behavior: The action issues POST /repos/{owner}/{repo}/issues/{n}/labels, paginated GET /repos/{owner}/{repo}/pulls/{n}/files, GET /repos/{owner}/{repo}/pulls/{n}, GET /repos/{owner}/{repo}/contents/{path} with base64 decoding, and a GraphQL removeLabelsFromLabelable mutation.. Required postcondition: When the first GET /pulls/{n}/files response carries a Link header with rel=next, ListChangedFiles requests page=2 and concatenates both pages; a single-page implementation returns only the first 100 files and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P009ListChangedFilesConcatenatesSecondPage",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-011",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-files.ts::GET /repos/{owner}/{repo}/contents/{path}",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-files.ts; surface: GET /repos/{owner}/{repo}/contents/{path}. Behavior: The action issues POST /repos/{owner}/{repo}/issues/{n}/labels, paginated GET /repos/{owner}/{repo}/pulls/{n}/files, GET /repos/{owner}/{repo}/pulls/{n}, GET /repos/{owner}/{repo}/contents/{path} with base64 decoding, and a GraphQL removeLabelsFromLabelable mutation.. Required postcondition: With sync-labels true and one stale configured label that has a node_id, the client sends one POST to GITHUB_GRAPHQL_URL whose body contains `removeLabelsFromLabelable` with the labelableId and the stale labelIds; a REST DELETE /issues/{n}/labels call fails this check.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P011RemoveLabelsNotRestDelete",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-012",
+      "requirement_ids": [
+        "R044"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-files.ts::configuration validation",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-files.ts; surface: configuration validation. Behavior: Unknown configuration keys produce an informational message and are ignored, while a negative or non-integer limit or a malformed changed-files block fails with a descriptive error.. Required postcondition: Given changed-files-labels-limit set to -1, LoadConfig returns an error stating the value must be a non-negative integer; given an unknown key `foo: bar`, it is ignored with an informational message rather than failing.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P012UnknownKeyIgnored",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-014",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-pull-requests.ts::action.yml output definitions",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-pull-requests.ts; surface: action.yml output definitions. Behavior: action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.. Required postcondition: When POST /issues/{n}/labels returns 500 but a follow-up label listing shows all requested labels already present, AddLabels returns success; returning the 500 error fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P014AddLabelsVerifiesListingAfterServerError",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-015",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-content.ts::GET /repos/{owner}/{repo}/contents/{path}",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-content.ts; surface: GET /repos/{owner}/{repo}/contents/{path}. Behavior: The action issues POST /repos/{owner}/{repo}/issues/{n}/labels, paginated GET /repos/{owner}/{repo}/pulls/{n}/files, GET /repos/{owner}/{repo}/pulls/{n}, GET /repos/{owner}/{repo}/contents/{path} with base64 decoding, and a GraphQL removeLabelsFromLabelable mutation.. Required postcondition: When POST /issues/{n}/labels returns 500 but a follow-up label listing shows all requested labels already present, AddLabels returns success; returning the 500 error fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P015AddLabelsRecoveryPagination",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-016",
+      "requirement_ids": [
+        "R034"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-label-configs.ts::configuration fetch failure",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-label-configs.ts; surface: configuration fetch failure. Behavior: If the configuration file cannot be fetched, the action warns about the missing file and access rights, logs the error, and fails the step.. Required postcondition: With sync-labels true and one stale configured label that has a node_id, the client sends one POST to GITHUB_GRAPHQL_URL whose body contains `removeLabelsFromLabelable` with the labelableId and the stale labelIds; a REST DELETE /issues/{n}/labels call fails this check.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P016RemoveLabelsCarriesNodeIDs",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-017",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/remove-labels.ts::action.yml input definitions",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/remove-labels.ts; surface: action.yml input definitions. Behavior: action.yml declares inputs repo-token (default ${{ github.token }}), configuration-path (default .github/labeler.yml), sync-labels (default false), dot (default true), and multiline pr-number with unchanged names, defaults, and meanings.. Required postcondition: When POST /issues/{n}/labels returns 500 but a follow-up label listing shows all requested labels already present, AddLabels returns success; returning the 500 error fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P017AddLabelsDoesNotReturnServerErrorWhenApplied",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-019",
+      "requirement_ids": [
+        "R035"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/types.ts::action.yml output definitions",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/types.ts; surface: action.yml output definitions. Behavior: action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.. Required postcondition: When the first GET /pulls/{n}/files response carries a Link header with rel=next, ListChangedFiles requests page=2 and concatenates both pages; a single-page implementation returns only the first 100 files and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P019ListChangedFilesHonorsLinkHeader",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-020",
+      "requirement_ids": [
+        "R041"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/get-changed-files.ts::configuration loading path",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/get-changed-files.ts; surface: configuration loading path. Behavior: When the configuration path exists locally the action reads it from disk; otherwise it fetches it through repos.getContent and base64-decodes the content.. Required postcondition: When POST /issues/{n}/labels returns 500 but a follow-up label listing shows all requested labels already present, AddLabels returns success; returning the 500 error fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P020AddLabelsRecoveryUsesCaseInsensitiveNames",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-021",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/remove-labels.ts::configuration fetch failure",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/remove-labels.ts; surface: configuration fetch failure. Behavior: If the configuration file cannot be fetched, the action warns about the missing file and access rights, logs the error, and fails the step.. Required postcondition: Given a contents API response with content `aGVsbG8=` and encoding `base64`, GetContent returns `hello` after stripping the newline and base64-decoding; returning the raw encoded string or an empty value fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P021GetContentStripsNewline",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-022",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/add-labels.ts::unfetchable or empty pull requests",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/add-labels.ts; surface: unfetchable or empty pull requests. Behavior: A pull request that cannot be fetched, or that has no changed files, produces a warning and is skipped.. Required postcondition: Given a contents API response with content `aGVsbG8=` and encoding `base64`, GetContent returns `hello` after stripping the newline and base64-decoding; returning the raw encoded string or an empty value fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P022GetContentReturnsDecodedValue",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    },
+    {
+      "id": "F2P-023",
+      "requirement_ids": [
+        "R036"
+      ],
+      "family": "target-runtime",
+      "projection": "target-execution-path",
+      "surface": "src/api/index.ts::unfetchable or empty pull requests",
+      "required_technology": {
+        "language_name": "Go",
+        "language_version": "1.24.0",
+        "name": "Go",
+        "version": "1.24.0"
+      },
+      "source_technology": {
+        "language_name": "TypeScript",
+        "language_version": "6.0.3",
+        "name": "TypeScript",
+        "version": "6.0.3"
+      },
+      "semantic_predicate": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: src/api/index.ts; surface: unfetchable or empty pull requests. Behavior: A pull request that cannot be fetched, or that has no changed files, produces a warning and is skipped.. Required postcondition: Given a contents API response with content `aGVsbG8=` and encoding `base64`, GetContent returns `hello` after stripping the newline and base64-decoding; returning the raw encoded string or an empty value fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "TestF2P023GetContentRejectsRawEncodedString",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS"
+    }
+  ]
+}

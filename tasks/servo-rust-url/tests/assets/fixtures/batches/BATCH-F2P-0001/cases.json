@@ -1,0 +1,123 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "cases": [
+    {
+      "case_id": "query-pairs-mut-fragment",
+      "observation_ids": ["F2P-001", "F2P-005"],
+      "input": "http://a/?x=1#frag",
+      "operation": "QueryPairsMut().Clear().AppendPair(\"a\",\"b\").Finish()",
+      "expected_as_str": "http://a/?a=b#frag",
+      "wrong_if": "http://a/#frag"
+    },
+    {
+      "case_id": "no-rust-delegation-invalid-ipv6",
+      "observation_ids": ["F2P-002", "F2P-008", "F2P-009"],
+      "input": "http://[:::1]",
+      "operation": "Parse + errors.Is(ErrInvalidIPv6Address); idna.DomainToASCII(\"example.com\")",
+      "expected_error": "url.ErrInvalidIPv6Address",
+      "expected_ascii": "example.com"
+    },
+    {
+      "case_id": "canonical-parse",
+      "observation_ids": ["F2P-003", "F2P-017", "F2P-020"],
+      "input": "https://github.com/rust-lang/rust/issues?labels=E-easy&state=open",
+      "expected_scheme": "https",
+      "expected_host": "github.com",
+      "expected_path": "/rust-lang/rust/issues",
+      "expected_path_segments": ["rust-lang", "rust", "issues"],
+      "expected_query": "labels=E-easy&state=open"
+    },
+    {
+      "case_id": "pure-go-deps",
+      "observation_ids": ["F2P-004"],
+      "input": "https://example.com/",
+      "expected_as_str": "https://example.com/",
+      "expected_deps": ["stdlib", "github.com/servo/rust-url/..."]
+    },
+    {
+      "case_id": "punycode-rfc3492",
+      "observation_ids": ["F2P-006"],
+      "encode_input": "bücher",
+      "encode_expected": "bcher-kva",
+      "decode_input": "bcher-kva",
+      "decode_expected": "bücher",
+      "invalid_input": "<<>>",
+      "invalid_ok": false
+    },
+    {
+      "case_id": "idna-strict-vs-loose",
+      "observation_ids": ["F2P-007", "F2P-018"],
+      "input": "foo_bar.example",
+      "loose_expected": "foo_bar.example",
+      "strict_expected_error": "idna.ErrInvalidDomain"
+    },
+    {
+      "case_id": "path-segments-mut-encoding",
+      "observation_ids": ["F2P-010", "F2P-016"],
+      "input": "http://a/b/c?q#frag",
+      "operation": "PathSegmentsMut().Pop().Push(\"2/100%.png\")",
+      "expected_path": "/b/2%2F100%25.png",
+      "expected_query": "q",
+      "expected_fragment": "frag"
+    },
+    {
+      "case_id": "ipv6-rfc5952",
+      "observation_ids": ["F2P-011"],
+      "input": "[2001:0db8:0000:0000:0000:ff00:0042:8329]",
+      "expected": "[2001:db8::ff00:42:8329]",
+      "invalid_input": "[:::1]",
+      "invalid_error": "url.ErrInvalidIPv6Address"
+    },
+    {
+      "case_id": "repository-change-set",
+      "observation_ids": ["F2P-012", "F2P-013"],
+      "allowed_additions": ["go.mod", ".go files under url/ idna/ percentencoding/ formurlencoded/ internal/"],
+      "protected_inputs_unchanged": true
+    },
+    {
+      "case_id": "fragment-comma-ok",
+      "observation_ids": ["F2P-014"],
+      "present_input": "data:text/plain,Hello?World#",
+      "present_expected": ["", true],
+      "absent_input": "data:text/plain,Hello",
+      "absent_expected": ["", false]
+    },
+    {
+      "case_id": "percent-encode-uppercase-and-value-add",
+      "observation_ids": ["F2P-015"],
+      "input": "foo bar?",
+      "expected": "foo%20bar%3F",
+      "byte_input": 63,
+      "byte_expected": "%3F",
+      "add_byte": 97
+    },
+    {
+      "case_id": "protected-inputs-and-test-integrity",
+      "observation_ids": ["F2P-017", "F2P-020"],
+      "protected_inputs": [
+        "url/tests/urltestdata.json",
+        "url/tests/setters_tests.json",
+        "idna/tests/IdnaTestV2.txt",
+        "idna/tests/punycode_tests.json",
+        "idna/tests/bad_punycode_tests.json"
+      ],
+      "inline_expected_values_allowed": false
+    },
+    {
+      "case_id": "utf8-error-reporting",
+      "observation_ids": ["F2P-019", "F2P-023", "F2P-024"],
+      "input": "%00%9F%92%96",
+      "expected_valid_up_to": 1,
+      "expected_error_len": [1, true],
+      "expected_lossy": "\u0000\ufffd\ufffd\ufffd"
+    },
+    {
+      "case_id": "sentinel-error-identity",
+      "observation_ids": ["F2P-021", "F2P-022"],
+      "input": "http://[:::1]",
+      "expected_is": ["url.ErrInvalidIPv6Address"],
+      "expected_not": ["url.ErrInvalidPort"]
+    }
+  ]
+}

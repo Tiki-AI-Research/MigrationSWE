@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/dalibo__pev2"
+description = "Migrate pev2 plan parsing and metric computation from TypeScript 5.9.3 to Rust 1.83.0."
+
+[metadata]
+category = "Language_migration"
+language = "typescript"
+repository_id = "5af48052-278e-428f-88f3-3796d355bd6b"
+task_id = "tp-4aee32216f98657137e3e42964b9b029"
+repository_url = "https://github.com/dalibo/pev2"
+base_commit_hash = "6d14a4f65b7400b9a877d6ec583f07f364f2267d"
+
+[metadata.tests]
+fail_to_pass_count = 185
+pass_to_pass_count = 39
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:dalibo__pev2-verifier-image-20261126"
+image_digest = "sha256:a208114d8d93959f8a2b87d989f9e7ab8cfc6d60d25b6028d20c534cabdd191b"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 6d14a4f65b7400b9a877d6ec583f07f364f2267d > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:dalibo__pev2-task-image-20261126"
+image_digest = "sha256:260156c7bc653787763903ccebe896ab5822cdbb74fa01f162231f0136e09c10"

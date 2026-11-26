@@ -1,0 +1,551 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "migration": {
+    "category": "language",
+    "source": "TypeScript",
+    "target": "Go"
+  },
+  "common_projection": {
+    "description": "Every P2P observation is reduced to the same status wrapper before comparison; the wrapper is derived from real test execution on each side, never hardcoded.",
+    "value_shape": {
+      "result": "PASS"
+    },
+    "normalization": "identity on the wrapper, i.e. source and target must both be {\"result\":\"PASS\"}"
+  },
+  "source": {
+    "repo": "/input/source",
+    "test_command": [
+      "npm",
+      "test"
+    ],
+    "test_command_note": "runs `tsx --test tests/**/*.test.ts` (node:test); wrapped with shared/skeleton/timeout.sh"
+  },
+  "target": {
+    "repo": "/input/target",
+    "test_command": [
+      "go",
+      "test",
+      "./..."
+    ],
+    "test_command_note": "the migrated repository keeps the original public TypeScript suite and adds the Go suite; both are executed under timeout"
+  },
+  "observations": [
+    {
+      "id": "P2P-013",
+      "surface": "test:tests/seeds-strategies.test.ts#getSeedStrategy exposes strategy definitions",
+      "requirement_ids": [
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R010",
+        "R012",
+        "R013",
+        "R014",
+        "R015",
+        "R016",
+        "R017",
+        "R018",
+        "R019",
+        "R020",
+        "R021",
+        "R022",
+        "R023",
+        "R024",
+        "R025",
+        "R026",
+        "R027",
+        "R028",
+        "R029",
+        "R030",
+        "R031",
+        "R032"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-05634"
+      ],
+      "source_tests": {
+        "file": "tests/seeds-strategies.test.ts",
+        "titles": [
+          "getSeedStrategy exposes strategy definitions"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "surface": "process exit codes for failures and parse errors",
+      "requirement_ids": [
+        "R006"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00008"
+      ],
+      "source_tests": {
+        "file": "tests/commands-files.test.ts",
+        "titles": [
+          "commands reject unsafe names and flag weak command content",
+          "commands CRUD stays under canonical commands root and validates shape"
+        ]
+      },
+      "target_tests": {
+        "kind": "go",
+        "names": [
+          "TestValidateCommandDocumentMissingTargetErrors",
+          "TestValidateCommandDocumentExistingTarget"
+        ]
+      }
+    },
+    {
+      "id": "P2P-007",
+      "surface": "hidden `ft bookmarks <cmd>` alias",
+      "requirement_ids": [
+        "R007"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00009"
+      ],
+      "source_tests": {
+        "file": "tests/cli.test.ts",
+        "titles": [
+          "ft navigation aliases inspect Field Theory library markdown"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-012",
+      "surface": "legacy ideas data migration",
+      "requirement_ids": [
+        "R030"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00032"
+      ],
+      "source_tests": {
+        "file": "tests/paths-migration.test.ts",
+        "titles": [
+          "migrateLegacyIdeasData: is idempotent",
+          "migrateLegacyIdeasData: recovers from a partial copy",
+          "migrateLegacyIdeasData: skips when new root already has content"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-014",
+      "surface": "`ft categories`",
+      "requirement_ids": [
+        "R016"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00018"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "getCategoryCounts still returns real categories alongside the exclusion",
+          "getCategoryCounts excludes unclassified placeholder"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-015",
+      "surface": "`ft domains`",
+      "requirement_ids": [
+        "R017"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00019"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "getClassificationProgress returns category and domain completion counts"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-016",
+      "surface": "engine resolution precedence",
+      "requirement_ids": [
+        "R021"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00023"
+      ],
+      "source_tests": {
+        "file": "tests/engine.test.ts",
+        "titles": [
+          "resolveEngine: uses saved preference when available",
+          "resolveEngine: single available engine is used without prompting",
+          "resolveEngine: override fails fast when binary not on PATH",
+          "resolveEngine: override rejects unknown engine"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-017",
+      "surface": "configuration environment loading",
+      "requirement_ids": [
+        "R031"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00033"
+      ],
+      "source_tests": {
+        "file": "tests/config.test.ts",
+        "titles": [
+          "loadChromeSessionConfig reads chrome user data dir and profile directory from env"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-018",
+      "surface": "`ft list`",
+      "requirement_ids": [
+        "R013"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00015"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "getBookmarkById and listBookmarks hydrate quoted tweets"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-019",
+      "surface": "`ft stats`",
+      "requirement_ids": [
+        "R015"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00017"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "getStats returns correct aggregate data",
+          "getStats returns chronological date range for legacy Twitter timestamps"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-020",
+      "surface": "`ft path` and `ft paths --json` output",
+      "requirement_ids": [
+        "R010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00012"
+      ],
+      "source_tests": {
+        "file": "tests/cli.test.ts",
+        "titles": [
+          "ft path: prints only the data directory",
+          "ft paths --json prints canonical roots"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-021",
+      "surface": "filesystem helpers for JSON, JSONL, and Markdown",
+      "requirement_ids": [
+        "R026"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00028"
+      ],
+      "source_tests": {
+        "file": "tests/fs.test.ts",
+        "titles": [
+          "writeJson: supports secure file mode for sensitive writes"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-022",
+      "surface": "process command names `ft` and `fieldtheory`",
+      "requirement_ids": [
+        "R003"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00005"
+      ],
+      "source_tests": {
+        "file": "tests/cli.test.ts",
+        "titles": [
+          "ft install app command is registered"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-023",
+      "surface": "`ft show <id>`",
+      "requirement_ids": [
+        "R014"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00016"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "getBookmarkById and listBookmarks hydrate quoted tweets"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-024",
+      "surface": "engine argv construction and engine label",
+      "requirement_ids": [
+        "R022"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00024"
+      ],
+      "source_tests": {
+        "file": "tests/engine.test.ts",
+        "titles": [
+          "resolveEngine: carries explicit model and effort into engine args",
+          "resolveEngine: codex args include skip-git-repo-check"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-004",
+      "surface": "test:tests/adjacent-librarian.test.ts#seedBriefCache: miss returns null",
+      "requirement_ids": [
+        "R030"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-03625"
+      ],
+      "source_tests": {
+        "file": "tests/adjacent-librarian.test.ts",
+        "titles": [
+          "seedBriefCache: miss returns null"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-008",
+      "surface": "test:tests/ideas-aggregate.test.ts#aggregateTopDots: aggregates across multiple runs and preserves repo identity",
+      "requirement_ids": [
+        "R015",
+        "R016",
+        "R017",
+        "R018",
+        "R020",
+        "R021",
+        "R022",
+        "R030"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-05058"
+      ],
+      "source_tests": {
+        "file": "tests/ideas-aggregate.test.ts",
+        "titles": [
+          "aggregateTopDots: aggregates across multiple runs and preserves repo identity"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-009",
+      "surface": "test:tests/bookmark-media.test.ts#fetchBookmarkMediaBatch backs off failed non-profile media unless retry is requested",
+      "requirement_ids": [
+        "R010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-04014"
+      ],
+      "source_tests": {
+        "file": "tests/bookmark-media.test.ts",
+        "titles": [
+          "fetchBookmarkMediaBatch backs off failed non-profile media unless retry is requested"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-010",
+      "surface": "test:tests/engine.test.ts#invokeEngineAsync: child stdin is closed with EOF (does not inherit parent)",
+      "requirement_ids": [
+        "R023"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-04638"
+      ],
+      "source_tests": {
+        "file": "tests/engine.test.ts",
+        "titles": [
+          "invokeEngineAsync: child stdin is closed with EOF (does not inherit parent)"
+        ]
+      },
+      "target_tests": {
+        "kind": "go",
+        "names": [
+          "TestInvokeEngineClosesStdinAndTrimsStdout"
+        ]
+      }
+    },
+    {
+      "id": "P2P-011",
+      "surface": "test:tests/bookmark-classify-llm.test.ts#extractJsonArray: stops at the end of the first balanced JSON array",
+      "requirement_ids": [
+        "R010",
+        "R019",
+        "R020"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-03830"
+      ],
+      "source_tests": {
+        "file": "tests/bookmark-classify-llm.test.ts",
+        "titles": [
+          "extractJsonArray: stops at the end of the first balanced JSON array"
+        ]
+      },
+      "target_tests": {
+        "kind": "go",
+        "names": [
+          "TestParseLLMResponseExtractsJSONArray"
+        ]
+      }
+    },
+    {
+      "id": "P2P-001",
+      "surface": "test:tests/adjacent-pipeline.test.ts#buildBatchScorePrompt: uses revised title/summary from sharpen critique",
+      "requirement_ids": [
+        "R030"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-03734"
+      ],
+      "source_tests": {
+        "file": "tests/adjacent-pipeline.test.ts",
+        "titles": [
+          "buildBatchScorePrompt: uses revised title/summary from sharpen critique"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-002",
+      "surface": "test:tests/bookmarks-db.test.ts#sanitizeFtsQuery: leaves plain queries alone",
+      "requirement_ids": [
+        "R010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-04081"
+      ],
+      "source_tests": {
+        "file": "tests/bookmarks-db.test.ts",
+        "titles": [
+          "sanitizeFtsQuery: leaves plain queries alone"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-003",
+      "surface": "test:tests/cli.test.ts#parseCookieOption: with only ct0, builds ct0-only header",
+      "requirement_ids": [
+        "R003",
+        "R004",
+        "R005",
+        "R010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-04393"
+      ],
+      "source_tests": {
+        "file": "tests/cli.test.ts",
+        "titles": [
+          "parseCookieOption: with only ct0, builds ct0-only header"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    },
+    {
+      "id": "P2P-005",
+      "surface": "test:tests/possible-wizard.test.ts#runPossibleWizard: quit at repos picker short-circuits",
+      "requirement_ids": [
+        "R010",
+        "R026"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-05548"
+      ],
+      "source_tests": {
+        "file": "tests/possible-wizard.test.ts",
+        "titles": [
+          "runPossibleWizard: quit at repos picker short-circuits"
+        ]
+      },
+      "target_tests": {
+        "kind": "suite"
+      }
+    }
+  ]
+}

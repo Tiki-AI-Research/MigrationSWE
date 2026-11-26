@@ -1,0 +1,265 @@
+{
+  "schema_version": "migration-p2p-observations:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "observations": [
+    {
+      "id": "P2P-025",
+      "requirement_ids": [
+        "R027"
+      ],
+      "surface": "metadata merge and precedence between .meta() and .openapi()",
+      "jest": [
+        {
+          "spec": "spec/modifiers/meta.spec.ts",
+          "titles": [
+            "meta should preserve metadata through the meta modifier",
+            "meta should override metadata when calling .openapi",
+            "meta should override metadata when calling .meta",
+            "meta should use the refId from .openapi as priority over the one in .meta"
+          ]
+        },
+        {
+          "spec": "spec/openapi-metadata.spec.ts",
+          "titles": [
+            "OpenAPI metadata can obtain overridden metadata"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-026",
+      "requirement_ids": [
+        "R029"
+      ],
+      "surface": "recursive lazy schema generation",
+      "jest": [
+        {
+          "spec": "spec/types/recursive-schemas.spec.ts"
+        },
+        {
+          "spec": "spec/types/lazy.spec.ts",
+          "titles": [
+            "lazy basic functionality supports registered recursive lazy schemas",
+            "lazy performance and stability handles deep recursive nesting without stack overflow"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-027",
+      "requirement_ids": [
+        "R017",
+        "R018",
+        "R019",
+        "R023",
+        "R026",
+        "R038",
+        "R040"
+      ],
+      "surface": "test:spec/types/template-literal.spec.ts#generates OpenAPI schema for template with number interpolation",
+      "jest": [
+        {
+          "spec": "spec/types/template-literal.spec.ts",
+          "titles": [
+            "template literal generates OpenAPI schema for template with number interpolation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-028",
+      "requirement_ids": [
+        "R040"
+      ],
+      "surface": "test-suite file-change scope and assertion integrity",
+      "jest": []
+    },
+    {
+      "id": "P2P-029",
+      "requirement_ids": [
+        "R024"
+      ],
+      "surface": "console.error side effect for a discriminated union without a discriminator",
+      "jest": [
+        {
+          "spec": "spec/types/discriminated-union.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-030",
+      "requirement_ids": [
+        "R012",
+        "R013",
+        "R018",
+        "R019",
+        "R020",
+        "R030",
+        "R040"
+      ],
+      "surface": "test:spec/routes/parameters.spec.ts#generates a reference path parameter for route",
+      "jest": [
+        {
+          "spec": "spec/routes/parameters.spec.ts",
+          "titles": [
+            "parameters path generates a reference path parameter for route"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-031",
+      "requirement_ids": [
+        "R014"
+      ],
+      "surface": "generated document object structure and $ref strings",
+      "jest": [
+        {
+          "spec": "spec/registry.spec.ts"
+        },
+        {
+          "spec": "spec/types/object.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-032",
+      "requirement_ids": [
+        "R020"
+      ],
+      "surface": "nullable recursive or pending reference output",
+      "jest": [
+        {
+          "spec": "spec/modifiers/nullable.spec.ts"
+        },
+        {
+          "spec": "spec/types/recursive-schemas.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-033",
+      "requirement_ids": [
+        "R006"
+      ],
+      "surface": "public package export and method surface",
+      "jest": [
+        {
+          "spec": "spec/registry.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-034",
+      "requirement_ids": [
+        "R038"
+      ],
+      "surface": "runtime schema inspection rather than hardcoded output",
+      "jest": [
+        {
+          "spec": "spec/types/object.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-035",
+      "requirement_ids": [
+        "R034"
+      ],
+      "surface": "src/index.ts export set and package API signatures",
+      "jest": [
+        {
+          "spec": "spec/registry.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-036",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "OpenAPIRegistry public methods and definitions getter",
+      "jest": [
+        {
+          "spec": "spec/registry.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-037",
+      "requirement_ids": [
+        "R036"
+      ],
+      "surface": "error types, messages, and console.error trigger conditions",
+      "jest": [
+        {
+          "spec": "spec/routes/parameters.spec.ts",
+          "titles": [
+            "parameters errors throws an error in case of names mismatch",
+            "parameters errors throws an error in case of location mismatch",
+            "parameters errors throws an error in case of location mismatch with reference",
+            "parameters errors throws an error in case of name mismatch with reference",
+            "parameters errors throws an error in case of missing name",
+            "parameters errors throws an error in case of missing location when registering a parameter"
+          ]
+        },
+        {
+          "spec": "spec/types/native-enum.spec.ts",
+          "titles": [
+            "native enum does not support mixed native enums"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-038",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "OpenApiGeneratorV31 constructor and document/components methods",
+      "jest": [
+        {
+          "spec": "spec/routes/index.spec.ts"
+        },
+        {
+          "spec": "spec/v3.2/openapi-generator.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "P2P-039",
+      "requirement_ids": [
+        "R007",
+        "R016",
+        "R017",
+        "R034",
+        "R040",
+        "R041"
+      ],
+      "surface": "test:spec/routes/index.spec.ts#can specify response with plain OpenApi format",
+      "jest": [
+        {
+          "spec": "spec/routes/index.spec.ts",
+          "titles": [
+            "Routes response definitions can specify response with plain OpenApi format"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2P-040",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "OpenApiGeneratorV3 constructor and document/components methods",
+      "jest": [
+        {
+          "spec": "spec/generation-sort.spec.ts"
+        },
+        {
+          "spec": "spec/custom-components.spec.ts"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+# Harbor runs the separate verifier environment (`[verifier] environment_mode =
+# "separate"`) in an ordinary, unprivileged container by default. This verifier
+# deliberately executes every evaluator and candidate command inside a private
+# network/PID/mount namespace so candidate code can never reach the network:
+#
+#   - verifier/sandbox.py:network_isolated_command() wraps evaluator commands in
+#     `unshare --net --pid --fork --mount-proc --kill-child`.
+#   - verifier/sandbox.py:sandbox_command() does the same for candidate commands
+#     and then drops to the unprivileged `agent` identity with an empty
+#     capability set via `setpriv ... --bounding-set=-all --no-new-privs`.
+#
+# With Docker's default capability set and seccomp profile, `unshare` with
+# namespace flags fails closed with EPERM ("unshare failed: Operation not
+# permitted"), which the verifier correctly reports as an infrastructure error
+# instead of silently running candidate code with network access. Namespace
+# isolation therefore requires:
+#
+#   - CAP_SYS_ADMIN        create the network/PID/mount namespaces and remount
+#                          /proc via `--mount-proc`
+#   - CAP_NET_ADMIN        enable loopback inside the new network namespace
+#                          (netns_loopback.py issues SIOCSIFFLAGS, because the
+#                          frozen image ships without iproute2)
+#   - apparmor=unconfined  `--mount-proc` must make / rprivate; the default
+#                          docker-default AppArmor profile denies that mount
+#   - seccomp=unconfined   the Rubric Judge (codex CLI) sandboxes every command
+#                          with bubblewrap; the default seccomp profile blocks
+#                          the mount/pivot_root sequence it needs, which makes
+#                          the Judge unable to read the repository at all
+#
+# `privileged: true` also works but is intentionally avoided: the privileges
+# above are the verified minimum. Runtime user namespaces are deliberately NOT
+# used, so this does not depend on the host's
+# kernel.apparmor_restrict_unprivileged_userns / unprivileged_userns_clone
+# settings.
+services:
+  main:
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined

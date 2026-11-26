@@ -1,0 +1,342 @@
+{
+  "schema_version": "migration-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "migration": {
+    "source": "Rust",
+    "target": "Go"
+  },
+  "shared": true,
+  "normalization": "nil-or-empty-slices-collapse-to-empty; size-hints-compare-by-(lower,upper)",
+  "cases": [
+    {
+      "id": "CORPUS-DIFF-001-IPRODUCT",
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R001"],
+      "operation": "Iproduct",
+      "input": [[1, 2], [10, 20]],
+      "expected": [[1, 10], [1, 20], [2, 10], [2, 20]]
+    },
+    {
+      "id": "CORPUS-DIFF-001-IZIP",
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R001"],
+      "operation": "Izip",
+      "input": [[1, 2, 3], [10, 20]],
+      "expected": [[1, 10], [2, 20]]
+    },
+    {
+      "id": "CORPUS-DIFF-001-CHAIN",
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R001"],
+      "operation": "ChainConcatenates",
+      "input": [[1], [2, 3], [4]],
+      "expected": [1, 2, 3, 4]
+    },
+    {
+      "id": "CORPUS-DIFF-003-FROM-SLICE",
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "operation": "FromSlice",
+      "input": [1, 2, 3],
+      "expected": [1, 2, 3],
+      "expected_size_hint": [3, 3]
+    },
+    {
+      "id": "CORPUS-DIFF-003-REPEAT-N",
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "operation": "RepeatN",
+      "input": [3, 7],
+      "expected": [7, 7, 7]
+    },
+    {
+      "id": "CORPUS-DIFF-005-EITHER-OR-BOTH",
+      "observation_id": "DIFF-005",
+      "requirement_ids": ["R006"],
+      "operation": "EitherOrBoth",
+      "input": [1, "a", "b"],
+      "expected": {
+        "left_is_left": true,
+        "left_is_both": false,
+        "left_value": [1, true],
+        "right_value": ["a", true],
+        "right_has_left": false,
+        "both_is_both": true
+      }
+    },
+    {
+      "id": "CORPUS-DIFF-006-CONCAT",
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R007"],
+      "operation": "Concat",
+      "input": [[[1], [2, 3], [4, 5, 6]]],
+      "expected": [1, 2, 3, 4, 5, 6]
+    },
+    {
+      "id": "CORPUS-DIFF-006-CONCAT-EMPTY",
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R007"],
+      "operation": "Concat",
+      "input": [[]],
+      "expected": []
+    },
+    {
+      "id": "CORPUS-DIFF-007-ARRAY-WINDOWS",
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R008"],
+      "operation": "ArrayWindows",
+      "input": [[1, 2, 3, 4, 5], 3],
+      "expected": [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+    },
+    {
+      "id": "CORPUS-DIFF-007-CIRCULAR-WINDOWS",
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R008"],
+      "operation": "CircularArrayWindows",
+      "input": [[1, 2, 3, 4], 3],
+      "expected": [[1, 2, 3], [2, 3, 4], [3, 4, 1], [4, 1, 2]]
+    },
+    {
+      "id": "CORPUS-DIFF-008-ALL-EQUAL-VALUE-ERROR",
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R009"],
+      "operation": "AllEqualValueError",
+      "input": [],
+      "expected": [
+        "got zero elements when all elements were expected to be equal",
+        "got different elements when all elements were expected to be equal"
+      ]
+    },
+    {
+      "id": "CORPUS-DIFF-008-EXACTLY-ONE-ERROR",
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R009"],
+      "operation": "ExactlyOneError",
+      "input": [2, 3, 4],
+      "expected": [
+        "got at least 2 elements when exactly one was expected",
+        "got zero elements when exactly one was expected"
+      ]
+    },
+    {
+      "id": "CORPUS-DIFF-009-FORMAT",
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R010"],
+      "operation": "Format",
+      "input": [[1, 2, 3], "-"],
+      "expected": ["1-2-3", true]
+    },
+    {
+      "id": "CORPUS-DIFF-009-FORMAT-WITH",
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R010"],
+      "operation": "FormatWith",
+      "input": [[1, 2, 3], ","],
+      "expected": ["a,b,c", true]
+    },
+    {
+      "id": "CORPUS-DIFF-010-ITERATE",
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R011"],
+      "operation": "Iterate",
+      "input": [1, 4],
+      "expected": [1, 2, 4, 8]
+    },
+    {
+      "id": "CORPUS-DIFF-010-INTERSPERSE-HINT",
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R011"],
+      "operation": "Intersperse",
+      "input": [[1, 2, 3], 0],
+      "expected": [1, 0, 2, 0, 3],
+      "expected_size_hint": [5, 5]
+    },
+    {
+      "id": "CORPUS-DIFF-010-MAP-NEXT-BACK",
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R011"],
+      "operation": "Map",
+      "input": [1, 2, 3],
+      "expected": [30, true, 1]
+    },
+    {
+      "id": "CORPUS-DIFF-012-INTERLEAVE",
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R013"],
+      "operation": "Interleave",
+      "input": [[1, 2], [-1, -2]],
+      "expected": [1, -1, 2, -2]
+    },
+    {
+      "id": "CORPUS-DIFF-012-INTERLEAVE-SHORTEST",
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R013"],
+      "operation": "InterleaveShortest",
+      "input": [[1, 2, 3], [-1, -2]],
+      "expected": [1, -1, 2, -2, 3]
+    },
+    {
+      "id": "CORPUS-DIFF-014-ALL-EQUAL-VALUE",
+      "observation_id": "DIFF-014",
+      "requirement_ids": ["R015"],
+      "operation": "AllEqualValue",
+      "input": [[3, 3, 3], [], [1, 2]],
+      "expected": [
+        3,
+        true,
+        "got zero elements when all elements were expected to be equal",
+        "got different elements when all elements were expected to be equal"
+      ]
+    },
+    {
+      "id": "CORPUS-DIFF-015-ARRAY-WINDOWS-EDGE",
+      "observation_id": "DIFF-015",
+      "requirement_ids": ["R016"],
+      "operation": "ArrayWindows",
+      "input": [[1, 2, 3, 4, 5], 3, [1, 2, 3], 0, [1, 2], 3],
+      "expected": [3, [[], [], [], []], 0]
+    },
+    {
+      "id": "CORPUS-DIFF-016-MERGE",
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R017"],
+      "operation": "Merge",
+      "input": [[0, 3, 6, 9], [0, 5, 10]],
+      "expected": [0, 0, 3, 5, 6, 9, 10]
+    },
+    {
+      "id": "CORPUS-DIFF-016-KMERGE",
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R017"],
+      "operation": "KMerge",
+      "input": [[0, 2, 4], [1, 3, 5], [6, 7]],
+      "expected": [0, 1, 2, 3, 4, 5, 6, 7]
+    },
+    {
+      "id": "CORPUS-DIFF-018-FOLD",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "operation": "Fold",
+      "input": [1, 2, 3, 4],
+      "expected": 10
+    },
+    {
+      "id": "CORPUS-DIFF-018-COLLECT-VEC",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "operation": "CollectVec",
+      "input": [1, 2, 3],
+      "expected": [1, 2, 3]
+    },
+    {
+      "id": "CORPUS-DIFF-018-SUM1",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "operation": "Sum1",
+      "input": [1, 2, 3],
+      "expected": [6, true]
+    },
+    {
+      "id": "CORPUS-DIFF-018-PRODUCT1",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "operation": "Product1",
+      "input": [2, 3, 4],
+      "expected": [24, true]
+    },
+    {
+      "id": "CORPUS-DIFF-019-ZIP-EQ",
+      "observation_id": "DIFF-019",
+      "requirement_ids": ["R020"],
+      "operation": "ZipEq",
+      "input": [[1, 2, 3], [1, 2]],
+      "expected": true
+    },
+    {
+      "id": "CORPUS-DIFF-019-CHUNKS",
+      "observation_id": "DIFF-019",
+      "requirement_ids": ["R020"],
+      "operation": "Chunks",
+      "input": [[1, 2, 3], 0],
+      "expected": true
+    },
+    {
+      "id": "CORPUS-DIFF-020-DEDUP",
+      "observation_id": "DIFF-020",
+      "requirement_ids": ["R021"],
+      "operation": "Dedup",
+      "input": [1, 1, 2, 2, 2, 3, 1],
+      "expected": [1, 2, 3, 1]
+    },
+    {
+      "id": "CORPUS-DIFF-021-EXACTLY-ONE",
+      "observation_id": "DIFF-021",
+      "requirement_ids": ["R022"],
+      "operation": "ExactlyOne",
+      "input": [7, [2, 3, 4], []],
+      "expected": [
+        7,
+        true,
+        [2, 3, 4],
+        "got zero elements when exactly one was expected",
+        0
+      ]
+    },
+    {
+      "id": "CORPUS-DIFF-022-SORTED",
+      "observation_id": "DIFF-022",
+      "requirement_ids": ["R023"],
+      "operation": "Sorted",
+      "input": [3, 1, 2],
+      "expected": [1, 2, 3]
+    },
+    {
+      "id": "CORPUS-DIFF-022-KSMALLEST",
+      "observation_id": "DIFF-022",
+      "requirement_ids": ["R023"],
+      "operation": "KSmallest",
+      "input": [[5, 1, 4, 2, 3], 2],
+      "expected": [1, 2]
+    },
+    {
+      "id": "CORPUS-DIFF-022-COUNTS",
+      "observation_id": "DIFF-022",
+      "requirement_ids": ["R023"],
+      "operation": "Counts",
+      "input": [1, 1, 2],
+      "expected": {"1": 2, "2": 1}
+    }
+  ],
+  "probes": [
+    {
+      "id": "PROBE-DIFF-011-NOSTD",
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R012"],
+      "command": ["go", "build", "-tags", "nostd", "./..."],
+      "expected": "exit-0",
+      "excluded_identifiers": ["Unique", "Duplicates", "Counts", "IntoGroupingMap"]
+    },
+    {
+      "id": "PROBE-DIFF-011-NOALLOC",
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R012"],
+      "command": ["go", "build", "-tags", "noalloc", "./..."],
+      "expected": "exit-0",
+      "excluded_identifiers": ["Iproduct", "Combinations", "Permutations", "Powerset", "Sorted"]
+    },
+    {
+      "id": "PROBE-DIFF-017-LAZINESS",
+      "observation_id": "DIFF-017",
+      "requirement_ids": ["R018"],
+      "command": ["go", "test", "-run", "TestDifferentialLaziness", "./..."],
+      "expected": "exit-0"
+    },
+    {
+      "id": "PROBE-DIFF-026-MIGRATED-TESTS",
+      "observation_id": "DIFF-026",
+      "requirement_ids": ["R029"],
+      "command": ["go", "test", "./..."],
+      "expected": "exit-0"
+    }
+  ]
+}

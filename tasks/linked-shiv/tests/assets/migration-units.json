@@ -1,0 +1,141 @@
+{
+  "schema_version": "migration-units:v3",
+  "units": [
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU001",
+      "kind": "dependency",
+      "requirement_ids": [
+        "R007",
+        "R008"
+      ],
+      "source_locators": [
+        {
+          "path": "setup.cfg",
+          "type": "manifest"
+        }
+      ],
+      "target_condition": "setup.cfg install_requires declares click==8.1.7 and no longer permits click 6.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU002",
+      "kind": "api",
+      "requirement_ids": [
+        "R001",
+        "R003",
+        "R004",
+        "R006",
+        "R008",
+        "R010"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/cli.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "shiv.cli.main defines every preserved option and exit path and runs under click 8.1.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU003",
+      "kind": "api",
+      "requirement_ids": [
+        "R002",
+        "R005"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/info.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "shiv.info.main keeps the positional pyz argument, the -j/--json flag, and its textual and JSON output under click 8.1.7.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU004",
+      "kind": "file",
+      "requirement_ids": [
+        "R003",
+        "R006",
+        "R009"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/pip.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "pip.install forwards unrecognized arguments unchanged and exits with PIP_INSTALL_ERROR when pip fails.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU005",
+      "kind": "file",
+      "requirement_ids": [
+        "R003"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/constants.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "Error text constants and their exit code values remain byte-identical.",
+      "validation_methods": [
+        "runtime"
+      ]
+    },
+    {
+      "allowed_exceptions": [],
+      "evidence_strategy": [
+        "p2p"
+      ],
+      "id": "MU006",
+      "kind": "entrypoint",
+      "requirement_ids": [
+        "R001",
+        "R010"
+      ],
+      "source_locators": [
+        {
+          "path": "src/shiv/__main__.py",
+          "type": "file"
+        }
+      ],
+      "target_condition": "python -m shiv still invokes the shiv CLI entry point, and an explicit --entry-point still determines startup precedence.",
+      "validation_methods": [
+        "runtime"
+      ]
+    }
+  ]
+}

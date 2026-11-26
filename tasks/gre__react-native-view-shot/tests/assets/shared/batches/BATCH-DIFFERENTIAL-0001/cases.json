@@ -1,0 +1,241 @@
+{
+  "corpus_id": "shared-case-corpus:BATCH-DIFFERENTIAL-0001",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "kind": "DIFFERENTIAL",
+  "projection": "normalized-result",
+  "input_class": "declared",
+  "description": "Shared, side-agnostic case corpus for react-native-view-shot 0.84.1 -> 0.85.0. Every case is evaluated identically against the source repository and the reference target; the normalized observation for each case must be equal on both sides. Cases assert preserved public contracts only (R003, R006-R035); the implementation-specific 0.85.0 API adaptations (R036-R039) are covered by other batches.",
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "requirement_ids": ["R003"],
+      "surface": "Public package surface of react-native-view-shot (JS exports and native module contract)",
+      "observable": {
+        "exports": ["captureRef", "captureScreen", "releaseCapture"],
+        "default_export": "ViewShot",
+        "static_members": ["captureRef", "releaseCapture"],
+        "native_module_name": "RNViewShot"
+      }
+    },
+    {
+      "id": "DIFF-002",
+      "requirement_ids": ["R006"],
+      "surface": "TurboModule specification NativeRNViewShotSpec module name constant NAME",
+      "observable": {
+        "module_name": "RNViewShot",
+        "registry": "TurboModuleRegistry",
+        "legacy_fallback": "NativeModules.RNViewShot"
+      }
+    },
+    {
+      "id": "DIFF-003",
+      "requirement_ids": ["R007"],
+      "surface": "TurboModule specification NativeRNViewShotSpec method releaseCapture(String)",
+      "observable": {"method": "releaseCapture", "argument": "String", "returns": "void"}
+    },
+    {
+      "id": "DIFF-004",
+      "requirement_ids": ["R008"],
+      "surface": "TurboModule specification NativeRNViewShotSpec method captureRef(Double target, ReadableMap withOptions, Promise promise)",
+      "observable": {
+        "method": "captureRef",
+        "arguments": ["number target", "Object withOptions"],
+        "returns": "Promise<string>"
+      }
+    },
+    {
+      "id": "DIFF-005",
+      "requirement_ids": ["R009"],
+      "surface": "TurboModule specification NativeRNViewShotSpec method captureScreen(ReadableMap options, Promise promise)",
+      "observable": {
+        "method": "captureScreen",
+        "arguments": ["Object options"],
+        "returns": "Promise<string>"
+      }
+    },
+    {
+      "id": "DIFF-006",
+      "requirement_ids": ["R010"],
+      "surface": "Public JS export captureRef(ref, options)",
+      "observable": {
+        "resolves_numeric_tag": true,
+        "uses_findNodeHandle": true,
+        "forwards_to_native": "RNViewShot.captureRef"
+      },
+      "input": {"ref": 42, "options": {"result": "tmpfile"}}
+    },
+    {
+      "id": "DIFF-007",
+      "requirement_ids": ["R011"],
+      "surface": "Public JS export captureScreen(options)",
+      "observable": {"validates_options": true, "forwards_to_native": "RNViewShot.captureScreen"},
+      "input": {"options": {"format": "jpg", "quality": 0.5}}
+    },
+    {
+      "id": "DIFF-008",
+      "requirement_ids": ["R012"],
+      "surface": "Public JS export releaseCapture(uri)",
+      "observable": {"string_argument": "RNViewShot.releaseCapture", "non_string": "warn-no-native-call"},
+      "input": {"uri": "/tmp/viewshot.png"}
+    },
+    {
+      "id": "DIFF-009",
+      "requirement_ids": ["R013"],
+      "surface": "ViewShot React component (default export)",
+      "observable": {
+        "component": "ViewShot",
+        "collapsable": false,
+        "has_onLayout": true,
+        "props": ["options", "captureMode", "onCapture", "onCaptureFailure", "onLayout", "style"]
+      }
+    },
+    {
+      "id": "DIFF-010",
+      "requirement_ids": ["R014"],
+      "surface": "ViewShot instance method capture()",
+      "observable": {"instance_method": "capture", "waits_first_layout": true, "resolves_via": "captureRef"}
+    },
+    {
+      "id": "DIFF-011",
+      "requirement_ids": ["R015"],
+      "surface": "CaptureOptions TypeScript interface fields",
+      "observable": {
+        "fields": ["fileName", "width", "height", "format", "quality", "result"],
+        "formats": ["jpg", "png", "webp", "webm", "raw"],
+        "results": ["tmpfile", "base64", "data-uri", "zip-base64"]
+      }
+    },
+    {
+      "id": "DIFF-012",
+      "requirement_ids": ["R016"],
+      "surface": "Data-uri result serialization (captureRef/captureScreen with result:\"data-uri\")",
+      "observable": {"pattern": "data:image/<subtype>;base64,<base64>", "jpg_maps_to": "jpeg"}
+    },
+    {
+      "id": "DIFF-013",
+      "requirement_ids": ["R017"],
+      "surface": "Windows C# native contract releaseCapture(string uri)",
+      "observable": {"method": "releaseCapture", "signature": "releaseCapture(string uri)", "scope": "application LocalFolder only"}
+    },
+    {
+      "id": "DIFF-014",
+      "requirement_ids": ["R018"],
+      "surface": "Windows C# native contract Task<string> captureRef(int tag, JSValue options)",
+      "observable": {"method": "captureRef", "signature": "Task<string> captureRef(int tag, JSValue options)"}
+    },
+    {
+      "id": "DIFF-015",
+      "requirement_ids": ["R019"],
+      "surface": "Result mode tmpfile (captureRef/captureScreen with result:\"tmpfile\")",
+      "observable": {"result": "tmpfile", "resolves": "temporary file path string"}
+    },
+    {
+      "id": "DIFF-016",
+      "requirement_ids": ["R020"],
+      "surface": "Result mode base64 (captureRef/captureScreen with result:\"base64\")",
+      "observable": {"result": "base64", "resolves": "raw base64 string without data: prefix"}
+    },
+    {
+      "id": "DIFF-017",
+      "requirement_ids": ["R021"],
+      "surface": "Result mode data-uri (captureRef/captureScreen with result:\"data-uri\")",
+      "observable": {"result": "data-uri", "resolves": "data-uri string"}
+    },
+    {
+      "id": "DIFF-018",
+      "requirement_ids": ["R022"],
+      "surface": "JS option validation format whitelist (validateOptions in src/index.tsx)",
+      "observable": {
+        "always_accepted": ["png", "jpg"],
+        "android_accepted": ["webp", "webm", "raw"],
+        "invalid_replaced_by": "png"
+      }
+    },
+    {
+      "id": "DIFF-019",
+      "requirement_ids": ["R023"],
+      "surface": "Windows C# helper Helpers.IsSupportedFormat whitelist",
+      "observable": {"supported": ["png", "jpg", "jpeg"], "unsupported": ["webm", "gif", "", null]}
+    },
+    {
+      "id": "DIFF-020",
+      "requirement_ids": ["R024"],
+      "surface": "Deprecated webm format alias for webp",
+      "observable": {"accepted": true, "alias_of": "webp", "emits_deprecation_warning": true}
+    },
+    {
+      "id": "DIFF-021",
+      "requirement_ids": ["R025"],
+      "surface": "Failed capture rejection and E_UNABLE_TO_SNAPSHOT error code",
+      "observable": {"rejects": true, "error_code": "E_UNABLE_TO_SNAPSHOT", "platforms": ["android", "windows"]}
+    },
+    {
+      "id": "DIFF-022",
+      "requirement_ids": ["R026"],
+      "surface": "Windows oversized capture error type",
+      "observable": {"platform": "windows", "oversized_error_type": "InvalidOperationException"}
+    },
+    {
+      "id": "DIFF-023",
+      "requirement_ids": ["R027"],
+      "surface": "tmpfile capture location (application LocalFolder/cache) and naming",
+      "observable": {"location": "application LocalFolder/cache", "naming": "explicit fileName or generated"}
+    },
+    {
+      "id": "DIFF-024",
+      "requirement_ids": ["R028"],
+      "surface": "releaseCapture path confinement (relative-path-only deletion)",
+      "observable": {"deletes": "relative paths inside capture directory only", "skips": ["", "absolute", "escaping"]}
+    },
+    {
+      "id": "DIFF-025",
+      "requirement_ids": ["R029"],
+      "surface": "ViewShot captureMode \"mount\"",
+      "observable": {"mode": "mount", "triggers": "exactly one capture after first layout"}
+    },
+    {
+      "id": "DIFF-026",
+      "requirement_ids": ["R030"],
+      "surface": "ViewShot captureMode \"update\"",
+      "observable": {"mode": "update", "triggers": "capture on each subsequent update"}
+    },
+    {
+      "id": "DIFF-027",
+      "requirement_ids": ["R031"],
+      "surface": "ViewShot captureMode \"continuous\" requestAnimationFrame loop",
+      "observable": {"mode": "continuous", "loop": "requestAnimationFrame", "cancels_on": "unmount or mode change"}
+    },
+    {
+      "id": "DIFF-028",
+      "requirement_ids": ["R032"],
+      "surface": "Required public capabilities and their contracts",
+      "observable": {"capabilities": ["captureRef", "captureScreen", "releaseCapture", "ViewShot", "capture"], "contract_unchanged": true}
+    },
+    {
+      "id": "DIFF-029",
+      "requirement_ids": ["R033"],
+      "surface": "Change confinement to library production sources, dependency configuration, and build assets",
+      "observable": {
+        "in_scope": ["src/index.tsx", "src/RNViewShot.ts", "src/specs/NativeRNViewShot.ts", "android/src/main", "android/src/paper", "ios/RNViewShot.mm", "windows/RNViewShot", "package.json"],
+        "out_of_scope": ["example", "example-expo", "example-windows", "web"]
+      }
+    },
+    {
+      "id": "DIFF-030",
+      "requirement_ids": ["R034"],
+      "surface": "Public test suites src/__tests__, android/src/test, windows/RNViewShot.Tests",
+      "observable": {
+        "suites": ["src/__tests__", "android/src/test", "windows/RNViewShot.Tests"],
+        "present": true,
+        "assertions_intact": true
+      }
+    },
+    {
+      "id": "DIFF-031",
+      "requirement_ids": ["R035"],
+      "surface": "Working-tree patch against base commit 68880f87a26e56a36965290109e044b598dec141",
+      "observable": {"patch_in_working_tree": true, "base_commit": "68880f87a26e56a36965290109e044b598dec141"}
+    }
+  ]
+}

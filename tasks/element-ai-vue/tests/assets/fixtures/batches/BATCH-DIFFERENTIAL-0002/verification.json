@@ -1,0 +1,102 @@
+{
+  "schema_version": "migration-differential-verification:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "executed_at_utc": "2026-10-24T22:04:52.274Z",
+  "commands": [
+    {
+      "side": "source",
+      "cwd": "/workspace/repo",
+      "command": [
+        "node",
+        "source/batches/BATCH-DIFFERENTIAL-0002/probe.mjs",
+        "/input/source",
+        "--report=/tmp/source-probe.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "side": "target",
+      "cwd": "/workspace/repo",
+      "command": [
+        "node",
+        "target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs",
+        "/input/target",
+        "--report=/tmp/target-probe.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "side": "target",
+      "cwd": "/opt/migration/build",
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "--reporter=dot"
+      ],
+      "exit_code": 0,
+      "summary": {
+        "test_files_passed": 1,
+        "tests_passed": 8
+      }
+    }
+  ],
+  "observations": {
+    "DIFF-033": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-034": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-035": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-036": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-037": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-038": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-039": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-040": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-041": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    },
+    "DIFF-042": {
+      "source": true,
+      "target": true,
+      "equal_after_normalization": true
+    }
+  },
+  "result_equality": {
+    "after_normalization": true
+  },
+  "source_all_passed": true,
+  "target_all_passed": true
+}

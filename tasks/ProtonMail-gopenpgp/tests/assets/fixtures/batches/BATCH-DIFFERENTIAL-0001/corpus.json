@@ -1,0 +1,427 @@
+{
+  "schema_version": "migration-differential-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "shared_corpus": true,
+  "projection": "normalized-result",
+  "scenario": "shared-case-corpus",
+  "gate_relation": "equal_after_normalization",
+  "probe": "../shared/batches/BATCH-DIFFERENTIAL-0001/diffprobe/main.go",
+  "authoring_execution": {
+    "source": {
+      "repo": "/input/source",
+      "executed": true
+    },
+    "target": {
+      "repo": "/input/target",
+      "executed": true
+    }
+  },
+  "cases": [
+    {
+      "observation_id": "DIFF-001",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt function signature",
+      "contract_requirement_ids": [
+        "R003"
+      ],
+      "atomic_claim": "Input: consumer code calling Decrypt(message, crypto.Armor, decHandle, nil, callbacks). Expected: it compiles unchanged; Decrypt keeps the exact five-parameter signature with messageEncoding int8 and a verifyHandle parameter that accepts nil.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "decrypt_signature"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-002",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.MIMECallbacks interface method set",
+      "contract_requirement_ids": [
+        "R004"
+      ],
+      "atomic_claim": "Input: a concrete type assigned to mime.MIMECallbacks. Expected: it compiles only if it implements exactly OnBody(string,string), OnAttachment(string,[]byte), OnEncryptedHeaders(string), OnVerified(int) and OnError(error); missing or renamed methods fail to satisfy the interface.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "callback_methods"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-003",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt callback invocation order",
+      "contract_requirement_ids": [
+        "R005"
+      ],
+      "atomic_claim": "Input: a decryptable, parseable PGP/MIME message with two attachments. Expected: the recorded callback sequence is OnVerified/OnError first, then exactly one OnBody, then two OnAttachment calls in MIME order, then a final OnEncryptedHeaders(\"\").",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-004",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt OnVerified status values",
+      "contract_requirement_ids": [
+        "R006"
+      ],
+      "atomic_claim": "Input: messages exercising each signature outcome. Expected: every OnVerified argument is one of constants.SIGNATURE_OK (0), SIGNATURE_NOT_SIGNED (1), SIGNATURE_NO_VERIFIER (2), SIGNATURE_FAILED (3) or SIGNATURE_BAD_CONTEXT (4), and never any other integer.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc",
+        "mime/testdata/mime/scenario_13.asc",
+        "mime/testdata/mime/scenario_23.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-005",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt OnError signature-error type",
+      "contract_requirement_ids": [
+        "R007"
+      ],
+      "atomic_claim": "Input: a message whose signature cannot be verified. Expected: each error passed to OnError satisfies errors.As(err, *crypto.SignatureVerificationError) and its Status equals the matching constant; a plain fmt.Errorf without the typed cause fails this check.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_11.asc",
+        "mime/testdata/mime/scenario_13.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-006",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt decryption-failure path",
+      "contract_requirement_ids": [
+        "R008"
+      ],
+      "atomic_claim": "Input: a decryptionHandle whose Decrypt returns a non-nil error. Expected: Decrypt calls OnError exactly once with that same error and invokes no other callback.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-007",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt unreadable-MIME error path",
+      "contract_requirement_ids": [
+        "R009"
+      ],
+      "atomic_claim": "Input: a successful decryption whose bytes are not a readable MIME message (no valid header block). Expected: Decrypt calls OnError with an error whose Error() string begins with the literal \"mime: \".",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-008",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt multipart/signed verification",
+      "contract_requirement_ids": [
+        "R010"
+      ],
+      "atomic_claim": "Input: a multipart/signed message whose signed first part has trailing spaces, tabs and CR before each line ending and a valid detached signature. Expected: the signed content is trimmed per line, canonicalized to CRLF, and passed to PGPVerify.VerifyDetached(canonicalBody, signature, crypto.Armor) so verification succeeds; verifying the untrimmed or decoded body fails.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-009",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt dual signature-failure path",
+      "contract_requirement_ids": [
+        "R011"
+      ],
+      "atomic_claim": "Input: a message where both the embedded OpenPGP signature and the PGP/MIME signature fail. Expected: OnError is called twice (embedded status first, then PGP/MIME status) and OnVerified is called once with max(embeddedStatus, mimeStatus) under SIGNATURE_FAILED (3) > SIGNATURE_NO_VERIFIER (2) > SIGNATURE_NOT_SIGNED (1) > SIGNATURE_OK (0).",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_13.asc",
+        "mime/testdata/mime/scenario_23.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-010",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt verifyHandle nil and non-nil behavior",
+      "contract_requirement_ids": [
+        "R012"
+      ],
+      "atomic_claim": "Input: two otherwise identical messages, one passed a non-nil verifyHandle and one passed nil. Expected: the first produces exactly one OnVerified(constants.SIGNATURE_OK) call; the second produces zero OnVerified calls.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-011",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt OnBody value",
+      "contract_requirement_ids": [
+        "R013"
+      ],
+      "atomic_claim": "Input: a message whose text/plain body contains the invalid UTF-8 byte 0xFF between ASCII text. Expected: OnBody is called exactly once with the body text in which 0xFF is replaced by U+FFFD and with the part's MIME type string.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-012",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt OnAttachment value",
+      "contract_requirement_ids": [
+        "R014"
+      ],
+      "atomic_claim": "Input: a message with two binary attachments in MIME order. Expected: OnAttachment is called exactly twice, each time with the attachment's raw header block string and its fully transfer-decoded bytes, in MIME order.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-013",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime.Decrypt OnEncryptedHeaders value",
+      "contract_requirement_ids": [
+        "R015"
+      ],
+      "atomic_claim": "Input: any successfully parsed message. Expected: OnEncryptedHeaders is called exactly once with the empty string and it is the final callback, after OnBody and all OnAttachment calls.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_00.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-014",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "exported mime package API",
+      "contract_requirement_ids": [
+        "R016"
+      ],
+      "atomic_claim": "Input: consumer code that imports github.com/ProtonMail/gopenpgp/v3/mime. Expected: all previously exported identifiers (Decrypt, MIMECallbacks and its methods) still exist with the same signatures and callback behavior; removing or renaming any of them breaks compilation.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "callback_methods",
+        "decrypt_signature"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-015",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "changed file set",
+      "contract_requirement_ids": [
+        "R019"
+      ],
+      "atomic_claim": "Input: `git diff --name-only` against the starting commit. Expected: only mime/mime.go, mime/signature_collector.go, mime/mime_test.go, go.mod and go.sum are listed; edits to crypto/, armor/, constants/, profile/, mobile/ or any other file fail this check.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "go_mod_requires_normalized"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-016",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "exported APIs of crypto, armor, constants, profile and mobile",
+      "contract_requirement_ids": [
+        "R020"
+      ],
+      "atomic_claim": "Input: compiling and testing the crypto, armor, constants, profile and mobile packages. Expected: their exported signatures and observable behavior are unchanged (same test outcomes) and the github.com/ProtonMail/go-crypto dependency remains; altering any public symbol of those packages fails this check.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "go_mod_requires_normalized",
+        "go_crypto_present"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-017",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime/testdata fixtures",
+      "contract_requirement_ids": [
+        "R021"
+      ],
+      "atomic_claim": "Input: the mime/testdata directory before and after the migration. Expected: every fixture file (for example mime/testdata/mime/scenario_11.asc and mime/testdata/mime_pgpMessage) is byte-identical, so `git diff -- mime/testdata` is empty.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "testdata_hashes"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    },
+    {
+      "observation_id": "DIFF-018",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "mime/mime_test.go behavioral assertions",
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "atomic_claim": "Input: mime/mime_test.go after the migration. Expected: the behavioral assertions on callback values, signature statuses and errors are retained (for example TestMessageVerificationNotSignedFailed still expects OnError statuses 1 and 3 and OnVerified [3]); deleting, skipping, loosening or hardcoding those assertions fails this check.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "scenarios"
+      ],
+      "differential_verified": true,
+      "fixtures": [
+        "mime/testdata/mime/scenario_11.asc"
+      ]
+    },
+    {
+      "observation_id": "DIFF-019",
+      "kind": "DIFFERENTIAL",
+      "family": "shared-case-corpus",
+      "input_class": "declared",
+      "projection": "normalized-result",
+      "scenario": "shared-case-corpus",
+      "surface": "working-tree patch",
+      "contract_requirement_ids": [
+        "R023"
+      ],
+      "atomic_claim": "Input: the collected patch from /workspace/repo. Expected: the change set is an uncommitted working-tree diff against commit 0cb393362a994a485e76cae41e73531a882c55ad and every created or modified file is present in the working tree, not only in a commit or outside the checkout.",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "normalized_observable_keys": [
+        "migration_contract"
+      ],
+      "differential_verified": true,
+      "fixtures": []
+    }
+  ]
+}

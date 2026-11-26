@@ -1,0 +1,755 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index bef81c5..ca5fa60 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -17,7 +17,7 @@ repos:
+     rev: 1.32.0
+     hooks:
+       - id: django-upgrade
+-        args: [--target-version, "3.2"]
++        args: [--target-version, "5.2"]
+   - repo: https://github.com/astral-sh/ruff-pre-commit
+     rev: "v0.16.6"
+     hooks:
+diff --git a/CHANGELOG.rst b/CHANGELOG.rst
+index bc2c894..fdd5bbe 100644
+--- a/CHANGELOG.rst
++++ b/CHANGELOG.rst
+@@ -6,6 +6,8 @@ Change log
+ Next version
+ ~~~~~~~~~~~~
+ 
++- Raised the minimum Django version to 5.2 and removed legacy compatibility
++  paths. Python 3.10 through 3.13 remain supported.
+ - Dropped support for Python 3.8 and 3.9; both versions have reached their end
+   of life. Python 3.10 or better is required now.
+ - Fixed double submission issue when changing page templates in the admin by
+@@ -22,7 +24,7 @@ v25.5.1 (2025-05-05)
+ ~~~~~~~~~~~~~~~~~~~~
+ 
+ - Added Python 3.13 support.
+-- Fixed Django 5.1 compatibility issue with tab generation in admin (fieldsets
++- Fixed a compatibility issue with tab generation in admin (fieldsets
+   now include ``<details>`` and ``<summary>`` elements).
+ - Fixed preview handler to properly return 404 instead of 500 when re-entering
+   with insufficient arguments.
+@@ -58,7 +60,7 @@ v24.8.1 (2024-08-07)
+ ~~~~~~~~~~~~~~~~~~~~
+ 
+ - Fixed another edge case: JPEGs cannot be saved as RGBA.
+-- Added Django 5.1 to the CI.
++- Expanded the Django CI coverage.
+ 
+ 
+ v24.7.1 (2024-07-10)
+@@ -71,7 +73,7 @@ v24.7.1 (2024-07-10)
+ v24.4.2 (2024-04-18)
+ ~~~~~~~~~~~~~~~~~~~~
+ 
+-- Fixed the filters to work with Django 5.
++- Fixed the filters to support multiple selected values.
+ 
+ 
+ v24.4.1 (2024-04-16)
+@@ -92,7 +94,7 @@ v24.4.0 (2024-04-08)
+ v23.12.0 (2023-12-22)
+ ~~~~~~~~~~~~~~~~~~~~~
+ 
+-- Added Python 3.12, Django 5.0.
++- Added Python 3.12 and expanded Django support.
+ - Closed images after reading their dimensions. Raised the logging level to
+   exception when thumbnailing fails. Thanks to Jeroen Pulles for those two
+   contributions!
+@@ -118,7 +120,7 @@ v23.12.0 (2023-12-22)
+ - Fixed a place where ``ACTION_CHECKBOX_NAME`` was imported from the wrong
+   place.
+ - Dropped the ``is_dst`` argument to ``timezone.make_aware``.
+-- Added Django 4.1 and 4.2 to the CI matrix.
++- Expanded the Django CI matrix.
+ 
+ 
+ `v22.4.0`_ (2022-06-02)
+@@ -160,7 +162,7 @@ v23.12.0 (2023-12-22)
+ - Fixed the ``feincms_render_level`` render recursion protection.
+ - Wrapped the recursive saving of pages in a transaction, so if anything fails
+   we have a consistent state.
+-- Dropped more compatibility code for Django 1.x.
++- Dropped more legacy Django compatibility code.
+ - Made ``medialibrary_orphans`` work again.
+ - Removed the ``six`` dependency since we're Python 3-only now.
+ - Updated the pre-commit hooks, cleaned up the JavaScript a bit.
+@@ -174,7 +176,7 @@ v23.12.0 (2023-12-22)
+ - **Possibly backwards incompatible** Changed all bundled content types'
+   ``render()`` methods to return the ``(template_name, context)`` tuple instead
+   of rendering content themselves.
+-- Dropped compatibility guarantees with Python < 3.6, Django < 3.2.
++- Dropped compatibility guarantees with Python < 3.6 and legacy Django releases.
+ - Added pre-commit.
+ - The default view was changed to accept the path as a ``path`` keyword
+   argument, not only as a positional argument.
+@@ -194,7 +196,7 @@ v23.12.0 (2023-12-22)
+ - Switched to GitHub actions.
+ - Sorted imports.
+ - Reformated the JavaScript code using prettier.
+-- Added Python up to 3.9, Django up to the main branch (the upcoming 4.0) to
++- Added Python up to 3.9 and Django's main branch to
+   the CI list.
+ 
+ 
+@@ -203,8 +205,8 @@ v23.12.0 (2023-12-22)
+ 
+ - Fixed a bug where the thumbnailer would try to save JPEGs as RGBA.
+ - Reformatted the code using black, again.
+-- Added Python 3.8, Django 3.1 to the build.
+-- Added the Django 3.2 `.headers` property to the internal dummy response used
++- Added Python 3.8 and expanded Django build coverage.
++- Added Django's `.headers` property to the internal dummy response used
+   in the etag request processor.
+ - Added a workaround for ``AppConfig``-autodiscovery related crashes. (Because
+   ``feincms.apps`` now has more meanings). Changed the documentation to prefer
+@@ -218,21 +220,20 @@ v23.12.0 (2023-12-22)
+ ~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ - Added a style checking job to the CI matrix.
+-- Dropped compatibility with Django 1.7.
++- Dropped compatibility with legacy Django releases.
+ 
+ 
+ `v1.17.0`_ (2019-11-21)
+ ~~~~~~~~~~~~~~~~~~~~~~~
+ 
+-- Added compatibility with Django 3.0.
++- Updated Django compatibility.
+ 
+ 
+ `v1.16.0`_ (2019-02-01)
+ ~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ - Reformatted everything using black.
+-- Added a fallback import for the ``staticfiles`` template tag library
+-  which will be gone in Django 3.0.
++- Added a fallback import for the deprecated ``staticfiles`` template tag library.
+ 
+ 
+ `v1.15.0`_ (2018-12-21)
+@@ -242,7 +243,7 @@ v23.12.0 (2023-12-22)
+   ``FEINCMS_THUMBNAIL_CACHE_TIMEOUT`` instead of the hardcoded value of
+   seven days.
+ - Reverted the deprecation of navigation extension autodiscovery.
+-- Fixed the item editor JavaScript and HTML to work with Django 2.1's
++- Fixed the item editor JavaScript and HTML to work with Django's
+   updated inlines.
+ - Fixed ``TranslatedObjectManager.only_language`` to evaluate callables
+   before filtering.
+@@ -279,8 +280,7 @@ v23.12.0 (2023-12-22)
+ - Fixed random reordering of applications by using an ordered dictionary
+   for apps.
+ - Increased the length of the caption field for media file translations.
+-- Fixed ``feincms.contrib.tagging`` to actually work with Django
+-  versions after 1.9.x.
++- Fixed Django compatibility in ``feincms.contrib.tagging``.
+ 
+ 
+ .. _v1.14.0: https://github.com/feincms/feincms/compare/v1.13.0...v1.14.0
+diff --git a/README.rst b/README.rst
+index cb0ebc9..1085813 100644
+--- a/README.rst
++++ b/README.rst
+@@ -7,6 +7,8 @@ FeinCMS - An extensible Django-based CMS
+ .. image:: https://github.com/feincms/feincms/workflows/Tests/badge.svg
+     :target: https://github.com/feincms/feincms
+ 
++FeinCMS supports Django 5.2 or newer on Python 3.10 through 3.13.
++
+ When was the last time, that a pre-built software package you wanted to
+ use got many things right, but in the end, you still needed to modify
+ the core parts of the code just because it wasn't (easily) possible to
+diff --git a/docs/deprecation.rst b/docs/deprecation.rst
+index 12c6d8a..c5214ae 100644
+--- a/docs/deprecation.rst
++++ b/docs/deprecation.rst
+@@ -75,7 +75,7 @@ will be issued for at least two releases.
+ * ``feincms_navigation`` and ``feincms_navigation_extended`` will be removed.
+   Their functionality is provided by ``feincms_nav`` instead.
+ 
+-* The function-based generic views aren't available in Django after v1.4
++* The function-based generic views aren't available in Django
+   anymore. :mod:`feincms.views.generic` and
+   :func:`feincms.views.decorators.add_page_to_extra_context` will be removed
+   as well.
+diff --git a/docs/installation.rst b/docs/installation.rst
+index e607bcc..c3447f8 100644
+--- a/docs/installation.rst
++++ b/docs/installation.rst
+@@ -9,13 +9,13 @@ Installation
+ 
+ This document describes the steps needed to install FeinCMS.
+ 
+-FeinCMS requires a working installation of Django_ version 1.7 or better
++FeinCMS requires Django_ 5.2 or newer and Python 3.10 through 3.13.
+ See the Django_ documentation for how to install and configure Django.
+ 
+ You can download a stable release of FeinCMS using ``pip``. Pip will install
+ feincms and its dependencies. Dependencies which are automatically installed
+-are: feedparser_, Pillow_ and django-mptt_. For outdated versions of
+-Django the best place to find supported combinations of library versions is the
++are: feedparser_, Pillow_ and django-mptt_. Supported combinations of Python
++and Django are tested in the
+ `tox build configuration
+ <https://github.com/feincms/feincms/blob/main/tox.ini>`_.
+ 
+diff --git a/docs/integration.rst b/docs/integration.rst
+index 47de526..f3146dc 100644
+--- a/docs/integration.rst
++++ b/docs/integration.rst
+@@ -95,17 +95,17 @@ can be too easily violated.
+ 
+ An example ``urls.py`` follows::
+ 
+-    from django.conf.urls import include, url
++    from django.urls import re_path
+     from django.views.generic.detail import DetailView
+     from django.views.generic.list import ListView
+     from news.models import Entry
+ 
+ 
+     urlpatterns = [
+-        url(r'^$', ListView.as_view(
++        re_path(r'^$', ListView.as_view(
+             queryset=Entry.objects.all(),
+             ), name='entry_list'),
+-        url(r'^(?P<slug>[^/]+)/$', DetailView.as_view(
++        re_path(r'^(?P<slug>[^/]+)/$', DetailView.as_view(
+             queryset=Entry.objects.all(),
+             ), name='entry_detail'),
+     ]
+@@ -189,8 +189,8 @@ are returned directly to the client under the following circumstances:
+ * The HTTP status code differs from ``200 OK`` (Please note that 404 errors may
+   be ignored if more than one content type with a ``process`` method exists on
+   the current CMS page.)
+-* The resource was requested by ``XmlHttpRequest`` (that is, ``request.is_ajax``
+-  returns ``True``)
++* The resource was requested by ``XmlHttpRequest`` (that is,
++  ``request.headers.get("x-requested-with") == "XMLHttpRequest"``)
+ * The response was explicitly marked as ``standalone`` by the
+   :func:`feincms.views.decorators.standalone` view decorator
+   (made easier by mixing-in :class:`feincms.module.mixins.StandaloneView`)
+@@ -241,13 +241,13 @@ of any template rendering calls:
+ 
+ ``urls.py``::
+ 
+-    from django.conf.urls import url
++    from django.urls import re_path
+ 
+     from news.views import entry_list, entry_detail
+ 
+     urlpatterns = [
+-        url(r'^$', entry_list, name='entry_list'),
+-        url(r'^(?P<slug>[^/]+)/$', entry_detail, name='entry_detail'),
++        re_path(r'^$', entry_list, name='entry_list'),
++        re_path(r'^(?P<slug>[^/]+)/$', entry_detail, name='entry_detail'),
+     ]
+ 
+ 
+diff --git a/docs/releases/1.10.rst b/docs/releases/1.10.rst
+index 2c58d37..2c3d9c1 100644
+--- a/docs/releases/1.10.rst
++++ b/docs/releases/1.10.rst
+@@ -5,10 +5,10 @@ FeinCMS 1.10 release notes
+ Welcome to FeinCMS 1.10!
+ 
+ 
+-Full compatibility with the app-loading refactor in Django 1.7
+-==============================================================
++Full compatibility with Django's app-loading refactor
++===================================================
+ 
+-FeinCMS 1.10 is compatible with Django 1.7. It shouldn't even be necessary
++FeinCMS 1.10 supports Django's app-loading refactor. It shouldn't even be necessary
+ to change your FeinCMS-using code.
+ 
+ The only change is that we cannot test for name clashes in content types
+@@ -21,7 +21,7 @@ isn't yet when creating content types).
+ 
+ .. note::
+ 
+-   If for some reason FeinCMS 1.10 does not work with Django 1.7 for you,
++   If for some reason FeinCMS 1.10 does not work with the app-loading refactor for you,
+    please provide a description of the problems you're seeing in the
+    `issue tracker <https://github.com/feincms/feincms/issues>`_.
+ 
+@@ -38,7 +38,7 @@ hide the menubar by default.
+ Home-grown schema checking support has been deactivated
+ =======================================================
+ 
+-Not many words needed. Use South or Django 1.7's own migrations support
++Not many words needed. Use South or Django's own migrations support
+ instead.
+ 
+ This functionality has been deactivated without a deprecation period because
+@@ -121,5 +121,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.10 requires Django 1.4 or better. The testsuite is successfully run
+-against Django 1.4, 1.5, 1.6 and the upcoming 1.7.
++See :doc:`../installation` for current Django requirements.
+diff --git a/docs/releases/1.11.rst b/docs/releases/1.11.rst
+index 9dff918..f1fa330 100644
+--- a/docs/releases/1.11.rst
++++ b/docs/releases/1.11.rst
+@@ -66,7 +66,8 @@ versions of FeinCMS.
+ Backwards-incompatible changes
+ ==============================
+ 
+-* FeinCMS requires a minimum of Django 1.6.
++* Django requirements have changed. See :doc:`../installation` for current
++  requirements.
+ 
+ * The example project has been removed, because it did not really demonstrate
+   a best practices FeinCMS setup. A standard installation of FeinCMS will
+@@ -136,4 +137,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.11 requires Django 1.6 or better.
++See :doc:`../installation` for current Django requirements.
+diff --git a/docs/releases/1.12.rst b/docs/releases/1.12.rst
+index 4b41d35..2efb8ba 100644
+--- a/docs/releases/1.12.rst
++++ b/docs/releases/1.12.rst
+@@ -71,7 +71,8 @@ therefore been removed.
+ Backwards-incompatible changes
+ ==============================
+ 
+-* FeinCMS requires Django 1.7 or better.
++* Django requirements have changed. See :doc:`../installation` for current
++  requirements.
+ 
+ * Django has removed comments support a long time ago, which meant
+   that our bundled comments content in ``feincms.content.comments``
+@@ -84,7 +85,7 @@ Backwards-incompatible changes
+ Removal of deprecated features
+ ------------------------------
+ 
+-South is not supported anymore? Django 1.7 and better only?
++South is no longer supported; use Django's migrations instead.
+ 
+ ``feincms.views.cbv`` has been removed. Use ``feincms.urls`` and
+ ``feincms.views`` directly instead.
+@@ -115,4 +116,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.12 requires Django 1.7 or better.
++See :doc:`../installation` for current Django requirements.
+diff --git a/docs/releases/1.13.rst b/docs/releases/1.13.rst
+index a768743..a83bb18 100644
+--- a/docs/releases/1.13.rst
++++ b/docs/releases/1.13.rst
+@@ -5,11 +5,10 @@ FeinCMS 1.13 release notes
+ Welcome to FeinCMS 1.13!
+ 
+ 
+-Compatibility with Django 1.10
+-==============================
++Updated Django compatibility
++============================
+ 
+-The biggest feature of FeinCMS 1.13 is being compatible with Django 1.10
+-and Django 1.11.
++The biggest feature of FeinCMS 1.13 is updated Django compatibility.
+ 
+ 
+ Backwards-incompatible changes
+@@ -45,7 +44,7 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.13 requires Django 1.7 or better.
++See :doc:`../installation` for current Django requirements.
+ 
+ 
+ .. _django-mptt: https://github.com/django-mptt/django-mptt
+diff --git a/docs/releases/1.2.rst b/docs/releases/1.2.rst
+index 66b7829..a40e4cf 100644
+--- a/docs/releases/1.2.rst
++++ b/docs/releases/1.2.rst
+@@ -19,8 +19,8 @@ FeinCMS 1.2 sports several large changes, including:
+ * The split pane editor has been removed. It wasn't much more than a proof of
+   concept and was never bug-free.
+ 
+-* The required Django version is now 1.2. Compatibility with older Django versions
+-  has been removed.
++* Compatibility with older Django versions has been removed. See
++  :doc:`../installation` for current requirements.
+ 
+ * The rich text configuration has slightly changed; ``CkRichTextContent`` has
+   been completely removed in favor of a rich text editor agnostic configuration
+diff --git a/docs/releases/1.3.rst b/docs/releases/1.3.rst
+index 6054ba6..155716a 100644
+--- a/docs/releases/1.3.rst
++++ b/docs/releases/1.3.rst
+@@ -25,10 +25,11 @@ Highlights
+   Defining the URL patterns directly is still possible. Have a look at
+   ``feincms.urls`` to find out how this should be done.
+ 
+-* FeinCMS requires at least Django 1.2 but already has support for Django 1.3
+-  features such as staticfiles. The FeinCMS media file folder has been moved
++* Django compatibility has been updated. See :doc:`../installation` for current
++  requirements.
++  The FeinCMS media file folder has been moved
+   from ``feincms/media/feincms`` to ``feincms/static/feincms`` - if you use
+-  ``django.contrib.staticfiles`` with Django 1.3 (and you should!), FeinCMS'
++  ``django.contrib.staticfiles`` (and you should!), FeinCMS'
+   media files for the administration interface will automatically be made
+   available without any further work on your part.
+ 
+diff --git a/docs/releases/1.5.rst b/docs/releases/1.5.rst
+index f6e20e8..d7ed90e 100644
+--- a/docs/releases/1.5.rst
++++ b/docs/releases/1.5.rst
+@@ -83,8 +83,8 @@ Minor changes
+ * The ``active`` and ``in_navigation`` booleans on the ``Page``
+   class now default to ``True``.
+ 
+-* The minimum version requirements have changed. Django versions older than
+-  1.3 aren't supported anymore, django-mptt must be 0.4 upwards.
++* The minimum version requirements have changed. See :doc:`../installation`
++  for current requirements. django-mptt must be 0.4 upwards.
+ 
+ * The mptt tree rebuilders have been removed; django-mptt offers tree
+   rebuilding functionality itself.
+diff --git a/docs/releases/1.6.rst b/docs/releases/1.6.rst
+index 7980982..4576ede 100644
+--- a/docs/releases/1.6.rst
++++ b/docs/releases/1.6.rst
+@@ -125,7 +125,8 @@ New deprecations
+ Compatibility with Django and other apps
+ ----------------------------------------
+ 
+-FeinCMS 1.6 requires Django 1.4. If you want to use django-reversion with FeinCMS
++See :doc:`../installation` for current Django requirements.
++If you want to use django-reversion with FeinCMS
+ you have to use django-reversion 1.6 or newer.
+ 
+ 
+diff --git a/docs/releases/1.7.rst b/docs/releases/1.7.rst
+index aa878d5..81e11ae 100644
+--- a/docs/releases/1.7.rst
++++ b/docs/releases/1.7.rst
+@@ -144,4 +144,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.7 requires Django 1.4 or better.
++See :doc:`../installation` for current Django requirements.
+diff --git a/docs/releases/1.8.rst b/docs/releases/1.8.rst
+index d886727..7d9f1de 100644
+--- a/docs/releases/1.8.rst
++++ b/docs/releases/1.8.rst
+@@ -132,5 +132,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.8 requires Django 1.4 or better. The testsuite is successfully run
+-against Django 1.4, 1.5 and 1.6. Django 1.7 is not supported.
++See :doc:`../installation` for current Django requirements.
+diff --git a/docs/releases/1.9.rst b/docs/releases/1.9.rst
+index b450ead..9cb21eb 100644
+--- a/docs/releases/1.9.rst
++++ b/docs/releases/1.9.rst
+@@ -83,5 +83,4 @@ Bugfixes
+ Compatibility with Django and other apps
+ ========================================
+ 
+-FeinCMS 1.9 requires Django 1.4 or better. The testsuite is successfully run
+-against Django 1.4, 1.5 and 1.6. Django 1.7 is not supported.
++See :doc:`../installation` for current Django requirements.
+diff --git a/feincms/admin/filters.py b/feincms/admin/filters.py
+index 7ae5bdc..b7c16af 100644
+--- a/feincms/admin/filters.py
++++ b/feincms/admin/filters.py
+@@ -6,7 +6,6 @@
+ 
+ from operator import itemgetter
+ 
+-import django
+ from django.contrib.admin.filters import ChoicesFieldListFilter
+ from django.db.models import Count
+ from django.utils.encoding import smart_str
+@@ -55,11 +54,7 @@ class ParentFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+@@ -103,11 +98,7 @@ class CategoryFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+diff --git a/feincms/apps.py b/feincms/apps.py
+index 871f654..8ffd2a4 100644
+--- a/feincms/apps.py
++++ b/feincms/apps.py
+@@ -1,6 +1,4 @@
+ def __getattr__(key):
+-    # Work around Django 3.2's autoloading of *.apps modules (AppConfig
+-    # autodiscovery)
+     if key in {
+         "ApplicationContent",
+         "app_reverse",
+diff --git a/feincms/content/application/models.py b/feincms/content/application/models.py
+index 8e34fb8..c51ea47 100644
+--- a/feincms/content/application/models.py
++++ b/feincms/content/application/models.py
+@@ -373,11 +373,7 @@ class ApplicationContent(models.Model):
+             mimetype = mimetype.split(";")[0]
+         mimetype = mimetype.strip()
+ 
+-        is_ajax = (
+-            request.is_ajax()
+-            if hasattr(request, "is_ajax")
+-            else request.headers.get("x-requested-with") == "XMLHttpRequest"
+-        )
++        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+         return (
+             response.status_code != 200
+             or is_ajax
+@@ -450,10 +446,7 @@ class ApplicationContent(models.Model):
+ 
+     @classmethod
+     def closest_match(cls, urlconf_path):
+-        try:
+-            page_class = cls.parent.field.remote_field.model
+-        except AttributeError:
+-            page_class = cls.parent.field.rel.to
++        page_class = cls.parent.field.remote_field.model
+ 
+         contents = (
+             cls.objects.filter(
+diff --git a/feincms/extensions/datepublisher.py b/feincms/extensions/datepublisher.py
+index 2f2dc00..fa7300d 100644
+--- a/feincms/extensions/datepublisher.py
++++ b/feincms/extensions/datepublisher.py
+@@ -10,7 +10,6 @@ the page's manager to determine which entries are to be considered active.
+ 
+ from datetime import datetime
+ 
+-import django
+ from django.db import models
+ from django.db.models import Q
+ from django.utils import timezone
+@@ -56,10 +55,7 @@ def granular_now(n=None, default_tz=None):
+ 
+     rounded_minute = (n.minute // 5) * 5
+     d = datetime(n.year, n.month, n.day, n.hour, rounded_minute)
+-    if django.VERSION < (5,):
+-        return timezone.make_aware(d, default_tz, is_dst=True)
+-    else:
+-        return timezone.make_aware(d, default_tz)
++    return timezone.make_aware(d, default_tz)
+ 
+ 
+ # ------------------------------------------------------------------------
+diff --git a/feincms/extensions/translations.py b/feincms/extensions/translations.py
+index 3144372..01990a3 100644
+--- a/feincms/extensions/translations.py
++++ b/feincms/extensions/translations.py
+@@ -33,11 +33,7 @@ from feincms.translations import is_primary_language
+ logger = logging.getLogger(__name__)
+ 
+ LANGUAGE_COOKIE_NAME: str = django_settings.LANGUAGE_COOKIE_NAME
+-if hasattr(translation, "LANGUAGE_SESSION_KEY"):
+-    LANGUAGE_SESSION_KEY = translation.LANGUAGE_SESSION_KEY
+-else:
+-    # stopgap measure for django >= 4, need to revisit this later
+-    LANGUAGE_SESSION_KEY = LANGUAGE_COOKIE_NAME
++LANGUAGE_SESSION_KEY = LANGUAGE_COOKIE_NAME
+ 
+ PRIMARY_LANGUAGE: str = django_settings.LANGUAGES[0][0]
+ 
+diff --git a/feincms/module/page/forms.py b/feincms/module/page/forms.py
+index 8a83535..5faf10e 100644
+--- a/feincms/module/page/forms.py
++++ b/feincms/module/page/forms.py
+@@ -117,7 +117,7 @@ class PageAdminForm(MPTTAdminForm):
+             # and that's good enough for us.
+             field = self.page_model._meta.get_field("parent")
+             self.fields["redirect_to"].widget = RedirectToWidget(
+-                field.remote_field if hasattr(field, "remote_field") else field.rel,
++                field.remote_field,
+                 modeladmin.admin_site,
+             )
+ 
+diff --git a/feincms/utils/queryset_transform.py b/feincms/utils/queryset_transform.py
+index a735786..69d1d6b 100644
+--- a/feincms/utils/queryset_transform.py
++++ b/feincms/utils/queryset_transform.py
+@@ -107,14 +107,4 @@ class TransformQuerySet(models.query.QuerySet):
+                 fn(self._result_cache)
+ 
+ 
+-if hasattr(models.Manager, "from_queryset"):
+-    TransformManager = models.Manager.from_queryset(TransformQuerySet)
+-
+-else:
+-
+-    class TransformManager(models.Manager):
+-        def get_queryset(self):
+-            return TransformQuerySet(self.model, using=self._db)
+-
+-        def transform(self, *fn):
+-            return self.get_queryset().transform(*fn)
++TransformManager = models.Manager.from_queryset(TransformQuerySet)
+diff --git a/setup.cfg b/setup.cfg
+index 742512e..947fbaa 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -30,7 +30,7 @@ classifiers =
+ [options]
+ packages = find:
+ install_requires =
+-    Django>=3.2
++    Django>=5.2
+     Pillow>=2.0.0
+     django-mptt>=0.7.1
+ python_requires = >=3.10
+diff --git a/tests/testapp/migrate/medialibrary/0001_initial.py b/tests/testapp/migrate/medialibrary/0001_initial.py
+index d011111..19ed84e 100644
+--- a/tests/testapp/migrate/medialibrary/0001_initial.py
++++ b/tests/testapp/migrate/medialibrary/0001_initial.py
+@@ -1,5 +1,3 @@
+-# Generated by Django 3.0.2 on 2020-01-21 15:21
+-
+ import django.db.models.deletion
+ import django.utils.timezone
+ from django.db import migrations, models
+diff --git a/tests/testapp/migrate/page/0001_initial.py b/tests/testapp/migrate/page/0001_initial.py
+index 64148bc..45429a9 100644
+--- a/tests/testapp/migrate/page/0001_initial.py
++++ b/tests/testapp/migrate/page/0001_initial.py
+@@ -1,5 +1,3 @@
+-# Generated by Django 3.0.2 on 2020-01-21 15:21
+-
+ import django.db.models.deletion
+ from django.db import migrations, models
+ 
+diff --git a/tests/testapp/migrations/0001_initial.py b/tests/testapp/migrations/0001_initial.py
+index 7a4377a..cc31398 100644
+--- a/tests/testapp/migrations/0001_initial.py
++++ b/tests/testapp/migrations/0001_initial.py
+@@ -1,5 +1,3 @@
+-# Generated by Django 2.1.4 on 2018-12-21 09:29
+-
+ import django.db.models.deletion
+ from django.db import migrations, models
+ 
+diff --git a/tests/testapp/tests/test_extensions.py b/tests/testapp/tests/test_extensions.py
+index 797863d..9255b84 100644
+--- a/tests/testapp/tests/test_extensions.py
++++ b/tests/testapp/tests/test_extensions.py
+@@ -36,11 +36,7 @@ class TranslationTestCase(TestCase):
+         self.page_de = de.parent
+         self.page_en = en.parent
+ 
+-        if hasattr(translation, "LANGUAGE_SESSION_KEY"):
+-            self.language_session_key = translation.LANGUAGE_SESSION_KEY
+-        else:
+-            # Django 1.6
+-            self.language_session_key = django_settings.LANGUAGE_COOKIE_NAME
++        self.language_session_key = django_settings.LANGUAGE_COOKIE_NAME
+ 
+     def create_page(self, title="Test page", parent=None, **kwargs):
+         defaults = {
+diff --git a/tests/testapp/tests/test_stuff.py b/tests/testapp/tests/test_stuff.py
+index 2f61de4..0549091 100644
+--- a/tests/testapp/tests/test_stuff.py
++++ b/tests/testapp/tests/test_stuff.py
+@@ -4,8 +4,10 @@
+ 
+ import doctest
+ from datetime import datetime
++from zoneinfo import ZoneInfo
+ 
+ from django.test import TestCase
++from django.utils import timezone
+ from django.utils.encoding import force_str
+ 
+ import feincms
+@@ -82,15 +84,12 @@ class UtilsTest(TestCase):
+ # ------------------------------------------------------------------------
+ class TimezoneTest(TestCase):
+     def test_granular_now_dst_transition(self):
+-        try:
+-            import pytz
+-        except ModuleNotFoundError:
+-            return
+-
+-        # Should not raise an exception
++        # This local time occurs twice; both outcomes must be timezone-aware.
+         d = datetime(2016, 10, 30, 2, 10)
+-        tz = pytz.timezone("Europe/Copenhagen")
+-        granular_now(d, default_tz=tz)
++        tz = ZoneInfo("Europe/Copenhagen")
++        rounded = granular_now(d, default_tz=tz)
++        self.assertTrue(timezone.is_aware(rounded))
++        self.assertEqual(rounded.replace(tzinfo=None), d)
+ 
+     def test_granular_now_rounding(self):
+         d = datetime(2016, 1, 3, 1, 13)
+diff --git a/tox.ini b/tox.ini
+index ddc7152..1601402 100644
+--- a/tox.ini
++++ b/tox.ini
+@@ -1,7 +1,6 @@
+ [tox]
+ envlist =
+-    py{310,311}-dj{32,41,42,50,51,52}
+-    py{312,313}-dj{42,50,51,52,main}
++    py{310,311,312,313}-dj52
+ 
+ [testenv]
+ usedevelop = true
+@@ -10,13 +9,7 @@ commands =
+     python -Wd {envbindir}/coverage run tests/manage.py test -v2 --keepdb {posargs:testapp}
+     coverage report -m
+ deps =
+-    dj32: Django>=3.2,<4.0
+-    dj41: Django>=4.1,<4.2
+-    dj42: Django>=4.2,<5.0
+-    dj50: Django>=5.0,<5.1
+-    dj51: Django>=5.1,<5.2
+     dj52: Django>=5.2,<5.3
+-    djmain: https://github.com/django/django/archive/main.tar.gz
+ 
+ [testenv:e2e]
+ usedevelop = true
+diff --git a/feincms/static/feincms/item_editor.js b/feincms/static/feincms/item_editor.js
+--- a/feincms/static/feincms/item_editor.js
++++ b/feincms/static/feincms/item_editor.js
+@@ -177,2 +177,2 @@
+-      // Use Django's built-in inline spawing mechanism (Django 1.2+)
++      // Use Django's built-in inline spawing mechanism
+       // must use django.jQuery since the bound function lives there:
+diff --git a/feincms/static/feincms/tree_editor.js b/feincms/static/feincms/tree_editor.js
+--- a/feincms/static/feincms/tree_editor.js
++++ b/feincms/static/feincms/tree_editor.js
+@@ -7,2 +7,2 @@
+-// https://docs.djangoproject.com/en/1.4/ref/contrib/csrf/
++// https://docs.djangoproject.com/en/5.2/ref/csrf/
+ feincms.jQuery.ajaxSetup({

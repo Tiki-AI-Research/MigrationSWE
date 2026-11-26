@@ -1,0 +1,59 @@
+schema_version = "1.3"
+artifacts = []
+
+[task]
+name = "tikiai/ProtonMail-gopenpgp"
+description = "Migrate GopenPGP MIME parsing from go-mime to go-message 0.18.0."
+
+[metadata]
+category = "Framework_migration"
+language = "go"
+repository_id = "4ac8c336-e212-4a79-8c8c-f4d1a8c7eefa"
+task_id = "tp-5b8a14a24e0f881a06bedb12df4d5d8c"
+repository_url = "https://github.com/ProtonMail/gopenpgp"
+base_commit_hash = "0cb393362a994a485e76cae41e73531a882c55ad"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 19
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:protonmail-gopenpgp-verifier-image-20261126"
+image_digest = "sha256:93a6e18d4b58cdebbd8fc9270e577fee2210458d135f3764c03e26508db6717d"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 0cb393362a994a485e76cae41e73531a882c55ad > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:protonmail-gopenpgp-task-image-20261126"
+image_digest = "sha256:0c5459b11b174d1fcf3be6848f5a5c2d66da5415b44e27668b35a60f6d691fa1"

@@ -1,0 +1,299 @@
+{
+  "schema_version": "migration-corpus:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "migration": {
+    "source": "Rust",
+    "target": "Go"
+  },
+  "target_probe": "target/batches/BATCH-F2P-0001/f2p_probe_test.go",
+  "observations": [
+    {
+      "observation_id": "F2P-001",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/put_back_n_impl.rs",
+      "surface": "exported identifiers of packages itertools, core and free",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P001InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-003",
+      "requirement_ids": [
+        "R102"
+      ],
+      "source_scope": "src/sources.rs",
+      "surface": "itertools.Fold, CollectVec, Sum1 and Product1 bulk specializations",
+      "predicate": "Rust's `size_hint() -> (usize, Option<usize>)` maps to `core.SizeHint{Lower,Upper}` with negative Upper meaning None: input `core.Hint(3,3)`; expected IsExact() true and {3,3}, while `core.RepeatIter(1).SizeHint()` equals {MaxInt,-1} with Bounded() false, which a plain tuple port cannot express",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P003SizeHintMapping"
+    },
+    {
+      "observation_id": "F2P-004",
+      "requirement_ids": [
+        "R105"
+      ],
+      "source_scope": "src/zip_eq_impl.rs",
+      "surface": "the panic behavior of itertools.ZipEq and itertools.Chunks",
+      "predicate": "Rust `panic!` becomes Go `panic`: input collecting ZipEq(slice(1,2,3),slice(1,2)); expected a recovered non-nil panic, and input constructing Chunks(slice(1,2,3),0); expected a recovered non-nil panic, whereas a migration that returns errors instead fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P004PanicSemantics"
+    },
+    {
+      "observation_id": "F2P-005",
+      "requirement_ids": [
+        "R110"
+      ],
+      "source_scope": "src/array_impl.rs",
+      "surface": "core.ArrayWindows and core.CircularArrayWindows",
+      "predicate": "Input CircularArrayWindows(slice(1,2,3,4),3); expected [[1,2,3],[2,3,4],[3,4,1],[4,1,2]]; input CircularArrayWindows(slice(1,2),3); expected [[1,2,1],[2,1,2]], showing wrap-around that a non-wrapping window port cannot produce",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P005CircularArrayWindows"
+    },
+    {
+      "observation_id": "F2P-006",
+      "requirement_ids": [
+        "R112"
+      ],
+      "source_scope": "src/free.rs",
+      "surface": "exported identifiers of packages itertools, core and free",
+      "predicate": "Input pairs [ok 1, error, ok 3] to free.ProcessResults with a summing processor; expected result [1] plus the propagated error, and input all-ok pairs [1,2]; expected [1,2] with nil error, reproducing Rust's process_results error slot",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P006FreeProcessResults"
+    },
+    {
+      "observation_id": "F2P-007",
+      "requirement_ids": [
+        "R109"
+      ],
+      "source_scope": "src/array_impl.rs",
+      "surface": "itertools.ArrayWindows zero and short window boundary",
+      "predicate": "Input ArrayWindows(slice(1,2,3),0); expected exactly k+1 = 4 empty windows; input ArrayWindows(slice(1,2),3); expected no windows, whereas a naive implementation returning no windows for N==0 fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P007ArrayWindowsBoundary"
+    },
+    {
+      "observation_id": "F2P-008",
+      "requirement_ids": [
+        "R101"
+      ],
+      "source_scope": "src/size_hint.rs",
+      "surface": "core.Iter[T] protocol and each adaptor's Next/SizeHint plus NextBack capability",
+      "predicate": "Rust's `next() -> Option<T>` cannot be copied through: input `core.FromSlice([]int{7})`; expected the iteration protocol `Next() (int,bool)` returns (7,true) then (0,false) while `SizeHint()` returns {1,1} then {0,0}",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P008FromSliceProtocol"
+    },
+    {
+      "observation_id": "F2P-013",
+      "requirement_ids": [
+        "R111"
+      ],
+      "source_scope": "src/lib.rs",
+      "surface": "runtime entry",
+      "predicate": "Rust macros become variadic Go functions: input Izip(slice(1,2,3),slice(10,20)); expected [[1,10],[2,20]]; input Iproduct(slice(1,2),slice(10,20)); expected [[1,10],[1,20],[2,10],[2,20]]; input ChainConcatenates(slice(1),slice(2,3),slice(4)); expected [1,2,3,4]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P013MacrosAsVariadic"
+    },
+    {
+      "observation_id": "F2P-016",
+      "requirement_ids": [
+        "R106"
+      ],
+      "source_scope": "src/format.rs",
+      "surface": "runtime entry",
+      "predicate": "Input `core.NewFormat(core.FromSlice([]int{1,2,3}),\"-\",nil).String()`; expected '1-2-3'; input a second String() call on the same value; expected a panic, reproducing Rust's consuming Display once-only contract",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P016FormatOneShot"
+    },
+    {
+      "observation_id": "F2P-022",
+      "requirement_ids": [
+        "R103"
+      ],
+      "source_scope": "src/exactly_one_err.rs",
+      "surface": "itertools.ExactlyOne and core.ExactlyOneError",
+      "predicate": "Input an empty iterator to AllEqualValue; expected a Go error with Error() exactly 'got zero elements when all elements were expected to be equal', and input slice(1,2) expected 'got different elements when all elements were expected to be equal'; a migration returning bare error values fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P022AllEqualValueErrors"
+    },
+    {
+      "observation_id": "F2P-024",
+      "requirement_ids": [
+        "R114"
+      ],
+      "source_scope": "src/all_equal_value_err.rs",
+      "surface": "runtime entry",
+      "predicate": "Input it.ExactlyOne(slice(2,3,4)); expected an error whose Error() is 'got at least 2 elements when exactly one was expected' and whose Next iteration restores 2,3,4, so consumed elements are not lost as they would be with a plain error return",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P024ExactlyOneRestores"
+    },
+    {
+      "observation_id": "F2P-002",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/pad_tail.rs",
+      "surface": "itertools.Interleave and itertools.InterleaveShortest",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P002InterleavePair"
+    },
+    {
+      "observation_id": "F2P-009",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/adaptors/mod.rs",
+      "surface": "itertools.Dedup",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P009InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-010",
+      "requirement_ids": [
+        "R109"
+      ],
+      "source_scope": "src/next_array.rs",
+      "surface": "core.ArrayWindows and core.CircularArrayWindows",
+      "predicate": "Input ArrayWindows(slice(1,2,3),0); expected exactly k+1 = 4 empty windows; input ArrayWindows(slice(1,2),3); expected no windows, whereas a naive implementation returning no windows for N==0 fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P010ArrayWindowsBoundary"
+    },
+    {
+      "observation_id": "F2P-011",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/take_while_inclusive.rs",
+      "surface": "itertools.Dedup",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P011InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-012",
+      "requirement_ids": [
+        "R105"
+      ],
+      "source_scope": "src/k_smallest.rs",
+      "surface": "itertools.Merge, MergeBy, MergeJoinBy, KMerge and KMergeBy",
+      "predicate": "Rust `panic!` becomes Go `panic`: input collecting ZipEq(slice(1,2,3),slice(1,2)); expected a recovered non-nil panic, and input constructing Chunks(slice(1,2,3),0); expected a recovered non-nil panic, whereas a migration that returns errors instead fails",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P012PanicSemantics"
+    },
+    {
+      "observation_id": "F2P-014",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/take_while_inclusive.rs",
+      "surface": "core.Iter[T] protocol and each adaptor's Next/SizeHint plus NextBack capability",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P014InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-015",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/pad_tail.rs",
+      "surface": "exported identifiers of packages itertools, core and free",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P015InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-017",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/pad_tail.rs",
+      "surface": "itertools.Dedup",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P017InterleaveShortest"
+    },
+    {
+      "observation_id": "F2P-018",
+      "requirement_ids": [
+        "R110"
+      ],
+      "source_scope": "src/array_impl.rs",
+      "surface": "itertools.ArrayWindows",
+      "predicate": "Input CircularArrayWindows(slice(1,2,3,4),3); expected [[1,2,3],[2,3,4],[3,4,1],[4,1,2]]; input CircularArrayWindows(slice(1,2),3); expected [[1,2,1],[2,1,2]], showing wrap-around that a non-wrapping window port cannot produce",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P018CircularArrayWindows"
+    },
+    {
+      "observation_id": "F2P-019",
+      "requirement_ids": [
+        "R102"
+      ],
+      "source_scope": "src/lazy_buffer.rs",
+      "surface": "core.Iter[T] protocol and each adaptor's Next/SizeHint plus NextBack capability",
+      "predicate": "Rust's `size_hint() -> (usize, Option<usize>)` maps to `core.SizeHint{Lower,Upper}` with negative Upper meaning None: input `core.Hint(3,3)`; expected IsExact() true and {3,3}, while `core.RepeatIter(1).SizeHint()` equals {MaxInt,-1} with Bounded() false, which a plain tuple port cannot express",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P019SizeHintMapping"
+    },
+    {
+      "observation_id": "F2P-020",
+      "requirement_ids": [
+        "R102"
+      ],
+      "source_scope": "src/repeatn.rs",
+      "surface": "core.Iter[T] protocol and each adaptor's Next/SizeHint plus NextBack capability",
+      "predicate": "Rust's `size_hint() -> (usize, Option<usize>)` maps to `core.SizeHint{Lower,Upper}` with negative Upper meaning None: input `core.Hint(3,3)`; expected IsExact() true and {3,3}, while `core.RepeatIter(1).SizeHint()` equals {MaxInt,-1} with Bounded() false, which a plain tuple port cannot express",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P020SizeHintMapping"
+    },
+    {
+      "observation_id": "F2P-021",
+      "requirement_ids": [
+        "R108"
+      ],
+      "source_scope": "src/adaptors/mod.rs",
+      "surface": "itertools.Interleave and itertools.InterleaveShortest",
+      "predicate": "Input InterleaveShortest(slice(1,2,3),slice(-1,-2)); expected [1,-1,2,-2,3] because the longer input contributes one trailing element once the shorter is selected, whereas a stop-at-shorter implementation yields [1,-1,2,-2]",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P021InterleavePair"
+    },
+    {
+      "observation_id": "F2P-023",
+      "requirement_ids": [
+        "R102"
+      ],
+      "source_scope": "src/sources.rs",
+      "surface": "core.Iter[T] protocol and each adaptor's Next/SizeHint plus NextBack capability",
+      "predicate": "Rust's `size_hint() -> (usize, Option<usize>)` maps to `core.SizeHint{Lower,Upper}` with negative Upper meaning None: input `core.Hint(3,3)`; expected IsExact() true and {3,3}, while `core.RepeatIter(1).SizeHint()` equals {MaxInt,-1} with Bounded() false, which a plain tuple port cannot express",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "target_test": "TestF2P023SizeHintMapping"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0001",
+  "migration": {
+    "source": { "name": "Express", "version": "4.17.1" },
+    "target": { "name": "Fastify", "version": "4.28.1" }
+  },
+  "requests": [
+    { "id": "GET /", "observation_ids": ["F2P-022", "F2P-019"], "method": "GET", "path": "/" },
+    { "id": "GET /start", "observation_ids": ["F2P-002", "F2P-003", "F2P-005", "F2P-023", "F2P-016"], "method": "GET", "path": "/start" },
+    { "id": "GET /status", "observation_ids": ["F2P-007", "F2P-020"], "method": "GET", "path": "/status" },
+    { "id": "GET /config", "observation_ids": ["F2P-010", "F2P-016"], "method": "GET", "path": "/config" },
+    { "id": "GET /files", "observation_ids": ["F2P-023"], "method": "GET", "path": "/files" },
+    { "id": "GET /recording/start", "observation_ids": ["F2P-001", "F2P-016"], "method": "GET", "path": "/recording/start" },
+    { "id": "GET /recording/stop", "observation_ids": ["F2P-001", "F2P-006", "F2P-008"], "method": "GET", "path": "/recording/stop" },
+    { "id": "GET /recording/:id/counter (empty)", "observation_ids": ["F2P-012", "F2P-021"], "method": "GET", "path": "/recording/missing/counter", "expect": { "status": 404, "body": "Not Found" } },
+    { "id": "GET /api/doc/index.html", "observation_ids": ["F2P-005"], "method": "GET", "path": "/api/doc/index.html", "fixture": ".build/apidoc/index.html" },
+    { "id": "GET /api/doc", "observation_ids": ["F2P-005"], "method": "GET", "path": "/api/doc" },
+    { "id": "GET /tracker/sse", "observation_ids": ["F2P-010"], "method": "GET", "path": "/tracker/sse", "accept": "text/event-stream" },
+    { "id": "GET /recording/:id/counter/csv", "observation_ids": ["F2P-009"], "method": "GET", "path": "/recording/demo/counter/csv", "expect": { "content_type_prefix": "text/csv" } },
+    { "id": "GET unknown page (catch-all)", "observation_ids": ["F2P-015", "F2P-014"], "method": "GET", "path": "/a-page-that-does-not-exist" },
+    { "id": "POST /ui 90kB", "observation_ids": ["F2P-004", "F2P-007", "F2P-011", "F2P-013", "F2P-014", "F2P-024"], "method": "POST", "path": "/ui", "content_type": "application/json", "body_kind": "json_90kb", "expect": { "status": 200 } },
+    { "id": "POST /ui 110kB", "observation_ids": ["F2P-004", "F2P-007", "F2P-011", "F2P-014", "F2P-024"], "method": "POST", "path": "/ui", "content_type": "application/json", "body_kind": "json_110kb", "expect": { "status_gte": 400 } },
+    { "id": "POST /counter/areas malformed", "observation_ids": ["F2P-004", "F2P-014"], "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body_kind": "malformed_json", "expect": { "status": 400, "content_type_prefix": "text/plain" } },
+    { "id": "POST /files multipart video", "observation_ids": ["F2P-017", "F2P-020"], "method": "POST", "path": "/files", "content_type": "multipart/form-data", "body_kind": "multipart_video", "expect": { "status": 200 } },
+    { "id": "POST /files wrong field", "observation_ids": ["F2P-017", "F2P-020"], "method": "POST", "path": "/files", "content_type": "multipart/form-data", "body_kind": "multipart_wrong_field", "expect": { "status": 500 } }
+  ],
+  "payloads": {
+    "json_90kb": { "pad": "<generate a 90 kB JSON string, below the preserved 102400 byte bodyLimit>" },
+    "json_110kb": { "pad": "<generate a 110 kB JSON string, above the preserved 102400 byte bodyLimit>" },
+    "malformed_json": "{\"",
+    "multipart_video": { "field": "video", "filename": "demo.mp4" },
+    "multipart_wrong_field": { "field": "file", "filename": "demo.mp4" },
+    "multipart_wrong_name": { "field": "video", "filename": "demo.txt" }
+  }
+}

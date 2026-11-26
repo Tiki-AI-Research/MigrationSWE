@@ -1,0 +1,115 @@
+{
+  "schema_version": "webvr-public-test-baseline/v1",
+  "file": "test/webvr-polyfill.test.js",
+  "helpers_file": "test/utils.js",
+  "framework": "vitest",
+  "baseline_scenario_count": 14,
+  "original_skip_markers": [],
+  "scenario_titles": [
+    "populates globals if enabled",
+    "should be enabled if API does not exist",
+    "should be disabled on desktop if API exists and PROVIDE_MOBILE_VRDISPLAY=false",
+    "should be disabled on mobile if API exists and PROVIDE_MOBILE_VRDISPLAY=false",
+    "should be enabled on mobile if API exists and PROVIDE_MOBILE_VRDISPLAY=true",
+    "should be false when no native support found",
+    "should be true when 1.1 native support found",
+    "provides no displays on desktop when API does not exist",
+    "provides no displays on desktop when API does exist",
+    "provides only native displays on desktop when API does exist with display",
+    "provides CardboardVRDisplay on mobile (${mobilePlatform}) by default when API does not exist",
+    "provides CardboardVRDisplay on mobile (${mobilePlatform}) by default when API exists without displays",
+    "provides no displays on mobile (${mobilePlatform}) when API exists without displays and PROVIDE_MOBILE_VRDISPLAY=false",
+    "provides only native displays on mobile (${mobilePlatform}) when API exists with displays"
+  ],
+  "required_assertion_semantics": [
+    "toBeDefined",
+    "toBeUndefined",
+    "toBe(true)",
+    "toBe(false)",
+    "toBe(0)",
+    "toBe(1)",
+    "toContain('test device')",
+    "toContain('Cardboard')"
+  ],
+  "required_helpers": [
+    "setupWindow",
+    "setUA",
+    "setDesktopUA",
+    "setIOSUA",
+    "setAndroidUA",
+    "addNativeNoDisplay",
+    "addNativeWithDisplay"
+  ],
+  "scenario_assertions": {
+    "populates globals if enabled": [
+      "toBeDefined",
+      "toBeDefined",
+      "toBeDefined"
+    ],
+    "should be enabled if API does not exist": [
+      "toBeUndefined",
+      "toBeDefined",
+      "toBe(true)"
+    ],
+    "should be disabled on desktop if API exists and PROVIDE_MOBILE_VRDISPLAY=false": [
+      "toBeDefined",
+      "toBeDefined",
+      "toBe(false)"
+    ],
+    "should be disabled on mobile if API exists and PROVIDE_MOBILE_VRDISPLAY=false": [
+      "toBeDefined",
+      "toBeDefined",
+      "toBe(false)"
+    ],
+    "should be enabled on mobile if API exists and PROVIDE_MOBILE_VRDISPLAY=true": [
+      "toBeDefined",
+      "toBeDefined",
+      "toBe(true)"
+    ],
+    "should be false when no native support found": [
+      "toBe(false)"
+    ],
+    "should be true when 1.1 native support found": [
+      "toBe(true)"
+    ],
+    "provides no displays on desktop when API does not exist": [
+      "toBe(0)"
+    ],
+    "provides no displays on desktop when API does exist": [
+      "toBe(0)"
+    ],
+    "provides only native displays on desktop when API does exist with display": [
+      "toBe(1)",
+      "toContain('test device')"
+    ],
+    "provides CardboardVRDisplay on mobile (${mobilePlatform}) by default when API does not exist": [
+      "toBe(1)",
+      "toContain('Cardboard')"
+    ],
+    "provides CardboardVRDisplay on mobile (${mobilePlatform}) by default when API exists without displays": [
+      "toBe(1)",
+      "toContain('Cardboard')"
+    ],
+    "provides no displays on mobile (${mobilePlatform}) when API exists without displays and PROVIDE_MOBILE_VRDISPLAY=false": [
+      "toBe(0)"
+    ],
+    "provides only native displays on mobile (${mobilePlatform}) when API exists with displays": [
+      "toBe(1)",
+      "toContain('test device')"
+    ]
+  },
+  "forbidden_test_markers": [
+    ".skip",
+    ".only",
+    "xit(",
+    "xdescribe(",
+    "xfail",
+    "exclude:",
+    "exclude)",
+    "testNamePattern",
+    "bail:",
+    "--bail",
+    "--exclude",
+    "--ignore"
+  ]
+}

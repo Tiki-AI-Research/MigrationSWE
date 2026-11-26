@@ -1,0 +1,390 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-F2P-0001",
+  "observations": [
+    {
+      "id": "F2P-001",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "processMarkdownToHtml code content escaping",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "processMarkdownToHtml(\"```\\n<div>x</div>\\n```\", p) contains \"<pre><code>&lt;div&gt;x&lt;/div&gt;\" while processMarkdownToHtml(\"<div>x</div>\", p) keeps raw \"<div>x</div>\"; rendering code parts as raw HTML fails the escaped-code assertion.",
+      "evidence_refs": [
+        "EVIDENCE-00063"
+      ]
+    },
+    {
+      "id": "F2P-002",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R060"
+      ],
+      "surface": "createBaseProcessor token types",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "createBaseProcessor([]).parse(\"# h\")[0].type === \"heading_open\" and processMarkdownToHtml(\"~~x~~\", p) renders \"<del>x</del>\" and not \"<s>x</s>\"; a unified processor returns a single mdast root rather than a markdown-it heading token, so a config-only wrapper fails.",
+      "evidence_refs": [
+        "EVIDENCE-00064"
+      ]
+    },
+    {
+      "id": "F2P-004",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::createBaseProcessor middleware ordering and options",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: createBaseProcessor middleware ordering and options. Behavior: For [{key:\"off\",plugin:(md)=>md.set({breaks:false})},{key:\"on\",plugin:(md,opts)=>md.set({breaks:opts.breaks}),options:{breaks:true}}], createBaseProcessor([...]).render(\"a\\nb\") contains <br>; reversing the entries yields no <br>, proving entry order and optional options are honored.. Required postcondition: processMarkdownToHtml(\"| L | C | R |\\n| :-- | :-: | --: |\\n| a | b | c |\", p) keeps left, center, and right alignment for the corresponding header and body cells; either align attributes or effective text-align styles can express this, while missing or conflicting alignment fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00280"
+      ]
+    },
+    {
+      "id": "F2P-006",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml GFM strikethrough",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml GFM strikethrough. Behavior: processMarkdownToHtml(\"~~text~~\", p) contains \"<del>text</del>\" and does not contain \"<s>text</s>\".. Required postcondition: createBaseProcessor().parse(\"| a |\\n| - |\\n| b |\") returns markdown-it table_open/table_close tokens, and createBaseProcessor().render(\"# h\") returns \"<h1>h</h1>\"; a config-only migration that still returns a unified processor returns mdast nodes and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00273"
+      ]
+    },
+    {
+      "id": "F2P-009",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R054"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml GFM tables",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml GFM tables. Behavior: For \"| H1 | H2 |\\n| :-- | --: |\\n| a | b |\", the output has a thead with H1/H2, a tbody row a/b, and left/right cell alignment preserved on the header and body cells.. Required postcondition: processMarkdownToHtml(\"~~x~~\", p) contains \"<del>x</del>\" and not markdown-it's default \"<s>x</s>\"; a config-only engine swap without rendering the required <del> output fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00376"
+      ]
+    },
+    {
+      "id": "F2P-011",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml raw HTML passthrough",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml raw HTML passthrough. Behavior: processMarkdownToHtml(\"<div class=\\\"x\\\">hi</div>\\n\\ninline <b>raw</b>\", p) contains the unchanged \"<div class=\\\"x\\\">hi</div>\" and \"<b>raw</b>\" rather than escaped &lt; forms.. Required postcondition: const p = createBaseProcessor([]); p.parse(\"# h\")[0].type === \"heading_open\" and p.render(\"# h\") === \"<h1>h</h1>\"; a unified processor returns a root mdast node and has no render(content) method, so it fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00302"
+      ]
+    },
+    {
+      "id": "F2P-012",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R051"
+      ],
+      "surface": "packages/utils/markdown-parse/models/index.ts::defaultCustomPlugins feature effects",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/models/index.ts; surface: defaultCustomPlugins math tokenization. Required postcondition: parsing inline $x$ and a multi-line $$ block containing x exposes distinct inline and block math, either as math tokens or as rendered KaTeX HTML tokens. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00316"
+      ]
+    },
+    {
+      "id": "F2P-016",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R056"
+      ],
+      "surface": "packages/utils/markdown-parse/models/remarkAbbr.ts::defaultCustomPlugins feature effects",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/models/remarkAbbr.ts; surface: defaultCustomPlugins abbreviation effects. Behavior: an abbreviation definition is consumed and a standalone HTML abbreviation is rendered with its title while XHTML remains unchanged. Required postcondition: processMarkdownToHtml on the abbreviation fixture wraps only the standalone HTML, while the processor retains markdown-it heading tokenization and consumes the definition. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00214"
+      ]
+    },
+    {
+      "id": "F2P-017",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R053"
+      ],
+      "surface": "packages/utils/markdown-parse/models/index.ts::processMarkdownToHtml GFM task lists",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/models/index.ts; surface: processMarkdownToHtml GFM task lists. Behavior: For \"- [x] done\\n- [ ] todo\", the output contains two disabled checkboxes where the first is checked and the second is unchecked, matching each item state.. Required postcondition: A processor built from defaultCustomPlugins with the remark-rehype options changed to {allowDangerousHtml:false} makes processMarkdownToHtml(\"<b>x</b>\", p) either escape the raw tags or drop them while retaining the inline text x, while {allowDangerousHtml:true} returns raw \"<b>x</b>\"; a migration that ignores middleware options always passes raw HTML and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00228"
+      ]
+    },
+    {
+      "id": "F2P-018",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R057"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml hard line breaks",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml hard line breaks. Behavior: processMarkdownToHtml(\"a\\nb\", p) contains \"<br>\" between a and b, such as \"<p>a<br>\\nb</p>\", rather than a plain newline.. Required postcondition: processMarkdownToParts(\"> ```js\\n> x\\n> ```\", p) returns one html part and zero code parts because that fence is nested at token.level > 0; splitting every pre/fence regardless of nesting returns a code part and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00297"
+      ]
+    },
+    {
+      "id": "F2P-019",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "packages/utils/markdown-parse/models/index.ts::defaultCustomPlugins options effects",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/models/index.ts; surface: defaultCustomPlugins options effects. Behavior: The default remark-rehype and rehype-katex options preserve raw HTML passthrough and the existing KaTeX configuration; rendering raw HTML leaves it unchanged and rendering the configured \\RR macro uses that macro. Required postcondition: the processor emits markdown-it heading_open tokens, and GFM task items render one disabled checkbox per item, with the first checked and the second unchecked. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00270"
+      ]
+    },
+    {
+      "id": "F2P-021",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts::processMarkdownToParts code loading status",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/models/remarkCodeBlockStatus.ts; surface: processMarkdownToParts code loading status. Behavior: A closed fenced code part has loading false and an unclosed fenced code part has loading true. Required postcondition: the markdown-it processor emits a fence token for a fenced code block. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00449"
+      ]
+    },
+    {
+      "id": "F2P-003",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R060"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml fenced code HTML",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml fenced code HTML. Behavior: processMarkdownToHtml(\"```js\\nconst a=1\\n```\", p) contains \"<pre><code class=\\\"language-js\\\">const a=1\" followed by \"</code></pre>\".. Required postcondition: createBaseProcessor([]).parse(\"# h\")[0].type === \"heading_open\" and processMarkdownToHtml(\"~~x~~\", p) renders \"<del>x</del>\" and not \"<s>x</s>\"; a unified processor returns a single mdast root rather than a markdown-it heading token, so a config-only wrapper fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00425"
+      ]
+    },
+    {
+      "id": "F2P-007",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R030"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToParts code language",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToParts code language. Behavior: fenced code parts preserve the language identifier without the language- prefix, and a fence without an info string has an empty language. Required postcondition: js and language-js fence info strings both yield language js, while an empty info string yields an empty language. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00383"
+      ]
+    },
+    {
+      "id": "F2P-008",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToParts HTML part content",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToParts HTML part content. Behavior: processMarkdownToParts(\"**bold**\", p)[0].content is a Vue VNode tree, not a string; rendering it through the Markdown component yields <strong>bold</strong>.. Required postcondition: processMarkdownToHtml(\"| L | C | R |\\n| :-- | :-: | --: |\\n| a | b | c |\", p) keeps left, center, and right alignment for the corresponding header and body cells; either align attributes or effective text-align styles can express this, while missing or conflicting alignment fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00435"
+      ]
+    },
+    {
+      "id": "F2P-010",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R054"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::createBaseProcessor base rules before middleware",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: createBaseProcessor base rules before middleware. Behavior: createBaseProcessor([]) renders \"a\\nb\" with <br>, \"| a |\\n| - |\\n| b |\" as a table, \"- [x] a\" with a checked disabled checkbox, \"~~x~~\" as <del>x</del>, and \"~x~\" not as <del>; supplied middleware still runs after these base rules.. Required postcondition: processMarkdownToHtml(\"~~x~~\", p) contains \"<del>x</del>\" and not markdown-it's default \"<s>x</s>\"; a config-only engine swap without rendering the required <del> output fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00389"
+      ]
+    },
+    {
+      "id": "F2P-020",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R054"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToParts raw HTML stream",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToParts raw HTML stream. Behavior: processMarkdownToParts(\"<div>x</div>\", p) returns one html part whose rendered VNode output preserves raw <div>x</div> without escaping it into text.. Required postcondition: processMarkdownToHtml(\"~~x~~\", p) contains \"<del>x</del>\" and not markdown-it's default \"<s>x</s>\"; a config-only engine swap without rendering the required <del> output fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00379"
+      ]
+    },
+    {
+      "id": "F2P-022",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::MiddlewarePluginItem type",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: MiddlewarePluginItem type. Behavior: TypeScript accepts {key:\"k\",plugin:()=>{},options:{x:1}} as MiddlewarePluginItem and rejects an object missing key; the runtime entry retains its key and options fields unchanged.. Required postcondition: const p = createBaseProcessor([]); p.parse(\"# h\")[0].type === \"heading_open\" and p.render(\"# h\") === \"<h1>h</h1>\"; a unified processor returns a root mdast node and has no render(content) method, so it fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00343"
+      ]
+    },
+    {
+      "id": "F2P-023",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml invalid math handling",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml invalid math handling. Behavior: processMarkdownToHtml(\"$\\\\frac{1}{$\", p) resolves without rejection and contains class=\"katex-error\" with style color:#cc0000.. Required postcondition: createBaseProcessor().parse(\"| a |\\n| - |\\n| b |\") returns markdown-it table_open/table_close tokens, and createBaseProcessor().render(\"# h\") returns \"<h1>h</h1>\"; a config-only migration that still returns a unified processor returns mdast nodes and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00338"
+      ]
+    },
+    {
+      "id": "F2P-005",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml hard line breaks",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml hard line breaks. Behavior: processMarkdownToHtml(\"a\\nb\", p) contains \"<br>\" between a and b, such as \"<p>a<br>\\nb</p>\", rather than a plain newline.. Required postcondition: processMarkdownToHtml(\"| L | C | R |\\n| :-- | :-: | --: |\\n| a | b | c |\", p) keeps left, center, and right alignment for the corresponding header and body cells; either align attributes or effective text-align styles can express this, while missing or conflicting alignment fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00365"
+      ]
+    },
+    {
+      "id": "F2P-013",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml GFM tables",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml GFM tables. Behavior: For \"| H1 | H2 |\\n| :-- | --: |\\n| a | b |\", the output has a thead with H1/H2, a tbody row a/b, and left/right cell alignment preserved on the header and body cells.. Required postcondition: createBaseProcessor().parse(\"| a |\\n| - |\\n| b |\") returns markdown-it table_open/table_close tokens, and createBaseProcessor().render(\"# h\") returns \"<h1>h</h1>\"; a config-only migration that still returns a unified processor returns mdast nodes and fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00254"
+      ]
+    },
+    {
+      "id": "F2P-014",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml GFM tables",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml GFM tables. Behavior: For \"| H1 | H2 |\\n| :-- | --: |\\n| a | b |\", the output has a thead with H1/H2, a tbody row a/b, and left/right cell alignment preserved on the header and body cells.. Required postcondition: processMarkdownToHtml(\"```\\n<div>x</div>\\n```\", p) contains \"<pre><code>&lt;div&gt;x&lt;/div&gt;\" while processMarkdownToHtml(\"<div>x</div>\", p) keeps raw \"<div>x</div>\"; rendering code parts as raw HTML fails the escaped-code assertion.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00246"
+      ]
+    },
+    {
+      "id": "F2P-015",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::createBaseProcessor middleware ordering and options",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: createBaseProcessor middleware ordering and options. Behavior: For [{key:\"off\",plugin:(md)=>md.set({breaks:false})},{key:\"on\",plugin:(md,opts)=>md.set({breaks:opts.breaks}),options:{breaks:true}}], createBaseProcessor([...]).render(\"a\\nb\") contains <br>; reversing the entries yields no <br>, proving entry order and optional options are honored.. Required postcondition: processMarkdownToHtml(\"```\\n<div>x</div>\\n```\", p) contains \"<pre><code>&lt;div&gt;x&lt;/div&gt;\" while processMarkdownToHtml(\"<div>x</div>\", p) keeps raw \"<div>x</div>\"; rendering code parts as raw HTML fails the escaped-code assertion.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00211"
+      ]
+    },
+    {
+      "id": "F2P-024",
+      "family": "target-runtime",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R060"
+      ],
+      "surface": "packages/utils/markdown-parse/index.ts::processMarkdownToHtml raw HTML passthrough",
+      "scenario": "target-postcondition",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: packages/utils/markdown-parse/index.ts; surface: processMarkdownToHtml raw HTML passthrough. Behavior: processMarkdownToHtml(\"<div class=\\\"x\\\">hi</div>\\n\\ninline <b>raw</b>\", p) contains the unchanged \"<div class=\\\"x\\\">hi</div>\" and \"<b>raw</b>\" rather than escaped &lt; forms.. Required postcondition: createBaseProcessor([]).parse(\"# h\")[0].type === \"heading_open\" and processMarkdownToHtml(\"~~x~~\", p) renders \"<del>x</del>\" and not \"<s>x</s>\"; a unified processor returns a single mdast root rather than a markdown-it heading token, so a config-only wrapper fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "evidence_refs": [
+        "EVIDENCE-00213"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "build_commands": [
+    [
+      ".venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--no-index",
+      "--no-build-isolation",
+      "--no-deps",
+      "-e",
+      "."
+    ]
+  ],
+  "environment": {
+    "PIP_NO_BUILD_ISOLATION": "1",
+    "PIP_NO_INDEX": "1"
+  },
+  "executor": {
+    "id": "command",
+    "version": "1"
+  },
+  "harness_command": [
+    ".venv/bin/python",
+    "{assets}/target/runner.py",
+    "{report}"
+  ],
+  "native_test_commands": [
+    [
+      ".venv/bin/python",
+      "-m",
+      "coverage",
+      "run",
+      "-m",
+      "pytest"
+    ]
+  ],
+  "preflight_commands": [
+    [
+      "python",
+      "--version"
+    ],
+    [
+      ".venv/bin/python",
+      "-m",
+      "pip",
+      "--version"
+    ],
+    [
+      ".venv/bin/python",
+      "-c",
+      "import click, coverage, pytest, setuptools"
+    ]
+  ],
+  "schema_version": "migration-environment-runtime:v3",
+  "technology": {
+    "framework": {
+      "name": "click",
+      "version": "8.1.7"
+    },
+    "language": {
+      "name": "Python",
+      "version": "3.11"
+    },
+    "toolchain": {
+      "name": "pip",
+      "version": "24.0"
+    }
+  },
+  "timeout_seconds": 1800.0,
+  "workdir": "/workspace/repo",
+  "workspace_materializations": [
+    {
+      "mode": "copy",
+      "source": "/opt/migration/dependencies/venv",
+      "target": ".venv"
+    }
+  ],
+  "writable_storage": [
+    {
+      "executable": true,
+      "id": "venv",
+      "initialization": "seed",
+      "lifecycle": "attempt",
+      "network": "enabled",
+      "size_limit": null,
+      "source": "venv",
+      "target": ".venv"
+    },
+    {
+      "executable": true,
+      "id": "pytest-cache",
+      "initialization": "empty",
+      "lifecycle": "attempt",
+      "network": "enabled",
+      "size_limit": null,
+      "source": null,
+      "target": ".pytest_cache"
+    },
+    {
+      "executable": true,
+      "id": "mypy-cache",
+      "initialization": "empty",
+      "lifecycle": "attempt",
+      "network": "enabled",
+      "size_limit": null,
+      "source": null,
+      "target": ".mypy_cache"
+    }
+  ]
+}

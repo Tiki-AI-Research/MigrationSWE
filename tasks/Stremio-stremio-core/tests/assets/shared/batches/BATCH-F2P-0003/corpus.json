@@ -1,0 +1,139 @@
+{
+  "schema_version": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "migration": {
+    "category": "language",
+    "source": { "language_name": "Rust", "language_version": "2021" },
+    "target": { "language_name": "Go", "language_version": "1.23.0" }
+  },
+  "observations": {
+    "F2P-049": {
+      "entry": "deeplinks.NewMetaItemDeepLinks",
+      "expect": { "metaDetailsVideos": "stremio:///detail/series/tt1" }
+    },
+    "F2P-050": {
+      "entry": "common.Loadable.MarshalJSON",
+      "expect": {
+        "loading": "{\"type\":\"Loading\"}",
+        "ready": "{\"type\":\"Ready\",\"content\":5}"
+      }
+    },
+    "F2P-051": {
+      "entry": "runtime.EnvError",
+      "expect": {
+        "fetch": { "code": 1, "message": "Failed to fetch: x" },
+        "other": { "code": 1001, "message": "Other error: x" }
+      }
+    },
+    "F2P-052": {
+      "entry": "git status --porcelain",
+      "expect": { "forbidden_prefix": "stremio-core-web/", "forbidden_suffixes": [".wasm", "bridge.js", "worker.js", "_bg.wasm"] }
+    },
+    "F2P-053": {
+      "entry": "models.New + Load(Player)",
+      "expect": { "nextVideo": "tt1:1:2", "libraryItem": true }
+    },
+    "F2P-054": {
+      "entry": "common.ResourceLoadable JSON",
+      "expect": { "content_type": "Ready" }
+    },
+    "F2P-055": {
+      "entry": "git status --porcelain -- stremio-core-web",
+      "expect": { "empty": true }
+    },
+    "F2P-056": {
+      "entry": "deeplinks.NewSearchHistoryItemDeepLinks/NewDiscoverDeepLinks",
+      "expect": {
+        "search": "stremio:///search?query=foo%20bar",
+        "discover": "stremio:///discover/https%3A%2F%2Fv3-cinemeta.strem.io%2Fmanifest.json/movie/top?genre=Action"
+      }
+    },
+    "F2P-057": {
+      "entry": "runtime.Env interface",
+      "expect": { "methods": ["Fetch", "GetStorage", "SetStorage", "ExecConcurrent", "ExecSequential", "Now", "LocalNow", "FlushAnalytics", "AnalyticsContext"] }
+    },
+    "F2P-058": {
+      "entry": "git status --porcelain",
+      "expect": { "forbidden_prefix": "stremio-core-web/" }
+    },
+    "F2P-059": {
+      "entry": "models.New",
+      "expect": { "models": ["Ctx", "Player", "StreamingServer"] }
+    },
+    "F2P-060": {
+      "entry": "models.Model.Update / UpdateField",
+      "expect": { "changed_fields": ["player"] }
+    },
+    "F2P-061": {
+      "entry": "runtime.Dispatch + NewState",
+      "expect": { "repeated_player_loads": 2, "field_order": ["ctx", "streaming_server", "player"] }
+    },
+    "F2P-062": {
+      "entry": "runtime.NewStateEvent + runtime.MigrateStorageSchema",
+      "expect": {
+        "event": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
+        "schema_version": 25,
+        "downgrade_code": 5
+      }
+    },
+    "F2P-063": {
+      "entry": "models.New + Load(Player) + persistence",
+      "expect": { "library_item": true, "storage_keys": ["profile", "library", "dismissed_events"] }
+    },
+    "F2P-064": {
+      "entry": "json.Marshal(runtime.EnvError)",
+      "expect": {
+        "fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
+        "other": "{\"code\":1001,\"message\":\"Other error: x\"}"
+      }
+    },
+    "F2P-065": {
+      "entry": "git status --porcelain",
+      "expect": { "forbidden_prefix": "stremio-core-web/" }
+    },
+    "F2P-066": {
+      "entry": "types.QueryParamsEncode",
+      "expect": { "encoded": "sort=popularity&genre=A%20B" }
+    },
+    "F2P-067": {
+      "entry": "types.NewStreamsBucket + json.Marshal",
+      "expect": {
+        "empty": "{\"uid\":null,\"items\":[]}",
+        "one_item_prefix": "{\"uid\":\"u1\",\"items\":[["
+      }
+    },
+    "F2P-068": {
+      "entry": "common.ResourceUpdate",
+      "expect": { "loading_then_ready": true, "changed_each_step": true }
+    },
+    "F2P-069": {
+      "entry": "addontransport.BuildLegacyReq + LegacyErr.ToEnvError",
+      "expect": {
+        "transport_url": "https://legacywatchhub.strem.io/stremio/v1",
+        "resource_path": { "resource": "stream", "type": "series", "id": "tt0386676:5:1" },
+        "rpc_error_code": 5,
+        "rpc_error_message": "boom",
+        "env_error_code": 2,
+        "env_error_message": "Addon protocol violation: rpc error 5: boom"
+      }
+    },
+    "F2P-070": {
+      "entry": "json.Marshal(runtime.EnvError) + git status",
+      "expect": { "code": 1001, "message": "Other error: x", "forbidden_prefix": "stremio-core-web/" }
+    },
+    "F2P-071": {
+      "entry": "runtime.NewStateEvent / runtime.CoreEvent",
+      "expect": {
+        "new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}",
+        "core_event": "{\"name\":\"CoreEvent\",\"args\":{\"event\":\"UserLoggedOut\"}}"
+      }
+    },
+    "F2P-072": {
+      "entry": "json.Marshal(runtime.EnvError) + runtime.NewStateEvent",
+      "expect": {
+        "fetch": "{\"code\":1,\"message\":\"Failed to fetch: x\"}",
+        "new_state": "{\"name\":\"NewState\",\"args\":[\"ctx\",\"player\"]}"
+      }
+    }
+  }
+}

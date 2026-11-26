@@ -1,0 +1,26 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "observations": ["F2P-062"],
+  "storage_keys": {
+    "schema_version": "schema_version",
+    "profile": "profile"
+  },
+  "initial": {
+    "schema_version": 1,
+    "profile": {
+      "settings": {
+        "interface_language": "eng",
+        "streaming_server_url": "http://127.0.0.1:11470"
+      }
+    }
+  },
+  "expected": {
+    "schema_version": 25,
+    "profile_settings_present": ["interfaceLanguage", "gpuVideoProcessing"],
+    "profile_settings_absent": ["interface_language"]
+  },
+  "downgrade": {
+    "schema_version": 26,
+    "env_error_code": 5
+  }
+}

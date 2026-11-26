@@ -1,0 +1,398 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "schema_version": "migration-asset-fragment:v2",
+  "observations": [
+    {
+      "id": "F2P-025",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode tmpfile (captureRef/captureScreen with result:\"tmpfile\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_ios_tmpfile",
+      "tech": "tech_r005",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00758"
+      ]
+    },
+    {
+      "id": "F2P-026",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "windows/RNViewShot/RNViewShotModule.cs::Windows C# native contract Task<string> captureRef(int tag, JSValue options)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_windows_captureref_sig",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00703"
+      ]
+    },
+    {
+      "id": "F2P-031",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "windows/RNViewShot/RNViewShotModule.cs::Windows C# native contract releaseCapture(string uri)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_windows_releasecapture_sig",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00713"
+      ]
+    },
+    {
+      "id": "F2P-032",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "windows/RNViewShot/RNViewShotModule.cs::releaseCapture path confinement (relative-path-only deletion)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_windows_release_confinement",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00710"
+      ]
+    },
+    {
+      "id": "F2P-041",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "windows/RNViewShot/RNViewShotModule.cs::Failed capture rejection and E_UNABLE_TO_SNAPSHOT error code",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_windows_error",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00716"
+      ]
+    },
+    {
+      "id": "F2P-027",
+      "requirement_ids": [
+        "R036"
+      ],
+      "surface": "ios/RNViewShot.mm::Data-uri result serialization (captureRef/captureScreen with result:\"data-uri\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_ios_viewregistry",
+      "tech": "tech_r036",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00753"
+      ]
+    },
+    {
+      "id": "F2P-029",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::TurboModule specification NativeRNViewShotSpec method captureRef(Double target, ReadableMap withOptions, Promise promise)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_android_spec_captureref",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00729"
+      ]
+    },
+    {
+      "id": "F2P-030",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode data-uri (captureRef/captureScreen with result:\"data-uri\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_datauri",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00748"
+      ]
+    },
+    {
+      "id": "F2P-033",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::TurboModule specification NativeRNViewShotSpec method captureScreen(ReadableMap options, Promise promise)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_android_spec_capturescreen",
+      "tech": "tech_r005",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00776"
+      ]
+    },
+    {
+      "id": "F2P-034",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode data-uri (captureRef/captureScreen with result:\"data-uri\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_js_exports",
+      "tech": "tech_r001",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00730"
+      ]
+    },
+    {
+      "id": "F2P-036",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::Deprecated webm format alias for webp",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_webm_alias",
+      "tech": "tech_r001",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00725"
+      ]
+    },
+    {
+      "id": "F2P-037",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::Failed capture rejection and E_UNABLE_TO_SNAPSHOT error code",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_error_code",
+      "tech": "tech_r005",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00724"
+      ]
+    },
+    {
+      "id": "F2P-038",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode tmpfile (captureRef/captureScreen with result:\"tmpfile\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_tmpfile_android",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00746"
+      ]
+    },
+    {
+      "id": "F2P-039",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode base64 (captureRef/captureScreen with result:\"base64\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_base64",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00759"
+      ]
+    },
+    {
+      "id": "F2P-040",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode data-uri (captureRef/captureScreen with result:\"data-uri\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_datauri",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00750"
+      ]
+    },
+    {
+      "id": "F2P-042",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::TurboModule specification NativeRNViewShotSpec method captureScreen(ReadableMap options, Promise promise)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_android_spec_capturescreen",
+      "tech": "tech_r001",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00744"
+      ]
+    },
+    {
+      "id": "F2P-043",
+      "requirement_ids": [
+        "R037"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::Deprecated webm format alias for webp",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_android_ui_manager_runtime",
+      "tech": "tech_r037",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00774"
+      ]
+    },
+    {
+      "id": "F2P-044",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::TurboModule specification NativeRNViewShotSpec method releaseCapture(String)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_android_spec_releasecapture",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00700"
+      ]
+    },
+    {
+      "id": "F2P-045",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::releaseCapture path confinement (relative-path-only deletion)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_release_confinement_android",
+      "tech": "tech_r001",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00701"
+      ]
+    },
+    {
+      "id": "F2P-046",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "ios/RNViewShot.mm::Result mode tmpfile (captureRef/captureScreen with result:\"tmpfile\")",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_ios_tmpfile",
+      "tech": "tech_r004",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00732"
+      ]
+    },
+    {
+      "id": "F2P-047",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::Deprecated webm format alias for webp",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_webm_alias",
+      "tech": "tech_r005",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00771"
+      ]
+    },
+    {
+      "id": "F2P-048",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "android/src/main/java/fr/greweb/reactnativeviewshot/RNViewShotModule.java::releaseCapture path confinement (relative-path-only deletion)",
+      "input_class": "declared-behavior",
+      "projection": "target-execution-path",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_release_confinement_android",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00745"
+      ]
+    },
+    {
+      "id": "F2P-028",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "Scoped production implementations of captureRef/captureScreen/releaseCapture across JS/TS, Android, iOS, and Windows",
+      "input_class": "declared-runtime",
+      "projection": "target-condition",
+      "scenario": "target-postcondition",
+      "behavior": "behavior_scoped_implementations",
+      "tech": "tech_r002",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00028"
+      ]
+    }
+  ]
+}

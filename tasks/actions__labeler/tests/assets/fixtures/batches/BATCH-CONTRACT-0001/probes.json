@@ -1,0 +1,232 @@
+{
+  "schema": "migration-contract-probes:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "kind": "CONTRACT",
+  "probe_contract": {
+    "executable": true,
+    "source_root": "/input/source",
+    "target_root": "/input/target",
+    "source_status_required": "PASS",
+    "target_status_required": "PASS",
+    "relation": "equal_after_normalization",
+    "normalization": "strip surrounding whitespace; collapse internal whitespace runs to one space; sort comma-separated label lists; compare error results by status/code/type before any message"
+  },
+  "probes": [
+    {
+      "observation_id": "CONTRACT-001",
+      "surface": "action.yml input definitions",
+      "source_entry": "action.yml",
+      "target_entry": "action.yml",
+      "method": "yaml-field",
+      "expected": "inputs:repo-token=${{ github.token }};configuration-path=.github/labeler.yml;sync-labels=false;dot=true;pr-number=<multiline>"
+    },
+    {
+      "observation_id": "CONTRACT-002",
+      "surface": "action.yml output definitions",
+      "source_entry": "action.yml",
+      "target_entry": "action.yml",
+      "method": "yaml-field",
+      "expected": "outputs:new-labels,all-labels"
+    },
+    {
+      "observation_id": "CONTRACT-003",
+      "surface": "label configuration YAML schema accepted by the action",
+      "source_entry": "src/api/get-label-configs.ts",
+      "target_entry": "internal/config/config.go",
+      "method": "config-accept",
+      "expected": "accepted"
+    },
+    {
+      "observation_id": "CONTRACT-004",
+      "surface": "GitHub Actions runtime environment contract",
+      "source_entry": "src/get-inputs/get-inputs.ts",
+      "target_entry": "internal/core/core.go",
+      "method": "env-contract",
+      "expected": "read INPUT_*;read GITHUB_EVENT_PATH;append GITHUB_OUTPUT"
+    },
+    {
+      "observation_id": "CONTRACT-005",
+      "surface": "GitHub REST and GraphQL calls issued by the action",
+      "source_entry": "src/api/get-content.ts",
+      "target_entry": "internal/githubapi/client.go",
+      "method": "api-request-log",
+      "expected": "POST /repos/{owner}/{repo}/issues/{n}/labels;GET /repos/{owner}/{repo}/pulls/{n}/files;GET /repos/{owner}/{repo}/pulls/{n};GET /repos/{owner}/{repo}/contents/{path};GraphQL removeLabelsFromLabelable"
+    },
+    {
+      "observation_id": "CONTRACT-006",
+      "surface": "changed-file glob and branch pattern matching",
+      "source_entry": "src/changedFiles.ts",
+      "target_entry": "internal/minimatch/minimatch.go",
+      "method": "matcher",
+      "expected": "dot-false-hidden=false;dot-true-hidden=true;github-glob=true;negate=true;branch-regex=true"
+    },
+    {
+      "observation_id": "CONTRACT-007",
+      "surface": "action failure and warning behavior",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "exit-status",
+      "expected": "unexpected=failed;403-unauthorized=failed+permission;resource-not-accessible=warning+failed"
+    },
+    {
+      "observation_id": "CONTRACT-008",
+      "surface": "changed-files rule evaluation",
+      "source_entry": "src/changedFiles.ts",
+      "target_entry": "internal/match/changedfiles.go",
+      "method": "behavior",
+      "expected": "any-glob-to-any-file=true;any-glob-to-all-files=true;all-globs-to-any-file=true;all-globs-to-all-files=true"
+    },
+    {
+      "observation_id": "CONTRACT-009",
+      "surface": "any/all rule aggregation",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/match/match.go",
+      "method": "behavior",
+      "expected": "any=at-least-one;all=every;label=conjunction-of-matchobjects"
+    },
+    {
+      "observation_id": "CONTRACT-010",
+      "surface": "label removal on sync",
+      "source_entry": "src/api/remove-labels.ts",
+      "target_entry": "internal/githubapi/client.go",
+      "method": "api-request-log",
+      "expected": "sync-labels-true=1 removeLabelsFromLabelable;sync-labels-false=0"
+    },
+    {
+      "observation_id": "CONTRACT-011",
+      "surface": "label set mutation",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "behavior",
+      "expected": "non-config-label=kept;concurrent-label=kept"
+    },
+    {
+      "observation_id": "CONTRACT-012",
+      "surface": "applied label cap and warning",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "behavior",
+      "expected": "applied-first=100;excess-warning=count"
+    },
+    {
+      "observation_id": "CONTRACT-013",
+      "surface": "max-files-changed gating",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "behavior",
+      "expected": "changed-files-skipped=true;branch-labels-active=true;existing-left=true"
+    },
+    {
+      "observation_id": "CONTRACT-014",
+      "surface": "changed-files-labels-limit gating",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "behavior",
+      "expected": "exceeds-limit=skipped;equal-to-limit=applied;max-files-changed-first=true"
+    },
+    {
+      "observation_id": "CONTRACT-015",
+      "surface": "changed-files label classification",
+      "source_entry": "src/api/get-label-configs.ts",
+      "target_entry": "internal/config/config.go",
+      "method": "behavior",
+      "expected": "has-changed-files-rule=true"
+    },
+    {
+      "observation_id": "CONTRACT-016",
+      "surface": "configuration loading path",
+      "source_entry": "src/api/get-label-configs.ts",
+      "target_entry": "internal/config/config.go",
+      "method": "behavior",
+      "expected": "local-exists=disk;local-missing=contents-api+base64-decoded"
+    },
+    {
+      "observation_id": "CONTRACT-017",
+      "surface": "configuration validation",
+      "source_entry": "src/api/get-label-configs.ts",
+      "target_entry": "internal/config/config.go",
+      "method": "error-type",
+      "expected": "unknown-key=info+ignored;negative-limit=error;malformed-changed-files=error"
+    },
+    {
+      "observation_id": "CONTRACT-018",
+      "surface": "pr-number input parsing",
+      "source_entry": "src/get-inputs/get-pr-numbers.ts",
+      "target_entry": "internal/inputs/inputs.go",
+      "method": "behavior",
+      "expected": "trim=true;blank-ignored=true;positive-int=accepted;invalid=warned+skipped;empty=event-pr"
+    },
+    {
+      "observation_id": "CONTRACT-019",
+      "surface": "invalid pr-number warning text",
+      "source_entry": "src/get-inputs/get-pr-numbers.ts",
+      "target_entry": "internal/inputs/inputs.go",
+      "method": "warning-normalized",
+      "expected": "bel-0x07=\\x07"
+    },
+    {
+      "observation_id": "CONTRACT-020",
+      "surface": "unfetchable or empty pull requests",
+      "source_entry": "src/api/get-changed-pull-requests.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "behavior",
+      "expected": "unfetchable=warned+skipped;empty=warned+skipped"
+    },
+    {
+      "observation_id": "CONTRACT-021",
+      "surface": "label addition failure handling",
+      "source_entry": "src/api/add-labels.ts",
+      "target_entry": "internal/githubapi/client.go",
+      "method": "behavior",
+      "expected": "5xx-then-listed=success;5xx-not-listed=failed"
+    },
+    {
+      "observation_id": "CONTRACT-022",
+      "surface": "bulk label removal failure",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "error-type",
+      "expected": "failed-naming-configured-labels-and-pr"
+    },
+    {
+      "observation_id": "CONTRACT-023",
+      "surface": "configuration fetch failure",
+      "source_entry": "src/api/get-label-configs.ts",
+      "target_entry": "internal/config/config.go",
+      "method": "exit-status",
+      "expected": "warned-missing-file-and-access;failed"
+    },
+    {
+      "observation_id": "CONTRACT-024",
+      "surface": "new-labels and all-labels outputs",
+      "source_entry": "src/labeler.ts",
+      "target_entry": "internal/labeler/labeler.go",
+      "method": "outputs",
+      "expected": "new-labels=added-only;all-labels=capped-100;preexisting-first;config-order-appended;comma-separated"
+    },
+    {
+      "observation_id": "CONTRACT-025",
+      "surface": "public capabilities and contracts",
+      "source_entry": "README.md",
+      "target_entry": "README.md",
+      "method": "inventory",
+      "expected": "provided=preserved;removed=0;changed-outside-goal=0"
+    },
+    {
+      "observation_id": "CONTRACT-026",
+      "surface": "repository change surface",
+      "source_entry": "package.json",
+      "target_entry": "go.mod",
+      "method": "inventory",
+      "expected": "unrelated-files-untouched=true"
+    },
+    {
+      "observation_id": "CONTRACT-027",
+      "surface": "test and evaluation integrity",
+      "source_entry": "jest.config.ts",
+      "target_entry": "internal/labeler/golden_test.go",
+      "method": "inventory",
+      "expected": "assertions-retained=true;comparisons-not-weakened=true;no-hardcoded-io=true"
+    }
+  ]
+}

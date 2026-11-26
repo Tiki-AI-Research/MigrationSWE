@@ -1,0 +1,187 @@
+{
+  "requirements": [
+    {
+      "assertion": "Calling stringify(value) returns a string that parse() can consume to revive an equivalent value.",
+      "id": "R001",
+      "instruction_quote": "- stringify(value, reducers?, options?) MUST return a flattened JSON string that parse can revive.",
+      "kind": "preserve",
+      "observable_surface": "the stringify export from the package entry point"
+    },
+    {
+      "assertion": "stringifyAsync awaits thenables and produces a payload accepted by the same parse/unflatten as stringify output; synchronous and asynchronous payloads remain mutually consumable and format-compatible.",
+      "id": "R002",
+      "instruction_quote": "- stringifyAsync(value, reducers?, options?) MUST await thenables and return the same payload format as stringify. Payloads produced by the synchronous and asynchronous paths MUST remain mutually consumable and format-compatible.",
+      "kind": "target_postcondition",
+      "observable_surface": "the stringifyAsync export from the package entry point"
+    },
+    {
+      "assertion": "parse(serialized, revivers, options) is behaviorally identical to unflatten(JSON.parse(serialized), revivers, options).",
+      "id": "R003",
+      "instruction_quote": "- parse(serialized, revivers?, options?) MUST equal unflatten(JSON.parse(serialized), revivers, options).",
+      "kind": "preserve",
+      "observable_surface": "the parse and unflatten exports from the package entry point"
+    },
+    {
+      "assertion": "uneval returns evaluable JavaScript source and wraps cyclic values in an IIFE.",
+      "id": "R004",
+      "instruction_quote": "- uneval(value, replacer?) MUST return equivalent JavaScript source, including an IIFE for cyclic values.",
+      "kind": "preserve",
+      "observable_surface": "the uneval export from the package entry point"
+    },
+    {
+      "assertion": "After migration, defaultStringifyOperations and defaultParseOperations are exported and frozen.",
+      "id": "R005",
+      "instruction_quote": "- defaultStringifyOperations and defaultParseOperations MUST be exported and frozen.",
+      "kind": "target_postcondition",
+      "observable_surface": "the defaultStringifyOperations and defaultParseOperations exports"
+    },
+    {
+      "assertion": "After migration, DevalueError instances carry name, path, value and root, and filterArrayIndices is importable.",
+      "id": "R006",
+      "instruction_quote": "- DevalueError MUST expose name, path, value and root, and filterArrayIndices MUST be exported.",
+      "kind": "target_postcondition",
+      "observable_surface": "the DevalueError and filterArrayIndices exports from the package entry point"
+    },
+    {
+      "assertion": "After parse, cyclic and repeated references resolve to the exact same object instance they had at serialization time.",
+      "id": "R007",
+      "instruction_quote": "- Cyclic and repeated references MUST round-trip to the same instance identity after parse.",
+      "kind": "preserve",
+      "observable_surface": "round-trip identity after stringify/parse for cyclic and repeated references"
+    },
+    {
+      "assertion": "ArrayBuffer, TypedArray, DataView, URL, URLSearchParams and Temporal values, in addition to the preserved value types, survive stringify/parse and uneval round-trips with equivalent value semantics.",
+      "id": "R008",
+      "instruction_quote": "- ArrayBuffer, TypedArray, DataView, URL, URLSearchParams and Temporal values MUST round-trip correctly, in addition to the preserved value types.",
+      "kind": "target_postcondition",
+      "observable_surface": "round-trip behavior for built-in and platform value types"
+    },
+    {
+      "assertion": "Sparse arrays with very large declared lengths and few populated entries round-trip correctly.",
+      "id": "R009",
+      "instruction_quote": "- Sparse arrays MUST round-trip correctly, including arrays with very large declared lengths and few populated entries.",
+      "kind": "preserve",
+      "observable_surface": "encoded representation and decode cost of sparse arrays"
+    },
+    {
+      "assertion": "Serializing a function, a Symbol primitive, or a thenable through the synchronous path throws a DevalueError carrying the failing path.",
+      "id": "R010",
+      "instruction_quote": "- Serializing a function or a thenable through the synchronous path MUST throw a DevalueError that exposes the failing path. - Serializing a Symbol primitive through the synchronous path MUST throw a DevalueError that exposes the failing path.",
+      "kind": "target_postcondition",
+      "observable_surface": "synchronous stringify error behavior at a failing path"
+    },
+    {
+      "assertion": "After migration, parse and unflatten reject malformed payloads, out-of-range indices, and __proto__ properties, including null-prototype objects whose key is not a string.",
+      "id": "R011",
+      "instruction_quote": "- parse and unflatten MUST reject malformed payloads, out-of-range indices, and __proto__ properties. They MUST also reject null-prototype object payloads whose key is not a string.",
+      "kind": "target_postcondition",
+      "observable_surface": "error behavior of parse and unflatten on invalid input"
+    },
+    {
+      "assertion": "The package manifests and lockfile resolve devalue 6.0.0 and contain no devalue 4.3.3 dependency.",
+      "id": "R012",
+      "instruction_quote": "1. The package version and dependency graph MUST target devalue 6.0.0 and MUST NOT retain a dependency on devalue 4.3.3.",
+      "kind": "dependency_policy",
+      "observable_surface": "package.json version and dependency graph"
+    },
+    {
+      "assertion": "All listed public contracts remain importable and callable with unchanged signatures and semantics after the migration.",
+      "id": "R013",
+      "instruction_quote": "2. Every public contract in the \"Public contract to preserve\" section MUST remain importable and callable with unchanged signatures and semantics.",
+      "kind": "preserve",
+      "observable_surface": "public entry-point imports and call signatures"
+    },
+    {
+      "assertion": "Every listed behavior remains observable after migration under devalue 6.0.0.",
+      "id": "R014",
+      "instruction_quote": "3. Every behavior in the \"Behavior that must stay unchanged\" section MUST remain observable after the migration.",
+      "kind": "preserve",
+      "observable_surface": "observable runtime behavior of the migrated package"
+    },
+    {
+      "assertion": "No listed exported public entry point is removed, renamed, or narrowed in the migrated package.",
+      "id": "R015",
+      "instruction_quote": "4. The migration MUST NOT remove, rename, or narrow any exported public entry point listed above.",
+      "kind": "preserve",
+      "observable_surface": "exported public entry-point names and shapes"
+    },
+    {
+      "assertion": "No listed value type, reference pattern, or rejection case regresses in the migrated package.",
+      "id": "R016",
+      "instruction_quote": "5. Serialization and deserialization MUST NOT introduce regressions for any value type, reference pattern, or rejection case listed above.",
+      "kind": "preserve",
+      "observable_surface": "serialization and deserialization result coverage"
+    },
+    {
+      "assertion": "Payloads produced by the synchronous and asynchronous paths remain mutually consumable and format-compatible.",
+      "id": "R017",
+      "instruction_quote": "- stringifyAsync(value, reducers?, options?) MUST await thenables and return the same payload format as stringify. Payloads produced by the synchronous and asynchronous paths MUST remain mutually consumable and format-compatible.",
+      "kind": "target_postcondition",
+      "observable_surface": "payload format compatibility between stringify and stringifyAsync"
+    },
+    {
+      "assertion": "Node.js Buffer values serialize only their visible bytes through stringify, stringifyAsync and uneval, without emitting bytes from the shared allocation pool, while ordinary typed arrays and DataViews keep whole-backing-store semantics.",
+      "id": "R018",
+      "instruction_quote": "- Node.js Buffer values MUST be serialized as Uint8Array values containing only the Buffer's visible bytes (byteOffset through byteOffset + byteLength). Their backing store MUST be copied, so bytes from a shared Buffer allocation pool are never emitted. Repeated references to the same Buffer MUST keep their identity after parse, while distinct Buffers MUST revive with separate backing stores. uneval MUST likewise emit only the visible bytes.",
+      "kind": "target_postcondition",
+      "observable_surface": "payload and uneval output for Node.js Buffers, plus unchanged whole-backing-store semantics for ordinary typed arrays and DataViews"
+    },
+    {
+      "assertion": "uneval invokes the replacer with a js template tag, renders fragment holes recursively (including nested fragments) while preserving shared identity, rejects every non-fragment return value except undefined, null and false, and reserves identifiers written in template strings.",
+      "id": "R019",
+      "instruction_quote": "- uneval(value, replacer) MUST pass `(value, js)` to the replacer, where `js` is a template tag that returns an opaque fragment. A fragment's interpolated values MUST be serialized recursively, including fragments nested inside fragments, and MUST keep shared-reference identity with values serialized elsewhere in the same call. The replacer MUST accept only such fragments, or `undefined`, `null` or `false` to serialize the value normally; any other return value, including the former string form, MUST throw `TypeError`. Identifier-like words written in a fragment's template strings, including in nested fragments, MUST be reserved so generated names cannot shadow them.",
+      "kind": "target_postcondition",
+      "observable_surface": "the uneval replacer contract and the generated fragment identifier namespace"
+    },
+    {
+      "assertion": "stringify, stringifyAsync and uneval escape unpaired UTF-16 surrogates into well-formed UTF-8-safe output at every nesting level and key position, while well-formed surrogate pairs keep their characters.",
+      "id": "R020",
+      "instruction_quote": "- stringify, stringifyAsync and uneval MUST emit well-formed output for strings containing unpaired UTF-16 surrogates, so the result survives UTF-8 encode/decode transport unchanged; unpaired surrogates MUST be escaped rather than emitted raw, while well-formed surrogate pairs MUST keep their original characters. This MUST hold for strings inside nested arrays and objects, for object property keys, and for Map and Set entries.",
+      "kind": "target_postcondition",
+      "observable_surface": "the UTF-8 transport safety of stringify, stringifyAsync and uneval output"
+    },
+    {
+      "assertion": "The migrated package manifest declares an engines.node lower bound of Node.js 22.17 or newer.",
+      "id": "R021",
+      "instruction_quote": "The migrated package MUST also declare `engines.node` with a lower bound of\nNode.js `22.17` or newer. The target manifest uses `>=22.17`.",
+      "kind": "dependency_policy",
+      "observable_surface": "package.json engines.node lower bound"
+    },
+    {
+      "assertion": "parse and unflatten reject a typed array or DataView whose reviver-supplied backing buffer is not an ArrayBuffer or SharedArrayBuffer; legitimate backings keep their byteOffset, byteLength and bytes.",
+      "id": "R022",
+      "instruction_quote": "- When a reviver replaces the serialized ArrayBuffer that a typed array or DataView refers to, revival MUST use only an actual ArrayBuffer or SharedArrayBuffer as that backing store. A reviver result that is a number, an array-like object, or any other value that is not an ArrayBuffer or SharedArrayBuffer MUST make parse and unflatten throw instead of allocating a new backing store from it. Legitimate ArrayBuffer and SharedArrayBuffer backings MUST still revive with their original byteOffset, byteLength and bytes, for full views as well as subarrays and DataViews.",
+      "kind": "target_postcondition",
+      "observable_surface": "the parse and unflatten exports from the package entry point"
+    },
+    {
+      "assertion": "stringifyAsync leaves every thenable it already reached with its rejection handled when it fails, still rejects with the original failure, and never reports an unhandled rejection on success.",
+      "id": "R023",
+      "instruction_quote": "- A settled stringifyAsync call MUST NOT leave a rejected thenable unhandled. When the call fails for any reason, the returned promise MUST reject with that failure and every thenable the call already reached MUST have its rejection handled, so the process reports no unhandled promise rejection. This MUST hold when the failing value is encountered before, after, or nested beside the thenables in arrays and Map entries, and when a thenable rejects while traversal is still running or after the first failure has already been detected. A call that succeeds MUST NOT report an unhandled rejection either, and a single rejected thenable MUST still reject the returned promise with the original rejection reason.",
+      "kind": "target_postcondition",
+      "observable_surface": "the stringifyAsync export from the package entry point"
+    },
+    {
+      "assertion": "uneval emits each repeated string of 128 characters or more and each repeated BigInt once per call and references it from every position, while a boxed primitive referenced more than once revives as one wrapper instance holding the same primitive value.",
+      "id": "R024",
+      "instruction_quote": "- uneval MUST emit a distinct string value whose length is 128 characters or more only once per call and MUST reference it from every position where it occurs, at any depth, inside arrays and objects, as a Map key or value, and as Set member content. The same rule applies to BigInt values. Shorter repeated strings MAY stay inline. Evaluating the emitted source MUST still produce the original values at every position, and a boxed primitive that is referenced more than once MUST still revive as a single wrapper instance holding the same primitive value.",
+      "kind": "target_postcondition",
+      "observable_surface": "the uneval export from the package entry point"
+    },
+    {
+      "assertion": "uneval reproduces an array's declared length, own elements and holes exactly when the prototype chain supplies an index the array does not own, without emitting or reviving the inherited element.",
+      "id": "R025",
+      "instruction_quote": "- uneval MUST reproduce an array's declared length, own elements and holes exactly, including when the array's prototype chain supplies an index that the array itself does not own. A prototype-supplied element MUST NOT be emitted as an own element, MUST NOT appear as a value in the revived array, and MUST NOT shorten the revived array.",
+      "kind": "target_postcondition",
+      "observable_surface": "the uneval export from the package entry point"
+    },
+    {
+      "assertion": "The package's declared type entry exports JavaScriptFragment, JavaScriptTag and UnevalReplacer with the 6.0.0 shapes, and UnevalReplacer rejects at the type level every replacer result the runtime rejects.",
+      "id": "R026",
+      "instruction_quote": "The migrated package MUST ship TypeScript declarations for its public API. A consumer that imports the package by its published name MUST resolve those declarations through the package's own declared type entry, and the declarations MUST keep exporting every type name the package already exports. The declarations MUST additionally export these three names: - `JavaScriptFragment` — the opaque value produced by the `js` template tag and accepted from `uneval` replacers. Consumers can pass a fragment around as a value, but cannot obtain one from a string, a plain object or any other forged literal. - `JavaScriptTag` — the type of the `js` argument that `uneval` passes to a replacer. It is callable only as a tagged template, its string parts are emitted verbatim, and its interpolated values accept arbitrary values. - `UnevalReplacer` — the replacer signature `(value, js) => ...` whose result is a `JavaScriptFragment`, or `false`, `null`, `undefined` or no value at all so the value is serialized normally. `UnevalReplacer` MUST reject at the type level every replacer result the runtime rejects: strings (including the former string form), numbers, booleans other than `false`, plain objects and functions. A strict TypeScript consumer that imports these names from the package and uses them as described MUST type-check without errors.",
+      "kind": "target_postcondition",
+      "observable_surface": "the package's declared TypeScript type entry"
+    }
+  ],
+  "schema_version": "migration-requirements:v1"
+}

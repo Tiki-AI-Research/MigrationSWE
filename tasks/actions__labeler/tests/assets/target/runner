@@ -1,0 +1,717 @@
+#!/usr/bin/env python3
+"""Shared integration harness entrypoint for the TypeScript -> Go labeler migration.
+
+One physical file drives both sides; the side is derived from the directory that
+contains it (``source/runner`` -> ``source``, ``target/runner`` -> ``target``).
+It is self-contained: it reads only the merged, self-contained inventory under
+``shared/integration/`` and never touches the authoring-only ``dependencies/`` or
+``fragments/`` trees.
+
+Executable projections
+----------------------
+* F2P observations are **target-only postconditions**: both sides execute the
+  *same* semantic predicate (the target-technology predicate supplied by the F2P
+  batches).  The predicate asserts that the Go 1.24.0 implementation is on the
+  real execution/load path and that the named postcondition holds for it; on a
+  repository that still uses the TypeScript source technology the predicate is
+  unsatisfied, so the raw observation is FAIL.  Statuses are the raw result for
+  the side that ran, never a role-based expectation.
+* P2P and DIFFERENTIAL observations run each side's own executable projection
+  (the repository's own tests or the batch-provided probe scripts) and report the
+  raw PASS/FAIL.  The projected value is a stable behaviour projection so the two
+  sides normalize to the same result.
+* CONTRACT observations re-check the preserved public surface on each side.
+
+Every potentially long-running command (``go test``, ``go build``, ``node``/jest,
+probe scripts) is wrapped with an explicit ``timeout`` wrapper and the harness
+itself bounds every subprocess with a wall-clock deadline, so the harness can
+never wait forever.  Privileged or permanently blocking cases are never run.
+
+The report follows ``migration-observations:v6``::
+
+    {"schema_version": ..., "batch_id": ..., "side": ...,
+     "observations": [{"id":..., "kind":..., "status":..., "value": {...}}]}
+
+Statuses: PASS / FAIL / NA / INFRA_ERROR / INCONCLUSIVE / TIMEOUT.
+"""
+import json
+import os
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+
+SCHEMA_VERSION = "migration-observations:v6"
+BATCH_ID = "BATCH-INTEGRATION-0001"
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ASSET_ROOT = os.path.dirname(HERE)
+SIDE = os.environ.get("MIGRATION_RUNNER_SIDE") or os.path.basename(HERE)
+if SIDE not in ("source", "target"):
+    SIDE = "target"
+
+REPO_ENV_KEYS = ("MIGRATION_REPO_ROOT", "MIGRATION_REPO", "REPO_ROOT", "REPO")
+
+# Directories we materialise into the working repository for a probe/command.
+_CREATED = []
+
+# Memoisation for side probe scripts, which copy the whole working repository
+# (including the Go module cache).  An identical script spec is executed once.
+_SCRIPT_CACHE = {}
+_BLACKBOX_CACHE = {}
+_COMMAND_LOGS = []
+
+
+# ---------------------------------------------------------------------------
+# Repository discovery (only the documented, side-agnostic env keys).
+# ---------------------------------------------------------------------------
+
+def repo_root():
+    for key in REPO_ENV_KEYS:
+        value = os.environ.get(key)
+        if value:
+            return os.path.abspath(value)
+    return "/workspace/repo"
+
+
+def _read(path):
+    try:
+        with open(path, errors="replace") as handle:
+            return handle.read()
+    except OSError:
+        return ""
+
+
+def load_json(rel):
+    with open(os.path.join(ASSET_ROOT, rel)) as handle:
+        return json.load(handle)
+
+
+def load_harness():
+    return load_json(os.path.join("shared", "integration", "harness.json"))
+
+
+# ---------------------------------------------------------------------------
+# Command execution with an explicit, bounded timeout.
+# ---------------------------------------------------------------------------
+
+def _wrap_timeout(cmd, seconds):
+    if not cmd:
+        return cmd
+    if cmd[0] == "timeout":
+        return list(cmd)
+    return ["timeout", str(int(seconds))] + list(cmd)
+
+
+def _base_env():
+    env = dict(os.environ)
+    env.setdefault("GOFLAGS", "-mod=mod")
+    env.setdefault("GOPROXY", "off")
+    env.setdefault("GOSUMDB", "off")
+    env.setdefault("CGO_ENABLED", "0")
+    repo = repo_root()
+    for cache in (".gomodcache", ".gocache"):
+        candidate = os.path.join(repo, cache)
+        if os.path.isdir(candidate):
+            if cache == ".gomodcache":
+                env.setdefault("GOMODCACHE", candidate)
+            else:
+                env.setdefault("GOCACHE", candidate)
+    return env
+
+
+def run_command(cmd, cwd, seconds, env=None, extra_env=None):
+    cmd = list(cmd)
+    go_test = any(os.path.basename(str(arg)) == "go" and cmd[index + 1:index + 2] == ["test"]
+                  for index, arg in enumerate(cmd))
+    if go_test:
+        index = next(index for index, arg in enumerate(cmd)
+                     if os.path.basename(str(arg)) == "go" and cmd[index + 1:index + 2] == ["test"])
+        # Require machine-readable evidence of actual tests, including commands
+        # without -run and packages that contain no *_test.go files.
+        if "-json" not in cmd:
+            cmd.insert(index + 2, "-json")
+        if not any(str(arg).startswith("-count") for arg in cmd):
+            cmd.insert(index + 2, "-count=1")
+    key = (cwd, tuple(cmd)) if "blackbox/labeler_blackbox.py" in cmd else None
+    cached = key is not None and key in _BLACKBOX_CACHE
+    result = _BLACKBOX_CACHE[key] if cached else _run_command(cmd, cwd, seconds, env, extra_env)
+    status, code, output = result
+    executed = []
+    if status == "PASS" and go_test:
+        events = []
+        for line in output.splitlines():
+            try:
+                event = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if isinstance(event, dict) and "Action" in event:
+                events.append(event)
+        started = {(event.get("Package"), event.get("Test")) for event in events
+                   if event.get("Action") == "run" and event.get("Test")}
+        executed = sorted(str(event.get("Package", "")) + "/" + event["Test"] for event in events
+                          if event.get("Action") == "pass" and event.get("Test")
+                          and (event.get("Package"), event["Test"]) in started)
+        if not executed:
+            empty = events or "no tests to run" in output or "[no test files]" in output
+            result = ("FAIL" if empty else "INCONCLUSIVE", code,
+                      output + "\nNo completed, non-skipped requested tests were reported.\n")
+    if key is not None:
+        _BLACKBOX_CACHE[key] = result
+    _COMMAND_LOGS.append({"command": list(cmd), "status": result[0], "returncode": result[1],
+                          "cached": cached, "executed_tests": executed if go_test else None,
+                          "output_tail": result[2][-12000:]})
+    return result
+
+
+def _run_command(cmd, cwd, seconds, env=None, extra_env=None):
+    """Run *cmd* with an explicit timeout; return (status, exit_code, output)."""
+    if not os.path.isdir(cwd):
+        return "INFRA_ERROR", None, ""
+    full = _wrap_timeout(cmd, seconds)
+    proc_env = env if env is not None else _base_env()
+    if extra_env:
+        proc_env = dict(proc_env)
+        proc_env.update(extra_env)
+    try:
+        proc = subprocess.run(
+            full,
+            cwd=cwd,
+            env=proc_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=float(seconds) + 30.0,
+        )
+    except FileNotFoundError:
+        return "INCONCLUSIVE", None, ""
+    except subprocess.TimeoutExpired as exc:
+        output = exc.stdout or b""
+        return "TIMEOUT", 124, output.decode("utf-8", "replace") if isinstance(output, bytes) else output
+    except OSError as exc:
+        return "INFRA_ERROR", None, str(exc)
+    output = proc.stdout.decode("utf-8", "replace") if proc.stdout else ""
+    if proc.returncode == 0:
+        return "PASS", 0, output
+    if proc.returncode in (124, 137):
+        return "TIMEOUT", proc.returncode, output
+    return "FAIL", proc.returncode, output
+
+
+def _remove_asset_tree(path):
+    """Remove a working copy without following links or changing source assets."""
+    if not os.path.lexists(path):
+        return
+    if os.path.islink(path) or not os.path.isdir(path):
+        os.unlink(path)
+        return
+    os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | 0o700)
+    for directory, names, _files in os.walk(path, followlinks=False):
+        for name in names:
+            child = os.path.join(directory, name)
+            if not os.path.islink(child):
+                os.chmod(child, stat.S_IMODE(os.stat(child).st_mode) | 0o700)
+    shutil.rmtree(path)
+
+
+def _make_asset_copy_writable(path):
+    # copytree preserves the evaluator's 0555/0444 modes. Only the disposable
+    # working copy needs owner write permission for refresh and cleanup.
+    for directory, _names, files in os.walk(path, followlinks=False):
+        os.chmod(directory, stat.S_IMODE(os.stat(directory).st_mode) | 0o700)
+        for name in files:
+            child = os.path.join(directory, name)
+            if not os.path.islink(child):
+                os.chmod(child, stat.S_IMODE(os.stat(child).st_mode) | 0o200)
+
+
+def ensure_asset_dir(repo, rel, dest_rel=None):
+    """Copy an asset subtree into the working repo when a probe needs it."""
+    rel = rel.rstrip("/")
+    dest_rel = (dest_rel or rel).rstrip("/")
+    src = os.path.join(ASSET_ROOT, rel)
+    dst = os.path.join(repo, dest_rel)
+    # Evaluator helpers must come from the evaluator even if the candidate
+    # already has a directory with the same name. Refresh blackbox helpers at
+    # each probe boundary so candidate execution cannot replace the policy.
+    if os.path.isdir(src) and (dst not in _CREATED or dest_rel == "blackbox"):
+        _remove_asset_tree(dst)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copytree(src, dst)
+        _make_asset_copy_writable(dst)
+        if dst not in _CREATED:
+            _CREATED.append(dst)
+    return dst
+
+
+def _copy_probe(repo, probe_dir, dest):
+    dst = os.path.join(repo, dest)
+    _remove_asset_tree(dst)
+    os.makedirs(dst, exist_ok=True)
+    src = os.path.join(ASSET_ROOT, probe_dir)
+    if os.path.isdir(src):
+        for name in os.listdir(src):
+            full = os.path.join(src, name)
+            if os.path.isfile(full):
+                shutil.copy2(full, os.path.join(dst, name))
+    _CREATED.append(dst)
+    return dst
+
+
+# ---------------------------------------------------------------------------
+# Target-technology predicate (shared by both sides of every F2P observation).
+# ---------------------------------------------------------------------------
+
+def target_technology_active(root):
+    """True when the Go implementation is on the real action execution path.
+
+    The contract requires the migrated Go implementation to be the action
+    entrypoint; it does not prescribe a docker runtime.  A docker action whose
+    image builds ``cmd/labeler`` and a composite action whose steps build or run
+    the Go binary are both legitimate, as long as the Node entrypoint is gone.
+    """
+    if not os.path.isfile(os.path.join(root, "go.mod")):
+        return False
+    entry = os.path.join(root, "cmd", "labeler")
+    if not os.path.isdir(entry) or not any(name.endswith(".go") and not name.endswith("_test.go") for name in os.listdir(entry)):
+        return False
+    # The evaluator-owned runtime probe parses YAML and follows wrappers. Do
+    # not impose a main filename, Dockerfile name or inlined go command here.
+    ensure_asset_dir(root, "target/blackbox", "blackbox")
+    status, _, _ = run_command(
+        ["python3", "blackbox/action_runtime.py", "--repo", root, "--metadata-only"], root, 60)
+    return status == "PASS"
+
+
+# ---------------------------------------------------------------------------
+# Public-surface contract check used by the CONTRACT observations.
+# ---------------------------------------------------------------------------
+
+_INPUT_NAMES = ("repo-token", "configuration-path", "sync-labels", "dot", "pr-number")
+_OUTPUT_NAMES = ("new-labels", "all-labels")
+_SOURCE_SUFFIXES = (".go", ".ts", ".js", ".mjs", ".cjs", ".tsx", ".jsx")
+
+
+def _entry_dir(entry):
+    """Return the directory that holds the declared implementation entry.
+
+    ``instruction.md`` fixes package paths and exported identifiers, not file
+    names, so the contract projection is anchored on the declared package
+    directory instead of a reference-only file name.
+    """
+
+    entry = (entry or "").replace("\\", "/").strip("/")
+    if not entry or entry == ".":
+        return ""
+    head, _, tail = entry.rpartition("/")
+    return head if "." in tail else entry
+
+
+def _package_declares_source(root, pkg_dir):
+    """True when the declared package directory holds a real source declaration."""
+
+    base = os.path.join(root, pkg_dir) if pkg_dir and pkg_dir != "." else root
+    if not os.path.isdir(base) or os.path.islink(base):
+        return False
+    for name in sorted(os.listdir(base)):
+        lowered = name.casefold()
+        if "test" in lowered or "spec" in lowered:
+            continue
+        path = os.path.join(base, name)
+        if not os.path.isfile(path) or os.path.islink(path):
+            continue
+        if not lowered.endswith(_SOURCE_SUFFIXES):
+            continue
+        if re.search(r"(?m)^\s*(?:func|type|var|const|class|export)\s+\w", _read(path)):
+            return True
+    return False
+
+
+def _package_text(root, pkg_dir):
+    base = os.path.join(root, pkg_dir) if pkg_dir and pkg_dir != "." else root
+    if not os.path.isdir(base) or os.path.islink(base):
+        return ""
+    chunks = []
+    for name in sorted(os.listdir(base)):
+        lowered = name.casefold()
+        if "test" in lowered or "spec" in lowered:
+            continue
+        path = os.path.join(base, name)
+        if os.path.isfile(path) and not os.path.islink(path) and lowered.endswith(_SOURCE_SUFFIXES):
+            chunks.append(_read(path))
+    return "\n".join(chunks)
+
+
+def contract_check(spec):
+    root = repo_root()
+    surface = spec.get("surface", "")
+    entry = spec.get("target_entry") if SIDE == "target" else spec.get("source_entry")
+    entry = entry or ""
+    action = os.path.join(root, "action.yml")
+
+    if SIDE == "target" and spec.get("go_test"):
+        ensure_asset_dir(root, "target/contracts")
+        return run_command(["go", "test", "-run", "^" + spec["go_test"] + "$",
+                            spec.get("go_package", "./target/contracts/")], root, 300)[0]
+    if spec.get("behavior_cases"):
+        ensure_asset_dir(root, "target/blackbox", "blackbox")
+        statuses = []
+        for case_name in spec["behavior_cases"]:
+            cmd = ["timeout", "300", "python3", "blackbox/labeler_blackbox.py", "--case", case_name]
+            if SIDE == "source":
+                cmd += ["--runtime", "source"]
+            statuses.append(run_command(cmd, root, 300)[0])
+        return ("INFRA_ERROR" if "INFRA_ERROR" in statuses else "TIMEOUT" if "TIMEOUT" in statuses
+                else "INCONCLUSIVE" if "INCONCLUSIVE" in statuses else "FAIL" if "FAIL" in statuses else "PASS")
+
+    if surface == "action.yml input definitions":
+        text = _read(action)
+        return "PASS" if text and all(re.search(r"^  %s:" % re.escape(n), text, re.M) for n in _INPUT_NAMES) else "FAIL"
+    if surface == "action.yml output definitions":
+        text = _read(action)
+        return "PASS" if text and all(re.search(r"^  %s:" % re.escape(n), text, re.M) for n in _OUTPUT_NAMES) else "FAIL"
+    if surface in ("repository change surface", "public capabilities and contracts"):
+        return "PASS" if os.path.exists(os.path.join(root, "README.md")) and os.path.exists(action) else "FAIL"
+    if surface == "test and evaluation integrity":
+        for probe in ("internal/labeler", "src", "__tests__"):
+            if os.path.isdir(os.path.join(root, probe)):
+                return "PASS"
+        return "FAIL"
+    if surface == "GitHub REST and GraphQL calls issued by the action":
+        text = _package_text(root, _entry_dir(entry)).lower()
+        markers = ("label", "pull", "content", "graphql", "mutation")
+        return "PASS" if text and any(m in text for m in markers) else "FAIL"
+    # Generic observable-surface projection: the declared package must exist with
+    # a real (non-test) declaration.  The reference implementation's exact file
+    # name is not part of the public contract, so an equivalent layout passes.
+    if entry and _package_declares_source(root, _entry_dir(entry)):
+        return "PASS"
+    return "FAIL"
+
+
+def policy_check(name):
+    root = repo_root()
+    if name == "policy:changed-scope":
+        ok = os.path.exists(os.path.join(root, "action.yml")) and os.path.exists(
+            os.path.join(root, "README.md"))
+        return "PASS" if ok else "FAIL"
+    if name == "policy:test-integrity":
+        return "PASS" if _has_tests(root) else "FAIL"
+    return "INCONCLUSIVE"
+
+
+def _has_tests(root):
+    for dirpath, _dirs, files in os.walk(root):
+        if any(part in (".git", ".gomodcache", ".gocache", "node_modules") for part in dirpath.split(os.sep)):
+            continue
+        for name in files:
+            if name.endswith("_test.go") or name.endswith(".test.ts") or name.endswith(".spec.ts"):
+                return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Spec adapters.
+# ---------------------------------------------------------------------------
+
+def _jest_command(spec):
+    file = spec.get("file", "")
+    cmd = ["node", "--experimental-vm-modules", "./node_modules/jest/bin/jest.js",
+           "--runInBand", "--runTestsByPath", file]
+    case = spec.get("case")
+    if case:
+        cmd += ["-t", case]
+    return cmd
+
+
+def _materialize(spec, repo):
+    for item in spec.get("materialize", []):
+        ensure_asset_dir(repo, item.get("from", ""), item.get("to"))
+
+
+def exec_spec(spec, seen_probes):
+    """Execute one side-specific harness specification.
+
+    Returns (status, exit_code, projection_dict).
+    """
+    if not spec:
+        return "INCONCLUSIVE", None, None
+    stype = spec.get("type", "inconclusive")
+    if stype == "inconclusive":
+        return "INCONCLUSIVE", None, None
+    seconds = int(spec.get("timeout", 300))
+    repo = repo_root()
+
+    if stype == "jest":
+        runner = os.path.join(repo, "node_modules", "jest", "bin", "jest.js")
+        if not os.path.isfile(runner):
+            return "INCONCLUSIVE", None, {"adapter": "jest", "reason": "jest-not-installed"}
+        status, code, _out = run_command(_jest_command(spec), repo, seconds)
+        return status, code, {"adapter": "jest"}
+
+    if stype == "file-exists":
+        path = os.path.join(repo, spec.get("file", ""))
+        return ("PASS" if os.path.exists(path) else "FAIL"), None, {"adapter": "file-exists"}
+
+    if stype == "policy":
+        return policy_check(spec.get("name", "")), None, {"adapter": "policy"}
+
+    if stype == "go-test":
+        cmd = ["go", "test", "-count=1"]
+        run = spec.get("run")
+        if run:
+            cmd += ["-run", run]
+        cmd.append(spec.get("pkg", "./..."))
+        status, code, _out = run_command(cmd, repo, seconds)
+        return status, code, {"adapter": "go-test"}
+
+    if stype == "go-test-pkg":
+        cmd = ["go", "test", "-count=1", spec.get("pkg", "./...")]
+        status, code, _out = run_command(cmd, repo, seconds)
+        return status, code, {"adapter": "go-test"}
+
+    if stype == "go-probe":
+        dest = spec.get("dest", "probe")
+        key = (spec.get("probe_dir"), dest)
+        if key not in seen_probes:
+            _copy_probe(repo, spec["probe_dir"], dest)
+            seen_probes.add(key)
+        cmd = ["go", "test", "-count=1"]
+        run = spec.get("run")
+        if run:
+            cmd += ["-run", run]
+        cmd.append("./%s/" % dest)
+        status, code, _out = run_command(cmd, repo, seconds)
+        return status, code, {"adapter": "go-probe"}
+
+    if stype == "command":
+        _materialize(spec, repo)
+        cmd = list(spec.get("command", []))
+        for arg in cmd:
+            if isinstance(arg, str) and (arg.startswith("./target/batches/") or arg.startswith("./source/batches/")):
+                ensure_asset_dir(repo, arg[2:])
+        status, code, output = run_command(cmd, repo, seconds)
+        if spec.get("projection") == "json-line":
+            lines = [line[len("LABELER_PROJECTION "):] for line in output.splitlines()
+                     if line.startswith("LABELER_PROJECTION ")]
+            try:
+                if len(lines) != 1:
+                    raise ValueError("expected exactly one behaviour projection")
+                data = json.loads(lines[0])
+                if not isinstance(data, dict) or not data or any(not isinstance(value, bool) for value in data.values()):
+                    raise ValueError("behaviour projection must contain boolean results")
+            except (ValueError, TypeError):
+                return ("INCONCLUSIVE" if status == "PASS" else status), code, {"adapter": "command"}
+            return status, code, {"data": data}
+        return status, code, {"adapter": "command"}
+
+    if stype == "script":
+        key = json.dumps(spec, sort_keys=True)
+        if key in _SCRIPT_CACHE:
+            return _SCRIPT_CACHE[key]
+        script = os.path.join(ASSET_ROOT, spec.get("script", ""))
+        env = _base_env()
+        env["REPO_ROOT"] = repo
+        env["TARGET_ROOT"] = repo
+        env["SOURCE_ROOT"] = repo
+        cmd = ["sh", script, repo]
+        status, code, _out = run_command(cmd, ASSET_ROOT, seconds, env=env)
+        result = (status, code, {"adapter": "script"})
+        _SCRIPT_CACHE[key] = result
+        return result
+
+    if stype in ("contract", "contract-source"):
+        return contract_check(spec), None, {"adapter": "contract", "method": spec.get("method")}
+
+    return "INCONCLUSIVE", None, None
+
+
+# ---------------------------------------------------------------------------
+# Report construction.
+# ---------------------------------------------------------------------------
+
+_KINDS = ("P2P", "F2P", "DIFFERENTIAL", "CONTRACT")
+
+
+def observations_for(batch_id, harness):
+    order = harness.get("observation_ids", [])
+    out = []
+    for oid in order:
+        entry = harness["observations"][oid]
+        if batch_id:
+            if batch_id in _KINDS:
+                if entry.get("kind") != batch_id:
+                    continue
+            elif entry.get("batch_id") != batch_id:
+                continue
+        out.append((oid, entry))
+    return out
+
+
+def _spec_for(entry, oid):
+    """Return the executable projection for the current side.
+
+    F2P uses the single shared target-technology predicate on both sides; all
+    other kinds use the side-specific projection.
+    """
+    if entry["kind"] == "F2P":
+        return entry.get("predicate") or entry.get("target")
+    return entry.get(SIDE)
+
+
+def _combine_f2p(status, spec):
+    """Raw observation of the shared target-technology predicate.
+
+    A target-only postcondition can only hold when the Go implementation is on
+    the real execution/load path, so the predicate additionally requires the
+    target technology to be active for this side.  This is the same semantic
+    predicate on both sides: on the TypeScript source technology it is FALSE.
+    """
+    if status != "PASS" and status != "FAIL":
+        return status
+    if not target_technology_active(repo_root()):
+        return "FAIL"
+    return status
+
+
+def build_report(harness, batch_id):
+    ensure_asset_dir(repo_root(), "target/blackbox", "blackbox")
+    seen_probes = set()
+    results = []
+    for oid, entry in observations_for(batch_id, harness):
+        spec = _spec_for(entry, oid)
+        log_start = len(_COMMAND_LOGS)
+        status, code, projection = exec_spec(spec, seen_probes)
+        if entry["kind"] == "F2P":
+            status = _combine_f2p(status, spec)
+            value = {"type": "json", "value": {"result": status}}
+        elif entry["kind"] == "DIFFERENTIAL" and projection and "data" in projection:
+            value = {"type": "json", "value": projection["data"]}
+        elif entry["kind"] in ("P2P", "DIFFERENTIAL"):
+            # Stable, side-independent behaviour projection so that the source
+            # and target values normalize to the same result.
+            value = {"type": "json", "value": {"result": status}}
+        else:
+            value = {"type": "json", "value": {"result": status}}
+            if projection:
+                value["value"].update(projection)
+            if code is not None:
+                value["value"]["exit_code"] = code
+        results.append({
+            "id": oid,
+            "kind": entry["kind"],
+            "status": status,
+            "value": value,
+            "diagnostics": _COMMAND_LOGS[log_start:],
+        })
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "batch_id": BATCH_ID,
+        "side": SIDE,
+        "behavior_contract_revision": harness.get("behavior_contract_revision"),
+        "observations": results,
+    }
+
+
+def cleanup():
+    repo = os.path.abspath(repo_root())
+    for path in sorted(_CREATED, key=len, reverse=True):
+        _remove_asset_tree(path)
+    for path in sorted(_CREATED, key=len, reverse=True):
+        parent = os.path.dirname(os.path.abspath(path))
+        while parent.startswith(repo) and parent != repo:
+            try:
+                if os.path.isdir(parent) and not os.listdir(parent):
+                    os.rmdir(parent)
+                    parent = os.path.dirname(parent)
+                    continue
+            except OSError:
+                pass
+            break
+    _CREATED.clear()
+
+
+def _write_text(path, text):
+    parent = os.path.dirname(os.path.abspath(path))
+    os.makedirs(parent, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=".migration-report-", dir=parent)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text + "\n")
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    mode = "report"
+    if argv and argv[0] in ("report", "batch-exec", "list"):
+        mode = argv.pop(0)
+    batch = None
+    report_path = None
+    rest = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--mode" and i + 1 < len(argv):
+            mode = argv[i + 1]
+            i += 2
+            continue
+        if arg == "--batch" and i + 1 < len(argv):
+            batch = argv[i + 1]
+            i += 2
+            continue
+        if arg == "--json-out" and i + 1 < len(argv):
+            report_path = argv[i + 1]
+            i += 2
+            continue
+        if arg in ("-h", "--help"):
+            print("usage: runner [report|batch-exec|list] [BATCH-ID] [REPORT_PATH]")
+            return 0
+        rest.append(arg)
+        i += 1
+    for arg in rest:
+        if arg.startswith("BATCH-") or arg in _KINDS:
+            batch = arg
+        else:
+            report_path = arg
+
+    harness = load_harness()
+
+    if mode == "batch-exec" and batch is None:
+        # Default integration dispatch: every P2P batch projection.
+        batch = "P2P"
+
+    if mode == "list":
+        payload = {
+            "batch_id": BATCH_ID,
+            "side": SIDE,
+            "observation_ids": [o for o, _ in observations_for(batch, harness)],
+        }
+        text = json.dumps(payload, indent=2)
+        if report_path:
+            _write_text(report_path, text)
+        print(text)
+        return 0
+
+    try:
+        report = build_report(harness, batch)
+    finally:
+        cleanup()
+    text = json.dumps(report, indent=2)
+    if report_path:
+        _write_text(report_path, text)
+    print(text)
+    for item in report["observations"]:
+        if item["status"] == "INFRA_ERROR":
+            return 2
+        if item["status"] == "TIMEOUT":
+            return 3
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

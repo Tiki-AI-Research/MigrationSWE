@@ -1,0 +1,44 @@
+{
+  "schema_version": "migration-side-cases:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "side": "target",
+  "language": "Go",
+  "language_version": "1.22",
+  "repository_path": "/input/target",
+  "run": {
+    "command": ["go", "test", "-count=1", "./..."],
+    "selector_flag": "-run",
+    "selector_filter": "regexp",
+    "selector_template": "^{case}$",
+    "env": {"GOFLAGS": "-mod=mod"}
+  },
+  "projection": {
+    "id": "status-wrapper",
+    "value": {"result": "PASS"}
+  },
+  "cases": [
+    {"observation_id": "P2P-001", "selectors": ["TestAsyncClientClosure", "TestExchangeCodeSuccessfulWithBasicAuth"]},
+    {"observation_id": "P2P-002", "selectors": ["TestExchangeCodeSuccessfulWithCompleteJSONResponse", "TestTokenRevocationWithRefreshToken", "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"]},
+    {"observation_id": "P2P-003", "selectors": ["TestAuthorizeURL", "TestExchangeCodeSuccessfulWithMinimalJSONResponse"]},
+    {"observation_id": "P2P-004", "selectors": ["TestExchangeCodeSuccessfulWithMinimalJSONResponse", "TestExchangeCodeSuccessfulWithCompleteJSONResponse", "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse"]},
+    {"observation_id": "P2P-005", "selectors": ["TestTokenRevocationWithAccessTokenAndEmptyJSONResponse", "TestTokenRevocationWithAccessTokenAndEmptyResponse", "TestTokenRevocationWithAccessTokenAndNonJSONResponse"]},
+    {"observation_id": "P2P-006", "selectors": ["TestExchangeCodeSuccessfulWithBasicAuth", "TestExchangeClientCredentialsWithBasicAuth"]},
+    {"observation_id": "P2P-007", "selectors": ["TestExchangeCodeSuccessfulWithMinimalJSONResponse"]},
+    {"observation_id": "P2P-008", "selectors": ["TestErrorResponseSerializer", "TestConfigurationErrorMessages"]},
+    {"observation_id": "P2P-009", "selectors": ["TestSecretRedaction", "TestSecretConversion"]},
+    {"observation_id": "P2P-010", "selectors": ["TestAuthorizeURLWithParam"]},
+    {"observation_id": "P2P-011", "selectors": ["TestDeviceTokenPendingThenSuccess", "TestDeviceTokenSlowdownThenSuccess", "TestDeviceTokenExpired", "TestDeviceTokenAuthorizationTimeout"]},
+    {"observation_id": "P2P-012", "selectors": ["TestErrorResponseSerializer"]},
+    {"observation_id": "P2P-013", "selectors": ["TestTokenRevocationWithRefreshToken", "TestTokenRevocationWithNonHTTPSURL"]},
+    {"observation_id": "P2P-014", "selectors": ["TestExchangeCodeWithSimpleJSONError", "TestExchangeCodeWithJSONParseError", "TestExchangeCodeWith400StatusCode"]},
+    {"observation_id": "P2P-015", "selectors": ["TestAuthorizeURL", "TestAuthorizeURLPKCE", "TestAuthorizeURLImplicit", "TestAuthorizeURLWithParam", "TestAuthorizeURLWithScopes", "TestAuthorizeURLWithRedirectURL"]},
+    {"observation_id": "P2P-016", "selectors": ["TestExchangeCodeWithUnexpectedContentType"]},
+    {"observation_id": "P2P-017", "selectors": ["TestTokenRevocationWithNonHTTPSURL"]},
+    {"observation_id": "P2P-018", "selectors": ["TestAuthorizeURLMissingEndpoint", "TestExchangeCodeMissingTokenEndpoint", "TestTokenIntrospectionMissingEndpoint", "TestTokenRevocationWithMissingURL"]},
+    {"observation_id": "P2P-019", "selectors": ["TestExchangeCodeSuccessfulWithCompleteJSONResponse", "TestTokenRevocationWithMissingURL", "TestTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse"]},
+    {"observation_id": "P2P-020", "selectors": ["TestExchangeClientCredentialsWithBasicAuth", "TestExchangeClientCredentialsWithBodyAuthAndScope", "TestExchangeClientCredentialsWithBasicAuthButNoClientSecret"]},
+    {"observation_id": "P2P-021", "selectors": ["TestExchangeCodeSuccessfulWithPKCEAndExtension", "TestExchangeDeviceCodeAndToken", "TestTokenIntrospectionSuccessfulWithBasicAuthFullResponse", "TestExtensionRevocationSuccessful"]},
+    {"observation_id": "P2P-022", "selectors": ["TestAuthorizeURL", "TestAuthorizeURLWithScopes", "TestAuthorizeURLWithOneScope"]}
+  ]
+}

@@ -1,0 +1,730 @@
+{
+  "schema_version": "differential-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "migration": {
+    "source_language": "TypeScript 6.0.3",
+    "target_language": "Go 1.23.0"
+  },
+  "notes": [
+    "Each case is executed unchanged against the source and the target implementation.",
+    "Inputs mirror the action.yml defaults that a GitHub runner materializes as INPUT_* env vars.",
+    "GITHUB_API_URL points at the case mock server; upload_url in release bodies uses {base}.",
+    "Only exit code, ordered requests, parsed outputs and the normalized ::error:: line are compared."
+  ],
+  "cases": [
+    {
+      "id": "CASE-001",
+      "kind": "http",
+      "observation_ids": ["DIFF-001", "DIFF-002", "DIFF-005", "DIFF-009", "DIFF-010", "DIFF-022", "DIFF-023", "DIFF-028"],
+      "requirement_ids": ["R001", "R002", "R006", "R009", "R010", "R011", "R023", "R024", "R031"],
+      "description": "Create a release with an explicit body, name defaulting to the tag and make_latest forwarded.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_body": "hello world",
+        "INPUT_draft": "false",
+        "INPUT_prerelease": "false",
+        "INPUT_makeLatest": "legacy",
+        "INPUT_allowUpdates": "false"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": "https://api.github.com/repos/ncipollo/release-action/tarball/v1.2.3",
+            "zipball_url": "https://api.github.com/repos/ncipollo/release-action/zipball/v1.2.3",
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-002",
+      "kind": "http",
+      "observation_ids": ["DIFF-006"],
+      "requirement_ids": ["R007"],
+      "description": "Empty tag falls back to the refs/tags/ git ref.",
+      "env": {
+        "INPUT_token": "test-token",
+        "GITHUB_REF": "refs/tags/v9.9.9"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 43,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v9.9.9",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/43/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v9.9.9",
+            "tag_name": "v9.9.9"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-003",
+      "kind": "http",
+      "observation_ids": ["DIFF-006"],
+      "requirement_ids": ["R007"],
+      "description": "Empty tag and a non-tag ref fail with the documented input error.",
+      "env": {
+        "INPUT_token": "test-token",
+        "GITHUB_REF": "refs/heads/main"
+      },
+      "github": []
+    },
+    {
+      "id": "CASE-004",
+      "kind": "http",
+      "observation_ids": ["DIFF-007"],
+      "requirement_ids": ["R008"],
+      "description": "A missing token fails input resolution before any REST call.",
+      "env": {
+        "INPUT_tag": "v1.2.3"
+      },
+      "github": []
+    },
+    {
+      "id": "CASE-005",
+      "kind": "http",
+      "observation_ids": ["DIFF-008", "DIFF-016", "DIFF-018", "DIFF-019", "DIFF-022"],
+      "requirement_ids": ["R009", "R017", "R019", "R020", "R023"],
+      "description": "Upload a globbed artifact with replacesArtifacts enabled and default raw content type.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifacts": "dist/*.bin",
+        "INPUT_replacesArtifacts": "true"
+      },
+      "workspace": [{"path": "dist/app.bin", "content": "abc"}],
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {"method": "GET", "path": "/releases/42/assets$", "status": 200, "body": []},
+        {
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "status": 201,
+          "body": {"browser_download_url": "https://uploads.example/app.bin"}
+        }
+      ]
+    },
+    {
+      "id": "CASE-006",
+      "kind": "http",
+      "observation_ids": ["DIFF-017"],
+      "requirement_ids": ["R018"],
+      "description": "An unmatched glob fails the action when artifactErrorsFailBuild is true.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifacts": "nope/*.bin",
+        "INPUT_artifactErrorsFailBuild": "true"
+      },
+      "github": []
+    },
+    {
+      "id": "CASE-007",
+      "kind": "http",
+      "observation_ids": ["DIFF-017", "DIFF-021"],
+      "requirement_ids": ["R018", "R022"],
+      "description": "An unmatched glob only warns when artifactErrorsFailBuild is false and uploads nothing.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifacts": "nope/*.bin",
+        "INPUT_artifactErrorsFailBuild": "false"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-008",
+      "kind": "http",
+      "observation_ids": ["DIFF-012", "DIFF-025", "DIFF-026"],
+      "requirement_ids": ["R013", "R025", "R026"],
+      "description": "allowUpdates=true looks the release up by tag and updates it.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_allowUpdates": "true",
+        "INPUT_body": "new body"
+      },
+      "github": [
+        {
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3$",
+          "status": 200,
+          "body": {
+            "id": 7,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/7$",
+          "status": 200,
+          "body": {
+            "id": 7,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-009",
+      "kind": "http",
+      "observation_ids": ["DIFF-012"],
+      "requirement_ids": ["R013"],
+      "description": "A 404 by-tag lookup falls back to a matching draft release and updates it.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_allowUpdates": "true"
+      },
+      "github": [
+        {"method": "GET", "path": "/releases/tags/v1.2.3$", "status": 404, "body": {"message": "Not Found"}},
+        {
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 200,
+          "body": [
+            {
+              "id": 9,
+              "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+              "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/9/assets{?name,label}",
+              "tarball_url": null,
+              "zipball_url": null,
+              "draft": true,
+              "prerelease": false,
+              "name": "v1.2.3",
+              "tag_name": "v1.2.3"
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/9$",
+          "status": 200,
+          "body": {
+            "id": 9,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/9/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": true,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-010",
+      "kind": "http",
+      "observation_ids": ["DIFF-013"],
+      "requirement_ids": ["R014"],
+      "description": "A non-404 lookup failure is propagated instead of falling back to create.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_allowUpdates": "true"
+      },
+      "github": [
+        {"method": "GET", "path": "/releases/tags/v1.2.3$", "status": 500, "body": {"message": "Server Error"}}
+      ]
+    },
+    {
+      "id": "CASE-011",
+      "kind": "http",
+      "observation_ids": ["DIFF-014"],
+      "requirement_ids": ["R015"],
+      "description": "skipIfReleaseExists=true and a non-draft release short-circuits the action.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_skipIfReleaseExists": "true"
+      },
+      "github": [
+        {
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3$",
+          "status": 200,
+          "body": {
+            "id": 7,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-012",
+      "kind": "http",
+      "observation_ids": ["DIFF-014"],
+      "requirement_ids": ["R015"],
+      "description": "skipIfReleaseExists=true continues when the release lookup fails and creates a release.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_skipIfReleaseExists": "true"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-013",
+      "kind": "http",
+      "observation_ids": ["DIFF-015"],
+      "requirement_ids": ["R016"],
+      "description": "updateOnlyUnreleased=true fails when the release is not a draft or prerelease.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_allowUpdates": "true",
+        "INPUT_updateOnlyUnreleased": "true"
+      },
+      "github": [
+        {
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3$",
+          "status": 200,
+          "body": {
+            "id": 7,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-014",
+      "kind": "http",
+      "observation_ids": ["DIFF-024", "DIFF-025"],
+      "requirement_ids": ["R024", "R025"],
+      "description": "generateReleaseNotes=true appends generated notes to the body separated by a newline.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_body": "B",
+        "INPUT_generateReleaseNotes": "true"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases/generate-notes$",
+          "status": 200,
+          "body": {"body": "N"}
+        },
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-015",
+      "kind": "http",
+      "observation_ids": ["DIFF-010"],
+      "requirement_ids": ["R011"],
+      "description": "An unsupported makeLatest value is omitted from the release request.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_makeLatest": "bogus"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-016",
+      "kind": "http",
+      "observation_ids": ["DIFF-011"],
+      "requirement_ids": ["R012"],
+      "description": "skipIfReleaseExists accepts the YAML core-schema literal TRUE.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_skipIfReleaseExists": "TRUE"
+      },
+      "github": [
+        {
+          "method": "GET",
+          "path": "/repos/ncipollo/release-action/releases/tags/v1.2.3$",
+          "status": 200,
+          "body": {
+            "id": 7,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/7/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-017",
+      "kind": "http",
+      "observation_ids": ["DIFF-026", "DIFF-025"],
+      "requirement_ids": ["R027", "R026"],
+      "description": "immutableCreate creates a draft, then publishes it with draft=false.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_immutableCreate": "true",
+        "INPUT_draft": "false"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 5,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/5/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": true,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ncipollo/release-action/releases/5$",
+          "status": 200,
+          "body": {
+            "id": 5,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/5/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CASE-018",
+      "kind": "http",
+      "observation_ids": ["DIFF-027", "DIFF-028"],
+      "requirement_ids": ["R028", "R031"],
+      "description": "A GitHub 404 with a missing detail renders the documented error.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 404,
+          "body": {"message": "Not Found", "errors": [{"code": "missing", "resource": "Release"}]}
+        }
+      ]
+    },
+    {
+      "id": "CASE-019",
+      "kind": "http",
+      "observation_ids": ["DIFF-019", "DIFF-020"],
+      "requirement_ids": ["R020", "R021"],
+      "description": "replacesArtifacts deletes a matching existing asset before uploading.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifacts": "dist/app.bin",
+        "INPUT_replacesArtifacts": "true"
+      },
+      "workspace": [{"path": "dist/app.bin", "content": "abc"}],
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/releases/42/assets$",
+          "status": 200,
+          "body": [{"id": 11, "name": "app.bin", "browser_download_url": "https://old.example/app.bin"}]
+        },
+        {"method": "DELETE", "path": "/repos/ncipollo/release-action/releases/assets/11$", "status": 204, "body": ""},
+        {
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "status": 201,
+          "body": {"browser_download_url": "https://new.example/app.bin"}
+        }
+      ]
+    },
+    {
+      "id": "CASE-020",
+      "kind": "http",
+      "observation_ids": ["DIFF-020", "DIFF-021"],
+      "requirement_ids": ["R020", "R022"],
+      "description": "removeArtifacts deletes every existing release asset before uploading.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_removeArtifacts": "true"
+      },
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/releases/42/assets$",
+          "status": 200,
+          "body": [
+            {"id": 11, "name": "a.bin", "browser_download_url": "https://old.example/a.bin"},
+            {"id": 12, "name": "b.bin", "browser_download_url": "https://old.example/b.bin"}
+          ]
+        },
+        {"method": "DELETE", "path": "/repos/ncipollo/release-action/releases/assets/11$", "status": 204, "body": ""},
+        {"method": "DELETE", "path": "/repos/ncipollo/release-action/releases/assets/12$", "status": 204, "body": ""}
+      ]
+    },
+    {
+      "id": "CASE-021",
+      "kind": "http",
+      "observation_ids": ["DIFF-020", "DIFF-021"],
+      "requirement_ids": ["R021", "R022"],
+      "description": "A repeatedly failing 5xx upload is retried three times, then skipped.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifacts": "dist/app.bin",
+        "INPUT_replacesArtifacts": "true",
+        "INPUT_artifactErrorsFailBuild": "false"
+      },
+      "workspace": [{"path": "dist/app.bin", "content": "abc"}],
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {"method": "GET", "path": "/releases/42/assets$", "status": 200, "body": []},
+        {"method": "POST", "path": "/uploads/repos/ncipollo/release-action/releases/42/assets", "status": 500, "body": {"message": "boom"}},
+        {"method": "POST", "path": "/uploads/repos/ncipollo/release-action/releases/42/assets", "status": 500, "body": {"message": "boom"}},
+        {"method": "POST", "path": "/uploads/repos/ncipollo/release-action/releases/42/assets", "status": 500, "body": {"message": "boom"}},
+        {"method": "POST", "path": "/uploads/repos/ncipollo/release-action/releases/42/assets", "status": 500, "body": {"message": "boom"}}
+      ]
+    },
+    {
+      "id": "CASE-022",
+      "kind": "http",
+      "observation_ids": ["DIFF-008", "DIFF-016", "DIFF-018", "DIFF-019"],
+      "requirement_ids": ["R009", "R017", "R019", "R020"],
+      "description": "The deprecated artifact input is used when artifacts is empty and content type defaults to raw.",
+      "env": {
+        "INPUT_tag": "v1.2.3",
+        "INPUT_token": "test-token",
+        "INPUT_artifact": "dist/a.txt",
+        "INPUT_replacesArtifacts": "true"
+      },
+      "workspace": [{"path": "dist/a.txt", "content": "abc"}],
+      "github": [
+        {
+          "method": "POST",
+          "path": "/repos/ncipollo/release-action/releases$",
+          "status": 201,
+          "body": {
+            "id": 42,
+            "html_url": "https://github.com/ncipollo/release-action/releases/tag/v1.2.3",
+            "upload_url": "{base}/uploads/repos/ncipollo/release-action/releases/42/assets{?name,label}",
+            "tarball_url": null,
+            "zipball_url": null,
+            "draft": false,
+            "prerelease": false,
+            "name": "v1.2.3",
+            "tag_name": "v1.2.3"
+          }
+        },
+        {"method": "GET", "path": "/releases/42/assets$", "status": 200, "body": []},
+        {
+          "method": "POST",
+          "path": "/uploads/repos/ncipollo/release-action/releases/42/assets",
+          "status": 201,
+          "body": {"browser_download_url": "https://uploads.example/a.txt"}
+        }
+      ]
+    },
+    {
+      "id": "CASE-S1",
+      "kind": "static",
+      "static_check": "action_schema_invariant",
+      "observation_ids": ["DIFF-003", "DIFF-004", "DIFF-029", "DIFF-031"],
+      "requirement_ids": ["R002", "R004", "R005", "R032", "R036"],
+      "description": "The action.yml inputs, outputs and branding are invariant except for the runs block."
+    },
+    {
+      "id": "CASE-S2",
+      "kind": "static",
+      "static_check": "test_suite_integrity",
+      "observation_ids": ["DIFF-030"],
+      "requirement_ids": ["R035"],
+      "description": "Neither implementation weakens or skips its behavioral assertions."
+    }
+  ]
+}

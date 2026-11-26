@@ -1,0 +1,317 @@
+{
+  "schema_version": "migration-p2p-probes:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "side": "target",
+  "native_test_commands": [
+    [
+      "npm",
+      "run",
+      "test"
+    ]
+  ],
+  "probe_command_template": "npm test -- --grep <title>",
+  "normalization": [
+    "strip volatile headers (date, etag, set-cookie values)",
+    "compare parsed JSON with stable key order",
+    "trim trailing whitespace in text bodies"
+  ],
+  "probes": [
+    {
+      "observation_id": "P2P-007",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/core/basic/code.authorization.test.js",
+        "title": "interaction check no session & max_age combo"
+      }
+    },
+    {
+      "observation_id": "P2P-017",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/userinfo/bearer.test.js",
+        "title": "bad Authorization header format (not bearer)"
+      }
+    },
+    {
+      "observation_id": "P2P-005",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/configuration/custom_client_metadata.test.js",
+        "title": "should not allow customization to remove redirect_uris when response_types need them"
+      }
+    },
+    {
+      "observation_id": "P2P-008",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/discovery/oauth_authorization_server.test.js",
+        "title": "does not populate ctx.oidc.entities"
+      }
+    },
+    {
+      "observation_id": "P2P-009",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "resolve route name `discovery` to the first well-known registration and assert the request exposes params plus the router, routerName, routerPath, _matchedRoute and _matchedRouteName fields."
+      }
+    },
+    {
+      "observation_id": "P2P-010",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "request.protocol and request.secure follow trustProxy resolution for direct and proxied requests."
+      }
+    },
+    {
+      "observation_id": "P2P-011",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the named exports, constructor/configuration schema, adapter persistence contract, provider events and cookie names/signing contracts."
+      }
+    },
+    {
+      "observation_id": "P2P-012",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert no migration-scope production module spawns, RPCs, dlopens or otherwise delegates request handling to a Koa runtime."
+      }
+    },
+    {
+      "observation_id": "P2P-013",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert no migration-scope production module imports or calls Koa to serve a request."
+      }
+    },
+    {
+      "observation_id": "P2P-014",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "preflight OPTIONS carrying Access-Control-Request-Method to the listed endpoints returns 204 with Access-Control-Allow-Origin, Access-Control-Allow-Methods and Access-Control-Max-Age."
+      }
+    },
+    {
+      "observation_id": "P2P-015",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the open, challenge, userinfo, client, clientWithDPoP and credential profiles emit Access-Control-Allow-Origin plus the profile-specific Access-Control-Expose-Headers."
+      }
+    },
+    {
+      "observation_id": "P2P-016",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert application/x-www-form-urlencoded and application/json bodies yield the same ctx.oidc.body values."
+      }
+    },
+    {
+      "observation_id": "P2P-018",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert a touched session is upserted exactly once before the response and an untouched session is not persisted."
+      }
+    },
+    {
+      "observation_id": "P2P-019",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert a body endpoint receiving a present unsupported Content-Type keeps its `only <cty> content-type bodies are supported on <method> <path>` rejection."
+      }
+    },
+    {
+      "observation_id": "P2P-020",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert HEAD /jwks and HEAD /auth route to the GET handler and return the same status and headers with no body."
+      }
+    },
+    {
+      "observation_id": "P2P-021",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert an unparseable body yields 400 with error exactly `failed to parse the request body`."
+      }
+    },
+    {
+      "observation_id": "P2P-022",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert provider.callback() serves correctly when mounted under the /oidc prefix through Express, Fastify and Hapi hosts."
+      }
+    },
+    {
+      "observation_id": "P2P-023",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the query, fragment, form_post, jwt and web_message response modes keep their serialization and parameter placement."
+      }
+    },
+    {
+      "observation_id": "P2P-024",
+      "expectation": "PASS",
+      "projection": "observable-result",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the raw body bytes reach the token, introspection, revocation, registration, device, PAR, CIBA, credential, challenge and interaction readers."
+      }
+    },
+    {
+      "observation_id": "P2P-001",
+      "expectation": "PASS",
+      "projection": "exception",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/interaction/interaction.test.js",
+        "title": "should abort an interaction when given an error result object (no description)"
+      }
+    },
+    {
+      "observation_id": "P2P-003",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/helpers/runtime_params.test.js",
+        "title": "reads enabled features and extra parameters for each authorization request"
+      }
+    },
+    {
+      "observation_id": "P2P-004",
+      "expectation": "PASS",
+      "projection": "serialized-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/request/jwt_request.test.js",
+        "title": "can contain claims parameter as JSON"
+      }
+    },
+    {
+      "observation_id": "P2P-006",
+      "expectation": "PASS",
+      "projection": "state-transition",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/registration_management/registration_management.test.js",
+        "title": "Client Delete Request"
+      }
+    },
+    {
+      "observation_id": "P2P-002",
+      "expectation": "PASS",
+      "projection": "return-value",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "probe": {
+        "kind": "mocha",
+        "file": "test/jwt/jsonwebtoken.test.js",
+        "title": "does not verify none with a key"
+      }
+    }
+  ]
+}

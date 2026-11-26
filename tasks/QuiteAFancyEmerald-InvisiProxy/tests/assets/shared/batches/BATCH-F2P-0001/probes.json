@@ -1,0 +1,347 @@
+{
+  "schema_version": "migration-asset-probes:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "note": "Shared semantic predicates used by both the source and target probes; identical predicate, opposite expected outcome.",
+  "probes": [
+    {
+      "observation_id": "F2P-001",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /github.ico",
+      "request": {
+        "method": "GET",
+        "path": "/github.ico"
+      },
+      "predicate": "disguised_404_uses_target_content_type",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-002",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "predicate": "helmet_headers_no_csp_no_x_powered_by",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-003",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /favicon.ico",
+      "request": {
+        "method": "GET",
+        "path": "/favicon.ico"
+      },
+      "predicate": "empty_body_favicon",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-004",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation.ico",
+      "request": {
+        "method": "GET",
+        "path": "/documentation.ico"
+      },
+      "predicate": "ico_underlying_page_with_disguised_type",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-005",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET //documentation//",
+      "request": {
+        "method": "GET",
+        "path": "//documentation//"
+      },
+      "predicate": "shared_http_and_ws_upgrade_single_port",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-006",
+      "projection": "dependency-declaration",
+      "surface": "package.json::dependency manifest",
+      "request": {
+        "manifest": "package.json"
+      },
+      "predicate": "express_app_no_fastify_instance",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-008",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation",
+      "request": {
+        "method": "GET",
+        "path": "/documentation"
+      },
+      "predicate": "esm_default_interop_express_helmet",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-009",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /service-blacklist.js",
+      "request": {
+        "method": "GET",
+        "path": "/service-blacklist.js"
+      },
+      "predicate": "explicit_root_route_200",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-011",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation/",
+      "request": {
+        "method": "GET",
+        "path": "/documentation/"
+      },
+      "predicate": "static_mount_after_parametric_route",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-012",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation",
+      "request": {
+        "method": "GET",
+        "path": "///documentation//"
+      },
+      "predicate": "duplicate_and_trailing_slash_normalization",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-015",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::overall public HTTP contract",
+      "request": {
+        "method": "GET",
+        "path": "/github/wisp"
+      },
+      "predicate": "github_redirect_route_registers_and_boots",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-016",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation/",
+      "request": {
+        "method": "GET",
+        "path": "/browsing"
+      },
+      "predicate": "express_router_serves_page_200",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-013",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /github",
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "headers": {
+          "cookie": "HistoryHide=true",
+          "sec-fetch-dest": "document"
+        }
+      },
+      "predicate": "historyhide_writehead_override_static",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-014",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /assets/js/card.js",
+      "request": {
+        "method": "GET",
+        "path": "/assets/js/card.js"
+      },
+      "predicate": "historyhide_writehead_override_dynamic",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-017",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::integrity of the migrated implementation and its checks",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "predicate": "standalone_helmet_no_csp_no_x_powered_by",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-018",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /robots.txt",
+      "request": {
+        "method": "GET",
+        "path": "/github/wisp"
+      },
+      "predicate": "github_redirect_302_after_boot",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-019",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /login",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "predicate": "helmet_nosniff_present",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-024",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /proxy/",
+      "request": {
+        "method": "GET",
+        "path": "/browsing"
+      },
+      "predicate": "prefixed_deploy_serves_pages_index_200",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-007",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /favicon.ico",
+      "request": {
+        "method": "GET",
+        "path": "/sitemap.xml"
+      },
+      "predicate": "page_content_type_xml_seo",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-010",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::overall public HTTP contract",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "predicate": "createServer_upgrade_wiring",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-020",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /favicon.ico",
+      "request": {
+        "method": "GET",
+        "path": "/favicon.ico"
+      },
+      "predicate": "slash_normalization_for_parametric_route",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-021",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /github",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "predicate": "no_x_powered_by_header",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-022",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /service-blacklist.js",
+      "request": {
+        "method": "GET",
+        "path": "/service-blacklist.js"
+      },
+      "predicate": "esm_default_interop_callable",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    },
+    {
+      "observation_id": "F2P-023",
+      "projection": "target-execution-path",
+      "surface": "src/server.mjs::GET /documentation",
+      "request": {
+        "method": "GET",
+        "path": "/documentation"
+      },
+      "predicate": "no_x_powered_by_framework_leak",
+      "expected": {
+        "target": "PASS",
+        "source": "FAIL"
+      }
+    }
+  ]
+}

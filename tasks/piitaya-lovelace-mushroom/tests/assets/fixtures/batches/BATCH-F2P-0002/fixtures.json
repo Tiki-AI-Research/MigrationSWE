@@ -1,0 +1,106 @@
+{
+  "schema_version": "migration-asset-fixtures:v2",
+  "batch_id": "BATCH-F2P-0002",
+  "role": "Fixed configuration inputs for the Superstruct 2.0.2 -> Zod 3.23.8 configuration-validation F2P probes.",
+  "fixtures": [
+    {
+      "id": "FIX-CARD-VALID",
+      "schema": "entityCardConfigStruct",
+      "input": { "type": "custom:mushroom-entity-card", "entity": "light.kitchen" },
+      "expect": "accept"
+    },
+    {
+      "id": "FIX-CARD-WRONG-TYPE",
+      "schema": "entityCardConfigStruct",
+      "input": { "type": "custom:mushroom-entity-card", "entity": 42 },
+      "expect": "reject",
+      "reject_issue": "invalid_type",
+      "reject_key": "entity"
+    },
+    {
+      "id": "FIX-CARD-UNKNOWN-KEY",
+      "schema": "entityCardConfigStruct",
+      "input": { "type": "custom:mushroom-entity-card", "bogus": 1 },
+      "expect": "reject",
+      "reject_issue": "unrecognized_keys",
+      "reject_key": "bogus"
+    },
+    {
+      "id": "FIX-CARD-MISSING-TYPE",
+      "schema": "lovelaceCardConfigStruct",
+      "input": {},
+      "expect": "reject",
+      "reject_issue": "invalid_type",
+      "reject_key": "type"
+    },
+    {
+      "id": "FIX-ENTITY-VALID",
+      "schema": "entitySharedConfigStruct",
+      "input": { "entity": "light.kitchen" },
+      "expect": "accept"
+    },
+    {
+      "id": "FIX-ENTITY-UNKNOWN-KEY",
+      "schema": "entitySharedConfigStruct",
+      "input": { "entity": "light.kitchen", "bogus": 1 },
+      "expect": "reject",
+      "reject_issue": "unrecognized_keys",
+      "reject_key": "bogus"
+    },
+    {
+      "id": "FIX-ENTITY-WRONG-TYPE",
+      "schema": "entitySharedConfigStruct",
+      "input": { "entity": 42 },
+      "expect": "reject",
+      "reject_issue": "invalid_type",
+      "reject_key": "entity"
+    },
+    {
+      "id": "FIX-APPEARANCE-ENUM-BAD",
+      "schema": "appearanceSharedConfigStruct",
+      "input": { "primary_info": 123 },
+      "expect": "reject",
+      "reject_issue": "invalid_enum_value",
+      "reject_key": "primary_info"
+    },
+    {
+      "id": "FIX-NAME-UNION-FAIL",
+      "schema": "entityNameStruct",
+      "input": 7,
+      "expect": "reject",
+      "reject_issue": "invalid_union"
+    },
+    {
+      "id": "FIX-LAYOUT-VALID",
+      "schema": "layoutStruct",
+      "input": "horizontal",
+      "expect": "accept"
+    },
+    {
+      "id": "FIX-LAYOUT-BAD",
+      "schema": "layoutStruct",
+      "input": "diagonal",
+      "expect": "reject"
+    },
+    {
+      "id": "FIX-ACTION-NONE",
+      "schema": "actionConfigStruct",
+      "input": { "action": "none" },
+      "expect": "accept"
+    },
+    {
+      "id": "FIX-ACTION-URL-MISSING-PATH",
+      "schema": "actionConfigStruct",
+      "input": { "action": "url" },
+      "expect": "reject",
+      "reject_issue": "invalid_type",
+      "reject_key": "url_path"
+    },
+    {
+      "id": "FIX-NON-VALIDATION-ERROR",
+      "schema": "handleStructError",
+      "input": "TypeError:boom",
+      "expect": "passthrough"
+    }
+  ]
+}

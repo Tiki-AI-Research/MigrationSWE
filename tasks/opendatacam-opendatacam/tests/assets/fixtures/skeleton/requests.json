@@ -1,0 +1,20 @@
+{
+  "skeleton_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-SKELETON-0001",
+  "requests": [
+    { "id": "GET /config", "method": "GET", "path": "/config", "body": null },
+    { "id": "GET /status", "method": "GET", "path": "/status", "body": null },
+    { "id": "GET /files", "method": "GET", "path": "/files", "body": null },
+    { "id": "POST /counter/areas empty", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": {} },
+    { "id": "POST /ui small", "method": "POST", "path": "/ui", "content_type": "application/json", "body": { "counterEnabled": true, "pathfinderEnabled": false } },
+    { "id": "GET unknown page", "method": "GET", "path": "/a-page-that-does-not-exist", "body": null }
+  ],
+  "payloads": {
+    "json_90kb": { "pad": "<generate 90 kB JSON string>" },
+    "json_110kb": { "pad": "<generate 110 kB JSON string>" },
+    "malformed_json": "{\"",
+    "multipart_video": { "field": "video", "filename": "demo.mp4" },
+    "multipart_wrong_field": { "field": "file", "filename": "demo.mp4" },
+    "multipart_wrong_name": { "field": "video", "filename": "demo.txt" }
+  }
+}

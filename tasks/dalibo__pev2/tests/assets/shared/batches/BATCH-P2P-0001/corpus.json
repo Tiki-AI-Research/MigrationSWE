@@ -1,0 +1,604 @@
+{
+  "schema_version": "migration-p2p-corpus:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "observations": [
+    {
+      "observation_id": "P2P-030",
+      "family": "public-api",
+      "surface": "exports:.",
+      "atomic_claim": "Preserve observable behavior for exports:.",
+      "contract_requirement_ids": [
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
+        "R008",
+        "R009",
+        "R010",
+        "R011",
+        "R012",
+        "R013",
+        "R014",
+        "R015",
+        "R016",
+        "R017",
+        "R018",
+        "R019",
+        "R020",
+        "R021",
+        "R022",
+        "R023",
+        "R024",
+        "R025",
+        "R026",
+        "R027",
+        "R028",
+        "R029",
+        "R030",
+        "R031",
+        "R032",
+        "R033",
+        "R034",
+        "R038",
+        "R039",
+        "R040"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00437"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-002",
+      "family": "public-api",
+      "surface": "PlanService.createPlan / pev2_core::create_plan",
+      "atomic_claim": "create_plan(\"\", content, \"SELECT  a     b\") returns a plan whose query is \"SELECT a b\" and whose content carries the computed maximum metrics.",
+      "contract_requirement_ids": [
+        "R004"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00008"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-003",
+      "family": "public-api",
+      "surface": "PlanService.cleanupSource and PlanService.splitIntoLines / cleanup_source, split_into_lines",
+      "atomic_claim": "cleanup_source strips psql frames and headers, and split_into_lines rejoins force-wrapped continuation lines, matching the TypeScript contracts.",
+      "contract_requirement_ids": [
+        "R007"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00011"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-004",
+      "family": "public-api",
+      "surface": "fromText auxiliary information parsing",
+      "atomic_claim": "from_text recognizes never-executed markers, InitPlan/SubPlan/CTE/Worker blocks, JIT/Planning/Serialization sections, Buffers, I/O Timings, Sort/Group/Hash keys, Memory and Cache lines.",
+      "contract_requirement_ids": [
+        "R017"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00021"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-005",
+      "family": "public-api",
+      "surface": "CTE Scan and InitPlan duration corrections",
+      "atomic_claim": "create_plan subtracts matching CTE total time from CTE Scan exclusive durations and removes InitPlan usage time from consuming nodes, skipping both when isAnalyze is false.",
+      "contract_requirement_ids": [
+        "R031"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00035"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-006",
+      "family": "public-api",
+      "surface": "getPlanContent array handling",
+      "atomic_claim": "get_plan_content on an array whose first element has a Plan member returns that first element as the plan content.",
+      "contract_requirement_ids": [
+        "R023"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00027"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-007",
+      "family": "public-api",
+      "surface": "deliverable confined to /workspace/repo",
+      "atomic_claim": "All new files live under /workspace/repo and the base commit 6d14a4f65b7400b9a877d6ec583f07f364f2267d history is preserved rather than replaced.",
+      "contract_requirement_ids": [
+        "R040"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00044"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-008",
+      "family": "public-api",
+      "surface": "splitIntoLines line reassembly",
+      "atomic_claim": "split_into_lines leaves no item with unbalanced parentheses and rejoins comma-terminated information lists split across lines.",
+      "contract_requirement_ids": [
+        "R015"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00019"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-009",
+      "family": "public-api",
+      "surface": "node-type field extraction",
+      "atomic_claim": "parse_node_type extracts Node Type/Relation Name/Alias/Index Name/Scan Direction/Join Type/Partial Mode/Strategy/Parallel Aware/Async Capable; \"Nested Loop\" keeps its bare type, \"Merge Left Join\" becomes \"Merge Join\", and a missing join type defaults to \"Inner\".",
+      "contract_requirement_ids": [
+        "R033"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00037"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-010",
+      "family": "public-api",
+      "surface": "never-executed node normalization",
+      "atomic_claim": "A `Hash (cost=... rows=...) (never executed)` node is produced with Actual Loops, Actual Rows, Actual Total Time and Actual Startup Time all equal to 0.",
+      "contract_requirement_ids": [
+        "R019"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00023"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-011",
+      "family": "public-api",
+      "surface": "protected tests and fixtures",
+      "atomic_claim": "The Vitest specs under src/services/__tests__ and src/__tests__, the from-text plan/expect fixtures, and the Playwright snapshots under tests/e2e are byte-identical after migration.",
+      "contract_requirement_ids": [
+        "R038"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00042"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-012",
+      "family": "public-api",
+      "surface": "Property key strings in the serialized plan content",
+      "atomic_claim": "A parsed analyzed plan exposes keys \"Actual Loops\", \"Actual Rows\", \"Total Cost\" and \"Plan Rows\" with the same spellings as the TypeScript Property enum.",
+      "contract_requirement_ids": [
+        "R008"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00012"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-013",
+      "family": "public-api",
+      "surface": "fractional actual rows marker",
+      "atomic_claim": "A node line with `rows=0.25` yields the marker `*Actual Rows Is Fractional` true and Actual Rows 0.25.",
+      "contract_requirement_ids": [
+        "R020"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00024"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-014",
+      "family": "public-api",
+      "surface": "PlanService.fromSource / pev2_core::from_source",
+      "atomic_claim": "from_source(\"Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\") returns plan content whose Plan.Node Type is \"Seq Scan\", while from_source(\"not a plan\") returns an error.",
+      "contract_requirement_ids": [
+        "R003"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00007"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-015",
+      "family": "public-api",
+      "surface": "splitBalanced / split_balanced",
+      "atomic_claim": "split_balanced(\"a,(b,c),d\", \",\") returns [\"a\", \"(b,c)\", \"d\"] so commas inside parentheses are not treated as separators.",
+      "contract_requirement_ids": [
+        "R010"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00014"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-016",
+      "family": "public-api",
+      "surface": "public capability preservation",
+      "atomic_claim": "Every public capability and contract named in the goal remains available after migration; none is removed or redefined.",
+      "contract_requirement_ids": [
+        "R034"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00038"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-017",
+      "family": "public-api",
+      "surface": "exclusive duration/cost and revised fields",
+      "atomic_claim": "For analyzed plans create_plan subtracts child totals to get exclusive duration/cost and stores loop- and worker-adjusted times in the *...Revised fields.",
+      "contract_requirement_ids": [
+        "R030"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00034"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-018",
+      "family": "public-api",
+      "surface": "Node constructor / pev2_core::parse_node_type",
+      "atomic_claim": "parse_node_type(\"Index Scan using idx on t\") yields Node Type \"Index Scan\", Index Name \"idx\", Relation Name \"t\" and Scan Direction \"Forward\".",
+      "contract_requirement_ids": [
+        "R009"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00013"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-019",
+      "family": "public-api",
+      "surface": "getPlanContent missing Plan error",
+      "atomic_claim": "get_plan_content({\"foo\": 1}) returns the error string \"Invalid plan\".",
+      "contract_requirement_ids": [
+        "R024"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00028"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-020",
+      "family": "public-api",
+      "surface": "createPlan maxEstimateFactor",
+      "atomic_claim": "create_plan sets maxEstimateFactor to twice the maximum planner estimate factor, and to 1 when the plan has no estimate factors.",
+      "contract_requirement_ids": [
+        "R029"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00033"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-021",
+      "family": "public-api",
+      "surface": "fromText error result",
+      "atomic_claim": "from_text(\"not a plan\") returns the error string \"Unable to parse plan\".",
+      "contract_requirement_ids": [
+        "R021"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00025"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-022",
+      "family": "public-api",
+      "surface": "JSON-serialized plan content structure",
+      "atomic_claim": "Serializing the parse result yields nested Plan/Plans node objects plus Workers, JIT, Planning, Serialization, Triggers and Query Text with the same key strings as TypeScript.",
+      "contract_requirement_ids": [
+        "R012"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00016"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-023",
+      "family": "public-api",
+      "surface": "createPlan isAnalyze/isVerbose flags",
+      "atomic_claim": "create_plan sets isAnalyze true when the root has Actual Rows and isVerbose true when any descendant (including inside a CTE/InitPlan) has Output.",
+      "contract_requirement_ids": [
+        "R025"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00029"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-024",
+      "family": "public-api",
+      "surface": "createPlan nodeId assignment and ctes collection",
+      "atomic_claim": "create_plan assigns sequential nodeId values and moves CTE/InitPlan nodes into the plan ctes list, removing them from their parent's Plans.",
+      "contract_requirement_ids": [
+        "R026"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00030"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-025",
+      "family": "public-api",
+      "surface": "PlanService.fromText / pev2_core::from_text",
+      "atomic_claim": "from_text(\"Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\") returns content with a root Plan node of type \"Seq Scan\".",
+      "contract_requirement_ids": [
+        "R005"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00009"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-026",
+      "family": "public-api",
+      "surface": "cleanupSource text normalization",
+      "atomic_claim": "cleanup_source removes `|`/`║`/`│` frames, border/separator lines, wrapping quotes, `+`/`↵` continuations, the QUERY PLAN header and a trailing `(N rows)` line.",
+      "contract_requirement_ids": [
+        "R014"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00018"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-027",
+      "family": "public-api",
+      "surface": "no weakened checks",
+      "atomic_claim": "The solution performs genuine parsing and metric computation on the supplied inputs rather than hardcoding expected outputs for known fixtures.",
+      "contract_requirement_ids": [
+        "R039"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00043"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-028",
+      "family": "public-api",
+      "surface": "pev2-core parsing, cleanup, line-splitting, node-construction and metric API",
+      "atomic_claim": "Given PostgreSQL EXPLAIN text or JSON, the Rust core returns parsed plan content and the derived metrics (maxRows, maxCost, maxTotalCost, maxDuration, maxBlocks, maxIo, maxEstimateFactor) that PlanService produced.",
+      "contract_requirement_ids": [
+        "R001"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00005"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-029",
+      "family": "public-api",
+      "surface": "fromSource JSON/text routing",
+      "atomic_claim": "from_source parses a pure JSON document directly, routes a JSON-like framed payload to from_json, and routes plain EXPLAIN text to from_text.",
+      "contract_requirement_ids": [
+        "R013"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00017"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-031",
+      "family": "public-api",
+      "surface": "ModifyTable to Operation conversion",
+      "atomic_claim": "A JSON ModifyTable node with Operation \"Insert\" is emitted with Node Type \"Insert\", and text `Insert on foo` yields Node Type \"Insert\".",
+      "contract_requirement_ids": [
+        "R032"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00036"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-032",
+      "family": "public-api",
+      "surface": "fromText indentation/depth tree construction",
+      "atomic_claim": "In from_text, a `->  Seq Scan` line indented under `Nested Loop` becomes a member of that node's Plans array based on indentation depth.",
+      "contract_requirement_ids": [
+        "R016"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00020"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-033",
+      "family": "public-api",
+      "surface": "createPlan maxBlocks and maxIo",
+      "atomic_claim": "create_plan computes maxBlocks.Shared/Temp/Local from the highest summed exclusive buffer counts and maxIo from the highest summed exclusive I/O read plus write time.",
+      "contract_requirement_ids": [
+        "R028"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00032"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-034",
+      "family": "public-api",
+      "surface": "exports:./dist/pev2.css",
+      "atomic_claim": "Preserve observable behavior for exports:./dist/pev2.css",
+      "contract_requirement_ids": [
+        "R001",
+        "R002"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00438"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-035",
+      "family": "public-api",
+      "surface": "PlanService.fromJson / pev2_core::from_json",
+      "atomic_claim": "from_json on a double-quoted JSON array payload returns the embedded plan content with the expected Plan node.",
+      "contract_requirement_ids": [
+        "R006"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00010"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-036",
+      "family": "public-api",
+      "surface": "fromJson embedded JSON extraction",
+      "atomic_claim": "from_json slices only the lines between the opening `[`/`{` and closing bracket lines and replaces `\"\"` with `\"` before parsing.",
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00026"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-037",
+      "family": "public-api",
+      "surface": "createPlan maximum metrics",
+      "atomic_claim": "create_plan computes content.maxRows, maxCost, maxTotalCost and maxDuration as the maxima of the corresponding node fields.",
+      "contract_requirement_ids": [
+        "R027"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00031"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-038",
+      "family": "public-api",
+      "surface": "Parent Relationship assignment",
+      "atomic_claim": "Under a `Nested Loop`, the first child gets Parent Relationship \"Outer\" and later children \"Inner\"; under an Append/Subquery Scan the applicable Member/Subquery values are set.",
+      "contract_requirement_ids": [
+        "R018"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00022"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-039",
+      "family": "public-api",
+      "surface": "pev2-core public entry points exported from lib.rs and wasm.rs",
+      "atomic_claim": "from_source, create_plan, from_text, from_json, cleanup_source, split_into_lines, split_balanced, find_node_by_id, find_node_by_subplan_name and should_show_prop are each callable as public Rust/wasm functions.",
+      "contract_requirement_ids": [
+        "R002"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00006"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-040",
+      "family": "public-api",
+      "surface": "findNodeById, findNodeBySubplanName, shouldShowProp / find_node_by_id, find_node_by_subplan_name, should_show_prop",
+      "atomic_claim": "find_node_by_id returns the node with the requested nodeId, find_node_by_subplan_name matches \"CTE <name>\", and should_show_prop filters already-displayed keys.",
+      "contract_requirement_ids": [
+        "R011"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00015"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-001",
+      "family": "public-api",
+      "surface": "test:src/__tests__/filters-formatDuration.spec.ts#formats multiple days",
+      "atomic_claim": "Preserve observable behavior for test:src/__tests__/filters-formatDuration.spec.ts#formats multiple days",
+      "contract_requirement_ids": [
+        "R038"
+      ],
+      "evidence_refs": [
+        "EVIDENCE-00476"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    }
+  ]
+}

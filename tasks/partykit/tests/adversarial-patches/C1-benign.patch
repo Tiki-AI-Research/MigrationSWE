@@ -1,0 +1,357 @@
+diff --git a/fixtures/hono/package.json b/fixtures/hono/package.json
+index fc3c8b4..e0ee0cc 100644
+--- a/fixtures/hono/package.json
++++ b/fixtures/hono/package.json
+@@ -8,8 +8,8 @@
+     "types": "wrangler types env.d.ts --include-runtime false"
+   },
+   "dependencies": {
+-    "hono": "^4.12.15",
+     "hono-party": "^2.1.0",
++    "itty-router": "5.0.18",
+     "partyserver": "^0.5.10",
+     "partysocket": "^1.3.0",
+     "react": "^19.2.5",
+diff --git a/fixtures/hono/src/server.ts b/fixtures/hono/src/server.ts
+index b8a5134..9693b9a 100644
+--- a/fixtures/hono/src/server.ts
++++ b/fixtures/hono/src/server.ts
+@@ -1,5 +1,5 @@
+-import { Hono } from "hono";
+ import { partyserverMiddleware } from "hono-party";
++import { Router, text } from "itty-router";
+ import { Server } from "partyserver";
+ 
+ import type { Connection, WSMessage } from "partyserver";
+@@ -15,24 +15,26 @@ export class Chat extends Server {
+   }
+ }
+ 
+-const app = new Hono<{ Bindings: Bindings }>();
++const router = Router();
+ 
+-app.use(
++router.all(
+   "*",
+-  partyserverMiddleware<{ Bindings: Bindings }>({
++  partyserverMiddleware<Bindings>({
+     options: {
+-      onBeforeConnect(req, _lobby, c) {
++      onBeforeConnect(req, _lobby, context) {
+         const url = new URL(req.url);
+         const token = url.searchParams.get("token");
+         if (!token) {
+           return new Response("Unauthorized", { status: 401 });
+         }
+-        console.log("env bindings available:", Object.keys(c.env));
++        console.log("env bindings available:", Object.keys(context));
+       }
+     }
+   })
+ );
+ 
+-app.get("/", (c) => c.text("Hello from Hono!"));
++router.get("/", () => text("Hello from Hono!"));
+ 
+-export default app;
++router.all("*", () => text("404 Not Found", { status: 404 }));
++
++export default router;
+diff --git a/fixtures/partytracks/package.json b/fixtures/partytracks/package.json
+index a3df7d2..dd9239e 100644
+--- a/fixtures/partytracks/package.json
++++ b/fixtures/partytracks/package.json
+@@ -8,7 +8,7 @@
+     "types": "wrangler types env.d.ts --include-runtime false"
+   },
+   "dependencies": {
+-    "hono": "^4.12.15",
++    "itty-router": "5.0.18",
+     "partytracks": "^0.0.56",
+     "rxjs": "^7.8.2"
+   },
+diff --git a/fixtures/partytracks/src/server.ts b/fixtures/partytracks/src/server.ts
+index 2cfbae4..31e78cc 100644
+--- a/fixtures/partytracks/src/server.ts
++++ b/fixtures/partytracks/src/server.ts
+@@ -1,17 +1,19 @@
+-import { Hono } from "hono";
++import { Router, text } from "itty-router";
+ import { routePartyTracksRequest } from "partytracks/server";
+ import { env } from "cloudflare:workers";
+ 
+-const app = new Hono();
++const router = Router();
+ 
+-app.all("/partytracks/*", (c) =>
++router.all("/partytracks/*", (request) =>
+   routePartyTracksRequest({
+     appId: env.REALTIME_SFU_APP_ID,
+     token: env.REALTIME_SFU_APP_TOKEN,
+     turnServerAppId: env.REALTIME_TURN_SERVER_APP_ID,
+     turnServerAppToken: env.REALTIME_TURN_SERVER_APP_TOKEN,
+-    request: c.req.raw
++    request
+   })
+ );
+ 
+-export default app;
++router.all("*", () => text("404 Not Found", { status: 404 }));
++
++export default router;
+diff --git a/package-lock.json b/package-lock.json
+index a9f9585..1a44c05 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -104,8 +104,8 @@
+       "name": "@partyserver/fixture-hono",
+       "version": "0.0.12",
+       "dependencies": {
+-        "hono": "^4.12.15",
+         "hono-party": "^2.1.0",
++        "itty-router": "5.0.18",
+         "partyserver": "^0.5.10",
+         "partysocket": "^1.3.0",
+         "react": "^19.2.5",
+@@ -150,7 +150,7 @@
+       "name": "@partyserver/fixture-partytracks",
+       "version": "0.0.28",
+       "dependencies": {
+-        "hono": "^4.12.15",
++        "itty-router": "5.0.18",
+         "partytracks": "^0.0.56",
+         "rxjs": "^7.8.2"
+       },
+@@ -7835,15 +7835,6 @@
+         "node": ">= 0.4"
+       }
+     },
+-    "node_modules/hono": {
+-      "version": "4.12.15",
+-      "resolved": "https://registry.npmjs.org/hono/-/hono-4.12.15.tgz",
+-      "integrity": "sha512-qM0jDhFEaCBb4TxoW7f53Qrpv9RBiayUHo0S52JudprkhvpjIrGoU1mnnr29Fvd1U335ZFPZQY1wlkqgfGXyLg==",
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=16.9.0"
+-      }
+-    },
+     "node_modules/hono-party": {
+       "resolved": "packages/hono-party",
+       "link": true
+@@ -8071,6 +8062,12 @@
+         "url": "https://github.com/sponsors/dmonad"
+       }
+     },
++    "node_modules/itty-router": {
++      "version": "5.0.18",
++      "resolved": "https://registry.npmjs.org/itty-router/-/itty-router-5.0.18.tgz",
++      "integrity": "sha512-mK3ReOt4ARAGy0V0J7uHmArG2USN2x0zprZ+u+YgmeRjXTDbaowDy3kPcsmQY6tH+uHhDgpWit9Vqmv/4rTXwA==",
++      "license": "MIT"
++    },
+     "node_modules/jiti": {
+       "version": "2.6.1",
+       "resolved": "https://registry.npmjs.org/jiti/-/jiti-2.6.1.tgz",
+@@ -11631,12 +11628,12 @@
+       "license": "ISC",
+       "devDependencies": {
+         "@cloudflare/workers-types": "^4.20260426.1",
+-        "hono": "^4.12.15",
++        "itty-router": "5.0.18",
+         "partyserver": "^0.5.10"
+       },
+       "peerDependencies": {
+         "@cloudflare/workers-types": "^4.20260424.1",
+-        "hono": "^4.6.17",
++        "itty-router": "5.0.18",
+         "partyserver": ">=0.2.0 <1.0.0"
+       }
+     },
+diff --git a/packages/hono-party/package.json b/packages/hono-party/package.json
+index 3027d3a..674b639 100644
+--- a/packages/hono-party/package.json
++++ b/packages/hono-party/package.json
+@@ -31,12 +31,12 @@
+   "description": "Use PartyServer with Hono",
+   "peerDependencies": {
+     "@cloudflare/workers-types": "^4.20260424.1",
+-    "hono": "^4.6.17",
++    "itty-router": "5.0.18",
+     "partyserver": ">=0.2.0 <1.0.0"
+   },
+   "devDependencies": {
+     "@cloudflare/workers-types": "^4.20260426.1",
+-    "hono": "^4.12.15",
++    "itty-router": "5.0.18",
+     "partyserver": "^0.5.10"
+   }
+ }
+diff --git a/packages/hono-party/src/index.ts b/packages/hono-party/src/index.ts
+index 74dc568..e0e0cdd 100644
+--- a/packages/hono-party/src/index.ts
++++ b/packages/hono-party/src/index.ts
+@@ -1,28 +1,27 @@
+-import { env } from "hono/adapter";
+-import { createMiddleware } from "hono/factory";
++// Routing is provided by itty-router after the framework migration.
+ import { routePartykitRequest } from "partyserver";
+ 
+-import type { Context, Env } from "hono";
++import type { RequestHandler } from "itty-router";
+ import type { Lobby, PartyServerOptions } from "partyserver";
+ 
+ /**
+- * Extended options for the Hono middleware that pass the Hono context
+- * to `onBeforeConnect` and `onBeforeRequest` as a third argument,
+- * giving access to `c.env`, `c.var`, `c.get()`, etc.
++ * Extended options for the itty-router middleware that pass the request's
++ * environment bindings to `onBeforeConnect` and `onBeforeRequest` as a third
++ * argument, giving access to the Worker's `env`.
+  */
+-export type HonoPartyServerOptions<E extends Env> = Omit<
++export type HonoPartyServerOptions<Bindings = Record<string, unknown>> = Omit<
+   PartyServerOptions,
+   "onBeforeConnect" | "onBeforeRequest"
+ > & {
+   onBeforeConnect?: (
+     req: Request,
+     lobby: Lobby,
+-    c: Context<E>
++    context: Bindings
+   ) => Response | Request | void | Promise<Response | Request | void>;
+   onBeforeRequest?: (
+     req: Request,
+     lobby: Lobby,
+-    c: Context<E>
++    context: Bindings
+   ) =>
+     | Response
+     | Request
+@@ -33,9 +32,9 @@ export type HonoPartyServerOptions<E extends Env> = Omit<
+ /**
+  * Configuration options for the PartyServer middleware
+  */
+-type PartyServerMiddlewareContext<E extends Env> = {
++type PartyServerMiddlewareContext<Bindings = Record<string, unknown>> = {
+   /** PartyServer-specific configuration options */
+-  options?: HonoPartyServerOptions<E>;
++  options?: HonoPartyServerOptions<Bindings>;
+   /** Optional error handler for caught errors */
+   onError?: (error: Error) => void;
+ };
+@@ -44,34 +43,36 @@ type PartyServerMiddlewareContext<E extends Env> = {
+  * Creates a middleware for handling PartyServer WebSocket and HTTP requests
+  * Processes both WebSocket upgrades and standard HTTP requests, delegating them to PartyServer
+  */
+-export function partyserverMiddleware<E extends Env = Env>(
+-  ctx?: PartyServerMiddlewareContext<E>
+-) {
+-  return createMiddleware<E>(async (c, next) => {
++export function partyserverMiddleware<Bindings = Record<string, unknown>>(
++  ctx?: PartyServerMiddlewareContext<Bindings>
++): RequestHandler<Request, [bindings: Bindings, context: ExecutionContext]> {
++  return async (request, bindings, _context) => {
+     try {
+-      const options = wrapOptionsWithContext(ctx?.options, c);
+-      const response = isWebSocketUpgrade(c)
+-        ? await handleWebSocketUpgrade(c, options)
+-        : await handleHttpRequest(c, options);
++      const options = wrapOptionsWithContext(ctx?.options, bindings);
++      const env = bindings as unknown as Cloudflare.Env;
++      const response = isWebSocketUpgrade(request)
++        ? await handleWebSocketUpgrade(request, env, options)
++        : await handleHttpRequest(request, env, options);
+ 
+-      return response === null ? await next() : response;
++      return response === null ? undefined : response;
+     } catch (error) {
+       if (ctx?.onError) {
+         ctx.onError(error as Error);
+-        return next();
++        return undefined;
+       }
+       throw error;
+     }
+-  });
++  };
+ }
+ 
+ /**
+- * Wraps the Hono-specific options into standard PartyServerOptions by
+- * closing over the Hono context so callbacks receive it as a third arg.
++ * Wraps the itty-router-specific options into standard PartyServerOptions by
++ * closing over the request's environment bindings so callbacks receive them as
++ * a third argument.
+  */
+-function wrapOptionsWithContext<E extends Env>(
+-  options: HonoPartyServerOptions<E> | undefined,
+-  c: Context<E>
++function wrapOptionsWithContext<Bindings>(
++  options: HonoPartyServerOptions<Bindings> | undefined,
++  context: Bindings
+ ): PartyServerOptions | undefined {
+   if (!options) return undefined;
+ 
+@@ -80,11 +81,11 @@ function wrapOptionsWithContext<E extends Env>(
+     ...rest,
+     ...(onBeforeConnect && {
+       onBeforeConnect: (req: Request, lobby: Lobby) =>
+-        onBeforeConnect(req, lobby, c)
++        onBeforeConnect(req, lobby, context)
+     }),
+     ...(onBeforeRequest && {
+       onBeforeRequest: (req: Request, lobby: Lobby) =>
+-        onBeforeRequest(req, lobby, c)
++        onBeforeRequest(req, lobby, context)
+     })
+   };
+ }
+@@ -93,16 +94,8 @@ function wrapOptionsWithContext<E extends Env>(
+  * Checks if the incoming request is a WebSocket upgrade request
+  * Looks for the 'upgrade' header with a value of 'websocket' (case-insensitive)
+  */
+-function isWebSocketUpgrade(c: Context): boolean {
+-  return c.req.header("upgrade")?.toLowerCase() === "websocket";
+-}
+-
+-/**
+- * Creates a new Request object from the Hono context
+- * Preserves the original request's URL, method, headers, and body
+- */
+-function createRequestFromContext(c: Context) {
+-  return c.req.raw.clone();
++function isWebSocketUpgrade(request: Request): boolean {
++  return request.headers.get("upgrade")?.toLowerCase() === "websocket";
+ }
+ 
+ /**
+@@ -110,11 +103,12 @@ function createRequestFromContext(c: Context) {
+  * Returns a WebSocket upgrade response if successful, null otherwise
+  */
+ async function handleWebSocketUpgrade(
+-  c: Context,
++  request: Request,
++  env: Cloudflare.Env,
+   options?: PartyServerOptions
+ ) {
+-  const req = createRequestFromContext(c);
+-  const response = await routePartykitRequest(req, env(c), options);
++  const req = request.clone();
++  const response = await routePartykitRequest(req, env, options);
+ 
+   if (!response?.webSocket) {
+     return null;
+@@ -130,7 +124,11 @@ async function handleWebSocketUpgrade(
+  * Handles standard HTTP requests
+  * Forwards the request to PartyServer and returns the response
+  */
+-async function handleHttpRequest(c: Context, options?: PartyServerOptions) {
+-  const req = createRequestFromContext(c);
+-  return routePartykitRequest(req, env(c), options);
++async function handleHttpRequest(
++  request: Request,
++  env: Cloudflare.Env,
++  options?: PartyServerOptions
++) {
++  const req = request.clone();
++  return routePartykitRequest(req, env, options);
+ }

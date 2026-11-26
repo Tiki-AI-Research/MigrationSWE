@@ -1,0 +1,41 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "kind": "CONTRACT",
+  "migration": {
+    "category": "language",
+    "source_language": "TypeScript",
+    "target_language": "Go"
+  },
+  "shared_corpus_required": true,
+  "source_baseline_commit": "98ce1450c7908643084f7487327dfa4f4bf8a367",
+  "contract_probe_contract": {
+    "executable": true,
+    "probe_root": {
+      "source": "/input/source",
+      "target": "/input/target"
+    },
+    "source_status_required": "PASS",
+    "target_status_required": "PASS",
+    "value_relation": "equal_after_normalization",
+    "normalization": "trim surrounding whitespace, collapse internal runs of spaces and newlines to a single space, sort comma-separated label lists, compare error values by status/code/type before any message"
+  },
+  "fixtures": {
+    "label_config": "fixtures/batches/BATCH-CONTRACT-0001/labeler.yml",
+    "event_pull_request": "fixtures/batches/BATCH-CONTRACT-0001/event.json",
+    "changed_files": "fixtures/batches/BATCH-CONTRACT-0001/changed_files.json",
+    "probe_table": "fixtures/batches/BATCH-CONTRACT-0001/probes.json"
+  },
+  "consumers": {
+    "source": "source/batches/BATCH-CONTRACT-0001/manifest.json",
+    "target": "target/batches/BATCH-CONTRACT-0001/manifest.json"
+  },
+  "harness": {
+    "long_running_commands_require_timeout": true,
+    "target_build_command": ["go", "build", "./..."],
+    "target_test_command": ["go", "test", "./..."],
+    "source_test_command": ["git", "diff", "--exit-code"],
+    "exclude_privileged_or_blocking_cases": true,
+    "max_wait_seconds": 600
+  }
+}

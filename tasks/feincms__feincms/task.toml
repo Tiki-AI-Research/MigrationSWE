@@ -1,0 +1,64 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts",
+]
+
+[task]
+name = "tikiai/feincms__feincms"
+description = "Upgrade FeinCMS from Django 3.2 to Django 5.2."
+
+[metadata]
+category = "Version_upgrade"
+language = "python"
+repository_id = "e3595a49-6332-4baa-8dd9-13b515da7ce3"
+task_id = "tp-05e84f009ec90632d7d8741b27de1d1f"
+repository_url = "https://github.com/feincms/feincms"
+base_commit_hash = "060eb148192aaec6aab394cf3001f1e5309bc548"
+
+[metadata.tests]
+fail_to_pass_count = 58
+pass_to_pass_count = 31
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:feincms__feincms-verifier-image-20261126"
+image_digest = "sha256:c04cfe9fa62c33598037cef16375272dcf7fe812565884d8fe1cb25c51d01d57"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 060eb148192aaec6aab394cf3001f1e5309bc548 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[verifier.env]
+MIGRATION_CANDIDATE_ISOLATION = "setuid"
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:feincms__feincms-task-image-20261126"
+image_digest = "sha256:4e689c140c3184c9047b440a0f94f9238ae603b1c6f2c8718b0ac6dfca535138"

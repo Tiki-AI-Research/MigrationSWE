@@ -1,0 +1,5407 @@
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..d6bc513
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,8 @@
++module github.com/thomas-mauran/chess-tui
++
++go 1.25.0
++
++require (
++	github.com/BurntSushi/toml v1.6.0
++	github.com/notnil/chess v1.10.0
++)
+diff --git a/go.sum b/go.sum
+new file mode 100644
+index 0000000..0ba9ba8
+--- /dev/null
++++ b/go.sum
+@@ -0,0 +1,5 @@
++github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
++github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
++github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
++github.com/notnil/chess v1.10.0 h1:RR3MgS9G6zZmJ+VPTJolyxdaIgxoUPyUUY+2iaw35G0=
++github.com/notnil/chess v1.10.0/go.mod h1:cRuJUIBFq9Xki05TWHJxHYkC+fFpq45IWwk94DdlCrA=
+diff --git a/internal/chess/board.go b/internal/chess/board.go
+new file mode 100644
+index 0000000..991162c
+--- /dev/null
++++ b/internal/chess/board.go
+@@ -0,0 +1,617 @@
++package chess
++
++import (
++	"log"
++	"strings"
++
++	chesslib "github.com/notnil/chess"
++)
++
++// GameBoard is the pure board model: move/position history plus derived draw,
++// check and navigation state.
++type GameBoard struct {
++	// MoveHistory holds the moves that produced each position.
++	MoveHistory []*chesslib.Move
++	// PositionHistory holds the past states; the last one is the current
++	// position unless navigating.
++	PositionHistory []*chesslib.Position
++	// ConsecutiveNonPawnOrCapture counts half-moves since the last pawn move
++	// or capture.
++	ConsecutiveNonPawnOrCapture int
++	// TakenPieces stores captured pieces.
++	TakenPieces []chesslib.Piece
++	// IsFlipped tracks whether the board is displayed flipped.
++	IsFlipped bool
++	// HistoryPositionIndex is the current index when navigating history;
++	// nil means viewing the latest position.
++	HistoryPositionIndex *int
++	// OriginalFlipState stores the flip state before navigating history.
++	OriginalFlipState *bool
++}
++
++// NewGameBoard returns a board in the standard starting position.
++func NewGameBoard() *GameBoard {
++	return &GameBoard{
++		PositionHistory: []*chesslib.Position{chesslib.StartingPosition()},
++	}
++}
++
++// Reset restores the board to the standard starting position.
++func (b *GameBoard) Reset() {
++	b.MoveHistory = nil
++	b.PositionHistory = []*chesslib.Position{chesslib.StartingPosition()}
++	b.ConsecutiveNonPawnOrCapture = 0
++	b.IsFlipped = false
++	b.HistoryPositionIndex = nil
++	b.OriginalFlipState = nil
++}
++
++// CurrentPosition returns the position currently shown, or nil if history is
++// empty.
++func (b *GameBoard) CurrentPosition() *chesslib.Position {
++	if b.HistoryPositionIndex != nil {
++		idx := *b.HistoryPositionIndex
++		if idx >= 0 && idx < len(b.PositionHistory) {
++			return b.PositionHistory[idx]
++		}
++		return nil
++	}
++	if len(b.PositionHistory) == 0 {
++		return nil
++	}
++	return b.PositionHistory[len(b.PositionHistory)-1]
++}
++
++// PositionRef returns the current position; it panics if the board was not
++// initialized.
++func (b *GameBoard) PositionRef() *chesslib.Position {
++	pos := b.CurrentPosition()
++	if pos == nil {
++		panic("Position history is empty: board was not initialized correctly")
++	}
++	return pos
++}
++
++// GetRoleAtSquare returns the piece type at a square.
++func (b *GameBoard) GetRoleAtSquare(sq chesslib.Square) (chesslib.PieceType, bool) {
++	p := b.PositionRef().Board().Piece(sq)
++	if p == chesslib.NoPiece {
++		return chesslib.NoPieceType, false
++	}
++	return p.Type(), true
++}
++
++// IsSquareOccupied reports whether a square holds a piece.
++func (b *GameBoard) IsSquareOccupied(sq chesslib.Square) bool {
++	return b.PositionRef().Board().Piece(sq) != chesslib.NoPiece
++}
++
++// GetPieceColorAtSquare returns the color of the piece on a square.
++func (b *GameBoard) GetPieceColorAtSquare(sq chesslib.Square) (chesslib.Color, bool) {
++	p := b.PositionRef().Board().Piece(sq)
++	if p == chesslib.NoPiece {
++		return chesslib.NoColor, false
++	}
++	return p.Color(), true
++}
++
++// GetAuthorizedPositions returns the legal destinations for the piece on the
++// given square, when it is the player's turn.
++func (b *GameBoard) GetAuthorizedPositions(playerTurn chesslib.Color, sq chesslib.Square) []chesslib.Square {
++	piece := b.PositionRef().Board().Piece(sq)
++	if piece == chesslib.NoPiece || piece.Color() != playerTurn {
++		return []chesslib.Square{}
++	}
++	var moves []chesslib.Square
++	for _, m := range b.PositionRef().ValidMoves() {
++		if m.S1() == sq {
++			moves = append(moves, m.S2())
++		}
++	}
++	return moves
++}
++
++// IsGettingChecked reports whether the given color's king is in check.
++func (b *GameBoard) IsGettingChecked(playerTurn chesslib.Color) bool {
++	pos := b.PositionRef()
++	return inCheck(pos) && pos.Turn() == playerTurn
++}
++
++// IsCheckmate reports whether the current position is checkmate.
++func (b *GameBoard) IsCheckmate() bool {
++	return b.PositionRef().Status() == chesslib.Checkmate
++}
++
++// IsDraw reports draw by stalemate, the fifty-move rule, repetition or
++// insufficient material.
++func (b *GameBoard) IsDraw() bool {
++	pos := b.PositionRef()
++	if pos.Status() == chesslib.Stalemate {
++		return true
++	}
++	if b.ConsecutiveNonPawnOrCapture == 50 {
++		return true
++	}
++	if b.IsDrawByRepetition() {
++		return true
++	}
++	return insufficientMaterial(pos)
++}
++
++// IsDrawByRepetition reports whether some position occurred three times.
++func (b *GameBoard) IsDrawByRepetition() bool {
++	counts := map[string]int{}
++	for _, pos := range b.PositionHistory {
++		key := positionKey(pos)
++		counts[key]++
++		if counts[key] >= 3 {
++			return true
++		}
++	}
++	return false
++}
++
++// FEN returns the current position in Forsyth-Edwards Notation.
++func (b *GameBoard) FEN() string {
++	return b.PositionRef().String()
++}
++
++// IncrementConsecutiveNonPawnOrCapture updates the fifty-move counter.
++func (b *GameBoard) IncrementConsecutiveNonPawnOrCapture(roleFrom chesslib.PieceType, roleTo *chesslib.PieceType) {
++	if roleFrom == chesslib.Pawn || roleTo != nil {
++		b.ConsecutiveNonPawnOrCapture = 0
++		return
++	}
++	b.ConsecutiveNonPawnOrCapture++
++}
++
++// BlackTakenPieces returns the captured black pieces.
++func (b *GameBoard) BlackTakenPieces() []chesslib.PieceType {
++	return b.takenPiecesFor(chesslib.Black)
++}
++
++// WhiteTakenPieces returns the captured white pieces.
++func (b *GameBoard) WhiteTakenPieces() []chesslib.PieceType {
++	return b.takenPiecesFor(chesslib.White)
++}
++
++func (b *GameBoard) takenPiecesFor(color chesslib.Color) []chesslib.PieceType {
++	var roles []chesslib.PieceType
++	for _, p := range b.TakenPieces {
++		if p.Color() == color {
++			roles = append(roles, p.Type())
++		}
++	}
++	return roles
++}
++
++// GetKingCoordinates returns the king's board coordinate.
++func (b *GameBoard) GetKingCoordinates(color chesslib.Color) (Coord, bool) {
++	for sq, p := range b.PositionRef().Board().SquareMap() {
++		if p.Type() == chesslib.King && p.Color() == color {
++			coord := FromSquare(sq)
++			if b.IsFlipped {
++				coord = coord.Reverse()
++			}
++			return coord, true
++		}
++	}
++	return Coord{}, false
++}
++
++// FlipTheBoard toggles the display orientation.
++func (b *GameBoard) FlipTheBoard() {
++	b.IsFlipped = !b.IsFlipped
++}
++
++// ExecuteMove plays the legal move from -> to, optionally promoting. It
++// appends the resulting position to the history and returns the move, or nil
++// if the move is illegal.
++func (b *GameBoard) ExecuteMove(from, to chesslib.Square, promotion chesslib.PieceType) *chesslib.Move {
++	pos := b.PositionRef()
++	legal := pos.ValidMoves()
++
++	matching := findMove(legal, from, to, promotion)
++
++	// Castling fallback: a UI may send the king to the rook file.
++	if matching == nil && isPotentialCastling(pos, from, to) {
++		for _, m := range legal {
++			if m.S1() == from && (m.HasTag(chesslib.KingSideCastle) || m.HasTag(chesslib.QueenSideCastle)) {
++				matching = m
++				break
++			}
++		}
++	}
++
++	if matching == nil {
++		return nil
++	}
++
++	b.recordCapture(pos, matching)
++
++	next := pos.Update(matching)
++	b.PositionHistory = append(b.PositionHistory, next)
++	b.HistoryPositionIndex = nil
++	b.OriginalFlipState = nil
++	return matching
++}
++
++// ExecuteShakmatyMove plays a move without specifying a promotion piece.
++func (b *GameBoard) ExecuteShakmatyMove(from, to chesslib.Square) *chesslib.Move {
++	return b.ExecuteMove(from, to, chesslib.NoPieceType)
++}
++
++// ExecuteShakmatyMoveWithPromotion plays a move with a promotion piece and
++// reports whether it succeeded.
++func (b *GameBoard) ExecuteShakmatyMoveWithPromotion(from, to chesslib.Square, promotion chesslib.PieceType) bool {
++	return b.ExecuteMove(from, to, promotion) != nil
++}
++
++// ReconstructHistory rebuilds the board from space-separated UCI moves.
++func (b *GameBoard) ReconstructHistory(movesStr string, expectedFEN *string) {
++	if strings.TrimSpace(movesStr) == "" {
++		return
++	}
++
++	b.Reset()
++
++	current := b.PositionHistory[0]
++	fields := strings.Fields(movesStr)
++	applied, failed := 0, 0
++
++	for i, raw := range fields {
++		mv, err := chesslib.UCINotation{}.Decode(current, raw)
++		if err != nil {
++			log.Printf("Failed to parse UCI move %d: %s - %v. Skipping.", i+1, raw, err)
++			failed++
++			continue
++		}
++		if !isLegal(current, mv) {
++			log.Printf("Illegal move %d: %s. Stopping history reconstruction.", i+1, raw)
++			failed++
++			break
++		}
++		b.recordCapture(current, mv)
++		next := current.Update(mv)
++		b.MoveHistory = append(b.MoveHistory, mv)
++		b.PositionHistory = append(b.PositionHistory, next)
++		current = next
++		applied++
++	}
++
++	if failed > 0 {
++		log.Printf("Failed to apply %d out of %d moves. History may be incomplete.", failed, len(fields))
++	}
++	_ = applied
++
++	if expectedFEN != nil && len(b.PositionHistory) > 0 {
++		finalFEN := b.PositionHistory[len(b.PositionHistory)-1].String()
++		if !fenPositionsMatch(finalFEN, *expectedFEN) {
++			log.Printf("Final position from moves doesn't match FEN. Final: %s, Expected: %s", finalFEN, *expectedFEN)
++			if fn, err := chesslib.FEN(*expectedFEN); err == nil {
++				g := chesslib.NewGame(fn)
++				if len(b.PositionHistory) > 0 {
++					b.PositionHistory[len(b.PositionHistory)-1] = g.Position()
++				}
++			}
++		}
++	}
++}
++
++// MoveToSAN returns the standard algebraic notation for the move at index.
++func (b *GameBoard) MoveToSAN(moveIndex int) string {
++	if moveIndex < 0 || moveIndex >= len(b.MoveHistory) || moveIndex >= len(b.PositionHistory) {
++		return ""
++	}
++	pos := b.PositionHistory[moveIndex]
++	mv := b.MoveHistory[moveIndex]
++	return chesslib.AlgebraicNotation{}.Encode(pos, mv)
++}
++
++// NavigateHistoryNext moves one position forward in history.
++func (b *GameBoard) NavigateHistoryNext(isSoloMode bool) bool {
++	if len(b.PositionHistory) == 0 {
++		return false
++	}
++	maxIndex := len(b.PositionHistory) - 1
++
++	if b.HistoryPositionIndex == nil {
++		return false
++	}
++	index := *b.HistoryPositionIndex
++	if index < maxIndex {
++		newIndex := index + 1
++		b.HistoryPositionIndex = &newIndex
++		b.IsFlipped = b.flipStateForIndex(newIndex, isSoloMode)
++		return true
++	}
++	// Reached the latest position.
++	b.HistoryPositionIndex = nil
++	if b.OriginalFlipState != nil {
++		b.IsFlipped = *b.OriginalFlipState
++		b.OriginalFlipState = nil
++	} else {
++		b.IsFlipped = b.flipStateForIndex(maxIndex, isSoloMode)
++	}
++	return true
++}
++
++// NavigateHistoryPrevious moves one position backward in history.
++func (b *GameBoard) NavigateHistoryPrevious(isSoloMode bool) bool {
++	if len(b.PositionHistory) == 0 {
++		return false
++	}
++	if b.HistoryPositionIndex == nil {
++		if len(b.PositionHistory) > 1 {
++			original := b.IsFlipped
++			b.OriginalFlipState = &original
++			prev := len(b.PositionHistory) - 2
++			b.HistoryPositionIndex = &prev
++			b.IsFlipped = b.flipStateForIndex(prev, isSoloMode)
++			return true
++		}
++		return false
++	}
++	index := *b.HistoryPositionIndex
++	if index > 0 {
++		newIndex := index - 1
++		b.HistoryPositionIndex = &newIndex
++		b.IsFlipped = b.flipStateForIndex(newIndex, isSoloMode)
++		return true
++	}
++	return false
++}
++
++// ResetHistoryNavigation returns to viewing the latest position.
++func (b *GameBoard) ResetHistoryNavigation(isSoloMode bool) {
++	if b.HistoryPositionIndex != nil {
++		b.HistoryPositionIndex = nil
++		if b.OriginalFlipState != nil {
++			b.IsFlipped = *b.OriginalFlipState
++			b.OriginalFlipState = nil
++		} else {
++			maxIndex := len(b.PositionHistory) - 1
++			if maxIndex < 0 {
++				maxIndex = 0
++			}
++			b.IsFlipped = b.flipStateForIndex(maxIndex, isSoloMode)
++		}
++	}
++}
++
++// TruncateHistoryAt removes all moves and positions after index.
++func (b *GameBoard) TruncateHistoryAt(index int) {
++	if index >= len(b.PositionHistory) {
++		return
++	}
++	newLen := index + 1
++	if newLen < len(b.PositionHistory) {
++		b.PositionHistory = b.PositionHistory[:newLen]
++	}
++	if index < len(b.MoveHistory) {
++		b.MoveHistory = b.MoveHistory[:index]
++	}
++	b.HistoryPositionIndex = nil
++	b.OriginalFlipState = nil
++}
++
++func (b *GameBoard) flipStateForIndex(index int, isSoloMode bool) bool {
++	if !isSoloMode {
++		return b.IsFlipped
++	}
++	return index%2 == 1
++}
++
++func (b *GameBoard) recordCapture(pos *chesslib.Position, mv *chesslib.Move) {
++	if mv.HasTag(chesslib.EnPassant) {
++		from := mv.S1()
++		to := mv.S2()
++		capturedSquare := chesslib.NewSquare(to.File(), from.Rank())
++		if p := pos.Board().Piece(capturedSquare); p != chesslib.NoPiece {
++			b.TakenPieces = append(b.TakenPieces, p)
++		}
++		return
++	}
++	if mv.HasTag(chesslib.Capture) {
++		if p := pos.Board().Piece(mv.S2()); p != chesslib.NoPiece {
++			b.TakenPieces = append(b.TakenPieces, p)
++		}
++	}
++}
++
++func findMove(legal []*chesslib.Move, from, to chesslib.Square, promotion chesslib.PieceType) *chesslib.Move {
++	for _, m := range legal {
++		if m.S1() != from || m.S2() != to {
++			continue
++		}
++		if promotion == chesslib.NoPieceType {
++			return m
++		}
++		if m.Promo() == promotion {
++			return m
++		}
++	}
++	return nil
++}
++
++func isLegal(pos *chesslib.Position, mv *chesslib.Move) bool {
++	target := mv.String()
++	for _, m := range pos.ValidMoves() {
++		if m.String() == target {
++			return true
++		}
++	}
++	return false
++}
++
++func isPotentialCastling(pos *chesslib.Position, from, to chesslib.Square) bool {
++	p := pos.Board().Piece(from)
++	if p == chesslib.NoPiece || p.Type() != chesslib.King || p.Color() != pos.Turn() {
++		return false
++	}
++	df := int(to.File()) - int(from.File())
++	dr := int(to.Rank()) - int(from.Rank())
++	if dr != 0 {
++		return false
++	}
++	return df == 2 || df == -2
++}
++
++// positionKey identifies a position ignoring move counters, matching the
++// threefold-repetition rule.
++func positionKey(pos *chesslib.Position) string {
++	sq := "-"
++	if pos.EnPassantSquare() != chesslib.NoSquare {
++		sq = pos.EnPassantSquare().String()
++	}
++	return pos.Board().String() + " " + pos.Turn().String() + " " + pos.CastleRights().String() + " " + sq
++}
++
++func fenPositionsMatch(a, b string) bool {
++	ap := strings.Fields(a)
++	bp := strings.Fields(b)
++	if len(ap) < 4 || len(bp) < 4 {
++		return false
++	}
++	for i := 0; i < 4; i++ {
++		if ap[i] != bp[i] {
++			return false
++		}
++	}
++	return true
++}
++
++func kingSquare(pos *chesslib.Position, color chesslib.Color) (chesslib.Square, bool) {
++	for sq, p := range pos.Board().SquareMap() {
++		if p.Type() == chesslib.King && p.Color() == color {
++			return sq, true
++		}
++	}
++	return chesslib.NoSquare, false
++}
++
++func inCheck(pos *chesslib.Position) bool {
++	sq, ok := kingSquare(pos, pos.Turn())
++	if !ok {
++		return false
++	}
++	return isSquareAttacked(pos, sq, pos.Turn().Other())
++}
++
++func isSquareAttacked(pos *chesslib.Position, sq chesslib.Square, by chesslib.Color) bool {
++	board := pos.Board()
++	file, rank := int(sq.File()), int(sq.Rank())
++
++	// Pawns.
++	pawnDir := 1
++	if by == chesslib.Black {
++		pawnDir = -1
++	}
++	for _, df := range []int{-1, 1} {
++		f := file + df
++		r := rank - pawnDir
++		if f >= 0 && f < 8 && r >= 0 && r < 8 {
++			p := board.Piece(chesslib.NewSquare(chesslib.File(f), chesslib.Rank(r)))
++			if p != chesslib.NoPiece && p.Type() == chesslib.Pawn && p.Color() == by {
++				return true
++			}
++		}
++	}
++
++	// Knights.
++	knightOffsets := [][2]int{{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}}
++	for _, o := range knightOffsets {
++		f, r := file+o[0], rank+o[1]
++		if !onBoard(f, r) {
++			continue
++		}
++		p := board.Piece(chesslib.NewSquare(chesslib.File(f), chesslib.Rank(r)))
++		if p != chesslib.NoPiece && p.Type() == chesslib.Knight && p.Color() == by {
++			return true
++		}
++	}
++
++	// King.
++	for df := -1; df <= 1; df++ {
++		for dr := -1; dr <= 1; dr++ {
++			if df == 0 && dr == 0 {
++				continue
++			}
++			f, r := file+df, rank+dr
++			if !onBoard(f, r) {
++				continue
++			}
++			p := board.Piece(chesslib.NewSquare(chesslib.File(f), chesslib.Rank(r)))
++			if p != chesslib.NoPiece && p.Type() == chesslib.King && p.Color() == by {
++				return true
++			}
++		}
++	}
++
++	// Sliding pieces.
++	if rayAttacked(board, file, rank, by, [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}, chesslib.Rook) {
++		return true
++	}
++	if rayAttacked(board, file, rank, by, [][2]int{{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}, chesslib.Bishop) {
++		return true
++	}
++	return false
++}
++
++func rayAttacked(board *chesslib.Board, file, rank int, by chesslib.Color, dirs [][2]int, slider chesslib.PieceType) bool {
++	for _, d := range dirs {
++		f, r := file+d[0], rank+d[1]
++		for onBoard(f, r) {
++			p := board.Piece(chesslib.NewSquare(chesslib.File(f), chesslib.Rank(r)))
++			if p != chesslib.NoPiece {
++				if p.Color() == by && (p.Type() == slider || p.Type() == chesslib.Queen) {
++					return true
++				}
++				break
++			}
++			f += d[0]
++			r += d[1]
++		}
++	}
++	return false
++}
++
++func onBoard(file, rank int) bool {
++	return file >= 0 && file < 8 && rank >= 0 && rank < 8
++}
++
++func insufficientMaterial(pos *chesslib.Position) bool {
++	var pawns, rooksQueens, minorCount int
++	sameColorBishops := true
++	var bishopColor int = -1
++	for sq, p := range pos.Board().SquareMap() {
++		switch p.Type() {
++		case chesslib.Pawn:
++			pawns++
++		case chesslib.Rook, chesslib.Queen:
++			rooksQueens++
++		case chesslib.Bishop:
++			minorCount++
++			c := (int(sq.File()) + int(sq.Rank())) % 2
++			if bishopColor == -1 {
++				bishopColor = c
++			} else if bishopColor != c {
++				sameColorBishops = false
++			}
++		case chesslib.Knight:
++			minorCount++
++		}
++	}
++	if pawns > 0 || rooksQueens > 0 {
++		return false
++	}
++	if minorCount == 0 {
++		return true
++	}
++	if minorCount == 1 {
++		return true
++	}
++	// Two or more minor pieces: only draw when all are bishops of one color
++	// (K+B+B same shade) or a single bishop pair of identical shade.
++	return sameColorBishops
++}
+diff --git a/internal/chess/board_test.go b/internal/chess/board_test.go
+new file mode 100644
+index 0000000..6fe3372
+--- /dev/null
++++ b/internal/chess/board_test.go
+@@ -0,0 +1,546 @@
++package chess
++
++import (
++	"strings"
++	"testing"
++
++	chesslib "github.com/notnil/chess"
++)
++
++func TestNewGameBoard(t *testing.T) {
++	b := NewGameBoard()
++	if len(b.MoveHistory) != 0 {
++		t.Fatalf("move history = %d, want 0", len(b.MoveHistory))
++	}
++	if len(b.PositionHistory) != 1 {
++		t.Fatalf("position history = %d, want 1", len(b.PositionHistory))
++	}
++	if b.ConsecutiveNonPawnOrCapture != 0 {
++		t.Fatalf("counter = %d, want 0", b.ConsecutiveNonPawnOrCapture)
++	}
++	if b.IsFlipped {
++		t.Fatal("board should not be flipped")
++	}
++
++	checks := map[chesslib.Square]chesslib.PieceType{
++		chesslib.A1: chesslib.Rook, chesslib.B1: chesslib.Knight, chesslib.C1: chesslib.Bishop,
++		chesslib.D1: chesslib.Queen, chesslib.E1: chesslib.King, chesslib.F1: chesslib.Bishop,
++		chesslib.G1: chesslib.Knight, chesslib.H1: chesslib.Rook,
++		chesslib.A2: chesslib.Pawn, chesslib.B2: chesslib.Pawn, chesslib.C2: chesslib.Pawn,
++		chesslib.D2: chesslib.Pawn, chesslib.E2: chesslib.Pawn, chesslib.F2: chesslib.Pawn,
++		chesslib.G2: chesslib.Pawn, chesslib.H2: chesslib.Pawn,
++		chesslib.A8: chesslib.Rook, chesslib.E8: chesslib.King,
++	}
++	for sq, want := range checks {
++		got, ok := b.GetRoleAtSquare(sq)
++		if !ok || got != want {
++			t.Fatalf("%v = %v/%v, want %v", sq, got, ok, want)
++		}
++	}
++	if b.IsSquareOccupied(chesslib.E4) || b.IsSquareOccupied(chesslib.D5) {
++		t.Fatal("middle of board should be empty")
++	}
++	if fen := b.FEN(); fen != "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" {
++		t.Fatalf("fen = %q", fen)
++	}
++}
++
++func TestExecuteMove(t *testing.T) {
++	b := NewGameBoard()
++	if !b.IsSquareOccupied(chesslib.E2) {
++		t.Fatal("e2 should be occupied")
++	}
++	if b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4) == nil {
++		t.Fatal("e2e4 should succeed")
++	}
++	if b.IsSquareOccupied(chesslib.E2) || !b.IsSquareOccupied(chesslib.E4) {
++		t.Fatal("e2 should be empty and e4 occupied")
++	}
++	if b.GetRoleAtSquareMust(chesslib.E4) != chesslib.Pawn {
++		t.Fatal("e4 should hold a pawn")
++	}
++	if len(b.MoveHistory) != 0 {
++		t.Fatalf("move history = %d, want 0", len(b.MoveHistory))
++	}
++	if len(b.PositionHistory) != 2 {
++		t.Fatalf("position history = %d, want 2", len(b.PositionHistory))
++	}
++}
++
++func (b *GameBoard) GetRoleAtSquareMust(sq chesslib.Square) chesslib.PieceType {
++	role, ok := b.GetRoleAtSquare(sq)
++	if !ok {
++		panic("no piece")
++	}
++	return role
++}
++
++func TestLegalMoves(t *testing.T) {
++	b := NewGameBoard()
++	pawnMoves := b.GetAuthorizedPositions(chesslib.White, chesslib.E2)
++	if !contains(pawnMoves, chesslib.E3) || !contains(pawnMoves, chesslib.E4) || len(pawnMoves) != 2 {
++		t.Fatalf("e2 pawn moves = %v", pawnMoves)
++	}
++	knightMoves := b.GetAuthorizedPositions(chesslib.White, chesslib.B1)
++	if !contains(knightMoves, chesslib.A3) || !contains(knightMoves, chesslib.C3) || len(knightMoves) != 2 {
++		t.Fatalf("b1 knight moves = %v", knightMoves)
++	}
++	if len(b.GetAuthorizedPositions(chesslib.White, chesslib.A1)) != 0 {
++		t.Fatal("rook should be blocked")
++	}
++	if len(b.GetAuthorizedPositions(chesslib.White, chesslib.C1)) != 0 {
++		t.Fatal("bishop should be blocked")
++	}
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	bishopMoves := b.GetAuthorizedPositions(chesslib.White, chesslib.F1)
++	for _, sq := range []chesslib.Square{chesslib.E2, chesslib.D3, chesslib.C4, chesslib.B5, chesslib.A6} {
++		if !contains(bishopMoves, sq) {
++			t.Fatalf("bishop missing %v in %v", sq, bishopMoves)
++		}
++	}
++	if len(b.GetAuthorizedPositions(chesslib.White, chesslib.D7)) != 0 {
++		t.Fatal("cannot move opponent pieces")
++	}
++	if len(b.GetAuthorizedPositions(chesslib.White, chesslib.E3)) != 0 {
++		t.Fatal("empty square has no moves")
++	}
++}
++
++func TestCheckmate(t *testing.T) {
++	b := NewGameBoard()
++	if b.IsCheckmate() || b.IsGettingChecked(chesslib.White) {
++		t.Fatal("initial position is not check")
++	}
++	b.ExecuteShakmatyMove(chesslib.F2, chesslib.F3)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.ExecuteShakmatyMove(chesslib.G2, chesslib.G4)
++	if b.ExecuteShakmatyMove(chesslib.D8, chesslib.H4) == nil {
++		t.Fatal("Qh4 should succeed")
++	}
++	if !b.IsCheckmate() {
++		t.Fatal("should be checkmate")
++	}
++	if !b.IsGettingChecked(chesslib.White) {
++		t.Fatal("white should be in check")
++	}
++}
++
++func TestFENGeneration(t *testing.T) {
++	b := NewGameBoard()
++	if fen := b.FEN(); fen != "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" {
++		t.Fatalf("initial fen = %q", fen)
++	}
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	if fen := b.FEN(); !strings.HasPrefix(fen, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq") {
++		t.Fatalf("after e4 fen = %q", fen)
++	}
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	if fen := b.FEN(); !strings.HasPrefix(fen, "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq") {
++		t.Fatalf("after e5 fen = %q", fen)
++	}
++	b.ExecuteShakmatyMove(chesslib.G1, chesslib.F3)
++	if fen := b.FEN(); fen != "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2" {
++		t.Fatalf("after Nf3 fen = %q", fen)
++	}
++}
++
++func TestStalemate(t *testing.T) {
++	b := NewGameBoard()
++	moves := [][2]chesslib.Square{
++		{chesslib.E2, chesslib.E3}, {chesslib.A7, chesslib.A5}, {chesslib.D1, chesslib.H5}, {chesslib.A8, chesslib.A6},
++		{chesslib.H5, chesslib.A5}, {chesslib.H7, chesslib.H5}, {chesslib.A5, chesslib.C7}, {chesslib.A6, chesslib.H6},
++		{chesslib.H2, chesslib.H4}, {chesslib.F7, chesslib.F6}, {chesslib.C7, chesslib.D7}, {chesslib.E8, chesslib.F7},
++		{chesslib.D7, chesslib.B7}, {chesslib.D8, chesslib.D3}, {chesslib.B7, chesslib.B8}, {chesslib.D3, chesslib.H7},
++		{chesslib.B8, chesslib.C8}, {chesslib.F7, chesslib.G6},
++	}
++	for _, m := range moves {
++		if b.IsDraw() || b.IsCheckmate() {
++			t.Fatalf("unexpected draw/checkmate before final move")
++		}
++		b.ExecuteShakmatyMove(m[0], m[1])
++	}
++	b.ExecuteShakmatyMove(chesslib.C8, chesslib.E6)
++	if !b.IsDraw() {
++		t.Fatal("should be a draw (stalemate)")
++	}
++	if b.IsCheckmate() {
++		t.Fatal("stalemate is not checkmate")
++	}
++	total := 0
++	for sq := chesslib.A1; sq <= chesslib.H8; sq++ {
++		if b.IsSquareOccupied(sq) {
++			total += len(b.GetAuthorizedPositions(chesslib.White, sq))
++		}
++	}
++	if total != 0 {
++		t.Fatalf("white should have no moves, got %d", total)
++	}
++}
++
++func TestCaptures(t *testing.T) {
++	b := NewGameBoard()
++	for _, m := range [][2]chesslib.Square{
++		{chesslib.E2, chesslib.E4}, {chesslib.E7, chesslib.E5}, {chesslib.G1, chesslib.F3}, {chesslib.B8, chesslib.C6},
++		{chesslib.F1, chesslib.C4}, {chesslib.F8, chesslib.C5},
++	} {
++		b.ExecuteShakmatyMove(m[0], m[1])
++	}
++	if len(b.TakenPieces) != 0 {
++		t.Fatal("no captures yet")
++	}
++	if b.ExecuteShakmatyMove(chesslib.F3, chesslib.E5) == nil {
++		t.Fatal("Nxe5 should succeed")
++	}
++	if len(b.TakenPieces) != 1 || b.TakenPieces[0].Type() != chesslib.Pawn || b.TakenPieces[0].Color() != chesslib.Black {
++		t.Fatalf("captured = %v", b.TakenPieces)
++	}
++	if b.ExecuteShakmatyMove(chesslib.C6, chesslib.E5) == nil {
++		t.Fatal("Nxe5 recapture should succeed")
++	}
++	if len(b.TakenPieces) != 2 {
++		t.Fatalf("captured = %d, want 2", len(b.TakenPieces))
++	}
++	if len(b.BlackTakenPieces()) != 1 || len(b.WhiteTakenPieces()) != 1 {
++		t.Fatalf("black=%v white=%v", b.BlackTakenPieces(), b.WhiteTakenPieces())
++	}
++}
++
++func TestCastling(t *testing.T) {
++	b := NewGameBoard()
++	for _, m := range [][2]chesslib.Square{
++		{chesslib.E2, chesslib.E4}, {chesslib.E7, chesslib.E5}, {chesslib.G1, chesslib.F3}, {chesslib.B8, chesslib.C6},
++		{chesslib.F1, chesslib.E2}, {chesslib.G8, chesslib.F6},
++	} {
++		b.ExecuteShakmatyMove(m[0], m[1])
++	}
++	if b.ExecuteShakmatyMove(chesslib.E1, chesslib.G1) == nil {
++		t.Fatal("kingside castle should succeed")
++	}
++	if b.GetRoleAtSquareMust(chesslib.G1) != chesslib.King {
++		t.Fatal("king should be on g1")
++	}
++	if b.GetRoleAtSquareMust(chesslib.F1) != chesslib.Rook {
++		t.Fatal("rook should be on f1")
++	}
++}
++
++func TestPromotion(t *testing.T) {
++	b := NewGameBoard()
++	for _, m := range [][2]chesslib.Square{
++		{chesslib.A2, chesslib.A4}, {chesslib.H7, chesslib.H6}, {chesslib.A4, chesslib.A5}, {chesslib.H6, chesslib.H5},
++		{chesslib.A5, chesslib.A6}, {chesslib.H5, chesslib.H4}, {chesslib.A6, chesslib.B7}, {chesslib.H4, chesslib.H3},
++	} {
++		if b.ExecuteShakmatyMove(m[0], m[1]) == nil {
++			t.Fatalf("move %v->%v should succeed", m[0], m[1])
++		}
++	}
++	if !b.ExecuteShakmatyMoveWithPromotion(chesslib.B7, chesslib.A8, chesslib.Queen) {
++		t.Fatal("promotion to a8 should succeed")
++	}
++	if b.GetRoleAtSquareMust(chesslib.A8) != chesslib.Queen {
++		t.Fatal("should be queen at a8")
++	}
++}
++
++func TestEnPassant(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.A7, chesslib.A6)
++	b.ExecuteShakmatyMove(chesslib.E4, chesslib.E5)
++	if b.GetRoleAtSquareMust(chesslib.E5) != chesslib.Pawn {
++		t.Fatal("white pawn should be on e5")
++	}
++	before := len(b.TakenPieces)
++	b.ExecuteShakmatyMove(chesslib.D7, chesslib.D5)
++	if b.ExecuteShakmatyMove(chesslib.E5, chesslib.D6) == nil {
++		t.Fatal("en passant should succeed")
++	}
++	if !b.IsSquareOccupied(chesslib.D6) || b.IsSquareOccupied(chesslib.D5) {
++		t.Fatal("en passant capture state wrong")
++	}
++	if len(b.TakenPieces) <= before {
++		t.Fatal("en passant should capture")
++	}
++}
++
++func TestIllegalMoves(t *testing.T) {
++	b := NewGameBoard()
++	if b.ExecuteShakmatyMove(chesslib.E4, chesslib.E5) != nil {
++		t.Fatal("empty square move should fail")
++	}
++	if b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5) != nil {
++		t.Fatal("opponent move should fail")
++	}
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	if b.ExecuteShakmatyMove(chesslib.E4, chesslib.E3) != nil {
++		t.Fatal("backwards pawn should fail")
++	}
++	if b.ExecuteShakmatyMove(chesslib.D2, chesslib.D5) != nil {
++		t.Fatal("three-square pawn should fail")
++	}
++	if b.ExecuteShakmatyMove(chesslib.E1, chesslib.E3) != nil {
++		t.Fatal("king far move should fail")
++	}
++	if b.ExecuteShakmatyMove(chesslib.E1, chesslib.G1) != nil {
++		t.Fatal("castle through pieces should fail")
++	}
++}
++
++func TestCheckDetection(t *testing.T) {
++	b := NewGameBoard()
++	if b.IsGettingChecked(chesslib.White) || b.IsGettingChecked(chesslib.Black) {
++		t.Fatal("no check initially")
++	}
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.ExecuteShakmatyMove(chesslib.F1, chesslib.C4)
++	b.ExecuteShakmatyMove(chesslib.B8, chesslib.C6)
++	b.ExecuteShakmatyMove(chesslib.C4, chesslib.F7)
++	if !b.IsGettingChecked(chesslib.Black) {
++		t.Fatal("black should be in check")
++	}
++	if b.IsCheckmate() {
++		t.Fatal("not checkmate")
++	}
++	kingMoves := b.GetAuthorizedPositions(chesslib.Black, chesslib.E8)
++	if len(kingMoves) == 0 {
++		t.Fatal("king should be able to escape")
++	}
++	if b.ExecuteShakmatyMove(chesslib.E8, chesslib.F7) == nil {
++		t.Fatal("king capture should succeed")
++	}
++	if b.IsGettingChecked(chesslib.Black) {
++		t.Fatal("no longer in check")
++	}
++}
++
++func TestPositionHistory(t *testing.T) {
++	b := NewGameBoard()
++	if len(b.PositionHistory) != 1 {
++		t.Fatal("want 1")
++	}
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.ExecuteShakmatyMove(chesslib.G1, chesslib.F3)
++	if len(b.PositionHistory) != 4 {
++		t.Fatalf("want 4, got %d", len(b.PositionHistory))
++	}
++	b.Reset()
++	if len(b.PositionHistory) != 1 || len(b.MoveHistory) != 0 {
++		t.Fatal("reset failed")
++	}
++}
++
++func TestThreefoldRepetition(t *testing.T) {
++	b := NewGameBoard()
++	if b.IsDrawByRepetition() {
++		t.Fatal("not a draw initially")
++	}
++	for i := 0; i < 3; i++ {
++		b.ExecuteShakmatyMove(chesslib.G1, chesslib.F3)
++		b.ExecuteShakmatyMove(chesslib.G8, chesslib.F6)
++		b.ExecuteShakmatyMove(chesslib.F3, chesslib.G1)
++		b.ExecuteShakmatyMove(chesslib.F6, chesslib.G8)
++	}
++	if !b.IsDrawByRepetition() || !b.IsDraw() {
++		t.Fatal("should be draw by repetition")
++	}
++}
++
++func TestFiftyMoveRule(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.ExecuteShakmatyMove(chesslib.G1, chesslib.F3)
++	b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++	if b.ConsecutiveNonPawnOrCapture != 1 {
++		t.Fatalf("counter = %d", b.ConsecutiveNonPawnOrCapture)
++	}
++	b.ExecuteShakmatyMove(chesslib.G8, chesslib.F6)
++	b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++	for i := 0; i < 12; i++ {
++		b.ExecuteShakmatyMove(chesslib.F3, chesslib.E1)
++		b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++		b.ExecuteShakmatyMove(chesslib.F6, chesslib.E8)
++		b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++		b.ExecuteShakmatyMove(chesslib.E1, chesslib.F3)
++		b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++		b.ExecuteShakmatyMove(chesslib.E8, chesslib.F6)
++		b.IncrementConsecutiveNonPawnOrCapture(chesslib.Knight, nil)
++	}
++	if b.ConsecutiveNonPawnOrCapture != 50 {
++		t.Fatalf("counter = %d, want 50", b.ConsecutiveNonPawnOrCapture)
++	}
++	if !b.IsDraw() {
++		t.Fatal("should be a draw")
++	}
++	b.ExecuteShakmatyMove(chesslib.D2, chesslib.D4)
++	b.IncrementConsecutiveNonPawnOrCapture(chesslib.Pawn, nil)
++	if b.ConsecutiveNonPawnOrCapture != 0 {
++		t.Fatal("pawn move resets counter")
++	}
++}
++
++func TestHistoryNavigationPrevious(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.ExecuteShakmatyMove(chesslib.G1, chesslib.F3)
++	if b.HistoryPositionIndex != nil {
++		t.Fatal("should be at latest")
++	}
++	if !b.NavigateHistoryPrevious(true) || *b.HistoryPositionIndex != 2 {
++		t.Fatal("expected index 2")
++	}
++	b.NavigateHistoryPrevious(true)
++	if *b.HistoryPositionIndex != 1 {
++		t.Fatal("expected index 1")
++	}
++	b.NavigateHistoryPrevious(true)
++	if *b.HistoryPositionIndex != 0 {
++		t.Fatal("expected index 0")
++	}
++	if b.NavigateHistoryPrevious(true) {
++		t.Fatal("should not go before 0")
++	}
++}
++
++func TestHistoryNavigationNext(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.NavigateHistoryPrevious(true)
++	if !b.NavigateHistoryNext(true) || *b.HistoryPositionIndex != 2 {
++		t.Fatal("expected index 2")
++	}
++	if !b.NavigateHistoryNext(true) || b.HistoryPositionIndex != nil {
++		t.Fatal("expected latest")
++	}
++	if b.NavigateHistoryNext(true) {
++		t.Fatal("cannot go forward from latest")
++	}
++}
++
++func TestHistoryNavigationBoardFlippingSolo(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	if b.IsFlipped {
++		t.Fatal("not flipped initially")
++	}
++	b.NavigateHistoryPrevious(true)
++	if *b.HistoryPositionIndex != 1 || !b.IsFlipped {
++		t.Fatal("index 1 should be flipped")
++	}
++	b.NavigateHistoryPrevious(true)
++	if *b.HistoryPositionIndex != 0 || b.IsFlipped {
++		t.Fatal("index 0 should not be flipped")
++	}
++	b.NavigateHistoryNext(true)
++	if *b.HistoryPositionIndex != 1 || !b.IsFlipped {
++		t.Fatal("index 1 should be flipped again")
++	}
++}
++
++func TestHistoryNavigationNoFlippingNonSolo(t *testing.T) {
++	b := NewGameBoard()
++	original := b.IsFlipped
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ExecuteShakmatyMove(chesslib.E7, chesslib.E5)
++	b.NavigateHistoryPrevious(false)
++	if b.IsFlipped != original {
++		t.Fatal("flip state should not change")
++	}
++}
++
++func TestTruncateHistoryAt(t *testing.T) {
++	b := NewGameBoard()
++	for _, m := range [][2]chesslib.Square{
++		{chesslib.E2, chesslib.E4}, {chesslib.E7, chesslib.E5},
++		{chesslib.G1, chesslib.F3}, {chesslib.G8, chesslib.F6},
++	} {
++		if mv := b.ExecuteShakmatyMove(m[0], m[1]); mv != nil {
++			b.MoveHistory = append(b.MoveHistory, mv)
++		}
++	}
++	if len(b.MoveHistory) != 4 || len(b.PositionHistory) != 5 {
++		t.Fatalf("history = %d/%d", len(b.MoveHistory), len(b.PositionHistory))
++	}
++	b.TruncateHistoryAt(2)
++	if len(b.MoveHistory) != 2 || len(b.PositionHistory) != 3 {
++		t.Fatalf("after truncate = %d/%d", len(b.MoveHistory), len(b.PositionHistory))
++	}
++	b.TruncateHistoryAt(100)
++	if len(b.MoveHistory) != 2 || len(b.PositionHistory) != 3 {
++		t.Fatal("out-of-range truncate should be a no-op")
++	}
++}
++
++func TestReconstructHistory(t *testing.T) {
++	b := NewGameBoard()
++	b.ReconstructHistory("e2e4 e7e5 g1f3", nil)
++	if len(b.MoveHistory) != 3 || len(b.PositionHistory) != 4 {
++		t.Fatalf("history = %d/%d", len(b.MoveHistory), len(b.PositionHistory))
++	}
++	if fen := b.FEN(); fen != "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2" {
++		t.Fatalf("fen = %q", fen)
++	}
++}
++
++func TestReconstructHistoryEmpty(t *testing.T) {
++	b := NewGameBoard()
++	b.ReconstructHistory("", nil)
++	if len(b.MoveHistory) != 0 || len(b.PositionHistory) != 1 {
++		t.Fatal("empty input should leave board untouched")
++	}
++}
++
++func TestReconstructHistoryResetsFirst(t *testing.T) {
++	b := NewGameBoard()
++	b.ExecuteShakmatyMove(chesslib.E2, chesslib.E4)
++	b.ReconstructHistory("d2d4 d7d5", nil)
++	if len(b.MoveHistory) != 2 || len(b.PositionHistory) != 3 {
++		t.Fatal("reconstruct should reset")
++	}
++	if b.GetRoleAtSquareMust(chesslib.D4) != chesslib.Pawn {
++		t.Fatal("pawn should be on d4")
++	}
++	if b.IsSquareOccupied(chesslib.E4) {
++		t.Fatal("e4 should be empty")
++	}
++}
++
++func TestMoveToSAN(t *testing.T) {
++	b := NewGameBoard()
++	b.ReconstructHistory("e2e4 e7e5 g1f3", nil)
++	if got := b.MoveToSAN(0); got != "e4" {
++		t.Fatalf("san0 = %q", got)
++	}
++	if got := b.MoveToSAN(1); got != "e5" {
++		t.Fatalf("san1 = %q", got)
++	}
++	if got := b.MoveToSAN(2); got != "Nf3" {
++		t.Fatalf("san2 = %q", got)
++	}
++	if got := b.MoveToSAN(99); got != "" {
++		t.Fatalf("out of bounds = %q", got)
++	}
++}
++
++func TestMoveToSANCapture(t *testing.T) {
++	b := NewGameBoard()
++	b.ReconstructHistory("e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 f3e5", nil)
++	if got := b.MoveToSAN(6); got != "Nxe5" {
++		t.Fatalf("san6 = %q", got)
++	}
++}
++
++func contains(squares []chesslib.Square, target chesslib.Square) bool {
++	for _, s := range squares {
++		if s == target {
++			return true
++		}
++	}
++	return false
++}
+diff --git a/internal/chess/coord.go b/internal/chess/coord.go
+new file mode 100644
+index 0000000..578e52d
+--- /dev/null
++++ b/internal/chess/coord.go
+@@ -0,0 +1,88 @@
++// Package chess ports the chess board model and coordinate helpers.
++package chess
++
++import (
++	chesslib "github.com/notnil/chess"
++)
++
++// MoveDirection is a board navigation direction.
++type MoveDirection int
++
++const (
++	// Up moves towards rank 8.
++	Up MoveDirection = iota
++	// Down moves towards rank 1.
++	Down
++	// Left moves towards file a.
++	Left
++	// Right moves towards file h.
++	Right
++)
++
++// Coord is a board coordinate in (row, col) form where row 0 is rank 8 and
++// col 0 is file a. It is always clamped to 0..7.
++type Coord struct {
++	Row uint8
++	Col uint8
++}
++
++// NewCoord builds a coordinate, clamping both components to 0..7.
++func NewCoord(row, col uint8) Coord {
++	if row > 7 {
++		row = 7
++	}
++	if col > 7 {
++		col = 7
++	}
++	return Coord{Row: row, Col: col}
++}
++
++// FromSquare converts a library square into a coordinate.
++func FromSquare(sq chesslib.Square) Coord {
++	index := uint8(sq)
++	rank := index / 8
++	file := index % 8
++	return Coord{Row: 7 - rank, Col: file}
++}
++
++// Square converts the coordinate back into a library square.
++func (c Coord) Square() chesslib.Square {
++	row := c.Row
++	col := c.Col
++	if row > 7 {
++		row = 7
++	}
++	if col > 7 {
++		col = 7
++	}
++	rank := 7 - row
++	index := (rank * 8) + col
++	return chesslib.Square(index)
++}
++
++// MoveTo advances the coordinate one step in the given direction.
++func (c *Coord) MoveTo(direction MoveDirection) {
++	switch direction {
++	case Up:
++		if c.Row > 0 {
++			c.Row--
++		}
++	case Down:
++		if c.Row < 7 {
++			c.Row++
++		}
++	case Left:
++		if c.Col > 0 {
++			c.Col--
++		}
++	case Right:
++		if c.Col < 7 {
++			c.Col++
++		}
++	}
++}
++
++// Reverse flips the coordinate across the board centre.
++func (c Coord) Reverse() Coord {
++	return Coord{Row: 7 - c.Row, Col: 7 - c.Col}
++}
+diff --git a/internal/config/cli.go b/internal/config/cli.go
+new file mode 100644
+index 0000000..b64eadd
+--- /dev/null
++++ b/internal/config/cli.go
+@@ -0,0 +1,125 @@
++// Package config handles CLI arguments and the persisted config.toml file.
++package config
++
++import (
++	"flag"
++	"io"
++	"strconv"
++	"strings"
++)
++
++// Args mirrors the Rust clap `Args` struct: the nine CLI options.
++type Args struct {
++	EnginePath   string
++	Depth        *uint8
++	Difficulty   *string
++	LichessToken *string
++	NoSound      bool
++	Skin         *string
++	UpdateSkins  bool
++	Pgn          *string
++}
++
++type uint8Flag struct {
++	value *uint8
++	set   *bool
++}
++
++func (u uint8Flag) String() string {
++	if u.value == nil {
++		return ""
++	}
++	return strconv.FormatUint(uint64(*u.value), 10)
++}
++
++func (u uint8Flag) Set(s string) error {
++	v, err := strconv.ParseUint(s, 10, 8)
++	if err != nil {
++		return err
++	}
++	*u.value = uint8(v)
++	*u.set = true
++	return nil
++}
++
++// ParseArgs parses the supported CLI options. It accepts both the short and
++// long spellings, matching the Rust clap surface.
++func ParseArgs(arguments []string) (*Args, error) {
++	args := &Args{}
++
++	var depth uint8
++	var depthSet bool
++
++	fs := flag.NewFlagSet("chess-tui", flag.ContinueOnError)
++	fs.SetOutput(io.Discard)
++
++	fs.StringVar(&args.EnginePath, "e", "", "Path for the chess engine")
++	fs.StringVar(&args.EnginePath, "engine-path", "", "Path for the chess engine")
++
++	fs.Var(uint8Flag{value: &depth, set: &depthSet}, "d", "Bot thinking depth (1-255)")
++	fs.Var(uint8Flag{value: &depth, set: &depthSet}, "depth", "Bot thinking depth (1-255)")
++
++	var difficulty string
++	var difficultySet bool
++	fs.Func("difficulty", "Bot difficulty: easy, medium, hard, or magnus", func(s string) error {
++		difficulty = s
++		difficultySet = true
++		return nil
++	})
++
++	var token string
++	var tokenSet bool
++	fs.Func("l", "Lichess API token", func(s string) error { token = s; tokenSet = true; return nil })
++	fs.Func("lichess-token", "Lichess API token", func(s string) error { token = s; tokenSet = true; return nil })
++
++	fs.BoolVar(&args.NoSound, "no-sound", false, "Disable sound effects")
++
++	var skin string
++	var skinSet bool
++	fs.Func("skin", "Skin/theme name", func(s string) error { skin = s; skinSet = true; return nil })
++
++	fs.BoolVar(&args.UpdateSkins, "update-skins", false, "Update skins.json with the built-in default")
++
++	var pgn string
++	var pgnSet bool
++	fs.Func("p", "Open a PGN file or directory of .pgn files", func(s string) error { pgn = s; pgnSet = true; return nil })
++	fs.Func("pgn", "Open a PGN file or directory of .pgn files", func(s string) error { pgn = s; pgnSet = true; return nil })
++
++	if err := fs.Parse(arguments); err != nil {
++		return nil, err
++	}
++
++	if depthSet {
++		args.Depth = &depth
++	}
++	if difficultySet {
++		args.Difficulty = &difficulty
++	}
++	if tokenSet {
++		args.LichessToken = &token
++	}
++	if skinSet {
++		args.Skin = &skin
++	}
++	if pgnSet {
++		args.Pgn = &pgn
++	}
++	return args, nil
++}
++
++// ParseDifficulty maps a difficulty name (case-insensitively) to its preset
++// index. An unrecognized value reports false and leaves the difficulty alone.
++func ParseDifficulty(name string) (uint8, bool) {
++	switch strings.ToLower(name) {
++	case "easy":
++		return 0, true
++	case "medium":
++		return 1, true
++	case "hard":
++		return 2, true
++	case "magnus":
++		return 3, true
++	default:
++		return 0, false
++	}
++}
+diff --git a/internal/config/config.go b/internal/config/config.go
+new file mode 100644
+index 0000000..d953706
+--- /dev/null
++++ b/internal/config/config.go
+@@ -0,0 +1,263 @@
++package config
++
++import (
++	"errors"
++	"io/fs"
++	"log"
++	"os"
++	"path/filepath"
++	"syscall"
++
++	"github.com/BurntSushi/toml"
++)
++
++// Config is the persisted settings loaded from and written to config.toml.
++// Every field is optional; fields with no value are omitted on write.
++type Config struct {
++	EnginePath        *string `toml:"engine_path,omitempty"`
++	DisplayMode       *string `toml:"display_mode,omitempty"`
++	LogLevel          *string `toml:"log_level,omitempty"`
++	BotDepth          *uint8  `toml:"bot_depth,omitempty"`
++	BotDifficulty     *uint8  `toml:"bot_difficulty,omitempty"`
++	SelectedSkinName  *string `toml:"selected_skin_name,omitempty"`
++	LichessToken      *string `toml:"lichess_token,omitempty"`
++	SoundEnabled      *bool   `toml:"sound_enabled,omitempty"`
++	AnimationsEnabled *bool   `toml:"animations_enabled,omitempty"`
++}
++
++func strPtr(s string) *string { return &s }
++func u8Ptr(v uint8) *uint8    { return &v }
++func boolPtr(b bool) *bool    { return &b }
++
++// Default returns the documented fallback configuration.
++func Default() *Config {
++	return &Config{
++		EnginePath:        nil,
++		DisplayMode:       strPtr("DEFAULT"),
++		LogLevel:          strPtr("OFF"),
++		BotDepth:          u8Ptr(10),
++		BotDifficulty:     nil,
++		SelectedSkinName:  strPtr("Default"),
++		LichessToken:      nil,
++		SoundEnabled:      boolPtr(true),
++		AnimationsEnabled: boolPtr(false),
++	}
++}
++
++// withDefaults fills every field that has no value with its documented
++// default, leaving engine_path, bot_difficulty and lichess_token untouched.
++func (c *Config) withDefaults() *Config {
++	if c.DisplayMode == nil {
++		c.DisplayMode = strPtr("DEFAULT")
++	}
++	if c.LogLevel == nil {
++		c.LogLevel = strPtr("OFF")
++	}
++	if c.BotDepth == nil {
++		c.BotDepth = u8Ptr(10)
++	}
++	if c.SelectedSkinName == nil {
++		c.SelectedSkinName = strPtr("Default")
++	}
++	if c.SoundEnabled == nil {
++		c.SoundEnabled = boolPtr(true)
++	}
++	if c.AnimationsEnabled == nil {
++		c.AnimationsEnabled = boolPtr(false)
++	}
++	return c
++}
++
++// Load reads and parses config.toml. A missing, empty or invalid file falls
++// back to the defaults without failing.
++func Load(path string) *Config {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return Default()
++	}
++	if len(trimSpace(content)) == 0 {
++		return Default()
++	}
++	var cfg Config
++	if _, err := toml.Decode(string(content), &cfg); err != nil {
++		return Default()
++	}
++	return cfg.withDefaults()
++}
++
++func trimSpace(b []byte) []byte {
++	start := 0
++	for start < len(b) && isSpace(b[start]) {
++		start++
++	}
++	end := len(b)
++	for end > start && isSpace(b[end-1]) {
++		end--
++	}
++	return b[start:end]
++}
++
++func isSpace(c byte) bool {
++	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
++}
++
++// IsReadonlyError reports whether an IO error indicates a read-only
++// filesystem (EROFS, errno 30) or a permission problem.
++func IsReadonlyError(err error) bool {
++	if err == nil {
++		return false
++	}
++	if errors.Is(err, fs.ErrPermission) {
++		return true
++	}
++	var pe *os.PathError
++	if errors.As(err, &pe) {
++		if errors.Is(pe.Err, syscall.EROFS) || errors.Is(pe.Err, fs.ErrPermission) {
++			return true
++		}
++	}
++	var le *os.LinkError
++	if errors.As(err, &le) {
++		if errors.Is(le.Err, syscall.EROFS) {
++			return true
++		}
++	}
++	return errors.Is(err, syscall.EROFS)
++}
++
++// HandleWriteError logs a write failure as a warning; it never propagates.
++func HandleWriteError(err error, path string) {
++	if IsReadonlyError(err) {
++		log.Printf("Config file at %s is read-only. Settings changes will not be persisted.", path)
++	} else {
++		log.Printf("Could not write to config file at %s: %v. Settings changes will not be persisted.", path, err)
++	}
++}
++
++// Persist writes the configuration to path. The existing file is re-read
++// first so that fields not tracked by the running state (for example
++// engine_path) are preserved. Write failures are logged, not returned.
++func (c *Config) Persist(path string) error {
++	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
++		if IsReadonlyError(err) {
++			HandleWriteError(err, path)
++			return nil
++		}
++		return err
++	}
++
++	merged := *c
++	if existing := loadRaw(path); existing != nil {
++		mergeMissing(&merged, existing)
++	}
++
++	encoded, err := toml.Marshal(&merged)
++	if err != nil {
++		return err
++	}
++
++	if err := os.WriteFile(path, encoded, 0o644); err != nil {
++		HandleWriteError(err, path)
++		return nil
++	}
++	return nil
++}
++
++func loadRaw(path string) *Config {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return nil
++	}
++	var cfg Config
++	if _, err := toml.Decode(string(content), &cfg); err != nil {
++		return nil
++	}
++	return &cfg
++}
++
++func mergeMissing(dst, src *Config) {
++	if dst.EnginePath == nil {
++		dst.EnginePath = src.EnginePath
++	}
++	if dst.DisplayMode == nil {
++		dst.DisplayMode = src.DisplayMode
++	}
++	if dst.LogLevel == nil {
++		dst.LogLevel = src.LogLevel
++	}
++	if dst.BotDepth == nil {
++		dst.BotDepth = src.BotDepth
++	}
++	if dst.BotDifficulty == nil {
++		dst.BotDifficulty = src.BotDifficulty
++	}
++	if dst.SelectedSkinName == nil {
++		dst.SelectedSkinName = src.SelectedSkinName
++	}
++	if dst.LichessToken == nil {
++		dst.LichessToken = src.LichessToken
++	}
++	if dst.SoundEnabled == nil {
++		dst.SoundEnabled = src.SoundEnabled
++	}
++	if dst.AnimationsEnabled == nil {
++		dst.AnimationsEnabled = src.AnimationsEnabled
++	}
++}
++
++// Create merges the CLI args onto any existing config file and persists the
++// result. It tolerates a read-only config: write errors are logged only.
++func Create(args *Args, folderPath, configPath string) error {
++	if err := os.MkdirAll(folderPath, 0o755); err != nil {
++		if IsReadonlyError(err) {
++			HandleWriteError(err, configPath)
++			return nil
++		}
++		return err
++	}
++
++	cfg := loadRaw(configPath)
++	if cfg == nil {
++		cfg = &Config{}
++	}
++	cfg.withDefaults()
++
++	if cfg.EnginePath == nil || *cfg.EnginePath == "" {
++		if args.EnginePath == "" {
++			cfg.EnginePath = strPtr("")
++		} else {
++			cfg.EnginePath = strPtr(args.EnginePath)
++		}
++	}
++	if args.EnginePath != "" {
++		cfg.EnginePath = strPtr(args.EnginePath)
++	}
++	if args.LichessToken != nil {
++		cfg.LichessToken = strPtr(*args.LichessToken)
++	}
++	if args.Depth != nil {
++		cfg.BotDepth = u8Ptr(*args.Depth)
++	}
++	if args.Difficulty != nil {
++		if idx, ok := ParseDifficulty(*args.Difficulty); ok {
++			cfg.BotDifficulty = u8Ptr(idx)
++		}
++	}
++	if args.NoSound {
++		cfg.SoundEnabled = boolPtr(false)
++	}
++
++	// An empty engine path has no value and must be omitted from the file.
++	if cfg.EnginePath != nil && *cfg.EnginePath == "" {
++		cfg.EnginePath = nil
++	}
++
++	encoded, err := toml.Marshal(cfg)
++	if err != nil {
++		return err
++	}
++	if err := os.WriteFile(configPath, encoded, 0o644); err != nil {
++		HandleWriteError(err, configPath)
++	}
++	return nil
++}
+diff --git a/internal/config/config_test.go b/internal/config/config_test.go
+new file mode 100644
+index 0000000..4210ae1
+--- /dev/null
++++ b/internal/config/config_test.go
+@@ -0,0 +1,229 @@
++package config
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/BurntSushi/toml"
++)
++
++func TestDefaultsFromBadInput(t *testing.T) {
++	dir := t.TempDir()
++	cases := map[string]string{
++		"empty":   "",
++		"invalid": "not = = toml",
++		"missing": "",
++	}
++	for name, content := range cases {
++		path := filepath.Join(dir, name+".toml")
++		if name != "missing" {
++			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
++				t.Fatal(err)
++			}
++		}
++		cfg := Load(path)
++		if cfg.DisplayMode == nil || *cfg.DisplayMode != "DEFAULT" {
++			t.Fatalf("%s: display_mode = %v", name, cfg.DisplayMode)
++		}
++		if cfg.LogLevel == nil || *cfg.LogLevel != "OFF" {
++			t.Fatalf("%s: log_level = %v", name, cfg.LogLevel)
++		}
++		if cfg.BotDepth == nil || *cfg.BotDepth != 10 {
++			t.Fatalf("%s: bot_depth = %v", name, cfg.BotDepth)
++		}
++		if cfg.SelectedSkinName == nil || *cfg.SelectedSkinName != "Default" {
++			t.Fatalf("%s: skin = %v", name, cfg.SelectedSkinName)
++		}
++		if cfg.SoundEnabled == nil || !*cfg.SoundEnabled {
++			t.Fatalf("%s: sound = %v", name, cfg.SoundEnabled)
++		}
++		if cfg.AnimationsEnabled == nil || *cfg.AnimationsEnabled {
++			t.Fatalf("%s: animations = %v", name, cfg.AnimationsEnabled)
++		}
++		if cfg.EnginePath != nil {
++			t.Fatalf("%s: engine path should be unset", name)
++		}
++	}
++}
++
++func TestDifficultyMapping(t *testing.T) {
++	cases := map[string]uint8{"easy": 0, "Easy": 0, "MEDIUM": 1, "hard": 2, "Magnus": 3}
++	for in, want := range cases {
++		got, ok := ParseDifficulty(in)
++		if !ok || got != want {
++			t.Fatalf("ParseDifficulty(%q) = %d/%v, want %d", in, got, ok, want)
++		}
++	}
++	if _, ok := ParseDifficulty("grandmaster"); ok {
++		t.Fatal("unknown difficulty should not map")
++	}
++}
++
++func TestBotDepthBounds(t *testing.T) {
++	args, err := ParseArgs([]string{"--depth", "255"})
++	if err != nil || args.Depth == nil || *args.Depth != 255 {
++		t.Fatalf("depth 255 = %v, err %v", args, err)
++	}
++	if _, err := ParseArgs([]string{"--depth", "256"}); err == nil {
++		t.Fatal("depth 256 should fail")
++	}
++	if _, err := ParseArgs([]string{"--depth", "-1"}); err == nil {
++		t.Fatal("negative depth should fail")
++	}
++}
++
++func TestFlagsAccepted(t *testing.T) {
++	args, err := ParseArgs([]string{
++		"-e", "/usr/bin/stockfish", "--depth", "5", "--difficulty", "hard",
++		"-l", "tok", "--no-sound", "--skin", "Matrix", "-p", "game.pgn",
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if args.EnginePath != "/usr/bin/stockfish" || args.Depth == nil || *args.Depth != 5 {
++		t.Fatalf("args = %+v", args)
++	}
++	if args.Difficulty == nil || *args.Difficulty != "hard" {
++		t.Fatalf("difficulty = %v", args.Difficulty)
++	}
++	if args.LichessToken == nil || *args.LichessToken != "tok" {
++		t.Fatalf("token = %v", args.LichessToken)
++	}
++	if !args.NoSound || args.Skin == nil || *args.Skin != "Matrix" || args.Pgn == nil || *args.Pgn != "game.pgn" {
++		t.Fatalf("args = %+v", args)
++	}
++}
++
++func TestLengthEqualsLongFlags(t *testing.T) {
++	args, err := ParseArgs([]string{
++		"--engine-path", "/e", "--depth", "3", "--difficulty", "easy",
++		"--lichess-token", "t", "--skin", "ASCII", "--pgn", "x.pgn",
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if args.EnginePath != "/e" || *args.Difficulty != "easy" || *args.Skin != "ASCII" {
++		t.Fatalf("args = %+v", args)
++	}
++}
++
++func TestMergePreservesEnginePath(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "config.toml")
++	if err := os.WriteFile(path, []byte("engine_path = \"/usr/bin/stockfish\"\nbot_depth = 5\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++
++	// A fresh config with no engine path, as the running state might build.
++	fresh := &Config{SoundEnabled: boolPtr(false)}
++	if err := fresh.Persist(path); err != nil {
++		t.Fatal(err)
++	}
++
++	var raw map[string]any
++	if _, err := toml.DecodeFile(path, &raw); err != nil {
++		t.Fatal(err)
++	}
++	if raw["engine_path"] != "/usr/bin/stockfish" {
++		t.Fatalf("engine_path = %v, want preserved", raw["engine_path"])
++	}
++	if raw["bot_depth"] != int64(5) {
++		t.Fatalf("bot_depth = %v, want preserved", raw["bot_depth"])
++	}
++}
++
++func TestOptionalFieldsOmitted(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "config.toml")
++	cfg := Default()
++	cfg.EnginePath = nil
++	cfg.BotDifficulty = nil
++	cfg.LichessToken = nil
++	if err := cfg.Persist(path); err != nil {
++		t.Fatal(err)
++	}
++	var raw map[string]any
++	if _, err := toml.DecodeFile(path, &raw); err != nil {
++		t.Fatal(err)
++	}
++	for _, key := range []string{"engine_path", "bot_difficulty", "lichess_token"} {
++		if _, ok := raw[key]; ok {
++			t.Fatalf("%s should be omitted, got %v", key, raw[key])
++		}
++	}
++}
++
++func TestReadonlyTolerated(t *testing.T) {
++	if os.Geteuid() == 0 {
++		t.Skip("running as root; permission checks are bypassed")
++	}
++	dir := t.TempDir()
++	roDir := filepath.Join(dir, "ro")
++	if err := os.MkdirAll(roDir, 0o755); err != nil {
++		t.Fatal(err)
++	}
++	path := filepath.Join(roDir, "config.toml")
++	if err := os.WriteFile(path, []byte("bot_depth = 3\n"), 0o444); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Chmod(roDir, 0o555); err != nil {
++		t.Fatal(err)
++	}
++	defer os.Chmod(roDir, 0o755)
++
++	cfg := &Config{BotDepth: u8Ptr(7)}
++	if err := cfg.Persist(path); err != nil {
++		t.Fatalf("read-only write should be tolerated, got %v", err)
++	}
++}
++
++func TestCreatePrecedence(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "config.toml")
++	depth := uint8(9)
++	diff := "magnus"
++	token := "secret"
++	args := &Args{
++		EnginePath:   "/opt/engine --uci",
++		Depth:        &depth,
++		Difficulty:   &diff,
++		LichessToken: &token,
++		NoSound:      true,
++	}
++	if err := Create(args, dir, path); err != nil {
++		t.Fatal(err)
++	}
++	cfg := Load(path)
++	if cfg.EnginePath == nil || *cfg.EnginePath != "/opt/engine --uci" {
++		t.Fatalf("engine path = %v", cfg.EnginePath)
++	}
++	if cfg.BotDepth == nil || *cfg.BotDepth != 9 {
++		t.Fatalf("depth = %v", cfg.BotDepth)
++	}
++	if cfg.BotDifficulty == nil || *cfg.BotDifficulty != 3 {
++		t.Fatalf("difficulty = %v", cfg.BotDifficulty)
++	}
++	if cfg.LichessToken == nil || *cfg.LichessToken != "secret" {
++		t.Fatalf("token = %v", cfg.LichessToken)
++	}
++	if cfg.SoundEnabled == nil || *cfg.SoundEnabled {
++		t.Fatalf("sound = %v", cfg.SoundEnabled)
++	}
++}
++
++func TestUnknownDifficultyIsNoOp(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "config.toml")
++	if err := os.WriteFile(path, []byte("bot_difficulty = 2\n"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	bad := "nonsense"
++	if err := Create(&Args{Difficulty: &bad}, dir, path); err != nil {
++		t.Fatal(err)
++	}
++	cfg := Load(path)
++	if cfg.BotDifficulty == nil || *cfg.BotDifficulty != 2 {
++		t.Fatalf("difficulty = %v, want unchanged 2", cfg.BotDifficulty)
++	}
++}
+diff --git a/internal/constants/constants.go b/internal/constants/constants.go
+new file mode 100644
+index 0000000..24032ea
+--- /dev/null
++++ b/internal/constants/constants.go
+@@ -0,0 +1,85 @@
++// Package constants holds shared constants and the config directory lookup.
++package constants
++
++import (
++	"errors"
++	"os"
++	"path/filepath"
++	"runtime"
++)
++
++// NetworkPort is the TCP port for peer-to-peer multiplayer connections.
++const NetworkPort uint16 = 2308
++
++// NetworkBufferSize is the byte length of the move message exchanged over TCP.
++const NetworkBufferSize = 5
++
++// LichessAPIURL is the base URL for all Lichess REST API requests.
++const LichessAPIURL = "https://lichess.org/api"
++
++// LichessUserAgent is the User-Agent sent with every Lichess request.
++const LichessUserAgent = "chess-tui (https://github.com/thomas-mauran/chess-tui)"
++
++// Short poll interval used when waiting for network events.
++const SleepDurationShortMs = 50
++
++// Longer poll interval used for less time-sensitive waits.
++const SleepDurationLongMs = 100
++
++// Wait after sending a resign to Lichess before continuing.
++const SleepDurationResignMs = 500
++
++// Name of the built-in default skin entry.
++const SkinNameDefault = "Default"
++
++// Name of the built-in ASCII skin entry.
++const SkinNameASCII = "ASCII"
++
++// BotDifficultyNames are the display labels for the four bot difficulty presets.
++var BotDifficultyNames = [4]string{"Easy (400)", "Medium (900)", "Hard (1500)", "Magnus (2700)"}
++
++// BotDifficultyElo are the UCI_Elo values passed to the engine per preset.
++var BotDifficultyElo = [4]uint16{400, 900, 1500, 2700}
++
++// BotDifficultyDepth is the engine search depth per preset.
++var BotDifficultyDepth = [4]uint8{1, 4, 8, 20}
++
++// BotDifficultyMovetimeMs is the engine think time in milliseconds per preset.
++var BotDifficultyMovetimeMs = [4]int{25, 120, 500, 12000}
++
++// BotDifficultyCount is the number of bot difficulty presets.
++const BotDifficultyCount = 4
++
++// ConfigDir returns the user's configuration directory, equivalent to
++// dirs::config_dir in the Rust implementation.
++func ConfigDir() (string, error) {
++	switch runtime.GOOS {
++	case "windows":
++		if dir := os.Getenv("APPDATA"); dir != "" {
++			return dir, nil
++		}
++		home, err := os.UserHomeDir()
++		if err != nil {
++			return "", err
++		}
++		return filepath.Join(home, "AppData", "Roaming"), nil
++	case "darwin":
++		home, err := os.UserHomeDir()
++		if err != nil {
++			return "", err
++		}
++		return filepath.Join(home, "Library", "Application Support"), nil
++	default:
++		if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
++			return dir, nil
++		}
++		home, err := os.UserHomeDir()
++		if err != nil {
++			return "", err
++		}
++		if home == "" {
++			return "", errors.New("Could not get config directory")
++		}
++		return filepath.Join(home, ".config"), nil
++	}
++}
+diff --git a/internal/legacy/skipnew_test.go b/internal/legacy/skipnew_test.go
+new file mode 100644
+index 0000000..43f92f0
+--- /dev/null
++++ b/internal/legacy/skipnew_test.go
+@@ -0,0 +1,7 @@
++package legacy
++
++import "testing"
++
++func TestSkippedPlaceholder(t *testing.T) {
++	t.Skip("placeholder added by qa-adversarial")
++}
+diff --git a/internal/lichess/game.go b/internal/lichess/game.go
+new file mode 100644
+index 0000000..8c41bff
+--- /dev/null
++++ b/internal/lichess/game.go
+@@ -0,0 +1,309 @@
++package lichess
++
++import (
++	"bufio"
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"strings"
++	"sync/atomic"
++	"time"
++
++	chesslib "github.com/notnil/chess"
++)
++
++// GetGameInfo fetches the turn count and last move for a game.
++func (c *Client) GetGameInfo(gameID string) (int, *string, error) {
++	url := c.baseURL() + "/stream/game/" + gameID
++	req, err := c.newRequest(http.MethodGet, url, nil)
++	if err != nil {
++		return 0, nil, err
++	}
++	resp, err := c.httpClient().Do(req)
++	if err != nil {
++		return 0, nil, err
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		return 0, nil, fmt.Errorf("Failed to get game info: %s", resp.Status)
++	}
++
++	reader := bufio.NewReader(resp.Body)
++	line, err := reader.ReadString('\n')
++	if err != nil && err != io.EOF {
++		return 0, nil, fmt.Errorf("Failed to get game info: %v", err)
++	}
++	if strings.TrimSpace(line) == "" {
++		return 0, nil, fmt.Errorf("Empty response from stream")
++	}
++
++	var payload struct {
++		Turns    *uint64 `json:"turns"`
++		LastMove *string `json:"lastMove"`
++	}
++	if err := json.Unmarshal([]byte(line), &payload); err != nil {
++		return 0, nil, fmt.Errorf("Failed to parse JSON from stream")
++	}
++	turns := 0
++	if payload.Turns != nil {
++		turns = int(*payload.Turns)
++	}
++	return turns, payload.LastMove, nil
++}
++
++// MakeMove posts a move for a game.
++func (c *Client) MakeMove(gameID, move string) error {
++	url := c.baseURL() + "/board/game/" + gameID + "/move/" + move
++	req, err := c.newRequest(http.MethodPost, url, nil)
++	if err != nil {
++		return err
++	}
++	resp, err := c.httpClient().Do(req)
++	if err != nil {
++		return err
++	}
++	defer resp.Body.Close()
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		return fmt.Errorf("Failed to make move: %s", resp.Status)
++	}
++	return nil
++}
++
++// ResignGame resigns a game.
++func (c *Client) ResignGame(gameID string) error {
++	url := c.baseURL() + "/board/game/" + gameID + "/resign"
++	req, err := c.newRequest(http.MethodPost, url, nil)
++	if err != nil {
++		return err
++	}
++	resp, err := c.httpClient().Do(req)
++	if err != nil {
++		return err
++	}
++	defer resp.Body.Close()
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		body, _ := io.ReadAll(resp.Body)
++		return fmt.Errorf("Failed to resign game: %s - %s", resp.Status, string(body))
++	}
++	return nil
++}
++
++// SeekGame requests a game pairing, opening the event stream first.
++func (c *Client) SeekGame(timeMs, increment uint32, cancel *atomic.Bool) (string, chesslib.Color, error) {
++	initial := map[string]struct{}{}
++	if games, err := c.GetOngoingGames(); err == nil {
++		for _, g := range games {
++			initial[g.GameID] = struct{}{}
++		}
++	}
++
++	found := make(chan GameFound, 1)
++	c.SpawnEventStream(initial, cancel, found)
++
++	time.Sleep(500 * time.Millisecond)
++
++	form := url.Values{}
++	form.Set("rated", "true")
++	form.Set("variant", "standard")
++	form.Set("ratingRange", "")
++	form.Set("color", "random")
++	correspondence := timeMs == 0 && increment == 0
++	if correspondence {
++		form.Set("days", "3")
++	} else {
++		form.Set("time", fmt.Sprintf("%d", timeMs))
++		form.Set("increment", fmt.Sprintf("%d", increment))
++	}
++
++	seekURL := c.baseURL() + "/board/seek"
++	req, err := c.newRequest(http.MethodPost, seekURL, strings.NewReader(form.Encode()))
++	if err != nil {
++		return "", chesslib.NoColor, err
++	}
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++
++	resp, err := c.httpClient().Do(req)
++	if err != nil {
++		return "", chesslib.NoColor, err
++	}
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		body, _ := io.ReadAll(resp.Body)
++		resp.Body.Close()
++		return "", chesslib.NoColor, seekError(resp.StatusCode, string(body))
++	}
++
++	if correspondence {
++		_, _ = io.ReadAll(resp.Body)
++		resp.Body.Close()
++	} else {
++		// Keep the connection open while polling for the event stream result.
++		go func() {
++			_, _ = io.Copy(io.Discard, resp.Body)
++			resp.Body.Close()
++		}()
++	}
++
++	maxWait := 10
++	if correspondence {
++		maxWait = 300
++	}
++	for i := 0; i < maxWait; i++ {
++		if cancel != nil && cancel.Load() {
++			return "", chesslib.NoColor, fmt.Errorf("Seek cancelled")
++		}
++		select {
++		case res := <-found:
++			if res.Err != nil {
++				return "", chesslib.NoColor, res.Err
++			}
++			return res.GameID, res.Color, nil
++		case <-time.After(time.Second):
++		}
++	}
++	return "", chesslib.NoColor, fmt.Errorf("Seek timed out. No game started.")
++}
++
++func seekError(status int, body string) error {
++	switch status {
++	case http.StatusForbidden:
++		return fmt.Errorf("Token missing permissions. Please generate a new token with 'board:play' scope enabled.")
++	case http.StatusTooManyRequests:
++		return fmt.Errorf("Rate limit exceeded. Please wait a minute before trying again.")
++	case http.StatusUnauthorized:
++		return fmt.Errorf("Invalid token. Please check your token or generate a new one.")
++	case http.StatusBadRequest:
++		return fmt.Errorf("Invalid seek parameters: %s", body)
++	default:
++		return fmt.Errorf("Failed to seek game: %d - %s", status, body)
++	}
++}
++
++// JoinGame joins a game, preferring the color from the player's ongoing games.
++func (c *Client) JoinGame(gameID, myID string) (string, chesslib.Color, error) {
++	if games, err := c.GetOngoingGames(); err == nil {
++		for _, g := range games {
++			if g.GameID == gameID {
++				return gameID, ParseGameColor(g.Color), nil
++			}
++		}
++	}
++
++	acceptURL := c.baseURL() + "/challenge/" + gameID + "/accept"
++	req, err := c.newRequest(http.MethodPost, acceptURL, nil)
++	if err == nil {
++		if resp, err := c.httpClient().Do(req); err == nil {
++			_ = resp.Body.Close()
++			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
++				time.Sleep(time.Second)
++			}
++		}
++	}
++
++	const maxPollAttempts = 30
++	const pollInterval = time.Second
++
++	for attempt := 0; attempt < maxPollAttempts; attempt++ {
++		if games, err := c.GetOngoingGames(); err == nil {
++			for _, g := range games {
++				if g.GameID == gameID {
++					return gameID, ParseGameColor(g.Color), nil
++				}
++			}
++		}
++
++		streamURL := c.baseURL() + "/board/game/" + gameID + "/stream"
++		sreq, err := c.newRequest(http.MethodGet, streamURL, nil)
++		if err != nil {
++			return "", chesslib.NoColor, err
++		}
++		resp, err := c.httpClient().Do(sreq)
++		if err != nil {
++			if attempt < maxPollAttempts-1 {
++				time.Sleep(pollInterval)
++				continue
++			}
++			return "", chesslib.NoColor, fmt.Errorf("Failed to connect to game stream: %v", err)
++		}
++
++		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++			status := resp.StatusCode
++			resp.Body.Close()
++			switch status {
++			case http.StatusNotFound:
++				if attempt < maxPollAttempts-1 {
++					time.Sleep(pollInterval)
++					continue
++				}
++				return "", chesslib.NoColor, fmt.Errorf("Game not found or hasn't started yet. Make sure the challenge has been accepted by your opponent.")
++			case http.StatusForbidden:
++				return "", chesslib.NoColor, fmt.Errorf("Cannot join this game. You may not be a participant.")
++			case http.StatusUnauthorized:
++				return "", chesslib.NoColor, fmt.Errorf("Invalid token. Please check your token or generate a new one.")
++			default:
++				return "", chesslib.NoColor, fmt.Errorf("Failed to join game: %d", status)
++			}
++		}
++
++		reader := bufio.NewReader(resp.Body)
++		lineCount := 0
++		for {
++			line, err := reader.ReadString('\n')
++			if err != nil && err != io.EOF {
++				break
++			}
++			lineCount++
++			if lineCount > 100 {
++				break
++			}
++			trimmed := strings.TrimSpace(line)
++			if trimmed == "" {
++				if err == io.EOF {
++					break
++				}
++				continue
++			}
++			var event GameEvent
++			if jsonErr := json.Unmarshal([]byte(trimmed), &event); jsonErr == nil {
++				if event.Type == "gameFull" {
++					var color chesslib.Color
++					switch {
++					case event.White.ID != "" && event.White.ID == myID:
++						color = chesslib.White
++					case event.Black.ID != "" && event.Black.ID == myID:
++						color = chesslib.Black
++					default:
++						resp.Body.Close()
++						return "", chesslib.NoColor, fmt.Errorf("You are not a participant in this game.")
++					}
++					resp.Body.Close()
++					return event.ID, color, nil
++				}
++				if event.Type == "gameState" {
++					if games, gerr := c.GetOngoingGames(); gerr == nil {
++						for _, g := range games {
++							if g.GameID == gameID {
++								resp.Body.Close()
++								return gameID, ParseGameColor(g.Color), nil
++							}
++						}
++					}
++					break
++				}
++			}
++			if err == io.EOF {
++				break
++			}
++		}
++		resp.Body.Close()
++
++		if attempt < maxPollAttempts-1 {
++			time.Sleep(pollInterval)
++		}
++	}
++
++	return "", chesslib.NoColor, fmt.Errorf("Game not started yet or failed to join. If you created a challenge, make sure your opponent has accepted it. Otherwise, try using 'My Ongoing Games' to join.")
++}
+diff --git a/internal/lichess/lichess_test.go b/internal/lichess/lichess_test.go
+new file mode 100644
+index 0000000..06bac88
+--- /dev/null
++++ b/internal/lichess/lichess_test.go
+@@ -0,0 +1,234 @@
++package lichess
++
++import (
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestRequestHeadersAndOngoingGames(t *testing.T) {
++	var gotUA, gotAuth string
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		gotUA = r.Header.Get("User-Agent")
++		gotAuth = r.Header.Get("Authorization")
++		if r.URL.Path != "/account/playing" {
++			t.Errorf("path = %s", r.URL.Path)
++		}
++		w.Header().Set("Content-Type", "application/json")
++		fmt.Fprint(w, `{"nowPlaying":[{"gameId":"abc","fullId":"abcfull","color":"white","fen":"startpos","opponent":{"id":"u","username":"bob","rating":1200},"isMyTurn":true}]}`)
++	}))
++	defer srv.Close()
++
++	c := NewClient("token123")
++	c.BaseURL = srv.URL
++	games, err := c.GetOngoingGames()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if gotUA != "chess-tui (https://github.com/thomas-mauran/chess-tui)" {
++		t.Fatalf("user-agent = %q", gotUA)
++	}
++	if gotAuth != "Bearer token123" {
++		t.Fatalf("auth = %q", gotAuth)
++	}
++	if len(games) != 1 || games[0].GameID != "abc" || games[0].Color != "white" || !games[0].IsMyTurn {
++		t.Fatalf("games = %+v", games)
++	}
++}
++
++func TestSeekErrorMapping(t *testing.T) {
++	cases := []struct {
++		status int
++		want   string
++	}{
++		{403, "Token missing permissions. Please generate a new token with 'board:play' scope enabled."},
++		{429, "Rate limit exceeded. Please wait a minute before trying again."},
++		{401, "Invalid token. Please check your token or generate a new one."},
++	}
++	for _, tc := range cases {
++		err := seekError(tc.status, "")
++		if err == nil || err.Error() != tc.want {
++			t.Fatalf("status %d = %v, want %q", tc.status, err, tc.want)
++		}
++	}
++	err := seekError(400, "bad body")
++	if err == nil || err.Error() != "Invalid seek parameters: bad body" {
++		t.Fatalf("400 = %v", err)
++	}
++}
++
++func TestJoinErrorMapping(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		switch {
++		case r.URL.Path == "/account/playing":
++			fmt.Fprint(w, `{"nowPlaying":[]}`)
++		case r.URL.Path == "/challenge/g1/accept":
++			w.WriteHeader(http.StatusNotFound)
++		case r.URL.Path == "/board/game/g1/stream":
++			w.WriteHeader(http.StatusForbidden)
++		default:
++			w.WriteHeader(http.StatusNotFound)
++		}
++	}))
++	defer srv.Close()
++
++	c := NewClient("token")
++	c.BaseURL = srv.URL
++	_, _, err := c.JoinGame("g1", "me")
++	if err == nil || err.Error() != "Cannot join this game. You may not be a participant." {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestJoinUnauthorized(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		switch {
++		case r.URL.Path == "/account/playing":
++			fmt.Fprint(w, `{"nowPlaying":[]}`)
++		case r.URL.Path == "/challenge/g1/accept":
++			w.WriteHeader(http.StatusNotFound)
++		case r.URL.Path == "/board/game/g1/stream":
++			w.WriteHeader(http.StatusUnauthorized)
++		default:
++			w.WriteHeader(http.StatusNotFound)
++		}
++	}))
++	defer srv.Close()
++
++	c := NewClient("token")
++	c.BaseURL = srv.URL
++	_, _, err := c.JoinGame("g1", "me")
++	if err == nil || err.Error() != "Invalid token. Please check your token or generate a new one." {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestMakeMoveAndResignErrors(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if r.URL.Path == "/board/game/g1/resign" {
++			w.WriteHeader(http.StatusBadRequest)
++			fmt.Fprint(w, "nope")
++			return
++		}
++		w.WriteHeader(http.StatusTeapot)
++	}))
++	defer srv.Close()
++
++	c := NewClient("t")
++	c.BaseURL = srv.URL
++	if err := c.MakeMove("g1", "e2e4"); err == nil || err.Error() != "Failed to make move: 418 I'm a teapot" {
++		t.Fatalf("move err = %v", err)
++	}
++	if err := c.ResignGame("g1"); err == nil || err.Error() != "Failed to resign game: 400 Bad Request - nope" {
++		t.Fatalf("resign err = %v", err)
++	}
++}
++
++func TestBoardStreamParsing(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/x-ndjson")
++		flusher, _ := w.(http.Flusher)
++		fmt.Fprint(w, `{"type":"gameFull","id":"g1","white":{"id":"me"},"black":{"id":"op"},"state":{"moves":"e2e4 e7e5","status":"started"}}`+"\n")
++		fmt.Fprint(w, `{"type":"gameState","moves":"e2e4 e7e5 g1f3","status":"started"}`+"\n")
++		fmt.Fprint(w, `{"type":"gameState","moves":"e2e4 e7e5 g1f3","status":"mate"}`+"\n")
++		if flusher != nil {
++			flusher.Flush()
++		}
++	}))
++	defer srv.Close()
++
++	c := NewClient("t")
++	c.BaseURL = srv.URL
++	ch := make(chan string, 16)
++	if err := c.StreamGame("g1", ch, nil); err != nil {
++		t.Fatal(err)
++	}
++
++	got := collect(t, ch, 4)
++	want := []string{"e7e5", "INIT_MOVES:2", "g1f3", "GAME_STATUS:checkmate"}
++	for i := range want {
++		if got[i] != want[i] {
++			t.Fatalf("message %d = %q, want %q (all=%v)", i, got[i], want[i], got)
++		}
++	}
++}
++
++func TestBoardStream404Stops(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(http.StatusNotFound)
++	}))
++	defer srv.Close()
++
++	c := NewClient("t")
++	c.BaseURL = srv.URL
++	ch := make(chan string, 4)
++	if err := c.StreamGame("g1", ch, nil); err != nil {
++		t.Fatal(err)
++	}
++	select {
++	case msg := <-ch:
++		t.Fatalf("unexpected message %q", msg)
++	case <-time.After(300 * time.Millisecond):
++	}
++}
++
++func TestEventStreamParsing(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/x-ndjson")
++		fmt.Fprint(w, "\n")
++		fmt.Fprint(w, `{"type":"gameStart","game":{"gameId":"newgame","color":"black"}}`+"\n")
++	}))
++	defer srv.Close()
++
++	c := NewClient("t")
++	c.BaseURL = srv.URL
++	cancel := &atomic.Bool{}
++	found := make(chan GameFound, 1)
++	c.SpawnEventStream(map[string]struct{}{"old": {}}, cancel, found)
++
++	select {
++	case res := <-found:
++		if res.Err != nil || res.GameID != "newgame" {
++			t.Fatalf("found = %+v", res)
++		}
++		if res.Color != ParseGameColor("black") {
++			t.Fatalf("color = %v", res.Color)
++		}
++	case <-time.After(2 * time.Second):
++		t.Fatal("timed out waiting for game start")
++	}
++}
++
++func TestGetGameInfo(t *testing.T) {
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		fmt.Fprint(w, `{"turns":7,"lastMove":"e2e4"}`+"\n")
++	}))
++	defer srv.Close()
++
++	c := NewClient("t")
++	c.BaseURL = srv.URL
++	turns, last, err := c.GetGameInfo("g1")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if turns != 7 || last == nil || *last != "e2e4" {
++		t.Fatalf("turns=%d last=%v", turns, last)
++	}
++}
++
++func collect(t *testing.T, ch <-chan string, n int) []string {
++	t.Helper()
++	var out []string
++	for i := 0; i < n; i++ {
++		select {
++		case msg := <-ch:
++			out = append(out, msg)
++		case <-time.After(2 * time.Second):
++			t.Fatalf("timed out after %d messages: %v", len(out), out)
++		}
++	}
++	return out
++}
+diff --git a/internal/lichess/models.go b/internal/lichess/models.go
+new file mode 100644
+index 0000000..3f3d25f
+--- /dev/null
++++ b/internal/lichess/models.go
+@@ -0,0 +1,163 @@
++// Package lichess ports the Lichess REST/SSE client.
++package lichess
++
++import (
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"strings"
++	"time"
++
++	chesslib "github.com/notnil/chess"
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++)
++
++// Client is the Lichess HTTP client.
++type Client struct {
++	Token   string
++	BaseURL string
++	HTTP    *http.Client
++}
++
++// NewClient creates a client with the given bearer token.
++func NewClient(token string) *Client {
++	return &Client{
++		Token:   token,
++		BaseURL: constants.LichessAPIURL,
++		HTTP: &http.Client{
++			Timeout: 10 * time.Second,
++		},
++	}
++}
++
++// Player is a game participant.
++type Player struct {
++	ID       string  `json:"id"`
++	Username string  `json:"username"`
++	Rating   *uint16 `json:"rating"`
++}
++
++// GameState mirrors the Lichess board game state.
++type GameState struct {
++	Moves  string `json:"moves"`
++	Status string `json:"status"`
++}
++
++// GameEvent is a board stream event (gameFull / gameState / chatLine).
++type GameEvent struct {
++	Type   string     `json:"type"`
++	ID     string     `json:"id"`
++	White  Player     `json:"white"`
++	Black  Player     `json:"black"`
++	State  *GameState `json:"state"`
++	Moves  string     `json:"moves"`
++	Status string     `json:"status"`
++}
++
++// EventStreamGame is the game payload of an event stream event.
++type EventStreamGame struct {
++	GameID string `json:"gameId"`
++	Color  string `json:"color"`
++}
++
++// EventStreamEvent is an event stream event.
++type EventStreamEvent struct {
++	Type string           `json:"type"`
++	Game *EventStreamGame `json:"game"`
++}
++
++// OpponentInfo describes an ongoing game opponent.
++type OpponentInfo struct {
++	ID       string  `json:"id"`
++	Username string  `json:"username"`
++	Rating   *uint16 `json:"rating"`
++}
++
++// OngoingGame is a game currently being played.
++type OngoingGame struct {
++	GameID   string       `json:"gameId"`
++	FullID   string       `json:"fullId"`
++	Color    string       `json:"color"`
++	FEN      string       `json:"fen"`
++	Opponent OpponentInfo `json:"opponent"`
++	IsMyTurn bool         `json:"isMyTurn"`
++}
++
++// OngoingGamesResponse wraps the ongoing games list.
++type OngoingGamesResponse struct {
++	NowPlaying []OngoingGame `json:"nowPlaying"`
++}
++
++func (c *Client) baseURL() string {
++	if c.BaseURL != "" {
++		return c.BaseURL
++	}
++	return constants.LichessAPIURL
++}
++
++func (c *Client) httpClient() *http.Client {
++	if c.HTTP != nil {
++		return c.HTTP
++	}
++	return http.DefaultClient
++}
++
++func (c *Client) newRequest(method, url string, body io.Reader) (*http.Request, error) {
++	req, err := http.NewRequest(method, url, body)
++	if err != nil {
++		return nil, err
++	}
++	req.Header.Set("User-Agent", constants.LichessUserAgent)
++	if c.Token != "" {
++		req.Header.Set("Authorization", "Bearer "+c.Token)
++	}
++	return req, nil
++}
++
++// GetOngoingGames fetches the player's ongoing games.
++func (c *Client) GetOngoingGames() ([]OngoingGame, error) {
++	url := c.baseURL() + "/account/playing"
++	req, err := c.newRequest(http.MethodGet, url, nil)
++	if err != nil {
++		return nil, err
++	}
++	resp, err := c.httpClient().Do(req)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		if resp.StatusCode == http.StatusUnauthorized {
++			return nil, fmt.Errorf("Invalid token. Please check your token or generate a new one.")
++		}
++		return nil, fmt.Errorf("Failed to fetch ongoing games: %s", resp.Status)
++	}
++
++	var out OngoingGamesResponse
++	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
++		return nil, err
++	}
++	return out.NowPlaying, nil
++}
++
++// ParseGameColor converts a Lichess color string into a chess color.
++func ParseGameColor(colorStr string) chesslib.Color {
++	if colorStr == "white" {
++		return chesslib.White
++	}
++	return chesslib.Black
++}
++
++// StatusName normalizes a status that may be nested as {"name": ...}.
++func normalizeStatus(status string) string {
++	status = strings.TrimSpace(status)
++	var m struct {
++		Name string `json:"name"`
++	}
++	if json.Unmarshal([]byte(status), &m) == nil && m.Name != "" {
++		return m.Name
++	}
++	return status
++}
+diff --git a/internal/lichess/stream.go b/internal/lichess/stream.go
+new file mode 100644
+index 0000000..b41ba30
+--- /dev/null
++++ b/internal/lichess/stream.go
+@@ -0,0 +1,262 @@
++package lichess
++
++import (
++	"bufio"
++	"encoding/json"
++	"net/http"
++	"strings"
++	"sync/atomic"
++	"time"
++
++	chesslib "github.com/notnil/chess"
++)
++
++// GameFound reports a game detected on the event stream.
++type GameFound struct {
++	GameID string
++	Color  chesslib.Color
++	Err    error
++}
++
++// SendStatusMessage maps a Lichess game status into a GAME_STATUS message.
++func SendStatusMessage(status string, moveTx chan<- string) {
++	var msg string
++	switch status {
++	case "mate", "checkmate":
++		msg = "GAME_STATUS:checkmate"
++	case "draw", "stalemate", "repetition", "insufficient", "fifty":
++		msg = "GAME_STATUS:draw"
++	case "resign":
++		msg = "GAME_STATUS:resign"
++	case "aborted":
++		msg = "GAME_STATUS:aborted"
++	default:
++		return
++	}
++	moveTx <- msg
++}
++
++// SpawnEventStream opens the event stream, looking for a gameStart whose id
++// was not present before the seek.
++func (c *Client) SpawnEventStream(initial map[string]struct{}, cancel *atomic.Bool, gameFound chan<- GameFound) {
++	go func() {
++		url := c.baseURL() + "/stream/event"
++		for {
++			if cancel != nil && cancel.Load() {
++				return
++			}
++
++			req, err := c.newRequest(http.MethodGet, url, nil)
++			if err != nil {
++				time.Sleep(5 * time.Second)
++				continue
++			}
++			resp, err := c.httpClient().Do(req)
++			if err != nil {
++				time.Sleep(5 * time.Second)
++				continue
++			}
++			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++				resp.Body.Close()
++				time.Sleep(5 * time.Second)
++				continue
++			}
++
++			scanner := bufio.NewScanner(resp.Body)
++			scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
++			for scanner.Scan() {
++				if cancel != nil && cancel.Load() {
++					resp.Body.Close()
++					return
++				}
++				line := strings.TrimSpace(scanner.Text())
++				if line == "" {
++					continue
++				}
++				var event EventStreamEvent
++				if err := json.Unmarshal([]byte(line), &event); err != nil {
++					continue
++				}
++				if event.Type == "gameStart" && event.Game != nil {
++					if _, seen := initial[event.Game.GameID]; !seen {
++						resp.Body.Close()
++						gameFound <- GameFound{GameID: event.Game.GameID, Color: ParseGameColor(event.Game.Color)}
++						return
++					}
++				}
++			}
++			resp.Body.Close()
++			time.Sleep(5 * time.Second)
++		}
++	}()
++}
++
++// SpawnGameStream opens the board game stream and emits only newly arrived
++// moves on moveTx.
++func (c *Client) SpawnGameStream(gameID string, moveTx chan<- string, playerColor *chesslib.Color) {
++	go func() {
++		url := c.baseURL() + "/board/game/stream/" + gameID
++
++		var lastTurns *int
++		var lastMoveSeen string
++		var lastStatus string
++
++		for {
++			req, err := c.newRequest(http.MethodGet, url, nil)
++			if err != nil {
++				time.Sleep(5 * time.Second)
++				continue
++			}
++			resp, err := c.httpClient().Do(req)
++			if err != nil {
++				time.Sleep(5 * time.Second)
++				continue
++			}
++			if resp.StatusCode == http.StatusNotFound {
++				resp.Body.Close()
++				return
++			}
++			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++				resp.Body.Close()
++				time.Sleep(5 * time.Second)
++				continue
++			}
++
++			scanner := bufio.NewScanner(resp.Body)
++			scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
++			for scanner.Scan() {
++				line := strings.TrimSpace(scanner.Text())
++				if line == "" {
++					continue
++				}
++				var event GameEvent
++				if err := json.Unmarshal([]byte(line), &event); err != nil {
++					handleRawGameEvent(line, moveTx, &lastTurns, &lastMoveSeen, &lastStatus)
++					continue
++				}
++				switch event.Type {
++				case "gameFull":
++					if lastTurns == nil {
++						state := event.State
++						if state == nil {
++							continue
++						}
++						turns := len(strings.Fields(state.Moves))
++						lastTurns = &turns
++						if turns > 0 {
++							last := lastField(state.Moves)
++							if last != "" {
++								moveTx <- last
++								lastMoveSeen = last
++							}
++						}
++						moveTx <- "INIT_MOVES:" + itoa(turns)
++					}
++				case "gameState":
++					current := len(strings.Fields(event.Moves))
++					if lastStatus != event.Status {
++						SendStatusMessage(event.Status, moveTx)
++						lastStatus = event.Status
++					}
++					if lastTurns == nil {
++						lastTurns = &current
++						if current > 0 {
++							last := lastField(event.Moves)
++							if last != "" {
++								moveTx <- last
++								lastMoveSeen = last
++							}
++						}
++						moveTx <- "INIT_MOVES:" + itoa(current)
++					} else if current > *lastTurns {
++						last := lastField(event.Moves)
++						if last != "" && last != lastMoveSeen {
++							moveTx <- last
++							lastMoveSeen = last
++							lastTurns = &current
++						}
++					}
++				case "chatLine":
++					continue
++				}
++			}
++			resp.Body.Close()
++			time.Sleep(5 * time.Second)
++		}
++	}()
++}
++
++func handleRawGameEvent(line string, moveTx chan<- string, lastTurns **int, lastMoveSeen *string, lastStatus *string) {
++	var payload struct {
++		FEN      string          `json:"fen"`
++		Turns    *uint64         `json:"turns"`
++		LastMove string          `json:"lastMove"`
++		Status   json.RawMessage `json:"status"`
++	}
++	if err := json.Unmarshal([]byte(line), &payload); err != nil {
++		return
++	}
++	if payload.FEN == "" || payload.Turns == nil {
++		return
++	}
++	if *lastTurns == nil {
++		turns := int(*payload.Turns)
++		*lastTurns = &turns
++		if turns > 0 && payload.LastMove != "" {
++			moveTx <- payload.LastMove
++			*lastMoveSeen = payload.LastMove
++		}
++		moveTx <- "INIT_MOVES:" + itoa(turns)
++	} else if payload.LastMove != "" && payload.LastMove != *lastMoveSeen {
++		moveTx <- payload.LastMove
++		*lastMoveSeen = payload.LastMove
++		turns := int(*payload.Turns)
++		*lastTurns = &turns
++	}
++	if len(payload.Status) > 0 {
++		status := normalizeStatus(string(payload.Status))
++		if status != "" && status != *lastStatus {
++			SendStatusMessage(status, moveTx)
++			*lastStatus = status
++		}
++	}
++}
++
++// StreamGame starts streaming a board game into moveTx.
++func (c *Client) StreamGame(gameID string, moveTx chan<- string, playerColor *chesslib.Color) error {
++	if gameID == "" {
++		return nil
++	}
++	c.SpawnGameStream(gameID, moveTx, playerColor)
++	return nil
++}
++
++func lastField(s string) string {
++	fields := strings.Fields(s)
++	if len(fields) == 0 {
++		return ""
++	}
++	return fields[len(fields)-1]
++}
++
++func itoa(n int) string {
++	if n == 0 {
++		return "0"
++	}
++	neg := n < 0
++	if neg {
++		n = -n
++	}
++	var buf [20]byte
++	i := len(buf)
++	for n > 0 {
++		i--
++		buf[i] = byte('0' + n%10)
++		n /= 10
++	}
++	if neg {
++		i--
++		buf[i] = '-'
++	}
++	return string(buf[i:])
++}
+diff --git a/internal/pgn/pgn.go b/internal/pgn/pgn.go
+new file mode 100644
+index 0000000..6b0996c
+--- /dev/null
++++ b/internal/pgn/pgn.go
+@@ -0,0 +1,389 @@
++// Package pgn ports PGN parsing, navigation and auto-play.
++package pgn
++
++import (
++	"os"
++	"strings"
++
++	chesslib "github.com/notnil/chess"
++)
++
++// Speed is one auto-play rate multiplier.
++type Speed struct {
++	Rate  float32
++	Label string
++}
++
++// Speeds are the auto-play rate multipliers.
++var Speeds = []Speed{
++	{0.5, "0.5x"},
++	{1.0, "1x"},
++	{1.5, "1.5x"},
++	{2.0, "2x"},
++	{2.5, "2.5x"},
++	{3.0, "3x"},
++	{4.0, "4x"},
++}
++
++// DefaultSpeedIdx selects the 1x speed.
++const DefaultSpeedIdx = 1
++
++// Viewer is a parsed PGN game with navigation and auto-play state.
++type Viewer struct {
++	// Positions[i] is the position after Moves[i-1]; Positions[0] is the start.
++	Positions []*chesslib.Position
++	Moves     []*chesslib.Move
++	SANs      []string
++	// CurrentPly is the currently shown ply (0 = start).
++	CurrentPly int
++	// Auto-play state.
++	AutoPlay      bool
++	SpeedIdx      int
++	AutoPlayAccum float32
++	// EndBannerDismissed is set when the end-of-game banner is hidden.
++	EndBannerDismissed bool
++	// Metadata from the PGN headers.
++	Title       string
++	White       string
++	Black       string
++	Result      string
++	Termination string
++}
++
++// FromFile loads all games from a PGN file.
++func FromFile(path string) ([]*Viewer, error) {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return nil, &readError{path: path, err: err}
++	}
++	return FromPGNString(string(content))
++}
++
++// FromPGNString parses one or more games from a PGN string.
++func FromPGNString(pgn string) ([]*Viewer, error) {
++	var viewers []*Viewer
++	for _, gameText := range splitPGNGames(pgn) {
++		if v, err := parseSingleGame(gameText); err == nil {
++			viewers = append(viewers, v)
++		}
++	}
++	if len(viewers) == 0 {
++		return nil, &parseError{msg: "No valid games found in PGN"}
++	}
++	return viewers, nil
++}
++
++type readError struct {
++	path string
++	err  error
++}
++
++func (e *readError) Error() string {
++	return "Cannot read '" + e.path + "': " + e.err.Error()
++}
++
++type parseError struct {
++	msg string
++}
++
++func (e *parseError) Error() string { return e.msg }
++
++// CurrentPosition returns the board position at the current ply.
++func (v *Viewer) CurrentPosition() *chesslib.Position {
++	return v.Positions[v.CurrentPly]
++}
++
++// LastMove returns the move that led to the current ply.
++func (v *Viewer) LastMove() *chesslib.Move {
++	if v.CurrentPly > 0 && v.CurrentPly-1 < len(v.Moves) {
++		return v.Moves[v.CurrentPly-1]
++	}
++	return nil
++}
++
++// Next advances one ply forward, clamped at the final position.
++func (v *Viewer) Next() {
++	if v.CurrentPly < len(v.Moves) {
++		v.CurrentPly++
++	}
++}
++
++// Prev steps one ply back and clears the end-banner-dismissed flag.
++func (v *Viewer) Prev() {
++	if v.CurrentPly > 0 {
++		v.CurrentPly--
++		v.EndBannerDismissed = false
++	}
++}
++
++// GotoStart jumps to the starting position.
++func (v *Viewer) GotoStart() {
++	v.CurrentPly = 0
++	v.EndBannerDismissed = false
++}
++
++// GotoEnd jumps to the final position.
++func (v *Viewer) GotoEnd() {
++	v.CurrentPly = len(v.Moves)
++}
++
++// TotalPlies returns the number of half-moves in the game.
++func (v *Viewer) TotalPlies() int {
++	return len(v.Moves)
++}
++
++// IsAtEnd reports whether the viewer is on the final position.
++func (v *Viewer) IsAtEnd() bool {
++	return len(v.Moves) > 0 && v.CurrentPly == len(v.Moves)
++}
++
++// ResultSummary returns the human-readable result string.
++func (v *Viewer) ResultSummary() string {
++	switch v.Result {
++	case "1-0":
++		return v.White + " (White) won"
++	case "0-1":
++		return v.Black + " (Black) won"
++	case "1/2-1/2":
++		return "Draw"
++	default:
++		return v.Result
++	}
++}
++
++// Tick advances auto-play when enabled (called on each 250ms tick).
++func (v *Viewer) Tick() {
++	if !v.AutoPlay {
++		return
++	}
++	rate := Speeds[v.SpeedIdx].Rate
++	v.AutoPlayAccum += rate * 0.25
++	for v.AutoPlayAccum >= 1.0 {
++		v.AutoPlayAccum -= 1.0
++		if v.CurrentPly < len(v.Moves) {
++			v.CurrentPly++
++		} else {
++			v.AutoPlay = false
++			v.AutoPlayAccum = 0
++			break
++		}
++	}
++}
++
++// SpeedLabel returns the current auto-play speed label.
++func (v *Viewer) SpeedLabel() string {
++	return Speeds[v.SpeedIdx].Label
++}
++
++// SpeedUp increases the auto-play speed, clamped at the maximum.
++func (v *Viewer) SpeedUp() {
++	if v.SpeedIdx+1 < len(Speeds) {
++		v.SpeedIdx++
++	}
++}
++
++// SpeedDown decreases the auto-play speed, clamped at the minimum.
++func (v *Viewer) SpeedDown() {
++	if v.SpeedIdx > 0 {
++		v.SpeedIdx--
++	}
++}
++
++func splitPGNGames(pgn string) []string {
++	var games []string
++	var current strings.Builder
++	hasMovetext := false
++
++	lines := strings.Split(pgn, "\n")
++	for _, line := range lines {
++		trimmed := strings.TrimSpace(line)
++		if strings.HasPrefix(trimmed, "[") && hasMovetext {
++			if strings.TrimSpace(current.String()) != "" {
++				games = append(games, current.String())
++				current.Reset()
++			}
++			hasMovetext = false
++		}
++		if trimmed != "" && !strings.HasPrefix(trimmed, "[") {
++			hasMovetext = true
++		}
++		current.WriteString(line)
++		current.WriteString("\n")
++	}
++	if strings.TrimSpace(current.String()) != "" {
++		games = append(games, current.String())
++	}
++	if len(games) == 0 && strings.TrimSpace(pgn) != "" {
++		games = append(games, pgn)
++	}
++	return games
++}
++
++func parseSingleGame(pgn string) (*Viewer, error) {
++	title := "?"
++	white := "?"
++	black := "?"
++	result := "*"
++	termination := ""
++
++	for _, line := range strings.Split(pgn, "\n") {
++		t := strings.TrimSpace(line)
++		if !strings.HasPrefix(t, "[") {
++			continue
++		}
++		val, ok := extractHeaderValue(t)
++		if !ok {
++			continue
++		}
++		lower := strings.ToLower(t)
++		switch {
++		case strings.HasPrefix(lower, "[event"):
++			title = val
++		case strings.HasPrefix(lower, "[white ") || strings.HasPrefix(lower, "[white\""):
++			white = val
++		case strings.HasPrefix(lower, "[black ") || strings.HasPrefix(lower, "[black\""):
++			black = val
++		case strings.HasPrefix(lower, "[result"):
++			result = val
++		case strings.HasPrefix(lower, "[termination"):
++			termination = val
++		}
++	}
++
++	var movetext strings.Builder
++	pastHeaders := false
++	for _, line := range strings.Split(pgn, "\n") {
++		t := strings.TrimSpace(line)
++		if !strings.HasPrefix(t, "[") {
++			pastHeaders = true
++		}
++		if pastHeaders {
++			movetext.WriteString(line)
++			movetext.WriteString(" ")
++		}
++	}
++
++	sanStrings := extractSANTokens(movetext.String())
++
++	positions := []*chesslib.Position{chesslib.StartingPosition()}
++	var moves []*chesslib.Move
++	var sans []string
++	pos := chesslib.StartingPosition()
++
++	for _, sanStr := range sanStrings {
++		clean := strings.TrimRight(sanStr, "+#")
++		mv, err := chesslib.AlgebraicNotation{}.Decode(pos, clean)
++		if err != nil {
++			break
++		}
++		next := pos.Update(mv)
++		moves = append(moves, mv)
++		sans = append(sans, sanStr)
++		pos = next
++		positions = append(positions, pos)
++	}
++
++	if len(moves) == 0 {
++		return nil, &parseError{msg: "No moves parsed from game '" + title + "'"}
++	}
++
++	return &Viewer{
++		Positions:   positions,
++		Moves:       moves,
++		SANs:        sans,
++		CurrentPly:  0,
++		SpeedIdx:    DefaultSpeedIdx,
++		Title:       title,
++		White:       white,
++		Black:       black,
++		Result:      result,
++		Termination: termination,
++	}, nil
++}
++
++func extractHeaderValue(line string) (string, bool) {
++	start := strings.Index(line, "\"")
++	end := strings.LastIndex(line, "\"")
++	if start < 0 || end <= start {
++		return "", false
++	}
++	return line[start+1 : end], true
++}
++
++func extractSANTokens(movetext string) []string {
++	text := movetext
++
++	for {
++		s := strings.Index(text, "{")
++		e := strings.Index(text, "}")
++		if s >= 0 && e > s {
++			text = text[:s] + " " + text[e+1:]
++			continue
++		}
++		break
++	}
++
++	for {
++		found := false
++		runes := []rune(text)
++		depth := 0
++		openIdx := -1
++		for ci, c := range runes {
++			switch c {
++			case '(':
++				if depth == 0 {
++					openIdx = ci
++				}
++				depth++
++			case ')':
++				if depth > 0 {
++					depth--
++					if depth == 0 && openIdx >= 0 {
++						byteStart := len(string(runes[:openIdx]))
++						byteEnd := len(string(runes[:ci+1]))
++						text = text[:byteStart] + " " + text[byteEnd:]
++						found = true
++					}
++				}
++			}
++			if found {
++				break
++			}
++		}
++		if !found {
++			break
++		}
++	}
++
++	var result []string
++	for _, token := range strings.Fields(text) {
++		if isMoveNumber(token) {
++			continue
++		}
++		if strings.HasPrefix(token, "$") {
++			continue
++		}
++		switch token {
++		case "1-0", "0-1", "1/2-1/2", "*":
++			continue
++		}
++		clean := strings.TrimRight(token, "!?")
++		if clean != "" {
++			result = append(result, clean)
++		}
++	}
++	return result
++}
++
++func isMoveNumber(token string) bool {
++	trimmed := strings.TrimRight(token, ".")
++	if trimmed == "" {
++		return false
++	}
++	for _, c := range trimmed {
++		if c < '0' || c > '9' {
++			return false
++		}
++	}
++	return true
++}
+diff --git a/internal/pgn/pgn_test.go b/internal/pgn/pgn_test.go
+new file mode 100644
+index 0000000..204c358
+--- /dev/null
++++ b/internal/pgn/pgn_test.go
+@@ -0,0 +1,164 @@
++package pgn
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++const checkmatePGN = `[Event "Live"]
++[White "A"]
++[Black "B"]
++[Result "0-1"]
++[Termination "B won by checkmate"]
++
++1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 0-1
++`
++
++func TestParseHeadersAndTermination(t *testing.T) {
++	games, err := FromPGNString(checkmatePGN)
++	if err != nil {
++		t.Fatal(err)
++	}
++	v := games[0]
++	if v.White != "A" || v.Black != "B" || v.Result != "0-1" || v.Termination != "B won by checkmate" {
++		t.Fatalf("headers = %+v", v)
++	}
++	if v.ResultSummary() != "B (Black) won" {
++		t.Fatalf("summary = %q", v.ResultSummary())
++	}
++}
++
++func TestNavigateBackFromFinal(t *testing.T) {
++	games, _ := FromPGNString(checkmatePGN)
++	v := games[0]
++	v.GotoEnd()
++	if !v.IsAtEnd() {
++		t.Fatal("should be at end")
++	}
++	endPly := v.CurrentPly
++	v.Prev()
++	if v.CurrentPly != endPly-1 {
++		t.Fatalf("ply = %d, want %d", v.CurrentPly, endPly-1)
++	}
++	if v.IsAtEnd() {
++		t.Fatal("should no longer be at end")
++	}
++}
++
++func TestSpeedClamped(t *testing.T) {
++	games, _ := FromPGNString(checkmatePGN)
++	v := games[0]
++	if v.SpeedLabel() != "1x" {
++		t.Fatalf("initial speed = %q", v.SpeedLabel())
++	}
++	for i := 0; i < 20; i++ {
++		v.SpeedUp()
++	}
++	if v.SpeedIdx != len(Speeds)-1 || v.SpeedLabel() != "4x" {
++		t.Fatalf("max speed = %q", v.SpeedLabel())
++	}
++	for i := 0; i < 20; i++ {
++		v.SpeedDown()
++	}
++	if v.SpeedIdx != 0 || v.SpeedLabel() != "0.5x" {
++		t.Fatalf("min speed = %q", v.SpeedLabel())
++	}
++}
++
++func TestPrevClearsEndBanner(t *testing.T) {
++	games, _ := FromPGNString(checkmatePGN)
++	v := games[0]
++	v.GotoEnd()
++	v.EndBannerDismissed = true
++	v.Prev()
++	if v.EndBannerDismissed {
++		t.Fatal("banner should be cleared")
++	}
++}
++
++func TestSamplePgn(t *testing.T) {
++	path := filepath.Join("..", "..", "examples", "sample.pgn")
++	if _, err := os.Stat(path); err != nil {
++		t.Skipf("sample.pgn not found: %v", err)
++	}
++	games, err := FromFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(games) != 1 {
++		t.Fatalf("games = %d, want 1", len(games))
++	}
++	v := games[0]
++	if v.Title != "Live Chess" || v.White != "Player A" || v.Black != "Player B" || v.Result != "0-1" {
++		t.Fatalf("headers = %+v", v)
++	}
++	if v.Termination != "Player B won by checkmate" {
++		t.Fatalf("termination = %q", v.Termination)
++	}
++	if v.TotalPlies() == 0 {
++		t.Fatal("expected moves")
++	}
++}
++
++func TestReadError(t *testing.T) {
++	_, err := FromFile("/no/such/file.pgn")
++	if err == nil || !strings.HasPrefix(err.Error(), "Cannot read '/no/such/file.pgn':") {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestNoValidGames(t *testing.T) {
++	_, err := FromPGNString("this is not a pgn")
++	if err == nil || err.Error() != "No valid games found in PGN" {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestStopOnIllegalMove(t *testing.T) {
++	pgn := `[Event "X"]
++
++1. e4 e5 2. Ke2 Ke7 3. Qh5 Nc6 4. Qxf7# 0-1
++`
++	games, err := FromPGNString(pgn)
++	if err != nil {
++		t.Fatal(err)
++	}
++	v := games[0]
++	// The illegal/parsable stop should leave the game valid but shorter than
++	// the full seven moves.
++	if v.TotalPlies() == 0 {
++		t.Fatal("expected some valid moves")
++	}
++	if v.TotalPlies() >= 7 {
++		t.Fatalf("expected stop on illegal move, got %d plies", v.TotalPlies())
++	}
++}
++
++func TestSplitMultipleGames(t *testing.T) {
++	multi := `[Event "One"]
++[White "A"]
++[Black "B"]
++[Result "1-0"]
++
++1. e4 e5 2. Nf3 1-0
++
++[Event "Two"]
++[White "C"]
++[Black "D"]
++[Result "0-1"]
++
++1. d4 d5 2. c4 0-1
++`
++	games, err := FromPGNString(multi)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(games) != 2 {
++		t.Fatalf("games = %d, want 2", len(games))
++	}
++	if games[0].Title != "One" || games[1].Title != "Two" {
++		t.Fatalf("titles = %q, %q", games[0].Title, games[1].Title)
++	}
++}
+diff --git a/internal/skin/default_skins.json b/internal/skin/default_skins.json
+new file mode 100644
+index 0000000..a1f6e09
+--- /dev/null
++++ b/internal/skin/default_skins.json
+@@ -0,0 +1,221 @@
++{
++  "piece_styles": [
++    {
++      "name": "CLASSIC",
++      "small": {
++        "bishop": "♝",
++        "king": "♚",
++        "knight": "♞",
++        "pawn": "♟",
++        "queen": "♛",
++        "rook": "♜"
++      },
++      "compact": {
++        "bishop": "\n █x█\n ███",
++        "king": "\n ▙✚▟\n ███",
++        "knight": "\n▞█▙\n ██",
++        "pawn": "\n ▟▙\n ██",
++        "queen": "▲▲▲\n █◈█\n ███",
++        "rook": "\n ▙█▟\n ███"
++      },
++      "extended": {
++        "bishop": " \n █x█\n ███\n ▗███▖",
++        "king": " \n▙█▟\n ▙✚▟\n ▗███▖",
++        "knight": " \n ▞█▙\n▞███\n ▗███▖",
++        "pawn": "   \n   \n ▟▙\n ██",
++        "queen": " ▲▲▲\n ◀█◈█▶\n ◥███◤\n ▗███▖",
++        "rook": " \n ▙█▟\n ███\n ▗███▖"
++      },
++      "large": {
++        "bishop": "\n   ⭘   \n  █x█  \n  ███  \n▗█████▖",
++        "king": "   ✚   \n ▞▀▄▀▚ \n ▙▄█▄▟ \n ▐███▌ \n▗█████▖",
++        "knight": "      \n ▟▛██▙\n▟█████\n▀▀▟██▌\n ▟████",
++        "pawn": "     \n     \n ▟█▙ \n ▜█▛ \n▟███▙",
++        "queen": "       \n◀█▟█▙█▶\n ◥█◈█◤ \n  ███  \n▗█████▖",
++        "rook": "       \n █▟█▙█ \n ▜███▛ \n ▐███▌ \n▗█████▖"
++      }
++    },
++    {
++      "name": "SIMPLE",
++      "small": {
++        "bishop": "s",
++        "king": "s",
++        "knight": "s",
++        "pawn": "s",
++        "queen": "s",
++        "rook": "s"
++      },
++      "compact": {
++        "bishop": "c",
++        "king": "c",
++        "knight": "c",
++        "pawn": "c",
++        "queen": "c",
++        "rook": "c"
++      },
++      "extended": {
++        "bishop": "e",
++        "king": "e",
++        "knight": "e",
++        "pawn": "e",
++        "queen": "e",
++        "rook": "e"
++      },
++      "large": {
++        "bishop": "l",
++        "king": "l",
++        "knight": "l",
++        "pawn": "l",
++        "queen": "l",
++        "rook": "l"
++      }
++    },
++    {
++      "name": "MINIMAL",
++      "small": {
++        "pawn": "•",
++        "bishop": "╱",
++        "knight": "┐",
++        "rook": "▣",
++        "queen": "♛",
++        "king": "♚"
++      },
++      "compact": {
++        "pawn": " ░ \n ░ \n   ",
++        "bishop": " ▓ \n ░ \n   ",
++        "knight": " ▓ \n ▓ \n   ",
++        "rook": " ▓ \n ▓ \n ▓ ",
++        "queen": " ▓ \n░▓░\n   ",
++        "king": " ▓ \n ▓ \n ▓ "
++      },
++      "extended": {
++        "pawn": "  ░  \n  ░  \n     ",
++        "bishop": "  ▓  \n  ░╲ \n     ",
++        "knight": "  ▓▓ \n   ▓ \n     ",
++        "rook": " ▓ ▓ \n ▓▓▓ \n     ",
++        "queen": " ▓ ▓ \n  ▓▓ \n     ",
++        "king": "  ▓  \n ▓ ▓ \n     "
++      },
++      "large": {
++        "pawn": "   ░   \n  ░░░  \n  ░░░  \n ░░░░░ \n ░░░░░ \n",
++        "bishop": "   ▓   \n  ▓ ▓  \n  ░▓░  \n ▓▓▓▓▓ \n ░▓▓▓░ \n",
++        "knight": "   ▞    \n   ▞▀▀▀▚  \n  ▙▄█▄▟ \n  ▐█▀█▌ \n ▗████▖\n",
++        "rook": " ▓ ▓ ▓ \n ▓▓▓▓▓ \n ▓ ▓ ▓ \n ▓ ▓ ▓ \n ▓▓▓▓▓ \n",
++        "queen": "    ✦    \n  ▓▓▓  \n ▓▓▓▓▓ \n ▓ ▓ ▓ \n ▓▓▓▓▓ \n",
++        "king": "     ✚    \n  ▞▀▄▀▚ \n  ▙▄█▄▟ \n  ▐███▌ \n ▗█████▖\n"
++      }
++    }
++  ],
++  "skins": [
++    {
++      "name": "Default",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [160, 160, 160] },
++      "board_black_color": { "Rgb": [128, 95, 69] },
++      "piece_white_color": { "Rgb": [245, 245, 245] },
++      "piece_black_color": { "Rgb": [20, 20, 20] },
++      "cursor_color": "LightBlue",
++      "selection_color": "LightGreen",
++      "last_move_color": "LightGreen"
++    },
++    {
++      "name": "Matrix",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [60, 60, 60] },
++      "board_black_color": { "Rgb": [30, 30, 30] },
++      "piece_white_color": { "Rgb": [220, 255, 255] },
++      "piece_black_color": { "Rgb": [80, 200, 80] },
++      "cursor_color": { "Rgb": [120, 220, 220] },
++      "selection_color": { "Rgb": [100, 200, 200] },
++      "last_move_color": { "Rgb": [80, 180, 180] }
++    },
++    {
++      "name": "Ocean",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [200, 220, 235] },
++      "board_black_color": { "Rgb": [100, 140, 170] },
++      "piece_white_color": { "Rgb": [235, 240, 245] },
++      "piece_black_color": { "Rgb": [15, 40, 75] },
++      "cursor_color": { "Rgb": [150, 200, 230] },
++      "selection_color": { "Rgb": [120, 180, 220] },
++      "last_move_color": { "Rgb": [100, 160, 200] }
++    },
++    {
++      "name": "Forest",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [200, 230, 200] },
++      "board_black_color": { "Rgb": [100, 150, 100] },
++      "piece_white_color": { "Rgb": [235, 245, 235] },
++      "piece_black_color": { "Rgb": [10, 40, 10] },
++      "cursor_color": { "Rgb": [150, 220, 150] },
++      "selection_color": { "Rgb": [120, 200, 120] },
++      "last_move_color": { "Rgb": [200, 220, 120] }
++    },
++    {
++      "name": "Midnight",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [100, 100, 120] },
++      "board_black_color": { "Rgb": [50, 50, 70] },
++      "piece_white_color": { "Rgb": [245, 245, 255] },
++      "piece_black_color": { "Rgb": [120, 120, 210] },
++      "cursor_color": { "Rgb": [180, 160, 220] },
++      "selection_color": { "Rgb": [160, 140, 200] },
++      "last_move_color": { "Rgb": [140, 120, 200] }
++    },
++    {
++      "name": "Sunset",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [255, 235, 210] },
++      "board_black_color": { "Rgb": [200, 140, 120] },
++      "piece_white_color": { "Rgb": [255, 255, 255] },
++      "piece_black_color": { "Rgb": [60, 20, 15] },
++      "cursor_color": { "Rgb": [255, 220, 150] },
++      "selection_color": { "Rgb": [255, 200, 120] },
++      "last_move_color": { "Rgb": [255, 180, 100] }
++    },
++    {
++      "name": "Classic",
++      "piece_style": "CLASSIC",
++      "board_white_color": { "Rgb": [240, 217, 181] },
++      "board_black_color": { "Rgb": [181, 136, 99] },
++      "piece_white_color": { "Rgb": [255, 255, 255] },
++      "piece_black_color": { "Rgb": [20, 20, 20] },
++      "cursor_color": { "Rgb": [150, 200, 255] },
++      "selection_color": { "Rgb": [120, 220, 120] },
++      "last_move_color": { "Rgb": [100, 200, 100] }
++    },
++    {
++      "name": "Neon",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [40, 40, 40] },
++      "board_black_color": { "Rgb": [20, 20, 20] },
++      "piece_white_color": { "Rgb": [255, 180, 255] },
++      "piece_black_color": { "Rgb": [120, 255, 255] },
++      "cursor_color": { "Rgb": [255, 255, 150] },
++      "selection_color": { "Rgb": [220, 150, 220] },
++      "last_move_color": { "Rgb": [150, 255, 150] }
++    },
++    {
++      "name": "Retro",
++      "piece_style": "DEFAULT",
++      "board_white_color": { "Rgb": [245, 245, 245] },
++      "board_black_color": { "Rgb": [15, 15, 15] },
++      "piece_white_color": { "Rgb": [70, 120, 255] },
++      "piece_black_color": { "Rgb": [220, 60, 60] },
++      "cursor_color": { "Rgb": [255, 200, 0] },
++      "selection_color": { "Rgb": [100, 200, 100] },
++      "last_move_color": { "Rgb": [150, 200, 150] }
++    },
++    {
++      "name": "Terminal",
++      "piece_style": "MINIMAL",
++      "board_white_color": { "Rgb": [32, 32, 32] },
++      "board_black_color": { "Rgb": [18, 18, 18] },
++      "piece_white_color": { "Rgb": [220, 220, 220] },
++      "piece_black_color": { "Rgb": [90, 90, 90] },
++      "cursor_color": { "Rgb": [120, 180, 255] },
++      "selection_color": { "Rgb": [80, 140, 200] },
++      "last_move_color": { "Rgb": [100, 160, 120] }
++    }
++  ]
++}
+diff --git a/internal/skin/skin.go b/internal/skin/skin.go
+new file mode 100644
+index 0000000..cd5b0bd
+--- /dev/null
++++ b/internal/skin/skin.go
+@@ -0,0 +1,254 @@
++// Package skin preserves the skins.json format and the --skin/--update-skins
++// behavior without the TUI.
++package skin
++
++import (
++	"bufio"
++	"embed"
++	"encoding/json"
++	"fmt"
++	"os"
++	"path/filepath"
++	"sort"
++	"strings"
++	"time"
++
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++)
++
++//go:embed default_skins.json
++var defaultFS embed.FS
++
++// DefaultSkins returns the embedded default skins.json content.
++func DefaultSkins() []byte {
++	b, err := defaultFS.ReadFile("default_skins.json")
++	if err != nil {
++		return nil
++	}
++	return b
++}
++
++// Color mirrors ratatui's Color serialization: either a named string or a
++// {"Rgb":[r,g,b]} object.
++type Color struct {
++	Name string
++	Rgb  *[3]uint8
++}
++
++// NamedColor builds a color from a name.
++func NamedColor(name string) Color { return Color{Name: name} }
++
++// RgbColor builds an RGB color.
++func RgbColor(r, g, b uint8) Color { return Color{Rgb: &[3]uint8{r, g, b}} }
++
++// MarshalJSON writes the named or RGB form.
++func (c Color) MarshalJSON() ([]byte, error) {
++	if c.Rgb != nil {
++		return json.Marshal(map[string][3]uint8{"Rgb": *c.Rgb})
++	}
++	return json.Marshal(c.Name)
++}
++
++// UnmarshalJSON reads either the named or RGB form.
++func (c *Color) UnmarshalJSON(data []byte) error {
++	trimmed := strings.TrimSpace(string(data))
++	if strings.HasPrefix(trimmed, "\"") {
++		var name string
++		if err := json.Unmarshal(data, &name); err != nil {
++			return err
++		}
++		c.Name = name
++		c.Rgb = nil
++		return nil
++	}
++	var obj map[string][3]uint8
++	if err := json.Unmarshal(data, &obj); err != nil {
++		return err
++	}
++	if rgb, ok := obj["Rgb"]; ok {
++		v := rgb
++		c.Rgb = &v
++		c.Name = ""
++	}
++	return nil
++}
++
++// Skin is a board/piece color theme.
++type Skin struct {
++	Name            string `json:"name"`
++	PieceStyle      string `json:"piece_style"`
++	BoardWhiteColor Color  `json:"board_white_color"`
++	BoardBlackColor Color  `json:"board_black_color"`
++	PieceWhiteColor Color  `json:"piece_white_color"`
++	PieceBlackColor Color  `json:"piece_black_color"`
++	CursorColor     Color  `json:"cursor_color"`
++	SelectionColor  Color  `json:"selection_color"`
++	LastMoveColor   Color  `json:"last_move_color"`
++}
++
++// PieceStyleSize holds the piece characters for one size.
++type PieceStyleSize struct {
++	Bishop string `json:"bishop"`
++	King   string `json:"king"`
++	Knight string `json:"knight"`
++	Pawn   string `json:"pawn"`
++	Queen  string `json:"queen"`
++	Rook   string `json:"rook"`
++}
++
++// PieceStyle is a named piece style with per-size character sets.
++type PieceStyle struct {
++	Name     string         `json:"name"`
++	Small    PieceStyleSize `json:"small"`
++	Compact  PieceStyleSize `json:"compact"`
++	Extended PieceStyleSize `json:"extended"`
++	Large    PieceStyleSize `json:"large"`
++}
++
++// SkinCollection wraps a list of skins.
++type SkinCollection struct {
++	Skins []Skin `json:"skins"`
++}
++
++// PieceStyleCollection wraps a list of piece styles.
++type PieceStyleCollection struct {
++	PieceStyles []PieceStyle `json:"piece_styles"`
++}
++
++// LoadAllSkins reads the skins list from a skins.json file.
++func LoadAllSkins(path string) ([]Skin, error) {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return nil, err
++	}
++	var collection SkinCollection
++	if err := json.Unmarshal(content, &collection); err != nil {
++		return nil, err
++	}
++	return collection.Skins, nil
++}
++
++// LoadAllPieceStyles reads the piece styles from a skins.json file.
++func LoadAllPieceStyles(path string) ([]PieceStyle, error) {
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return nil, err
++	}
++	var collection PieceStyleCollection
++	if err := json.Unmarshal(content, &collection); err != nil {
++		return nil, err
++	}
++	return collection.PieceStyles, nil
++}
++
++// GetSkinByName finds a skin by name.
++func GetSkinByName(skins []Skin, name string) (Skin, bool) {
++	for _, s := range skins {
++		if s.Name == name {
++			return s, true
++		}
++	}
++	return Skin{}, false
++}
++
++// ASCII returns the built-in ASCII skin entry.
++func ASCII() Skin {
++	return Skin{
++		Name:            "ASCII",
++		PieceStyle:      "ASCII",
++		BoardWhiteColor: RgbColor(160, 160, 160),
++		BoardBlackColor: RgbColor(128, 95, 69),
++		PieceWhiteColor: NamedColor("White"),
++		PieceBlackColor: NamedColor("Black"),
++		CursorColor:     NamedColor("LightBlue"),
++		SelectionColor:  NamedColor("LightGreen"),
++		LastMoveColor:   NamedColor("LightGreen"),
++	}
++}
++
++// Default returns the built-in default skin entry.
++func Default() Skin {
++	return Skin{
++		Name:            "Default",
++		PieceStyle:      "DEFAULT",
++		BoardWhiteColor: RgbColor(160, 160, 160),
++		BoardBlackColor: RgbColor(128, 95, 69),
++		PieceWhiteColor: NamedColor("White"),
++		PieceBlackColor: NamedColor("Black"),
++		CursorColor:     NamedColor("LightBlue"),
++		SelectionColor:  NamedColor("LightGreen"),
++		LastMoveColor:   NamedColor("LightGreen"),
++	}
++}
++
++// CreateDefaultSkinsFile writes the embedded default skins.json to path.
++func CreateDefaultSkinsFile(path string) error {
++	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
++		return err
++	}
++	return os.WriteFile(path, DefaultSkins(), 0o644)
++}
++
++// SkinsPath returns CONFIG_DIR/chess-tui/skins.json.
++func SkinsPath() (string, error) {
++	dir, err := constants.ConfigDir()
++	if err != nil {
++		return "", err
++	}
++	return filepath.Join(dir, "chess-tui", "skins.json"), nil
++}
++
++// RunUpdateSkins implements --update-skins: confirm, archive, overwrite.
++func RunUpdateSkins(in *bufio.Reader, out *os.File) error {
++	configDir, err := constants.ConfigDir()
++	if err != nil {
++		return err
++	}
++	skinsDir := filepath.Join(configDir, "chess-tui")
++	skinsPath := filepath.Join(skinsDir, "skins.json")
++
++	if err := os.MkdirAll(skinsDir, 0o755); err != nil {
++		return err
++	}
++
++	if _, err := os.Stat(skinsPath); os.IsNotExist(err) {
++		if err := os.WriteFile(skinsPath, DefaultSkins(), 0o644); err != nil {
++			return err
++		}
++		fmt.Fprintf(out, "Created skins.json with default content at %s\n", skinsPath)
++		return nil
++	}
++
++	fmt.Fprint(out, "This will replace your skins config with the default. Your current file will be archived in the same folder. Continue? (y/n): ")
++	line, _ := in.ReadString('\n')
++	answer := strings.ToLower(strings.TrimSpace(line))
++	if answer != "y" && answer != "yes" {
++		fmt.Fprintln(out, "Aborted.")
++		return nil
++	}
++
++	timestamp := time.Now().Format("2006-01-02_15-04-05")
++	archivePath := filepath.Join(skinsDir, fmt.Sprintf("skins_%s.json", timestamp))
++
++	content, err := os.ReadFile(skinsPath)
++	if err != nil {
++		return err
++	}
++	if err := os.WriteFile(archivePath, content, 0o644); err != nil {
++		return err
++	}
++	if err := os.WriteFile(skinsPath, DefaultSkins(), 0o644); err != nil {
++		return err
++	}
++
++	fmt.Fprintf(out, "Archived previous config to %s and updated skins.json with default.\n", archivePath)
++	return nil
++}
++
++// sortedSkins is a helper retained for deterministic iteration.
++func sortedSkins(skins []Skin) []Skin {
++	out := make([]Skin, len(skins))
++	copy(out, skins)
++	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
++	return out
++}
+diff --git a/internal/skin/skin_test.go b/internal/skin/skin_test.go
+new file mode 100644
+index 0000000..ac28ec5
+--- /dev/null
++++ b/internal/skin/skin_test.go
+@@ -0,0 +1,91 @@
++package skin
++
++import (
++	"bufio"
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++func TestColorRoundTrip(t *testing.T) {
++	cases := []string{
++		`"LightBlue"`,
++		`{"Rgb":[160,160,160]}`,
++	}
++	for _, raw := range cases {
++		var c Color
++		if err := json.Unmarshal([]byte(raw), &c); err != nil {
++			t.Fatalf("unmarshal %s: %v", raw, err)
++		}
++		out, err := json.Marshal(c)
++		if err != nil {
++			t.Fatal(err)
++		}
++		var normalized any
++		if err := json.Unmarshal([]byte(raw), &normalized); err != nil {
++			t.Fatal(err)
++		}
++		want, _ := json.Marshal(normalized)
++		if string(out) != string(want) {
++			t.Fatalf("round-trip %s -> %s, want %s", raw, out, want)
++		}
++	}
++}
++
++func TestLoadDefaultSkins(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "skins.json")
++	if err := CreateDefaultSkinsFile(path); err != nil {
++		t.Fatal(err)
++	}
++	skins, err := LoadAllSkins(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, ok := GetSkinByName(skins, "Default"); !ok {
++		t.Fatal("default skins should contain a Default entry")
++	}
++	styles, err := LoadAllPieceStyles(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(styles) == 0 {
++		t.Fatal("expected piece styles")
++	}
++}
++
++func TestRunUpdateSkinsCreatesFile(t *testing.T) {
++	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", dir)
++	var out strings.Builder
++	if err := runUpdateSkinsTo(&out, ""); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := os.Stat(filepath.Join(dir, "chess-tui", "skins.json")); err != nil {
++		t.Fatal(err)
++	}
++	if !strings.Contains(out.String(), "Created skins.json") {
++		t.Fatalf("output = %q", out.String())
++	}
++}
++
++// runUpdateSkinsTo is a small test shim around RunUpdateSkins.
++func runUpdateSkinsTo(out *strings.Builder, answer string) error {
++	tmp, err := os.CreateTemp("", "skins-out-*")
++	if err != nil {
++		return err
++	}
++	defer os.Remove(tmp.Name())
++	if err := RunUpdateSkins(bufio.NewReader(strings.NewReader(answer)), tmp); err != nil {
++		return err
++	}
++	if _, err := tmp.Seek(0, 0); err != nil {
++		return err
++	}
++	buf := make([]byte, 4096)
++	n, _ := tmp.Read(buf)
++	out.Write(buf[:n])
++	return nil
++}
+diff --git a/internal/tcp/opponent.go b/internal/tcp/opponent.go
+new file mode 100644
+index 0000000..e33b8c4
+--- /dev/null
++++ b/internal/tcp/opponent.go
+@@ -0,0 +1,191 @@
++// Package tcp ports the TCP multiplayer opponent client and server.
++package tcp
++
++import (
++	"fmt"
++	"net"
++	"time"
++
++	chesslib "github.com/notnil/chess"
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++)
++
++// Opponent is a TCP peer connection.
++type Opponent struct {
++	conn             net.Conn
++	OpponentWillMove bool
++	Color            chesslib.Color
++	GameStarted      bool
++	InitialMoveCount int
++	MovesReceived    int
++}
++
++// New connects to addr (retrying five times) and returns an opponent. When
++// color is nil the color token is read from the stream.
++func New(addr string, color *chesslib.Color) (*Opponent, error) {
++	var conn net.Conn
++	var err error
++	for attempt := 1; attempt <= 5; attempt++ {
++		conn, err = net.DialTimeout("tcp", addr, 2*time.Second)
++		if err == nil {
++			break
++		}
++	}
++	if conn == nil {
++		return nil, fmt.Errorf("Failed to connect to the server after 5 attempts to the following address %s", addr)
++	}
++
++	resolved := chesslib.Black
++	if color != nil {
++		resolved = *color
++	} else {
++		c, err := GetColorFromStream(conn)
++		if err != nil {
++			_ = conn.Close()
++			return nil, err
++		}
++		resolved = c
++	}
++
++	return &Opponent{
++		conn:             conn,
++		OpponentWillMove: resolved == chesslib.White,
++		Color:            resolved,
++	}, nil
++}
++
++// Conn returns the underlying connection.
++func (o *Opponent) Conn() net.Conn { return o.conn }
++
++// Close closes the underlying connection.
++func (o *Opponent) Close() error {
++	if o.conn == nil {
++		return nil
++	}
++	return o.conn.Close()
++}
++
++// SendEndGameToServer writes the ended token.
++func (o *Opponent) SendEndGameToServer() {
++	if o.conn == nil {
++		return
++	}
++	_, _ = o.conn.Write([]byte("ended"))
++}
++
++// SendMoveToServer sends a move as from+to plus an optional promotion suffix.
++func (o *Opponent) SendMoveToServer(from, to chesslib.Square, promotion chesslib.PieceType) {
++	if o.conn == nil {
++		return
++	}
++	moveStr := SquareString(from) + SquareString(to) + PromotionSuffix(promotion)
++	_, _ = o.conn.Write([]byte(moveStr))
++}
++
++// ReadStream performs a non-blocking read, returning "" when no data is ready.
++// A peer that disconnects or sends the ended token surfaces as an error.
++func (o *Opponent) ReadStream() (string, error) {
++	if o.conn == nil {
++		return "", nil
++	}
++	buf := make([]byte, constants.NetworkBufferSize)
++	_ = o.conn.SetReadDeadline(time.Now())
++	n, err := o.conn.Read(buf)
++	if err != nil {
++		if ne, ok := err.(net.Error); ok && ne.Timeout() {
++			return "", nil
++		}
++		return "", nil
++	}
++	if n == 0 {
++		return "", nil
++	}
++	response := string(buf[:n])
++	if trimSpace(response) == "ended" || trimSpace(response) == "" {
++		return "", fmt.Errorf("Game ended by the other opponent")
++	}
++	return response, nil
++}
++
++// GetColorFromStream reads a w/b color token from the stream.
++func GetColorFromStream(conn net.Conn) (chesslib.Color, error) {
++	buf := make([]byte, constants.NetworkBufferSize)
++	n, err := conn.Read(buf)
++	if err != nil {
++		return chesslib.NoColor, fmt.Errorf("Failed to read color from stream: %v", err)
++	}
++	switch string(buf[:n]) {
++	case "w":
++		return chesslib.White, nil
++	case "b":
++		return chesslib.Black, nil
++	default:
++		return chesslib.NoColor, fmt.Errorf("Failed to get color from stream")
++	}
++}
++
++// WaitForGameStart performs a non-blocking read and accepts only the start
++// token "s".
++func WaitForGameStart(o *Opponent) (bool, error) {
++	if o.conn == nil {
++		return false, fmt.Errorf("No opponent connected")
++	}
++	buf := make([]byte, constants.NetworkBufferSize)
++	_ = o.conn.SetReadDeadline(time.Now())
++	n, err := o.conn.Read(buf)
++	if err != nil {
++		if ne, ok := err.(net.Error); ok && ne.Timeout() {
++			return false, nil
++		}
++		return false, fmt.Errorf("Failed to read start signal from stream: %v", err)
++	}
++	if n == 0 {
++		return false, nil
++	}
++	switch string(buf[:n]) {
++	case "s":
++		return true, nil
++	default:
++		return false, fmt.Errorf("Failed to get start signal from stream")
++	}
++}
++
++// SquareString renders a square in algebraic form.
++func SquareString(sq chesslib.Square) string {
++	if sq == chesslib.NoSquare {
++		return ""
++	}
++	return sq.String()
++}
++
++// PromotionSuffix maps a promotion piece to its wire suffix.
++func PromotionSuffix(promotion chesslib.PieceType) string {
++	switch promotion {
++	case chesslib.Queen:
++		return "q"
++	case chesslib.Rook:
++		return "r"
++	case chesslib.Bishop:
++		return "b"
++	case chesslib.Knight:
++		return "n"
++	default:
++		return ""
++	}
++}
++
++func trimSpace(s string) string {
++	start := 0
++	for start < len(s) && isSpace(s[start]) {
++		start++
++	}
++	end := len(s)
++	for end > start && isSpace(s[end-1]) {
++		end--
++	}
++	return s[start:end]
++}
++
++func isSpace(c byte) bool {
++	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
++}
+diff --git a/internal/tcp/protocol_test.go b/internal/tcp/protocol_test.go
+new file mode 100644
+index 0000000..9855011
+--- /dev/null
++++ b/internal/tcp/protocol_test.go
+@@ -0,0 +1,128 @@
++package tcp
++
++import (
++	"net"
++	"testing"
++	"time"
++)
++
++func startServer(t *testing.T, hostWhite bool) (string, *GameServer) {
++	t.Helper()
++	lis, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	server := NewGameServer(hostWhite)
++	go server.Serve(lis)
++	t.Cleanup(server.Stop)
++	return lis.Addr().String(), server
++}
++
++func dial(t *testing.T, addr string) net.Conn {
++	t.Helper()
++	conn, err := net.Dial("tcp", addr)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { conn.Close() })
++	return conn
++}
++
++func readN(t *testing.T, conn net.Conn, n int) string {
++	t.Helper()
++	buf := make([]byte, n)
++	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
++	got, err := conn.Read(buf)
++	if err != nil {
++		t.Fatalf("read: %v", err)
++	}
++	return string(buf[:got])
++}
++
++func TestJoinColorAndStart(t *testing.T) {
++	addr, _ := startServer(t, true)
++	host := dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	joiner := dial(t, addr)
++
++	if got := readN(t, joiner, 1); got != "w" {
++		t.Fatalf("joiner color = %q, want w", got)
++	}
++	if got := readN(t, host, 1); got != "s" {
++		t.Fatalf("host start = %q, want s", got)
++	}
++}
++
++func TestThirdClientRejected(t *testing.T) {
++	addr, _ := startServer(t, true)
++	_ = dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	_ = dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	third := dial(t, addr)
++
++	buf := make([]byte, 64)
++	_ = third.SetReadDeadline(time.Now().Add(2 * time.Second))
++	n, err := third.Read(buf)
++	if err != nil {
++		t.Fatalf("read: %v", err)
++	}
++	if string(buf[:n]) != "Game is already full" {
++		t.Fatalf("third client = %q", string(buf[:n]))
++	}
++}
++
++func TestRelayWithoutEcho(t *testing.T) {
++	addr, _ := startServer(t, true)
++	host := dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	joiner := dial(t, addr)
++	readN(t, joiner, 1) // color
++	readN(t, host, 1)   // start
++
++	if _, err := host.Write([]byte("e2e4")); err != nil {
++		t.Fatal(err)
++	}
++	if got := readN(t, joiner, 5); got != "e2e4" {
++		t.Fatalf("relayed = %q", got)
++	}
++
++	// The sender must not receive its own message back.
++	_ = host.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
++	buf := make([]byte, 5)
++	if _, err := host.Read(buf); err == nil {
++		t.Fatal("sender should not receive an echo")
++	}
++}
++
++func TestEndedBroadcast(t *testing.T) {
++	addr, _ := startServer(t, true)
++	host := dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	joiner := dial(t, addr)
++	readN(t, joiner, 1)
++	readN(t, host, 1)
++
++	if _, err := host.Write([]byte("ended")); err != nil {
++		t.Fatal(err)
++	}
++	if got := readN(t, joiner, 5); got != "ended" {
++		t.Fatalf("broadcast = %q, want ended", got)
++	}
++}
++
++func TestMoveFraming(t *testing.T) {
++	addr, _ := startServer(t, true)
++	host := dial(t, addr)
++	time.Sleep(50 * time.Millisecond)
++	joiner := dial(t, addr)
++	readN(t, joiner, 1)
++	readN(t, host, 1)
++
++	if _, err := joiner.Write([]byte("e7e8q")); err != nil {
++		t.Fatal(err)
++	}
++	if got := readN(t, host, 5); got != "e7e8q" {
++		t.Fatalf("framed = %q", got)
++	}
++}
+diff --git a/internal/tcp/server.go b/internal/tcp/server.go
+new file mode 100644
+index 0000000..60a32a9
+--- /dev/null
++++ b/internal/tcp/server.go
+@@ -0,0 +1,214 @@
++package tcp
++
++import (
++	"fmt"
++	"net"
++	"sync"
++	"time"
++
++	chesslib "github.com/notnil/chess"
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++)
++
++type client struct {
++	addr string
++	conn net.Conn
++}
++
++// GameServer is the TCP multiplayer server.
++type GameServer struct {
++	mu          sync.Mutex
++	clients     []*client
++	IsHostWhite bool
++
++	stopOnce sync.Once
++	stop     chan struct{}
++	listener net.Listener
++}
++
++// NewGameServer creates a server for the given host color.
++func NewGameServer(isHostWhite bool) *GameServer {
++	return &GameServer{
++		IsHostWhite: isHostWhite,
++		stop:        make(chan struct{}),
++	}
++}
++
++// Run binds 0.0.0.0:2308 and serves until Stop is called.
++func (s *GameServer) Run() {
++	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", constants.NetworkPort))
++	if err != nil {
++		return
++	}
++	s.mu.Lock()
++	s.listener = listener
++	s.mu.Unlock()
++	s.serve(listener)
++}
++
++// Serve accepts connections from an existing listener.
++func (s *GameServer) Serve(listener net.Listener) {
++	s.mu.Lock()
++	s.listener = listener
++	s.mu.Unlock()
++	s.serve(listener)
++}
++
++func (s *GameServer) serve(listener net.Listener) {
++	done := make(chan struct{})
++	go func() {
++		select {
++		case <-s.stop:
++		case <-done:
++		}
++		_ = listener.Close()
++	}()
++
++	for {
++		conn, err := listener.Accept()
++		if err != nil {
++			select {
++			case <-s.stop:
++				close(done)
++				return
++			default:
++			}
++			if ne, ok := err.(net.Error); ok && ne.Timeout() {
++				time.Sleep(constants.SleepDurationLongMs * time.Millisecond)
++				continue
++			}
++			close(done)
++			return
++		}
++		go s.handleJoin(conn)
++	}
++}
++
++func (s *GameServer) handleJoin(conn net.Conn) {
++	s.mu.Lock()
++	switch {
++	case len(s.clients) == 1:
++		color := "w"
++		if !s.IsHostWhite {
++			color = "b"
++		}
++		_, _ = conn.Write([]byte(color))
++		other := s.clients[0]
++		_, _ = other.conn.Write([]byte("s"))
++	case len(s.clients) >= 2:
++		_, _ = conn.Write([]byte("Game is already full"))
++		s.mu.Unlock()
++		_ = conn.Close()
++		return
++	}
++	s.clients = append(s.clients, &client{addr: conn.RemoteAddr().String(), conn: conn})
++	s.mu.Unlock()
++
++	s.HandleClient(conn)
++}
++
++// HandleClient relays messages from conn to the other client without echoing,
++// broadcasting the ended token on disconnect or the ended token.
++func (s *GameServer) HandleClient(conn net.Conn) {
++	addr := conn.RemoteAddr().String()
++	buf := make([]byte, constants.NetworkBufferSize)
++
++	for {
++		select {
++		case <-s.stop:
++			return
++		default:
++		}
++
++		_ = conn.SetReadDeadline(time.Now().Add(constants.SleepDurationShortMs * time.Millisecond))
++		n, err := conn.Read(buf)
++		if err != nil {
++			if ne, ok := err.(net.Error); ok && ne.Timeout() {
++				continue
++			}
++			s.BroadcastMessage("ended", conn)
++			s.RemoveClient(addr)
++			s.Stop()
++			return
++		}
++		if n == 0 {
++			s.BroadcastMessage("ended", conn)
++			s.RemoveClient(addr)
++			s.Stop()
++			return
++		}
++
++		request := string(buf[:n])
++		s.BroadcastMessage(request, conn)
++
++		if trimSpace(request) == "ended" {
++			s.RemoveClient(addr)
++			s.Stop()
++			return
++		}
++	}
++}
++
++// BroadcastMessage sends a message to every client except sender.
++func (s *GameServer) BroadcastMessage(message string, sender net.Conn) {
++	s.mu.Lock()
++	clients := make([]*client, len(s.clients))
++	copy(clients, s.clients)
++	s.mu.Unlock()
++
++	for _, c := range clients {
++		if c.conn == sender {
++			continue
++		}
++		_ = c.conn.SetWriteDeadline(time.Now().Add(time.Second))
++		_, _ = c.conn.Write([]byte(message))
++	}
++}
++
++// RemoveClient drops a client from the roster.
++func (s *GameServer) RemoveClient(addr string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	for i, c := range s.clients {
++		if c.addr == addr {
++			s.clients = append(s.clients[:i], s.clients[i+1:]...)
++			return
++		}
++	}
++}
++
++// Stop shuts the server down and closes remaining connections.
++func (s *GameServer) Stop() {
++	s.stopOnce.Do(func() {
++		close(s.stop)
++		s.mu.Lock()
++		clients := make([]*client, len(s.clients))
++		copy(clients, s.clients)
++		s.mu.Unlock()
++		for _, c := range clients {
++			_ = c.conn.Close()
++		}
++	})
++}
++
++// SetupGameServer starts a server for the given host color in the background.
++func SetupGameServer(hostColor chesslib.Color) *GameServer {
++	server := NewGameServer(hostColor == chesslib.White)
++	go server.Run()
++	time.Sleep(constants.SleepDurationLongMs * time.Millisecond)
++	return server
++}
++
++// GetHostIP returns the machine's outbound IP address, if discoverable.
++func GetHostIP() (net.IP, error) {
++	conn, err := net.Dial("udp", "8.8.8.8:80")
++	if err != nil {
++		return nil, err
++	}
++	defer conn.Close()
++	local := conn.LocalAddr()
++	if udp, ok := local.(*net.UDPAddr); ok {
++		return udp.IP, nil
++	}
++	return nil, fmt.Errorf("Failed to determine host IP")
++}
+diff --git a/internal/uci/bot.go b/internal/uci/bot.go
+new file mode 100644
+index 0000000..82fb2ff
+--- /dev/null
++++ b/internal/uci/bot.go
+@@ -0,0 +1,180 @@
++// Package uci ports the UCI chess engine client.
++package uci
++
++import (
++	"bufio"
++	"fmt"
++	"io"
++	"os/exec"
++	"strings"
++
++	chesslib "github.com/notnil/chess"
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++)
++
++// Bot is a UCI engine wrapper with difficulty configuration.
++type Bot struct {
++	EnginePath    string
++	BotWillMove   bool
++	IsBotStarting bool
++	// Depth is the base depth used when difficulty is off.
++	Depth uint8
++	// Difficulty preset index: nil = off (full strength), 0..3 otherwise.
++	Difficulty *uint8
++}
++
++// New creates a bot.
++func New(enginePath string, isBotStarting bool, depth uint8, difficulty *uint8) *Bot {
++	return &Bot{
++		EnginePath:    enginePath,
++		IsBotStarting: isBotStarting,
++		Depth:         depth,
++		Difficulty:    difficulty,
++	}
++}
++
++// EffectiveDepth returns the preset depth when a difficulty is set, else the
++// base depth.
++func (b *Bot) EffectiveDepth() uint8 {
++	if b.Difficulty != nil {
++		idx := int(*b.Difficulty)
++		if idx >= 0 && idx < len(constants.BotDifficultyDepth) {
++			return constants.BotDifficultyDepth[idx]
++		}
++	}
++	return b.Depth
++}
++
++// MovetimeMs returns the preset movetime in milliseconds when a difficulty is
++// set.
++func (b *Bot) MovetimeMs() (int, bool) {
++	if b.Difficulty != nil {
++		idx := int(*b.Difficulty)
++		if idx >= 0 && idx < len(constants.BotDifficultyMovetimeMs) {
++			return constants.BotDifficultyMovetimeMs[idx], true
++		}
++	}
++	return 0, false
++}
++
++// Elo returns the preset ELO when a difficulty is set.
++func (b *Bot) Elo() (uint16, bool) {
++	if b.Difficulty != nil {
++		idx := int(*b.Difficulty)
++		if idx >= 0 && idx < len(constants.BotDifficultyElo) {
++			return constants.BotDifficultyElo[idx], true
++		}
++	}
++	return 0, false
++}
++
++// GetMove spawns the engine, performs the UCI handshake, sends the position
++// and search parameters, and returns the engine's best move.
++func (b *Bot) GetMove(fen string) (string, error) {
++	if _, err := chesslib.FEN(fen); err != nil {
++		return "", fmt.Errorf("Failed to parse FEN '%s': %v", fen, err)
++	}
++
++	parts := strings.Fields(b.EnginePath)
++	var cmd *exec.Cmd
++	if len(parts) == 0 {
++		cmd = exec.Command(b.EnginePath)
++	} else {
++		cmd = exec.Command(parts[0], parts[1:]...)
++	}
++
++	stdin, err := cmd.StdinPipe()
++	if err != nil {
++		return "", fmt.Errorf("Failed to initialize engine: %v", err)
++	}
++	stdout, err := cmd.StdoutPipe()
++	if err != nil {
++		return "", fmt.Errorf("Failed to initialize engine: %v", err)
++	}
++
++	if err := cmd.Start(); err != nil {
++		return "", fmt.Errorf("Failed to spawn engine process: %v", err)
++	}
++	defer func() {
++		_ = stdin.Close()
++		_ = cmd.Process.Kill()
++		_ = cmd.Wait()
++	}()
++
++	reader := bufio.NewReader(stdout)
++
++	if err := sendLine(stdin, "uci"); err != nil {
++		return "", fmt.Errorf("Failed UCI handshake: %v", err)
++	}
++	if err := waitFor(reader, "uciok"); err != nil {
++		return "", fmt.Errorf("Failed UCI handshake: %v", err)
++	}
++
++	if elo, ok := b.Elo(); ok {
++		if err := sendLine(stdin, "setoption name UCI_LimitStrength value true"); err != nil {
++			return "", fmt.Errorf("Failed to set UCI_LimitStrength: %v", err)
++		}
++		if err := sendLine(stdin, fmt.Sprintf("setoption name UCI_Elo value %d", elo)); err != nil {
++			return "", fmt.Errorf("Failed to set UCI_Elo: %v", err)
++		}
++	}
++
++	if err := sendLine(stdin, "position fen "+fen); err != nil {
++		return "", fmt.Errorf("Failed to send position to engine: %v", err)
++	}
++
++	depth := b.EffectiveDepth()
++	goCmd := fmt.Sprintf("go depth %d", depth)
++	if ms, ok := b.MovetimeMs(); ok {
++		goCmd += fmt.Sprintf(" movetime %d", ms)
++	}
++	if err := sendLine(stdin, goCmd); err != nil {
++		return "", fmt.Errorf("Engine failed to compute move: %v", err)
++	}
++
++	for {
++		line, err := reader.ReadString('\n')
++		trimmed := strings.TrimSpace(line)
++		if strings.HasPrefix(trimmed, "bestmove") {
++			fields := strings.Fields(trimmed)
++			if len(fields) < 2 {
++				return "", fmt.Errorf("Engine returned non-normal move")
++			}
++			move := fields[1]
++			if move == "0000" || move == "(none)" || move == "null" {
++				return "", fmt.Errorf("Engine returned non-normal move")
++			}
++			return move, nil
++		}
++		if err != nil {
++			if err == io.EOF {
++				return "", fmt.Errorf("Engine failed to compute move: engine exited without bestmove")
++			}
++			return "", fmt.Errorf("Engine failed to compute move: %v", err)
++		}
++	}
++}
++
++func sendLine(w io.Writer, line string) error {
++	_, err := io.WriteString(w, line+"\n")
++	return err
++}
++
++func waitFor(reader *bufio.Reader, target string) error {
++	for {
++		line, err := reader.ReadString('\n')
++		trimmed := strings.TrimSpace(line)
++		if target != "" && trimmed == target {
++			return nil
++		}
++		if strings.HasPrefix(trimmed, target) {
++			return nil
++		}
++		if err != nil {
++			if err == io.EOF {
++				return fmt.Errorf("engine closed the connection")
++			}
++			return err
++		}
++	}
++}
+diff --git a/internal/uci/bot_test.go b/internal/uci/bot_test.go
+new file mode 100644
+index 0000000..d29b7c7
+--- /dev/null
++++ b/internal/uci/bot_test.go
+@@ -0,0 +1,160 @@
++package uci
++
++import (
++	"bufio"
++	"fmt"
++	"os"
++	"strings"
++	"testing"
++)
++
++// TestHelperProcess is not a real test: it acts as a stub UCI engine when
++// re-executed by the test binary.
++func TestHelperProcess(t *testing.T) {
++	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
++		return
++	}
++	logPath := os.Getenv("STUB_LOG")
++	scanner := bufio.NewScanner(os.Stdin)
++	for scanner.Scan() {
++		line := scanner.Text()
++		if logPath != "" {
++			if f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
++				fmt.Fprintln(f, line)
++				f.Close()
++			}
++		}
++		switch {
++		case line == "uci":
++			fmt.Println("id name StubEngine")
++			fmt.Println("uciok")
++		case strings.HasPrefix(line, "go"):
++			fmt.Println("info depth 1 score cp 0")
++			fmt.Println("bestmove e2e4")
++		}
++	}
++	os.Exit(0)
++}
++
++func stubEngine(t *testing.T) (string, string) {
++	t.Helper()
++	logPath := t.TempDir() + "/stub.log"
++	enginePath := os.Args[0] + " -test.run=TestHelperProcess"
++	return enginePath, logPath
++}
++
++func configureStub(t *testing.T, logPath string) {
++	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
++	t.Setenv("STUB_LOG", logPath)
++}
++
++func readCommands(t *testing.T, path string) []string {
++	t.Helper()
++	content, err := os.ReadFile(path)
++	if err != nil {
++		return nil
++	}
++	return strings.Split(strings.TrimSpace(string(content)), "\n")
++}
++
++const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
++
++func TestHandshakeOrder(t *testing.T) {
++	enginePath, logPath := stubEngine(t)
++	configureStub(t, logPath)
++
++	bot := New(enginePath, false, 6, nil)
++	move, err := bot.GetMove(startFEN)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if move != "e2e4" {
++		t.Fatalf("move = %q", move)
++	}
++	cmds := readCommands(t, logPath)
++	idx := func(prefix string) int {
++		for i, c := range cmds {
++			if strings.HasPrefix(c, prefix) {
++				return i
++			}
++		}
++		return -1
++	}
++	if uci, pos, goIdx := idx("uci"), idx("position"), idx("go "); !(uci >= 0 && pos > uci && goIdx > pos) {
++		t.Fatalf("handshake order wrong: %v", cmds)
++	}
++	if strings.Contains(strings.Join(cmds, "\n"), "go depth 6") == false {
++		t.Fatalf("expected 'go depth 6': %v", cmds)
++	}
++}
++
++func TestLimitStrengthElo(t *testing.T) {
++	enginePath, logPath := stubEngine(t)
++	configureStub(t, logPath)
++
++	diff := uint8(0)
++	bot := New(enginePath, false, 10, &diff)
++	if _, err := bot.GetMove(startFEN); err != nil {
++		t.Fatal(err)
++	}
++	joined := strings.Join(readCommands(t, logPath), "\n")
++	if !strings.Contains(joined, "setoption name UCI_LimitStrength value true") {
++		t.Fatalf("missing UCI_LimitStrength: %s", joined)
++	}
++	if !strings.Contains(joined, "setoption name UCI_Elo value 400") {
++		t.Fatalf("missing UCI_Elo: %s", joined)
++	}
++	if !strings.Contains(joined, "go depth 1 movetime 25") {
++		t.Fatalf("expected preset go params: %s", joined)
++	}
++}
++
++func TestGoParamsFullStrength(t *testing.T) {
++	enginePath, logPath := stubEngine(t)
++	configureStub(t, logPath)
++
++	bot := New(enginePath, false, 12, nil)
++	if _, err := bot.GetMove(startFEN); err != nil {
++		t.Fatal(err)
++	}
++	joined := strings.Join(readCommands(t, logPath), "\n")
++	if !strings.Contains(joined, "go depth 12") {
++		t.Fatalf("expected 'go depth 12': %s", joined)
++	}
++	if strings.Contains(joined, "movetime") {
++		t.Fatalf("full strength should have no movetime: %s", joined)
++	}
++	if strings.Contains(joined, "UCI_LimitStrength") {
++		t.Fatalf("full strength should not set limit strength: %s", joined)
++	}
++}
++
++func TestPositionFen(t *testing.T) {
++	enginePath, logPath := stubEngine(t)
++	configureStub(t, logPath)
++
++	bot := New(enginePath, false, 5, nil)
++	if _, err := bot.GetMove(startFEN); err != nil {
++		t.Fatal(err)
++	}
++	joined := strings.Join(readCommands(t, logPath), "\n")
++	if !strings.Contains(joined, "position fen "+startFEN) {
++		t.Fatalf("expected position fen: %s", joined)
++	}
++}
++
++func TestSpawnError(t *testing.T) {
++	bot := New("/nonexistent/engine-binary-does-not-exist", false, 5, nil)
++	_, err := bot.GetMove(startFEN)
++	if err == nil || !strings.Contains(err.Error(), "Failed to spawn engine process") {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestInvalidFEN(t *testing.T) {
++	bot := New("/nonexistent/engine", false, 5, nil)
++	_, err := bot.GetMove("not-a-fen")
++	if err == nil || !strings.HasPrefix(err.Error(), "Failed to parse FEN") {
++		t.Fatalf("err = %v", err)
++	}
++}
+diff --git a/main.go b/main.go
+new file mode 100644
+index 0000000..9f690ac
+--- /dev/null
++++ b/main.go
+@@ -0,0 +1,198 @@
++package main
++
++import (
++	"bufio"
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++	"sort"
++	"strings"
++
++	"github.com/thomas-mauran/chess-tui/internal/config"
++	"github.com/thomas-mauran/chess-tui/internal/constants"
++	"github.com/thomas-mauran/chess-tui/internal/pgn"
++	"github.com/thomas-mauran/chess-tui/internal/skin"
++)
++
++// settings holds the effective runtime settings after applying CLI-over-config
++// precedence.
++type settings struct {
++	EnginePath   string
++	Depth        uint8
++	Difficulty   *uint8
++	LichessToken *string
++	SoundEnabled bool
++	Skin         string
++}
++
++func main() {
++	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
++}
++
++// run executes the CLI and returns the process exit code.
++func run(arguments []string, stdin io.Reader, stdout, stderr io.Writer) int {
++	args, err := config.ParseArgs(arguments)
++	if err != nil {
++		fmt.Fprintf(stderr, "Failed to parse arguments: %v\n", err)
++		return 1
++	}
++
++	// --update-skins is dispatched before any other work.
++	if args.UpdateSkins {
++		if err := skin.RunUpdateSkins(bufio.NewReader(stdin), fileWriter(stdout)); err != nil {
++			fmt.Fprintf(stderr, "Failed to update skins: %v\n", err)
++			return 1
++		}
++		return 0
++	}
++
++	configDir, err := constants.ConfigDir()
++	if err != nil {
++		fmt.Fprintf(stderr, "Failed to determine config directory: %v\n", err)
++		return 1
++	}
++	folderPath := filepath.Join(configDir, "chess-tui")
++	configPath := filepath.Join(folderPath, "config.toml")
++
++	if err := config.Create(args, folderPath, configPath); err != nil {
++		fmt.Fprintf(stderr, "Failed to create config: %v\n", err)
++		return 1
++	}
++
++	cfg := config.Load(configPath)
++	effective := resolveSettings(args, cfg)
++
++	// Ensure skins.json exists and load the available skins/piece styles.
++	skinsPath := filepath.Join(folderPath, "skins.json")
++	if _, err := os.Stat(skinsPath); os.IsNotExist(err) {
++		if err := skin.CreateDefaultSkinsFile(skinsPath); err != nil {
++			fmt.Fprintf(stderr, "Failed to create default skins.json: %v\n", err)
++		}
++	}
++	availableSkins := []skin.Skin{skin.Default(), skin.ASCII()}
++	if custom, err := skin.LoadAllSkins(skinsPath); err == nil {
++		for _, s := range custom {
++			if s.Name != constants.SkinNameDefault && s.Name != constants.SkinNameASCII {
++				availableSkins = append(availableSkins, s)
++			}
++		}
++	}
++	if _, ok := skin.GetSkinByName(availableSkins, effective.Skin); !ok {
++		effective.Skin = availableSkins[0].Name
++	}
++
++	if args.Pgn != nil {
++		games, err := loadPGN(*args.Pgn, stderr)
++		if err != nil {
++			fmt.Fprintf(stderr, "Failed to load PGN '%s': %v\n", *args.Pgn, err)
++			return 1
++		}
++		_ = games
++	}
++
++	_ = effective
++	return 0
++}
++
++// resolveSettings applies CLI values on top of the persisted config.
++func resolveSettings(args *config.Args, cfg *config.Config) settings {
++	s := settings{
++		Depth:        10,
++		SoundEnabled: true,
++		Skin:         "Default",
++	}
++	if cfg != nil {
++		if cfg.EnginePath != nil {
++			s.EnginePath = *cfg.EnginePath
++		}
++		if cfg.BotDepth != nil {
++			s.Depth = *cfg.BotDepth
++		}
++		if cfg.BotDifficulty != nil {
++			d := *cfg.BotDifficulty
++			s.Difficulty = &d
++		}
++		if cfg.LichessToken != nil {
++			t := *cfg.LichessToken
++			s.LichessToken = &t
++		}
++		if cfg.SoundEnabled != nil {
++			s.SoundEnabled = *cfg.SoundEnabled
++		}
++		if cfg.SelectedSkinName != nil {
++			s.Skin = *cfg.SelectedSkinName
++		}
++	}
++
++	if args.EnginePath != "" {
++		s.EnginePath = args.EnginePath
++	}
++	if args.Depth != nil {
++		s.Depth = *args.Depth
++	}
++	if args.Difficulty != nil {
++		if idx, ok := config.ParseDifficulty(*args.Difficulty); ok {
++			s.Difficulty = &idx
++		}
++	}
++	if args.LichessToken != nil {
++		t := *args.LichessToken
++		s.LichessToken = &t
++	}
++	if args.NoSound {
++		s.SoundEnabled = false
++	}
++	if args.Skin != nil {
++		s.Skin = *args.Skin
++	}
++	return s
++}
++
++// loadPGN loads a PGN file or every .pgn file in a directory (sorted).
++func loadPGN(path string, stderr io.Writer) ([]*pgn.Viewer, error) {
++	info, err := os.Stat(path)
++	if err != nil {
++		return nil, err
++	}
++	if !info.IsDir() {
++		return pgn.FromFile(path)
++	}
++
++	entries, err := os.ReadDir(path)
++	if err != nil {
++		return nil, err
++	}
++	var files []string
++	for _, e := range entries {
++		if e.IsDir() {
++			continue
++		}
++		if strings.EqualFold(filepath.Ext(e.Name()), ".pgn") {
++			files = append(files, filepath.Join(path, e.Name()))
++		}
++	}
++	sort.Strings(files)
++
++	var all []*pgn.Viewer
++	for _, f := range files {
++		games, err := pgn.FromFile(f)
++		if err != nil {
++			fmt.Fprintf(stderr, "Skipping %s: %v\n", f, err)
++			continue
++		}
++		all = append(all, games...)
++	}
++	if len(all) == 0 {
++		return nil, fmt.Errorf("No valid .pgn files found in '%s'", path)
++	}
++	return all, nil
++}
++
++// fileWriter adapts an io.Writer to the *os.File expected by RunUpdateSkins.
++func fileWriter(w io.Writer) *os.File {
++	if f, ok := w.(*os.File); ok {
++		return f
++	}
++	return os.Stdout
++}
+diff --git a/main_test.go b/main_test.go
+new file mode 100644
+index 0000000..95fcb25
+--- /dev/null
++++ b/main_test.go
+@@ -0,0 +1,120 @@
++package main
++
++import (
++	"bytes"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/thomas-mauran/chess-tui/internal/config"
++)
++
++const simplePGN = `[Event "%s"]
++[White "W"]
++[Black "B"]
++[Result "1-0"]
++
++1. e4 e5 2. Nf3 1-0
++`
++
++func TestFlagsAcceptedMain(t *testing.T) {
++	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", dir)
++	var stdout, stderr bytes.Buffer
++	code := run([]string{"-e", "/e", "-d", "3", "--difficulty", "easy", "-l", "t", "--no-sound", "--skin", "ASCII"}, strings.NewReader(""), &stdout, &stderr)
++	if code != 0 {
++		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
++	}
++}
++
++func TestCliOverridesConfig(t *testing.T) {
++	engine := "/from/config"
++	sound := true
++	cfg := &config.Config{EnginePath: &engine, SoundEnabled: &sound}
++	depth := uint8(3)
++	engineCLI := "/from/cli"
++	args := &config.Args{EnginePath: engineCLI, Depth: &depth, NoSound: true}
++
++	s := resolveSettings(args, cfg)
++	if s.EnginePath != "/from/cli" {
++		t.Fatalf("engine path = %q", s.EnginePath)
++	}
++	if s.Depth != 3 {
++		t.Fatalf("depth = %d", s.Depth)
++	}
++	if s.SoundEnabled {
++		t.Fatal("--no-sound should win over config")
++	}
++}
++
++func TestCliDifficultyOverrides(t *testing.T) {
++	stored := uint8(1)
++	cfg := &config.Config{BotDifficulty: &stored}
++	hard := "hard"
++	s := resolveSettings(&config.Args{Difficulty: &hard}, cfg)
++	if s.Difficulty == nil || *s.Difficulty != 2 {
++		t.Fatalf("difficulty = %v", s.Difficulty)
++	}
++}
++
++func TestPgnDirectorySorted(t *testing.T) {
++	dir := t.TempDir()
++	if err := os.WriteFile(filepath.Join(dir, "b.pgn"), []byte(strings.Replace(simplePGN, "%s", "Second", 1)), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "a.pgn"), []byte(strings.Replace(simplePGN, "%s", "First", 1)), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "ignore.txt"), []byte("not pgn"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	var stderr bytes.Buffer
++	games, err := loadPGN(dir, &stderr)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(games) != 2 {
++		t.Fatalf("games = %d, want 2", len(games))
++	}
++	if games[0].Title != "First" || games[1].Title != "Second" {
++		t.Fatalf("order = %q, %q", games[0].Title, games[1].Title)
++	}
++}
++
++func TestPgnFailureExit(t *testing.T) {
++	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", dir)
++	empty := t.TempDir()
++	var stdout, stderr bytes.Buffer
++	code := run([]string{"--pgn", empty}, strings.NewReader(""), &stdout, &stderr)
++	if code != 1 {
++		t.Fatalf("exit = %d, want 1", code)
++	}
++	if !strings.Contains(stderr.String(), "Failed to load PGN") {
++		t.Fatalf("stderr = %q", stderr.String())
++	}
++}
++
++func TestPgnMissingFileExit(t *testing.T) {
++	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", dir)
++	var stdout, stderr bytes.Buffer
++	code := run([]string{"--pgn", filepath.Join(dir, "missing.pgn")}, strings.NewReader(""), &stdout, &stderr)
++	if code != 1 {
++		t.Fatalf("exit = %d, want 1", code)
++	}
++}
++
++func TestUpdateSkinsDispatched(t *testing.T) {
++	dir := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", dir)
++	var stdout, stderr bytes.Buffer
++	code := run([]string{"--update-skins"}, strings.NewReader(""), &stdout, &stderr)
++	if code != 0 {
++		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
++	}
++	if _, err := os.Stat(filepath.Join(dir, "chess-tui", "skins.json")); err != nil {
++		t.Fatalf("skins.json not created: %v", err)
++	}
++}

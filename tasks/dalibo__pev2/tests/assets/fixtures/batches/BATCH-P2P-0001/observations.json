@@ -1,0 +1,959 @@
+[
+  {
+    "atomic_claim": "Preserve observable behavior for exports:.",
+    "contract_requirement_ids": [
+      "R001",
+      "R002",
+      "R003",
+      "R004",
+      "R005",
+      "R006",
+      "R007",
+      "R008",
+      "R009",
+      "R010",
+      "R011",
+      "R012",
+      "R013",
+      "R014",
+      "R015",
+      "R016",
+      "R017",
+      "R018",
+      "R019",
+      "R020",
+      "R021",
+      "R022",
+      "R023",
+      "R024",
+      "R025",
+      "R026",
+      "R027",
+      "R028",
+      "R029",
+      "R030",
+      "R031",
+      "R032",
+      "R033",
+      "R034",
+      "R038",
+      "R039",
+      "R040"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "exports:."
+    },
+    "evidence_refs": [
+      "EVIDENCE-00437"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:bd0b59120fa5be5659363d8a7d37b406c2fa674e834f8e64cfbb342a2f1fd319",
+    "id": "P2P-030",
+    "kind": "P2P",
+    "projection_signature": "sha256:00c3404f0627ac8c65d6253d6a49de8d8a59de958e6c9e83a406eb1825ccaa1a",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan(\"\", content, \"SELECT  a     b\") returns a plan whose query is \"SELECT a b\" and whose content carries the computed maximum metrics.",
+    "contract_requirement_ids": [
+      "R004"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "PlanService.createPlan / pev2_core::create_plan"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00008"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:1196e9a7e8fc4715f55bbc4fa82afdb57a303bd5728b4bbac549ed11045a2356",
+    "id": "P2P-002",
+    "kind": "P2P",
+    "projection_signature": "sha256:0027d0d25b7cbdd69d9a3655e4281ee45f5e296552542575ea0ac2354ce6068e",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "cleanup_source strips psql frames and headers, and split_into_lines rejoins force-wrapped continuation lines, matching the TypeScript contracts.",
+    "contract_requirement_ids": [
+      "R007"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "PlanService.cleanupSource and PlanService.splitIntoLines / cleanup_source, split_into_lines"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00011"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:1cfe82e843e3ca02dedf745a7cf9cb7a0296d4ff0658b2f5475c89b429209fec",
+    "id": "P2P-003",
+    "kind": "P2P",
+    "projection_signature": "sha256:fb19939f57a034e81ba51f168fa42b1b6423095b635279db0877f71b007ce5c9",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_text recognizes never-executed markers, InitPlan/SubPlan/CTE/Worker blocks, JIT/Planning/Serialization sections, Buffers, I/O Timings, Sort/Group/Hash keys, Memory and Cache lines.",
+    "contract_requirement_ids": [
+      "R017"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fromText auxiliary information parsing"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00021"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:1ecf24c62ec36120a9bccabb00ffa3ec569d9a9ae9e38f38402d36bbcc6a6895",
+    "id": "P2P-004",
+    "kind": "P2P",
+    "projection_signature": "sha256:767560b6bdda286259ca3340c6962500f2179e2cfbb8f6b5a6551614644afd28",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan subtracts matching CTE total time from CTE Scan exclusive durations and removes InitPlan usage time from consuming nodes, skipping both when isAnalyze is false.",
+    "contract_requirement_ids": [
+      "R031"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "CTE Scan and InitPlan duration corrections"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00035"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:1fd5d242b010024a20f4bfa2078d8af6b9e4b516700ed73d53236e2666eec485",
+    "id": "P2P-005",
+    "kind": "P2P",
+    "projection_signature": "sha256:253580eb73373472f6139b2b5455984326868826bafa44e2be34773d763a239c",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "get_plan_content on an array whose first element has a Plan member returns that first element as the plan content.",
+    "contract_requirement_ids": [
+      "R023"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "getPlanContent array handling"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00027"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:2b2dfe8a074f66b55ac16b2f6966a7a5e23a1fce422171059567e3da3dc9392c",
+    "id": "P2P-006",
+    "kind": "P2P",
+    "projection_signature": "sha256:578ff4cc282cd91efcb48b07fa8bb9d0f895af1d777d60e5a59a8043d2b3d845",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "All new files live under /workspace/repo and the base commit 6d14a4f65b7400b9a877d6ec583f07f364f2267d history is preserved rather than replaced.",
+    "contract_requirement_ids": [
+      "R040"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "deliverable confined to /workspace/repo"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00044"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:2d557eb29e0891e028252cc3e22353b24a7ecefb9c9fc454a2aedfa22c3f61d4",
+    "id": "P2P-007",
+    "kind": "P2P",
+    "projection_signature": "sha256:ed8dcf91404d113c63e35e9fcb7bfd5af04b9dea9d00bae451f018dcd7d47c58",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "split_into_lines leaves no item with unbalanced parentheses and rejoins comma-terminated information lists split across lines.",
+    "contract_requirement_ids": [
+      "R015"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "splitIntoLines line reassembly"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00019"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:37a8ae65b2e418987133980574f6de452fc344eb8b3fd955ec09a822b0c812a8",
+    "id": "P2P-008",
+    "kind": "P2P",
+    "projection_signature": "sha256:2e87b929199cffe12df2434ebcf1bca9a419a97243e1177139dc4469316aca7c",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "parse_node_type extracts Node Type/Relation Name/Alias/Index Name/Scan Direction/Join Type/Partial Mode/Strategy/Parallel Aware/Async Capable; \"Nested Loop\" keeps its bare type, \"Merge Left Join\" becomes \"Merge Join\", and a missing join type defaults to \"Inner\".",
+    "contract_requirement_ids": [
+      "R033"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "node-type field extraction"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00037"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:384793ae8386cae820541c308f93ce5ad4eba83ec9d4fb1e37583e93e38aedbb",
+    "id": "P2P-009",
+    "kind": "P2P",
+    "projection_signature": "sha256:6b517827b7f590ec72e5a6f00c2e4b84df6d6d22afcb052721afc5640850b85d",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A `Hash (cost=... rows=...) (never executed)` node is produced with Actual Loops, Actual Rows, Actual Total Time and Actual Startup Time all equal to 0.",
+    "contract_requirement_ids": [
+      "R019"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "never-executed node normalization"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00023"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:39a8b8153fb9cd22f34a2553282a95b4f0d0ab6e8c2b048bd8c969bb04d2928e",
+    "id": "P2P-010",
+    "kind": "P2P",
+    "projection_signature": "sha256:63040ca5af5fb81f60f84b7bbf4ffc6b9d88489942288fd872e940140cf39ee0",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "The Vitest specs under src/services/__tests__ and src/__tests__, the from-text plan/expect fixtures, and the Playwright snapshots under tests/e2e are byte-identical after migration.",
+    "contract_requirement_ids": [
+      "R038"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "protected tests and fixtures"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00042"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:411fd87268b9a35c6e4586fabb48fb7356d1a57700132b771eded66f6f96acde",
+    "id": "P2P-011",
+    "kind": "P2P",
+    "projection_signature": "sha256:784fe98424197083bc9b74e964fb592ab1e93ce246e19c5abd1f0e4592be8db2",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A parsed analyzed plan exposes keys \"Actual Loops\", \"Actual Rows\", \"Total Cost\" and \"Plan Rows\" with the same spellings as the TypeScript Property enum.",
+    "contract_requirement_ids": [
+      "R008"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "Property key strings in the serialized plan content"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00012"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:44103ddd2c0fba04b155a0d61fc3833c2a76563033a91ad516d4c34896f9c14e",
+    "id": "P2P-012",
+    "kind": "P2P",
+    "projection_signature": "sha256:2107aff6a6314224b8accdece87bfabe144577bffb8461daa5da9d91df23de0d",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A node line with `rows=0.25` yields the marker `*Actual Rows Is Fractional` true and Actual Rows 0.25.",
+    "contract_requirement_ids": [
+      "R020"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fractional actual rows marker"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00024"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:4e7b9681e432c6cdcf4b7034b4630f3a3a69118774410a2f80648528c2ca9800",
+    "id": "P2P-013",
+    "kind": "P2P",
+    "projection_signature": "sha256:8fbe2030a63948585f5551c8f592ab7193bf6ccae8db4c7273b24a3eb9148c92",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_source(\"Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\") returns plan content whose Plan.Node Type is \"Seq Scan\", while from_source(\"not a plan\") returns an error.",
+    "contract_requirement_ids": [
+      "R003"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "PlanService.fromSource / pev2_core::from_source"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00007"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:4ffee8bc52bf28a87646d2a8bbe4544f581a9de706a67529a76ccb913e538d34",
+    "id": "P2P-014",
+    "kind": "P2P",
+    "projection_signature": "sha256:813271e5f2dd16541e3b2e5d985fc22a8c2e6495e424240eb18c0d5408941dc8",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "split_balanced(\"a,(b,c),d\", \",\") returns [\"a\", \"(b,c)\", \"d\"] so commas inside parentheses are not treated as separators.",
+    "contract_requirement_ids": [
+      "R010"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "splitBalanced / split_balanced"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00014"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:57de89180e8defe77736c14ec390bb5cefa3f57d50afd1bb33c974f2ae1bc2fd",
+    "id": "P2P-015",
+    "kind": "P2P",
+    "projection_signature": "sha256:9f106643be041e7d1e84e659a9b95e80adc24e28f7a3f9b50603d88366948ac4",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Every public capability and contract named in the goal remains available after migration; none is removed or redefined.",
+    "contract_requirement_ids": [
+      "R034"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "public capability preservation"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00038"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:59f7fa70c152c1dd6639908a1ac68c891cd9a8460eecd66091307667a3ce4830",
+    "id": "P2P-016",
+    "kind": "P2P",
+    "projection_signature": "sha256:ab8e79ccf2f69de7fa8a2c97483a43993d97a5e1de23ed8f7674cfec16bd0006",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "For analyzed plans create_plan subtracts child totals to get exclusive duration/cost and stores loop- and worker-adjusted times in the *...Revised fields.",
+    "contract_requirement_ids": [
+      "R030"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "exclusive duration/cost and revised fields"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00034"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:5c4f22289d0ff876a34e6ea10a8e62c2300f37fa4308ba744a8939ddafe018e4",
+    "id": "P2P-017",
+    "kind": "P2P",
+    "projection_signature": "sha256:9220759edb92bfcde385623a20ba68de7a1d5e4517c3d768feb3f1deef8d4181",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "parse_node_type(\"Index Scan using idx on t\") yields Node Type \"Index Scan\", Index Name \"idx\", Relation Name \"t\" and Scan Direction \"Forward\".",
+    "contract_requirement_ids": [
+      "R009"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "Node constructor / pev2_core::parse_node_type"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00013"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:661b98730e43f58cc2896844f254c55a0bb8865a33b9a8450cb21967daa1ee8a",
+    "id": "P2P-018",
+    "kind": "P2P",
+    "projection_signature": "sha256:f9fb4a6363c7338875378d5a1e3ea215953d3ab5c4caa09ccca3a48a7519087e",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "get_plan_content({\"foo\": 1}) returns the error string \"Invalid plan\".",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "getPlanContent missing Plan error"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00028"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:67ebafa3badd96b8a50bc931a773d91f0d44fd7e87edf648e46348f786a43010",
+    "id": "P2P-019",
+    "kind": "P2P",
+    "projection_signature": "sha256:dbcda57c2fda06ce49c01f1607468441d2fdbe901e3cf5af481836f98368b049",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan sets maxEstimateFactor to twice the maximum planner estimate factor, and to 1 when the plan has no estimate factors.",
+    "contract_requirement_ids": [
+      "R029"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "createPlan maxEstimateFactor"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00033"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:69192c5a88a7f01cc2d581874855969fca67a5fb2aa92f0888ed6d6bdc5c0130",
+    "id": "P2P-020",
+    "kind": "P2P",
+    "projection_signature": "sha256:d9a7923f4d40dd4387b490cc456f215a3e15aa9c389cda6a6fc1e474794e7838",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_text(\"not a plan\") returns the error string \"Unable to parse plan\".",
+    "contract_requirement_ids": [
+      "R021"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fromText error result"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00025"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:6e16da6dc49030171cbf7682f8fba0485e67dba069165cb3acf35ca9b45d933e",
+    "id": "P2P-021",
+    "kind": "P2P",
+    "projection_signature": "sha256:0d6c9300c509a40e69e7d85b5128130fe956a7d1e9c251a9adcfbf774278156f",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Serializing the parse result yields nested Plan/Plans node objects plus Workers, JIT, Planning, Serialization, Triggers and Query Text with the same key strings as TypeScript.",
+    "contract_requirement_ids": [
+      "R012"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "JSON-serialized plan content structure"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00016"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:87d797cf3116c8e15013f950c9ccce2107cd9ae0ff55778d5c34728c96fb498f",
+    "id": "P2P-022",
+    "kind": "P2P",
+    "projection_signature": "sha256:e0b5a2a185857296f761db8c2e2fe0c47c6815bdbd81a3169e3af87e780f3e50",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan sets isAnalyze true when the root has Actual Rows and isVerbose true when any descendant (including inside a CTE/InitPlan) has Output.",
+    "contract_requirement_ids": [
+      "R025"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "createPlan isAnalyze/isVerbose flags"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00029"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:8b959c6e4ba42730375a6f649f7db41d9ae273f369cd199d7faf158d639b5c3f",
+    "id": "P2P-023",
+    "kind": "P2P",
+    "projection_signature": "sha256:fed4fab22e415568aa14c7c141018fc2b7ac497555ac2447cea472f1db51d640",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan assigns sequential nodeId values and moves CTE/InitPlan nodes into the plan ctes list, removing them from their parent's Plans.",
+    "contract_requirement_ids": [
+      "R026"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "createPlan nodeId assignment and ctes collection"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00030"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:909aff7c74ed74d2201bdc0123900c103f480f9c333b2f8c1ecc1620220ee022",
+    "id": "P2P-024",
+    "kind": "P2P",
+    "projection_signature": "sha256:867781ecd621b08c8a27163f559b2dec0d681331c13f66d7313678cad903da48",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_text(\"Seq Scan on t  (cost=0.00..1.00 rows=1 width=4)\") returns content with a root Plan node of type \"Seq Scan\".",
+    "contract_requirement_ids": [
+      "R005"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "PlanService.fromText / pev2_core::from_text"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00009"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:9e36ada6c7e2ee53c97d8e2cf955fba10d401c8e1af83ea81e694cc305094d03",
+    "id": "P2P-025",
+    "kind": "P2P",
+    "projection_signature": "sha256:6e15e79e1fb521b2e9e415446d4cfc520ac8488a78046ff39b8caf78ae94c725",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "cleanup_source removes `|`/`║`/`│` frames, border/separator lines, wrapping quotes, `+`/`↵` continuations, the QUERY PLAN header and a trailing `(N rows)` line.",
+    "contract_requirement_ids": [
+      "R014"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "cleanupSource text normalization"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00018"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:9fad9e09d67101a27f9165532fe0b1586da8a47e43324cd9d86fede4da41708d",
+    "id": "P2P-026",
+    "kind": "P2P",
+    "projection_signature": "sha256:d6be044a5a7ad8dc922b8921af44d914ef9458312ffc50c9b4eb5f27bb3ad002",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "The solution performs genuine parsing and metric computation on the supplied inputs rather than hardcoding expected outputs for known fixtures.",
+    "contract_requirement_ids": [
+      "R039"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "no weakened checks"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00043"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:a5ba4924656451c6ff6e900c91d9ec51487a5c787b75e46e4ffda4e29b1b29d2",
+    "id": "P2P-027",
+    "kind": "P2P",
+    "projection_signature": "sha256:04c8e268dcb1202395a8119ae13c5279e2f20be2ec16140b0a5571750528e1c8",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Given PostgreSQL EXPLAIN text or JSON, the Rust core returns parsed plan content and the derived metrics (maxRows, maxCost, maxTotalCost, maxDuration, maxBlocks, maxIo, maxEstimateFactor) that PlanService produced.",
+    "contract_requirement_ids": [
+      "R001"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "pev2-core parsing, cleanup, line-splitting, node-construction and metric API"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00005"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:ad917ef452c0114ac93a3c881b807fadf958a0f31e67a8be0ed13c4393482aad",
+    "id": "P2P-028",
+    "kind": "P2P",
+    "projection_signature": "sha256:63f71164ced8cfb8e79ce07ba46df38101c99c536aca6b3dff374ddef3d19949",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_source parses a pure JSON document directly, routes a JSON-like framed payload to from_json, and routes plain EXPLAIN text to from_text.",
+    "contract_requirement_ids": [
+      "R013"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fromSource JSON/text routing"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00017"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:b7d89c341656f7029cc0a52e45f073eabdf3e88201ab7ef033c4521dc729289f",
+    "id": "P2P-029",
+    "kind": "P2P",
+    "projection_signature": "sha256:d101631a44fc1303770053e25663d6bd3ffac63885bc9068b0a56da51f44f1c9",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "A JSON ModifyTable node with Operation \"Insert\" is emitted with Node Type \"Insert\", and text `Insert on foo` yields Node Type \"Insert\".",
+    "contract_requirement_ids": [
+      "R032"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "ModifyTable to Operation conversion"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00036"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:c2fbc2c913482c841ee1893a02ab2856db15757550ec0b8cc952a6c4bb13a578",
+    "id": "P2P-031",
+    "kind": "P2P",
+    "projection_signature": "sha256:dffd42fc8a1645340b5077e2a91d4734f356cee33060e2e19df001c05789c11e",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "In from_text, a `->  Seq Scan` line indented under `Nested Loop` becomes a member of that node's Plans array based on indentation depth.",
+    "contract_requirement_ids": [
+      "R016"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fromText indentation/depth tree construction"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00020"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:c74f359e8be9a6d0f6075e1dfde1cb7666b130f6d3fda6663fca31a30eddbb34",
+    "id": "P2P-032",
+    "kind": "P2P",
+    "projection_signature": "sha256:36b54818306e7edf0ab3cc80f23ae9775a4826aa5a71d04f8714e60a9ebae0a4",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan computes maxBlocks.Shared/Temp/Local from the highest summed exclusive buffer counts and maxIo from the highest summed exclusive I/O read plus write time.",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "createPlan maxBlocks and maxIo"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00032"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:d5694bdcfdca1f37c6aaee5de7ef89d7f8e58a2bd4674a115762628b973878ac",
+    "id": "P2P-033",
+    "kind": "P2P",
+    "projection_signature": "sha256:e60eb5fa14719ee285688f14f59822629b09d355b637f3c6e1270a0cfaec7a60",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Preserve observable behavior for exports:./dist/pev2.css",
+    "contract_requirement_ids": [
+      "R001",
+      "R002"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "exports:./dist/pev2.css"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00438"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:d8fd396e43ce2b19729cc19eb9f6a5e7b3913364483288413e4398eb3a3f549b",
+    "id": "P2P-034",
+    "kind": "P2P",
+    "projection_signature": "sha256:c4119f2863cc4f879b42ffeff5f908ec8ea76c826932cf037a5e2b761664d822",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_json on a double-quoted JSON array payload returns the embedded plan content with the expected Plan node.",
+    "contract_requirement_ids": [
+      "R006"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "PlanService.fromJson / pev2_core::from_json"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00010"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:e26d1876f1218f7d3c60cb4033d134e9c573e0cc76bd02cd7f2571bdb81626d5",
+    "id": "P2P-035",
+    "kind": "P2P",
+    "projection_signature": "sha256:57308c1800d4a2d45e2e838d4bd6141b10a725d8815669dd98576b91a205ff75",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_json slices only the lines between the opening `[`/`{` and closing bracket lines and replaces `\"\"` with `\"` before parsing.",
+    "contract_requirement_ids": [
+      "R022"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "fromJson embedded JSON extraction"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00026"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:e35e7bc1f063f004f2a3463c825e685cdb62364e92d77c5df6c46b21822cb328",
+    "id": "P2P-036",
+    "kind": "P2P",
+    "projection_signature": "sha256:d773480639317f985fce4b9961d11129aa41b065176a3226677b601f7f4b1959",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "create_plan computes content.maxRows, maxCost, maxTotalCost and maxDuration as the maxima of the corresponding node fields.",
+    "contract_requirement_ids": [
+      "R027"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "createPlan maximum metrics"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00031"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:e786d5973f8d8564ad526ebe2103b19cfc1466cf5047580c5ec450291926b38c",
+    "id": "P2P-037",
+    "kind": "P2P",
+    "projection_signature": "sha256:297026c2b28849ef0a0c1d065e81bd1e069e39b7c3b51621811ce29d8fa73b2b",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Under a `Nested Loop`, the first child gets Parent Relationship \"Outer\" and later children \"Inner\"; under an Append/Subquery Scan the applicable Member/Subquery values are set.",
+    "contract_requirement_ids": [
+      "R018"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "Parent Relationship assignment"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00022"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:eb33d35602db1f9069178f44aa0bb0e3fa549a2e842aea7a19e5cbb1d10e9ba8",
+    "id": "P2P-038",
+    "kind": "P2P",
+    "projection_signature": "sha256:d49bacfee4d84e1f217d36681dcfee3e190759a70342c3ecdfeb8901196f4b5c",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "from_source, create_plan, from_text, from_json, cleanup_source, split_into_lines, split_balanced, find_node_by_id, find_node_by_subplan_name and should_show_prop are each callable as public Rust/wasm functions.",
+    "contract_requirement_ids": [
+      "R002"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "pev2-core public entry points exported from lib.rs and wasm.rs"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00006"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:f1b191c3699a8fea800630af2379614fa6e4bd84efa79616537be4aed23f449a",
+    "id": "P2P-039",
+    "kind": "P2P",
+    "projection_signature": "sha256:d2573975bfbdc5d15f40e56f990330a4b4ddb91887c8303ce4ca53d2ff077a71",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "find_node_by_id returns the node with the requested nodeId, find_node_by_subplan_name matches \"CTE <name>\", and should_show_prop filters already-displayed keys.",
+    "contract_requirement_ids": [
+      "R011"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "observable-result",
+      "scenario": "normal",
+      "surface": "findNodeById, findNodeBySubplanName, shouldShowProp / find_node_by_id, find_node_by_subplan_name, should_show_prop"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00015"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:ffc34a147b83a06a2ea338674061e91ab59cd874f0bd0b5dc045ef55c8787eb3",
+    "id": "P2P-040",
+    "kind": "P2P",
+    "projection_signature": "sha256:358c92b385bde54e5df467e6f37826076a58c6777c103aea3c42c85d2b6481c8",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  },
+  {
+    "atomic_claim": "Preserve observable behavior for test:src/__tests__/filters-formatDuration.spec.ts#formats multiple days",
+    "contract_requirement_ids": [
+      "R038"
+    ],
+    "coverage": {
+      "input_class": "valid",
+      "projection": "return-value",
+      "scenario": "normal",
+      "surface": "test:src/__tests__/filters-formatDuration.spec.ts#formats multiple days"
+    },
+    "evidence_refs": [
+      "EVIDENCE-00476"
+    ],
+    "family": "public-api",
+    "fingerprint": "sha256:01681dc2263dd3e38a41dbadda84df493c42c7f929b6f9f529de3c9f864496f1",
+    "id": "P2P-001",
+    "kind": "P2P",
+    "projection_signature": "sha256:8e656f1e91f486574ea1dc5ee107876cc8d5316ca59e67025475a5962a472413",
+    "reason": "evidence-bound-atomic-observation",
+    "source_expectation": "PASS",
+    "target_expectation": "PASS"
+  }
+]

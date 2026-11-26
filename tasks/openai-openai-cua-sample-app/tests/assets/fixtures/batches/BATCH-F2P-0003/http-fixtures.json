@@ -1,0 +1,45 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "description": "Deterministic HTTP fixtures shared by the BATCH-F2P-0003 target probes.",
+  "scenario": {
+    "id": "fixture-scenario",
+    "labId": "paint",
+    "category": "creativity",
+    "title": "Fixture",
+    "description": "Synthetic F2P probe scenario",
+    "defaultPrompt": "Complete fixture.",
+    "tags": ["fixture"]
+  },
+  "requests": {
+    "health": { "method": "GET", "url": "/health" },
+    "capabilities": { "method": "GET", "url": "/api/capabilities" },
+    "scenarios": { "method": "GET", "url": "/api/scenarios" },
+    "startRun": {
+      "method": "POST",
+      "url": "/api/runs",
+      "headers": { "content-type": "application/json" },
+      "payload": { "scenarioId": "fixture-scenario", "prompt": "p" }
+    },
+    "malformedStartRun": {
+      "method": "POST",
+      "url": "/api/runs",
+      "headers": { "content-type": "application/json" },
+      "rawPayload": "{invalid"
+    },
+    "preflight": {
+      "method": "OPTIONS",
+      "url": "/api/runs",
+      "headers": { "origin": "http://localhost:3000" }
+    },
+    "backendMismatch": {
+      "method": "GET",
+      "url": "/health",
+      "headers": { "x-cua-backend": "python" }
+    },
+    "missingRun": { "method": "GET", "url": "/api/runs/missing-run" },
+    "stopRun": { "method": "POST", "url": "/api/runs/probe-run/stop" }
+  },
+  "expectedErrorEnvelope": { "code": "invalid_request" },
+  "allowedOrigins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+  "disallowedOrigins": ["https://untrusted.example", "null"]
+}

@@ -1,0 +1,1492 @@
+{
+  "schema_version": "labeler-grouping-contract:v1",
+  "baseline_commit": "98ce1450c7908643084f7487327dfa4f4bf8a367",
+  "semantics": "Plain options join the first existing any group; separately normalized MatchConfig groups are conjoined. Explicit any/all options retain OR/AND. Mixed-group order follows the original parser.",
+  "cases": [
+    {
+      "id": "plain-file-head-11",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-file-head-10",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-file-head-01",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-file-head-00",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-head-file-11",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-head-file-10",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-head-file-01",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-head-file-00",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-any-then-plain-11",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-then-plain-10",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-then-plain-01",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-then-plain-00",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-then-explicit-any-11",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-then-explicit-any-10",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-then-explicit-any-01",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-then-explicit-any-00",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-any-head-then-plain-11",
+      "rules": [
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-head-then-plain-10",
+      "rules": [
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-head-then-plain-01",
+      "rules": [
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-head-then-plain-00",
+      "rules": [
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-head-then-explicit-any-11",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-head-then-explicit-any-10",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-head-then-explicit-any-01",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-head-then-explicit-any-00",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-any-11",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "two-explicit-any-10",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-any-01",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-any-00",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "any": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-all-11",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "two-explicit-all-10",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-all-01",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "two-explicit-all-00",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-any-all-11",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-any-all-10",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-any-all-01",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-any-all-00",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-all-plain-11",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "explicit-all-plain-10",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-all-plain-01",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "explicit-all-plain-00",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "head-branch": "^feature/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-explicit-all-11",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-explicit-all-10",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-explicit-all-01",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-explicit-all-00",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "all": [
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "single-any-11",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "single-any-10",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "single-any-01",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "single-any-00",
+      "rules": [
+        {
+          "any": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "single-all-11",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "single-all-10",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": false
+    },
+    {
+      "id": "single-all-01",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "single-all-00",
+      "rules": [
+        {
+          "all": [
+            {
+              "changed-files": [
+                {
+                  "any-glob-to-any-file": "docs/**"
+                }
+              ]
+            },
+            {
+              "head-branch": "^feature/"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-two-file-rules-11",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "src/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "docs/a.md",
+        "src/a.go"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-file-rules-10",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "src/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "docs/a.md"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-file-rules-01",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "src/**"
+            }
+          ]
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "src/a.go"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-file-rules-00",
+      "rules": [
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "docs/**"
+            }
+          ]
+        },
+        {
+          "changed-files": [
+            {
+              "any-glob-to-any-file": "src/**"
+            }
+          ]
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    },
+    {
+      "id": "plain-two-branch-rules-11",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "base-branch": "^release/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "release/1",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-branch-rules-10",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "base-branch": "^release/"
+        }
+      ],
+      "head": "feature/x",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-branch-rules-01",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "base-branch": "^release/"
+        }
+      ],
+      "head": "main",
+      "base": "release/1",
+      "files": [
+        "x.txt"
+      ],
+      "matches": true
+    },
+    {
+      "id": "plain-two-branch-rules-00",
+      "rules": [
+        {
+          "head-branch": "^feature/"
+        },
+        {
+          "base-branch": "^release/"
+        }
+      ],
+      "head": "main",
+      "base": "main",
+      "files": [
+        "x.txt"
+      ],
+      "matches": false
+    }
+  ]
+}

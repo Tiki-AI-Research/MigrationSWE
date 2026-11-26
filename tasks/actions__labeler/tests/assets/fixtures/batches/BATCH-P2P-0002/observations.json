@@ -1,0 +1,291 @@
+{
+  "batch_id": "BATCH-P2P-0002",
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "kind": "P2P",
+  "observations": [
+    {
+      "atomic_claim": "Preserve observable behavior for test:__tests__/labeler.test.ts#throws error for decimal string",
+      "contract_requirement_ids": [
+        "R003",
+        "R008",
+        "R009",
+        "R010",
+        "R011",
+        "R016",
+        "R017",
+        "R019",
+        "R021",
+        "R023",
+        "R024",
+        "R025",
+        "R031"
+      ],
+      "coverage": {
+        "input_class": "invalid",
+        "projection": "exception",
+        "scenario": "error",
+        "surface": "test:__tests__/labeler.test.ts#throws error for decimal string"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00314"
+      ],
+      "id": "P2P-030",
+      "projection_signature": "sha256:5e4122c823bfe269f811712e4e409b1e1dca3e2e089dd5df874c9f448354d399",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "Preserve observable behavior for test:__tests__/labeler.test.ts#when multiple MatchConfigs are supplied",
+      "contract_requirement_ids": [
+        "R014",
+        "R016",
+        "R020",
+        "R031"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "return-value",
+        "scenario": "normal",
+        "surface": "test:__tests__/labeler.test.ts#when multiple MatchConfigs are supplied"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00325"
+      ],
+      "id": "P2P-034",
+      "projection_signature": "sha256:3a1bea3ebbef6f480eef869475b35a4c03b9613ed607d1738ce1cb2c4a95605c",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "All prior public capabilities and contracts remain available after migration and none are removed or changed outside the stated goal.",
+      "contract_requirement_ids": [
+        "R027"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "public capabilities and contracts"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00439"
+      ],
+      "id": "P2P-028",
+      "projection_signature": "sha256:2dbb9dd4361437fad139ca4e0702f6d42b9b269cb0ea8bff8456fd8d0567f2d0",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "Preserve observable behavior for test:__tests__/labeler.test.ts#returns false when config has empty changed-files array",
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "coverage": {
+        "input_class": "boundary",
+        "projection": "return-value",
+        "scenario": "boundary",
+        "surface": "test:__tests__/labeler.test.ts#returns false when config has empty changed-files array"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00297"
+      ],
+      "id": "P2P-032",
+      "projection_signature": "sha256:542316ef1638a905a456228456dcaa9e57db7c899f3151b1d45ae6de7e6c7ba2",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "action.yml declares outputs new-labels and all-labels, each described as a comma-separated list, with unchanged names.",
+      "contract_requirement_ids": [
+        "R004"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "action.yml output definitions"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00416"
+      ],
+      "id": "P2P-035",
+      "projection_signature": "sha256:2bed5711e60a3916221e2b0430675f5fdf7e022769a3bdf6589d294e1f323ca6",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "Labels not present in the configuration are never removed, and labels concurrently added by another actor remain present in all-labels.",
+      "contract_requirement_ids": [
+        "R013"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label set mutation"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00425"
+      ],
+      "id": "P2P-025",
+      "projection_signature": "sha256:ee7e0dfec10f7ae79790ba7d60e0b3f29ee43c15bd836dd03a64cb74a647d21b",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "With dot=false a glob `**/*.ts` does not match `.hidden/x.ts` while a glob `.github/**` matches `.github/workflows/x.yml`; a `!docs/**` pattern negates; a branch pattern `^feature/.*$` is evaluated as a JavaScript regular expression.",
+      "contract_requirement_ids": [
+        "R008"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "changed-file glob and branch pattern matching"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00420"
+      ],
+      "id": "P2P-026",
+      "projection_signature": "sha256:2a52bb106b816dc1e5634ddc951b9f1a110651bb119337d05d226cd68e7c833b",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "action.yml declares inputs repo-token (default ${{ github.token }}), configuration-path (default .github/labeler.yml), sync-labels (default false), dot (default true), and multiline pr-number with unchanged names, defaults, and meanings.",
+      "contract_requirement_ids": [
+        "R003"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "action.yml input definitions"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00415"
+      ],
+      "id": "P2P-027",
+      "projection_signature": "sha256:12d5af594819ba934c0001d2c3faecf63d2039090c4c73be6c33741e10bca138",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "When adding labels returns a 5xx server error, the action re-reads the issue labels and verifies the requested labels were actually applied before deciding to fail.",
+      "contract_requirement_ids": [
+        "R023"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label addition failure handling"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00435"
+      ],
+      "id": "P2P-029",
+      "projection_signature": "sha256:d8e5d88375239024901799ffde5b6c865768e9bdc1b89261a69ff3502cd25b75",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "A failed bulk removal fails with an error naming the affected configured labels and the pull request number.",
+      "contract_requirement_ids": [
+        "R024"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "bulk label removal failure"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00436"
+      ],
+      "id": "P2P-031",
+      "projection_signature": "sha256:d3c07fd24cc9de6c0162b57375298596b37675586be13265614b1c8ce3291f41",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "A config mapping top-level label names to arrays of match objects using changed-files, head-branch, and base-branch, with optional any and all groupings and top-level options changed-files-labels-limit and max-files-changed, is accepted unchanged.",
+      "contract_requirement_ids": [
+        "R005"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "label configuration YAML schema accepted by the action"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00417"
+      ],
+      "id": "P2P-033",
+      "projection_signature": "sha256:68e8672d04f7c04dd24a64a585d6225f420c5ad2f1b30dcae54fc5fc92be9735",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "An invalid pr-number containing a non-printable character is reported with the character escaped as \\xNN in the warning.",
+      "contract_requirement_ids": [
+        "R021"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "invalid pr-number warning text"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00433"
+      ],
+      "id": "P2P-036",
+      "projection_signature": "sha256:bcf589079f55e99d25b6bb32dc5547f1e02daff283c407043c356d19bc52a4ec",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "A pull request that cannot be fetched, or that has no changed files, produces a warning and is skipped.",
+      "contract_requirement_ids": [
+        "R022"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "unfetchable or empty pull requests"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00434"
+      ],
+      "id": "P2P-037",
+      "projection_signature": "sha256:08e2725b694cb53356964bbf1e23ea06537ca8158aed2c8e34bafe4404636b54",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    },
+    {
+      "atomic_claim": "When more than 100 labels apply, only the first 100 are applied and a warning lists the excess labels.",
+      "contract_requirement_ids": [
+        "R014"
+      ],
+      "coverage": {
+        "input_class": "valid",
+        "projection": "observable-result",
+        "scenario": "normal",
+        "surface": "applied label cap and warning"
+      },
+      "evidence_refs": [
+        "EVIDENCE-00426"
+      ],
+      "id": "P2P-038",
+      "projection_signature": "sha256:a5ee483bd2a97c1d0a576475ccd399f5128dc4874500695aacb8648a0ac55870",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS"
+    }
+  ],
+  "schema": "migration-observation-fixture:v1"
+}

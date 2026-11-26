@@ -1,0 +1,3194 @@
+diff --git a/suite/_harness.js b/suite/_harness.js
+new file mode 100644
+index 0000000..57e2a05
+--- /dev/null
++++ b/suite/_harness.js
+@@ -0,0 +1,1193 @@
++'use strict';
++
++const assert = require('assert');
++const crypto = require('crypto');
++const fs = require('fs');
++const http = require('http');
++const os = require('os');
++const path = require('path');
++const { execFile, spawn } = require('child_process');
++
++const REPO = path.resolve(process.env.SHARING_REPO || process.cwd());
++const ISOLATED = process.env.HARBOR_ISOLATED === '1';
++process.env.SHARING_TEST = '1';
++const directAppModule = ISOLATED ? null : require(path.join(REPO, 'bin', 'app.js'));
++const CANDIDATE_UID = 1001;
++const SANDBOX_ROOT = '/workspace/candidate-sandboxes';
++const HTTP_REQUEST_TIMEOUT_MS = 10000;
++
++// Shared by the controller and the isolated worker. A hijacked candidate
++// response can fail without sending headers or ending the response, so an
++// error listener alone cannot bound the request.
++// Compare RFC 6266 disposition and the effective download filename. RFC 5987
++// filename* takes precedence over its optional legacy fallback filename.
++function contentDispositionMeaning(header) {
++    assert.strictEqual(typeof header, 'string', 'Content-Disposition must be present');
++    const parts = header.match(/(?:[^;"\r\n]|"(?:\\.|[^"\\\r\n])*")+/g);
++    assert.ok(parts && parts.join(';') === header, 'malformed Content-Disposition');
++    const type = parts.shift().trim().toLowerCase();
++    assert.match(type, /^[!#$%&'*+.^_`|~0-9a-z-]+$/);
++    const parameters = Object.create(null);
++    for (const part of parts) {
++        const match = /^\s*([!#$%&'*+.^_`|~0-9A-Za-z-]+)\s*=\s*(?:"((?:[\t\x20-\x21\x23-\x5b\x5d-\x7e\x80-\xff]|\\[\t\x20-\x7e\x80-\xff])*)"|([!#$%&'*+.^_`|~0-9A-Za-z-]+))\s*$/.exec(part);
++        assert.ok(match, 'malformed disposition parameter');
++        const key = match[1].toLowerCase();
++        assert.ok(!(key in parameters), 'duplicate disposition parameter');
++        parameters[key] = match[2] === undefined ? match[3] : match[2].replace(/\\([\s\S])/g, '$1');
++    }
++    let filename = parameters.filename;
++    if (parameters['filename*'] !== undefined) {
++        const extended = /^([^']*)'[^']*'(.*)$/.exec(parameters['filename*']);
++        assert.ok(extended, 'malformed extended filename');
++        const charset = extended[1].toLowerCase();
++        assert.ok(charset === 'utf-8' || charset === 'iso-8859-1', 'unsupported filename charset');
++        assert.ok(!/%(?![0-9a-f]{2})/i.test(extended[2]), 'malformed filename escape');
++        filename = charset === 'utf-8' ? decodeURIComponent(extended[2]) :
++            extended[2].replace(/%([0-9a-f]{2})/ig, (_, byte) => String.fromCharCode(parseInt(byte, 16)));
++    }
++    return { type, filename };
++}
++
++function guardedHttpRequest(startRequest, body, label) {
++    return new Promise((resolve, reject) => {
++        let req;
++        let response;
++        let settled = false;
++        const requestError = (code, message) => Object.assign(new Error(label + ': ' + message), { code });
++        const finish = (error, value) => {
++            if (settled) return;
++            settled = true;
++            clearTimeout(timer);
++            if (error) {
++                if (response) response.destroy();
++                if (req) req.destroy();
++                reject(error);
++            } else {
++                resolve(value);
++            }
++        };
++        // Use an absolute deadline: socket inactivity timeouts can be reset
++        // indefinitely by a response that sends data but never finishes.
++        const timer = setTimeout(() => finish(requestError(
++            'ERR_HTTP_REQUEST_TIMEOUT', 'HTTP request timed out after ' + HTTP_REQUEST_TIMEOUT_MS + 'ms'
++        )), HTTP_REQUEST_TIMEOUT_MS);
++        try {
++            req = startRequest((incoming) => {
++                response = incoming;
++                const chunks = [];
++                response.on('error', (error) => finish(error));
++                response.once('aborted', () => finish(requestError(
++                    'ERR_HTTP_RESPONSE_ABORTED', 'HTTP response aborted before completion'
++                )));
++                response.once('close', () => {
++                    if (!response.complete) finish(requestError(
++                        'ERR_HTTP_RESPONSE_INCOMPLETE', 'HTTP response closed before completion'
++                    ));
++                });
++                response.on('data', (chunk) => chunks.push(chunk));
++                response.once('end', () => {
++                    if (!response.complete) {
++                        finish(requestError('ERR_HTTP_RESPONSE_INCOMPLETE', 'incomplete HTTP response'));
++                        return;
++                    }
++                    const buffer = Buffer.concat(chunks);
++                    finish(null, {
++                        status: response.statusCode,
++                        statusCode: response.statusCode,
++                        headers: response.headers,
++                        body: buffer,
++                        text: buffer.toString('utf8'),
++                    });
++                });
++            });
++            req.on('error', (error) => finish(error));
++            req.once('close', () => {
++                if (!response) finish(requestError(
++                    'ERR_HTTP_REQUEST_CLOSED', 'HTTP request closed before a response arrived'
++                ));
++            });
++            if (body) req.write(body);
++            req.end();
++        } catch (error) {
++            finish(error);
++        }
++    });
++}
++
++const WORKER_SOURCE = String.raw`
++'use strict';
++const fs = require('fs');
++const http = require('http');
++const workerHttpAgent = new http.Agent({ keepAlive: true, maxSockets: 4 });
++const Module = require('module');
++const path = require('path');
++const { execFile } = require('child_process');
++const safeWrite = process.stdout.write.bind(process.stdout);
++const safeStringify = JSON.stringify.bind(JSON);
++const nonce = '__HARBOR_NONCE__';
++const HTTP_REQUEST_TIMEOUT_MS = ${HTTP_REQUEST_TIMEOUT_MS};
++const guardedHttpRequest = ${guardedHttpRequest.toString()};
++
++function emit(value, callback) {
++    safeWrite('\nHARBOR_RESULT_' + nonce + '=' + safeStringify(value) + '\n', callback);
++}
++
++function requestHttp(port, request) {
++    const body = request.bodyBase64 ? Buffer.from(request.bodyBase64, 'base64') : null;
++    const headers = { ...(request.headers || {}) };
++    if (body && headers['Content-Length'] == null && headers['content-length'] == null) {
++        headers['Content-Length'] = body.length;
++    }
++    return guardedHttpRequest((onResponse) => http.request({
++        hostname: '127.0.0.1',
++        port,
++        path: request.path,
++        method: request.method || 'GET',
++        headers,
++        agent: workerHttpAgent,
++    }, onResponse), body, (request.method || 'GET') + ' ' + request.path).then((response) => ({
++        status: response.status,
++        statusCode: response.statusCode,
++        headers: response.headers,
++        bodyBase64: response.body.toString('base64'),
++        text: response.text,
++    }));
++}
++
++function normalizedOptions(spec) {
++    const options = { ...(spec.options || {}) };
++    if (Object.prototype.hasOwnProperty.call(options, 'clipboardData')) {
++        const clipboardData = options.clipboardData;
++        delete options.clipboardData;
++        options.getClipboardData = () => clipboardData;
++    }
++    return options;
++}
++
++function resolveServer(handle) {
++    if (!handle) return null;
++    // A native listener or explicit server is authoritative. A wrapper may
++    // also expose a Fastify app whose internal server is not the listener.
++    if (typeof handle.address === 'function' && typeof handle.on === 'function') return handle;
++    if (handle.server && typeof handle.server.address === 'function') return handle.server;
++    if (handle.app && handle.app.server) return handle.app.server;
++    return handle;
++}
++
++async function closeHandle(handle) {
++    if (!handle) return;
++    // Drop this worker's keep-alive sockets before awaiting the candidate
++    // server close: a candidate whose close() waits for open connections
++    // (Fastify) deadlocks against our pooled socket on Node 14.
++    workerHttpAgent.destroy();
++    try {
++        if (handle.app && typeof handle.close === 'function') {
++            await handle.close();
++            return;
++        }
++        if (typeof handle.close === 'function') {
++            const value = handle.close();
++            if (value && typeof value.then === 'function') await value;
++        }
++    } catch (error) {
++        if (!error || error.code !== 'ERR_SERVER_NOT_RUNNING') throw error;
++    }
++}
++
++async function runStartHttp(spec) {
++    const config = require(path.join(spec.repo, 'bin', 'config.js'));
++    if (spec.options && spec.options.auth) {
++        config.auth.username = spec.options.auth.username;
++        config.auth.password = spec.options.auth.password;
++    }
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    const options = normalizedOptions(spec);
++    delete options.auth;
++    let handle;
++    let startedResolve;
++    let startedReject;
++    const started = new Promise((resolve, reject) => {
++        startedResolve = resolve;
++        startedReject = reject;
++    });
++    try {
++        handle = appModule.start({
++            ...options,
++            port: 0,
++            onStart: (...args) => startedResolve(args),
++        });
++    } catch (error) {
++        startedReject(error);
++    }
++    await started;
++    try {
++        const server = resolveServer(handle);
++        const address = server && typeof server.address === 'function' ? server.address() : null;
++        const port = address && typeof address === 'object' ? address.port : null;
++        if (!port) throw new Error('candidate server did not expose a listening port');
++        return await requestHttp(port, spec.request);
++    } finally {
++        await closeHandle(handle);
++    }
++}
++
++async function runBuildInject(spec) {
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    const app = appModule.buildApp(normalizedOptions(spec));
++    try {
++        const request = spec.request;
++        const response = await app.inject({
++            method: request.method || 'GET',
++            url: request.path,
++            headers: request.headers || {},
++            payload: request.bodyBase64 ? Buffer.from(request.bodyBase64, 'base64') : undefined,
++        });
++        return {
++            status: response.statusCode,
++            statusCode: response.statusCode,
++            headers: response.headers,
++            bodyBase64: Buffer.from(response.body).toString('base64'),
++            text: response.body,
++        };
++    } finally {
++        if (app && typeof app.close === 'function') await app.close();
++    }
++}
++
++async function runBuildCapabilities(spec) {
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    const app = appModule.buildApp(normalizedOptions(spec));
++    const capabilities = {
++        inject: typeof app.inject,
++        ready: typeof app.ready,
++        close: typeof app.close,
++    };
++    if (Object.values(capabilities).some((value) => value !== 'function')) {
++        throw new TypeError('buildApp result lacks Fastify lifecycle methods');
++    }
++    try {
++        await app.ready();
++        return capabilities;
++    } finally {
++        if (app && typeof app.close === 'function') await app.close();
++    }
++}
++
++async function runTargetDependencies(spec) {
++    const packageJson = JSON.parse(fs.readFileSync(path.join(spec.repo, 'package.json'), 'utf8'));
++    const fastifyPackage = require(path.join(spec.repo, 'node_modules', 'fastify', 'package.json'));
++    const multipartPackage = require(path.join(spec.repo, 'node_modules', '@fastify', 'multipart', 'package.json'));
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    const app = appModule.buildApp(normalizedOptions(spec));
++    const capabilities = {
++        inject: typeof app.inject,
++        ready: typeof app.ready,
++        close: typeof app.close,
++    };
++    try {
++        await app.ready();
++        return {
++            capabilities,
++            appVersion: app.version,
++            fastifyVersion: fastifyPackage.version,
++            multipartVersion: multipartPackage.version,
++            declaredFastify: packageJson.dependencies && packageJson.dependencies.fastify,
++            declaredMultipart: packageJson.dependencies && packageJson.dependencies['@fastify/multipart'],
++        };
++    } finally {
++        if (app && typeof app.close === 'function') await app.close();
++    }
++}
++
++function packageIdentityFor(file) {
++    let directory = path.dirname(file);
++    for (let depth = 0; depth < 12; depth += 1) {
++        const manifestPath = path.join(directory, 'package.json');
++        if (fs.existsSync(manifestPath)) {
++            try {
++                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
++                if (manifest && typeof manifest.name === 'string' && manifest.name.length > 0) {
++                    return manifest.name;
++                }
++            } catch (error) {
++                return null;
++            }
++            return null;
++        }
++        const parentDirectory = path.dirname(directory);
++        if (parentDirectory === directory) return null;
++        directory = parentDirectory;
++    }
++    return null;
++}
++
++async function runNoLegacyRuntime(spec) {
++    const legacyNames = new Set(['express', 'express-fileupload', 'express-basic-auth']);
++    const originalLoad = Module._load;
++    let legacyLoads = 0;
++    let fastifyLoads = 0;
++    Module._load = function guardedLoad(request, parent, isMain) {
++        const name = String(request).split('/').slice(0, String(request).startsWith('@') ? 2 : 1).join('/');
++        let identity = name;
++        const bareSpecifier = !String(request).startsWith('.') && !path.isAbsolute(String(request)) && !name.startsWith('node:') && !Module.builtinModules.includes(name);
++        if (bareSpecifier) {
++            try {
++                const resolved = Module._resolveFilename(request, parent, isMain);
++                identity = packageIdentityFor(resolved) || name;
++            } catch (error) {
++                identity = name;
++            }
++        }
++        if (legacyNames.has(name) || legacyNames.has(identity)) {
++            legacyLoads += 1;
++            throw new Error('legacy Express runtime load blocked: ' + name + ' (resolved package: ' + identity + ')');
++        }
++        if (name === 'fastify' || identity === 'fastify') fastifyLoads += 1;
++        return originalLoad.apply(this, arguments);
++    };
++    let app;
++    try {
++        const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++        if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++        app = appModule.buildApp(normalizedOptions(spec));
++        const response = await app.inject({ method: 'GET', url: spec.request.path });
++        return {
++            statusCode: response.statusCode,
++            text: response.body,
++            fastifyLoads,
++            legacyLoads,
++            npmTest: await new Promise((resolve) => {
++                execFile('npm', ['test'], {
++                    cwd: spec.repo,
++                    env: process.env,
++                    timeout: 120000,
++                    maxBuffer: 4 * 1024 * 1024,
++                }, (error, stdout, stderr) => resolve({
++                    code: error ? (typeof error.code === 'number' ? error.code : 1) : 0,
++                    stdout: String(stdout || '').slice(-8000),
++                    stderr: String(stderr || '').slice(-8000),
++                }));
++            }),
++        };
++    } finally {
++        Module._load = originalLoad;
++        if (app && typeof app.close === 'function') await app.close();
++    }
++}
++
++async function runBuildLifecycle(spec) {
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    let first = appModule.buildApp(normalizedOptions(spec));
++    if (!first || typeof first.ready !== 'function' || typeof first.close !== 'function') {
++        throw new TypeError('first Fastify instance lacks lifecycle methods');
++    }
++    await first.ready();
++    await first.close();
++    first = null;
++    const second = appModule.buildApp(normalizedOptions(spec));
++    try {
++        const response = await second.inject({ method: 'GET', url: spec.request.path });
++        return { statusCode: response.statusCode, text: response.body };
++    } finally {
++        if (second && typeof second.close === 'function') await second.close();
++    }
++}
++
++async function runOnceLifecycle(spec) {
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    const root = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sharing-once-f2p-'));
++    fs.writeFileSync(path.join(root, 'once.txt'), 'once payload', 'utf8');
++    let finishCount = 0;
++    let finishReason = null;
++    let closeCount = 0;
++    let finishResolve;
++    let startedResolve;
++    const finished = new Promise((resolve) => { finishResolve = resolve; });
++    const started = new Promise((resolve) => { startedResolve = resolve; });
++    const handle = appModule.start({
++        port: 0,
++        sharePath: root,
++        once: true,
++        onStart: () => startedResolve(),
++        onFinish(reason) {
++            finishCount += 1;
++            finishReason = reason;
++            finishResolve();
++        },
++    });
++    const server = resolveServer(handle);
++    // The public contract requires the active listener to close. Both a native
++    // server.close() and Fastify.close() are valid implementations of --once.
++    server.on('close', () => { closeCount += 1; });
++    try {
++        await started;
++        const response = await requestHttp(server.address().port, { path: '/share/once.txt', headers: { Connection: 'close' } });
++        await Promise.race([
++            finished,
++            new Promise((resolve) => setTimeout(resolve, 2200)),
++        ]);
++        return {
++            statusCode: response.statusCode,
++            body: response.text,
++            finishCount,
++            finishReason,
++            closeCount,
++            listening: server.listening,
++        };
++    } finally {
++        try {
++            await closeHandle(handle);
++        } catch (error) {
++            // The once operation may already have closed its listener.
++        }
++        fs.rmSync(root, { recursive: true, force: true });
++    }
++}
++
++async function runUtil(spec) {
++    const utils = require(path.join(spec.repo, 'bin', 'utils.js'));
++    const config = require(path.join(spec.repo, 'bin', 'config.js'));
++    if (spec.name === 'appExportType') {
++        const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++        return typeof appModule[spec.args[0]];
++    }
++    if (spec.name === 'debugLog') {
++        const messages = [];
++        const originalLog = console.log;
++        config.debug = Boolean(spec.debug);
++        console.log = (message) => messages.push(message);
++        try {
++            utils.debugLog(spec.args[0]);
++        } finally {
++            console.log = originalLog;
++        }
++        return messages;
++    }
++    if (spec.name === 'configDefaults') {
++        return { debug: config.debug, protocol: config.ssl.protocol, port: config.portfinder.port };
++    }
++    const fn = utils[spec.name];
++    if (typeof fn !== 'function') throw new TypeError(spec.name + ' is not a function');
++    return fn(...(spec.args || []));
++}
++
++function runCli(spec) {
++    return new Promise((resolve, reject) => {
++        execFile(process.execPath, [path.join(spec.repo, 'bin', 'index.js'), ...(spec.args || [])], {
++            cwd: spec.repo,
++            env: { ...process.env, SHARING_TEST: '1' },
++            timeout: spec.timeout || 30000,
++        }, (error, stdout, stderr) => {
++            if (error) {
++                reject(Object.assign(error, { stdout, stderr }));
++                return;
++            }
++            resolve({ stdout, stderr });
++        });
++    });
++}
++
++async function runOnceSequence(spec) {
++    const config = require(path.join(spec.repo, 'bin', 'config.js'));
++    if (spec.options && spec.options.auth) {
++        config.auth.username = spec.options.auth.username;
++        config.auth.password = spec.options.auth.password;
++    }
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    const options = normalizedOptions(spec);
++    delete options.auth;
++    let handle;
++    let startedResolve;
++    let startedReject;
++    const started = new Promise((resolve, reject) => {
++        startedResolve = resolve;
++        startedReject = reject;
++    });
++    try {
++        handle = appModule.start({
++            ...options,
++            once: true,
++            port: 0,
++            onStart: (...args) => startedResolve(args),
++        });
++    } catch (error) {
++        startedReject(error);
++    }
++    await started;
++    const server = resolveServer(handle);
++    const address = server && typeof server.address === 'function' ? server.address() : null;
++    const port = address && typeof address === 'object' ? address.port : null;
++    if (!port) throw new Error('candidate server did not expose a listening port');
++    const responses = [];
++    try {
++        for (const request of spec.requests || []) {
++            responses.push(await requestHttp(port, request));
++            if (request.waitMs) await new Promise((resolve) => setTimeout(resolve, request.waitMs));
++        }
++        const closedBy = Date.now() + 2000;
++        while (server && server.listening && Date.now() < closedBy) {
++            await new Promise((resolve) => setTimeout(resolve, 25));
++        }
++        return {
++            responses,
++            listening: Boolean(server && server.listening),
++        };
++    } finally {
++        try { await closeHandle(handle); } catch (e) { /* ignore */ }
++        workerHttpAgent.destroy();
++    }
++}
++
++async function main() {
++    const spec = JSON.parse(Buffer.from('__HARBOR_INPUT__', 'base64').toString('utf8'));
++    process.chdir(spec.repo);
++    let value;
++    if (spec.kind === 'start-http') value = await runStartHttp(spec);
++    else if (spec.kind === 'build-inject') value = await runBuildInject(spec);
++    else if (spec.kind === 'build-capabilities') value = await runBuildCapabilities(spec);
++    else if (spec.kind === 'target-dependencies') value = await runTargetDependencies(spec);
++    else if (spec.kind === 'no-legacy-runtime') value = await runNoLegacyRuntime(spec);
++    else if (spec.kind === 'build-lifecycle') value = await runBuildLifecycle(spec);
++    else if (spec.kind === 'once-lifecycle') value = await runOnceLifecycle(spec);
++    else if (spec.kind === 'once-sequence') value = await runOnceSequence(spec);
++    else if (spec.kind === 'util') value = await runUtil(spec);
++    else if (spec.kind === 'cli') value = await runCli(spec);
++    else throw new Error('unknown isolated operation: ' + spec.kind);
++    workerHttpAgent.destroy();
++    emit({ ok: true, value });
++}
++
++main().catch((error) => {
++    workerHttpAgent.destroy();
++    // Flush the failure before exiting even if the broken candidate left
++    // unrelated timers or server handles alive in this one-shot worker.
++    emit({ ok: false, error: error && (error.stack || error.message) || String(error) }, () => process.exit(1));
++});
++`;
++
++function candidateEnvironment(scratch) {
++    return {
++        // Candidate-spawned node/npm (e.g. npm test) must use the pinned
++        // candidate runtime, not the newer evaluator tooling Node.
++        PATH: '/opt/node14/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
++        HOME: path.join(scratch, 'home'),
++        TMPDIR: path.join(scratch, 'tmp'),
++        XDG_CACHE_HOME: path.join(scratch, 'cache'),
++        NPM_CONFIG_CACHE: path.join(scratch, 'cache', 'npm'),
++        LANG: 'C.UTF-8',
++        LC_ALL: 'C.UTF-8',
++        SHARING_TEST: '1',
++        HTTP_PROXY: '',
++        HTTPS_PROXY: '',
++        http_proxy: '',
++        https_proxy: '',
++        ALL_PROXY: '',
++        all_proxy: '',
++        NO_PROXY: '*',
++        no_proxy: '*',
++    };
++}
++
++function makeCandidateScratch(candidate) {
++    fs.mkdirSync(SANDBOX_ROOT, { recursive: true, mode: 0o711 });
++    const scratch = fs.mkdtempSync(path.join(SANDBOX_ROOT, 'node-'));
++    if (candidate) fs.chownSync(scratch, CANDIDATE_UID, CANDIDATE_UID);
++    fs.chmodSync(scratch, 0o700);
++    for (const name of ['home', 'tmp', 'cache']) {
++        const child = path.join(scratch, name);
++        fs.mkdirSync(child, { mode: 0o700 });
++        if (candidate) fs.chownSync(child, CANDIDATE_UID, CANDIDATE_UID);
++    }
++    return scratch;
++}
++
++function runIsolated(spec, timeout = 60000, targetRepo = REPO, candidate = true) {
++    const scratch = makeCandidateScratch(candidate);
++    const nonce = crypto.randomBytes(24).toString('hex');
++    const input = Buffer.from(JSON.stringify({ ...spec, repo: targetRepo })).toString('base64');
++    const source = WORKER_SOURCE.replace('__HARBOR_NONCE__', nonce)
++        .replace('__HARBOR_INPUT__', input);
++    const namespacePrefix = [
++        'unshare',
++        '--net',
++        '--pid',
++        '--fork',
++        '--mount-proc',
++        '--kill-child',
++        'sh',
++        '-c',
++        'ip link set lo up && exec "$@"',
++        'sh',
++    ];
++    // Root creates the namespaces, then setpriv drops to the candidate UID,
++    // so candidate isolation never relies on unprivileged user namespaces.
++    const candidateDrop = [
++        'setpriv',
++        '--reuid=1001',
++        '--regid=1001',
++        '--clear-groups',
++        '--inh-caps=-all',
++        '--ambient-caps=-all',
++        '--bounding-set=-all',
++        '--no-new-privs',
++    ];
++    const command = [
++        ...namespacePrefix,
++        ...(candidate ? candidateDrop : []),
++        '/opt/node14/bin/node',
++        '-',
++    ];
++    const executable = 'unshare';
++    return new Promise((resolve, reject) => {
++        const child = spawn(executable, command, {
++            cwd: targetRepo,
++            env: candidateEnvironment(scratch),
++            stdio: ['pipe', 'pipe', 'pipe'],
++        });
++        const stdout = [];
++        const stderr = [];
++        let timedOut = false;
++        const timer = setTimeout(() => {
++            timedOut = true;
++            child.kill('SIGKILL');
++        }, timeout);
++        child.stdout.on('data', (chunk) => stdout.push(chunk));
++        child.stderr.on('data', (chunk) => stderr.push(chunk));
++        child.on('error', (error) => {
++            clearTimeout(timer);
++            removeDir(scratch);
++            reject(error);
++        });
++        child.on('close', (code) => {
++            clearTimeout(timer);
++            removeDir(scratch);
++            const output = Buffer.concat(stdout).toString('utf8');
++            const diagnostic = Buffer.concat(stderr).toString('utf8');
++            if (timedOut) {
++                reject(new Error('candidate sandbox timed out'));
++                return;
++            }
++            const marker = 'HARBOR_RESULT_' + nonce + '=';
++            const line = output.split(/\r?\n/).find((item) => item.startsWith(marker));
++            if (!line) {
++                reject(new Error('candidate sandbox produced no authenticated result; exit=' + code + '; stderr=' + diagnostic.slice(-2000)));
++                return;
++            }
++            let result;
++            try {
++                result = JSON.parse(line.slice(marker.length));
++            } catch (error) {
++                reject(new Error('candidate sandbox produced invalid authenticated JSON'));
++                return;
++            }
++            if (code !== 0 || !result.ok) {
++                reject(new Error(result.error || ('candidate sandbox exited ' + code)));
++                return;
++            }
++            resolve(result.value);
++        });
++        child.stdin.on('error', () => {}); // Spawn/close handlers report early worker failures.
++        child.stdin.end(source);
++    });
++}
++
++function isolatedHttpAtRepo(targetRepo, options, requestSpec, candidate = true) {
++    const body = requestSpec.body == null ? null : Buffer.from(requestSpec.body);
++    return runIsolated({
++        kind: 'start-http',
++        options: serializeOptions(options),
++        request: {
++            method: requestSpec.method || 'GET',
++            path: requestSpec.path,
++            headers: requestSpec.headers || {},
++            bodyBase64: body ? body.toString('base64') : null,
++        },
++    }, 60000, targetRepo, candidate).then((response) => ({
++        status: response.status,
++        headers: response.headers,
++        body: Buffer.from(response.bodyBase64, 'base64'),
++        text: response.text,
++    }));
++}
++
++function tempDir(prefix = 'sharing-feature-') {
++    const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
++    if (ISOLATED) {
++        fs.chownSync(directory, CANDIDATE_UID, CANDIDATE_UID);
++        fs.chmodSync(directory, 0o700);
++    }
++    return directory;
++}
++
++function makeCandidateWritable(directory) {
++    if (ISOLATED) {
++        fs.chownSync(directory, CANDIDATE_UID, CANDIDATE_UID);
++        fs.chmodSync(directory, 0o700);
++    }
++    return directory;
++}
++
++function makeEvaluatorReadable(directory) {
++    if (ISOLATED) fs.chmodSync(directory, 0o755);
++    return directory;
++}
++
++function removeDir(directory) {
++    fs.rmSync(directory, { recursive: true, force: true });
++}
++
++function request(base, route, options = {}) {
++    if (ISOLATED && base && base.__harborSandbox === true) {
++        const body = options.body == null ? null : Buffer.from(options.body);
++        const requestSpec = {
++            method: options.method || 'GET',
++            path: route,
++            headers: { ...(options.headers || {}) },
++            bodyBase64: body ? body.toString('base64') : null,
++        };
++        return runIsolated({
++            kind: base.builder === 'buildApp' ? 'build-inject' : 'start-http',
++            options: base.options,
++            request: requestSpec,
++        }).then((response) => ({
++            status: response.status,
++            statusCode: response.statusCode,
++            headers: response.headers,
++            body: Buffer.from(response.bodyBase64, 'base64'),
++            text: response.text,
++        }));
++    }
++    const url = new URL(route, base);
++    const body = options.body == null ? null : Buffer.from(options.body);
++    const headers = { ...(options.headers || {}) };
++    if (body && headers['Content-Length'] == null && headers['content-length'] == null) {
++        headers['Content-Length'] = body.length;
++    }
++    return guardedHttpRequest((onResponse) => http.request(url, {
++        method: options.method || 'GET',
++        headers,
++    }, onResponse), body, (options.method || 'GET') + ' ' + route);
++}
++
++function serializeOptions(options) {
++    const serialized = { ...options };
++    if (typeof serialized.getClipboardData === 'function') {
++        serialized.clipboardData = serialized.getClipboardData();
++        delete serialized.getClipboardData;
++    }
++    delete serialized.updateClipboardData;
++    delete serialized.onStart;
++    delete serialized.onFinish;
++    return serialized;
++}
++
++function postJson(base, route, value) {
++    return request(base, route, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify(value),
++    });
++}
++
++function postMultipart(base, route, parts) {
++    const boundary = '----sharing-feature-' + Date.now().toString(16);
++    const chunks = [];
++    for (const part of parts) {
++        chunks.push(Buffer.from('--' + boundary + '\r\n'));
++        chunks.push(Buffer.from(
++            'Content-Disposition: form-data; name="' + part.field + '"; filename="' + part.filename + '"\r\n' +
++            'Content-Type: application/octet-stream\r\n\r\n'
++        ));
++        chunks.push(Buffer.from(part.content));
++        chunks.push(Buffer.from('\r\n'));
++    }
++    chunks.push(Buffer.from('--' + boundary + '--\r\n'));
++    return request(base, route, {
++        method: 'POST',
++        headers: { 'Content-Type': 'multipart/form-data; boundary=' + boundary },
++        body: Buffer.concat(chunks),
++    });
++}
++
++async function startServer(options) {
++    if (ISOLATED) {
++        return {
++            handle: null,
++            base: {
++                __harborSandbox: true,
++                builder: 'start',
++                options: serializeOptions(options),
++            },
++            close: async () => {},
++        };
++    }
++    let resolveStarted;
++    let rejectStarted;
++    const started = new Promise((resolve, reject) => {
++        resolveStarted = resolve;
++        rejectStarted = reject;
++    });
++    let handle;
++    let restoreAuth = null;
++    try {
++        if (options.auth) {
++            const config = require(path.join(REPO, 'bin', 'config.js'));
++            const previous = { username: config.auth.username, password: config.auth.password };
++            config.auth.username = options.auth.username;
++            config.auth.password = options.auth.password;
++            restoreAuth = () => {
++                config.auth.username = previous.username;
++                config.auth.password = previous.password;
++            };
++        }
++        handle = directAppModule.start({
++            port: 0,
++            sharePath: options.sharePath,
++            receive: Boolean(options.receive),
++            clipboard: Boolean(options.clipboard),
++            clipboardText: Boolean(options.clipboardText),
++            getClipboardData: options.getClipboardData,
++            updateClipboardData: options.updateClipboardData || null,
++            postUploadRedirectUrl: options.postUploadRedirectUrl || '',
++            shareAddress: options.shareAddress || '',
++            token: options.token || '',
++            allowZip: Boolean(options.allowZip),
++            once: Boolean(options.once),
++            onStart: (...args) => resolveStarted(args),
++        });
++    } catch (error) {
++        if (restoreAuth) restoreAuth();
++        rejectStarted(error);
++    }
++    await started;
++    const server = resolveServer(handle);
++    const address = server && server.address && server.address();
++    const port = address && typeof address === 'object' ? address.port : null;
++    if (!port) throw new Error('server did not expose a listening port');
++    return {
++        handle,
++        base: 'http://127.0.0.1:' + port,
++        close: async () => {
++            try {
++                if (handle && handle.app) {
++                    await handle.close();
++                    return;
++                }
++                await new Promise((resolve, reject) => {
++                    handle.close((error) => error ? reject(error) : resolve());
++                });
++            } finally {
++                if (restoreAuth) restoreAuth();
++            }
++        },
++    };
++}
++
++async function withServer(options, callback) {
++    const running = await startServer(options);
++    try {
++        return await callback(running);
++    } finally {
++        await running.close();
++    }
++}
++
++function runFeature(name, callback) {
++    Promise.resolve()
++        .then(callback)
++        .then(() => {
++            process.stdout.write('PASS ' + name + '\n');
++        })
++        .catch((error) => {
++            process.stderr.write('FAIL ' + name + ': ' + (error.stack || error) + '\n');
++            process.exitCode = 1;
++        });
++}
++
++function execCli(args) {
++    if (ISOLATED) {
++        return runIsolated({ kind: 'cli', args });
++    }
++    return new Promise((resolve, reject) => {
++        execFile(process.execPath, [path.join(REPO, 'bin', 'index.js'), ...args], {
++            env: { ...process.env, SHARING_TEST: '1' },
++        }, (error, stdout, stderr) => {
++            if (error) {
++                reject(Object.assign(error, { stdout, stderr }));
++                return;
++            }
++            resolve({ stdout, stderr });
++        });
++    });
++}
++
++function callUtil(name, args = [], options = {}) {
++    if (ISOLATED) {
++        return runIsolated({ kind: 'util', name, args, ...options });
++    }
++    const utils = require(path.join(REPO, 'bin', 'utils.js'));
++    const config = require(path.join(REPO, 'bin', 'config.js'));
++    if (name === 'debugLog') {
++        const previous = config.debug;
++        const messages = [];
++        const original = console.log;
++        config.debug = Boolean(options.debug);
++        console.log = (message) => messages.push(message);
++        try {
++            utils.debugLog(args[0]);
++        } finally {
++            console.log = original;
++            config.debug = previous;
++        }
++        return Promise.resolve(messages);
++    }
++    if (name === 'configDefaults') {
++        return Promise.resolve({
++            debug: config.debug,
++            protocol: config.ssl.protocol,
++            port: config.portfinder.port,
++        });
++    }
++    return Promise.resolve(utils[name](...args));
++}
++
++function verifyBuildLifecycle(options, route) {
++    if (ISOLATED) {
++        return runIsolated({
++            kind: 'build-lifecycle',
++            options: serializeOptions(options),
++            request: { path: route },
++        });
++    }
++    return Promise.resolve().then(async () => {
++        let first = directAppModule.buildApp(options);
++        let second;
++        try {
++            await first.ready();
++            await first.close();
++            first = null;
++            second = directAppModule.buildApp(options);
++            const response = await second.inject({ method: 'GET', url: route });
++            return { statusCode: response.statusCode, text: response.body };
++        } finally {
++            if (first) await first.close();
++            if (second) await second.close();
++        }
++    });
++}
++
++async function runOnceLifecycle(spec) {
++    const appModule = require(path.join(spec.repo, 'bin', 'app.js'));
++    if (typeof appModule.buildApp !== 'function') throw new TypeError('buildApp is not a function');
++    const root = fs.mkdtempSync(path.join(require('os').tmpdir(), 'sharing-once-f2p-'));
++    fs.writeFileSync(path.join(root, 'once.txt'), 'once payload', 'utf8');
++    let finishCount = 0;
++    let finishReason = null;
++    let closeCount = 0;
++    let finishResolve;
++    let startedResolve;
++    const finished = new Promise((resolve) => { finishResolve = resolve; });
++    const started = new Promise((resolve) => { startedResolve = resolve; });
++    const handle = appModule.start({
++        port: 0,
++        sharePath: root,
++        once: true,
++        onStart: () => startedResolve(),
++        onFinish(reason) {
++            finishCount += 1;
++            finishReason = reason;
++            finishResolve();
++        },
++    });
++    const server = resolveServer(handle);
++    // The public contract requires the active listener to close. Both a native
++    // server.close() and Fastify.close() are valid implementations of --once.
++    server.on('close', () => { closeCount += 1; });
++    try {
++        await started;
++        const response = await request('http://127.0.0.1:' + server.address().port, '/share/once.txt', { headers: { Connection: 'close' } });
++        await Promise.race([
++            finished,
++            new Promise((resolve) => setTimeout(resolve, 2200)),
++        ]);
++        return {
++            statusCode: response.statusCode,
++            body: response.text,
++            finishCount,
++            finishReason,
++            closeCount,
++            listening: server.listening,
++        };
++    } finally {
++        try {
++            await new Promise((resolve) => {
++                const closing = handle.close(() => resolve());
++                if (closing && typeof closing.then === 'function') closing.then(resolve, resolve);
++            });
++        } catch (error) {
++            // The once operation may already have closed its listener.
++        }
++        removeDir(root);
++    }
++}
++
++async function runOnceSequence(spec) {
++    const running = await startServer({ ...spec.options, once: true });
++    const responses = [];
++    try {
++        for (const requestOptions of spec.requests || []) {
++            responses.push(await request(running.base, requestOptions.path, requestOptions));
++            if (requestOptions.waitMs) {
++                await new Promise((resolve) => setTimeout(resolve, requestOptions.waitMs));
++            }
++        }
++        const handle = running.handle;
++        const server = resolveServer(handle);
++        const closedBy = Date.now() + 2000;
++        while (server && server.listening && Date.now() < closedBy) {
++            await new Promise((resolve) => setTimeout(resolve, 25));
++        }
++        return { responses, listening: Boolean(server && server.listening) };
++    } finally {
++        try {
++            await running.close();
++        } catch (error) {
++            if (!error || error.code !== 'ERR_SERVER_NOT_RUNNING') throw error;
++        }
++    }
++}
++
++function verifyOnceLifecycle(options) {
++    if (ISOLATED) {
++        return runIsolated({
++            kind: 'once-lifecycle',
++            options: serializeOptions(options),
++        });
++    }
++    return runOnceLifecycle({ repo: REPO, options });
++}
++
++function verifyOnceSequence(options, requests) {
++    const spec = { options, requests };
++    if (ISOLATED) {
++        return runIsolated({
++            kind: 'once-sequence',
++            options: serializeOptions(options),
++            requests,
++        });
++    }
++    return runOnceSequence({ repo: REPO, ...spec });
++}
++
++function verifyTargetDependencies(options) {
++    if (ISOLATED) {
++        return runIsolated({
++            kind: 'target-dependencies',
++            options: serializeOptions(options),
++        });
++    }
++    const packageJson = require(path.join(REPO, 'package.json'));
++    const fastifyPackage = require(path.join(REPO, 'node_modules', 'fastify', 'package.json'));
++    const multipartPackage = require(path.join(REPO, 'node_modules', '@fastify', 'multipart', 'package.json'));
++    const app = directAppModule.buildApp(options);
++    return Promise.resolve(app.ready()).then(() => ({
++        capabilities: {
++            inject: typeof app.inject,
++            ready: typeof app.ready,
++            close: typeof app.close,
++        },
++        appVersion: app.version,
++        fastifyVersion: fastifyPackage.version,
++        multipartVersion: multipartPackage.version,
++        declaredFastify: packageJson.dependencies && packageJson.dependencies.fastify,
++        declaredMultipart: packageJson.dependencies && packageJson.dependencies['@fastify/multipart'],
++    })).finally(() => app.close());
++}
++
++function verifyNoLegacyRuntime(options, route) {
++    if (ISOLATED) {
++        return runIsolated({
++            kind: 'no-legacy-runtime',
++            options: serializeOptions(options),
++            request: { path: route },
++        });
++    }
++    return Promise.resolve().then(async () => {
++        const app = directAppModule.buildApp(options);
++        try {
++            const response = await app.inject({ method: 'GET', url: route });
++            return { statusCode: response.statusCode, text: response.body, fastifyLoads: 1, legacyLoads: 0 };
++        } finally {
++            await app.close();
++        }
++    });
++}
++
++const appModule = ISOLATED ? {
++    buildApp(options = {}) {
++        const sandboxOptions = serializeOptions(options);
++        return {
++            inject(requestOptions) {
++                const body = requestOptions.payload == null
++                    ? null
++                    : Buffer.from(requestOptions.payload);
++                return runIsolated({
++                    kind: 'build-inject',
++                    options: sandboxOptions,
++                    request: {
++                        method: requestOptions.method || 'GET',
++                        path: requestOptions.url,
++                        headers: requestOptions.headers || {},
++                        bodyBase64: body ? body.toString('base64') : null,
++                    },
++                }).then((response) => ({
++                    statusCode: response.statusCode,
++                    headers: response.headers,
++                    body: response.text,
++                }));
++            },
++            async ready() {
++                const capabilities = await runIsolated({
++                    kind: 'build-capabilities',
++                    options: sandboxOptions,
++                });
++                if (capabilities.inject !== 'function' || capabilities.close !== 'function') {
++                    throw new TypeError('buildApp result lacks Fastify lifecycle methods');
++                }
++            },
++            async close() {},
++        };
++    },
++} : directAppModule;
++
++module.exports = {
++    REPO,
++    appModule,
++    assert,
++    callUtil,
++    contentDispositionMeaning,
++    execCli,
++    fs,
++    isolatedHttpAtRepo,
++    makeCandidateWritable,
++    makeEvaluatorReadable,
++    path,
++    postJson,
++    postMultipart,
++    removeDir,
++    request,
++    runFeature,
++    startServer,
++    tempDir,
++    verifyBuildLifecycle,
++    verifyOnceLifecycle,
++    verifyOnceSequence,
++    verifyNoLegacyRuntime,
++    verifyTargetDependencies,
++    withServer,
++};
+diff --git a/suite/differential/behavior-oracle.js b/suite/differential/behavior-oracle.js
+new file mode 100644
+index 0000000..4cbdcb3
+--- /dev/null
++++ b/suite/differential/behavior-oracle.js
+@@ -0,0 +1,140 @@
++'use strict';
++
++const {
++    assert,
++    contentDispositionMeaning,
++    fs,
++    isolatedHttpAtRepo,
++    makeEvaluatorReadable,
++    path,
++    removeDir,
++    REPO,
++    runFeature,
++    tempDir,
++} = require('../_harness');
++
++const BASE_REPO = process.env.SHARING_BASE_DIR || '/opt/sharing-base';
++
++function multipart(parts) {
++    const boundary = '----sharing-differential-boundary';
++    const chunks = [];
++    for (const part of parts) {
++        chunks.push(Buffer.from('--' + boundary + '\r\n'));
++        chunks.push(Buffer.from(
++            'Content-Disposition: form-data; name="' + part.field + '"; filename="' + part.filename + '"\r\n' +
++            'Content-Type: application/octet-stream\r\n\r\n'
++        ));
++        chunks.push(Buffer.from(part.content));
++        chunks.push(Buffer.from('\r\n'));
++    }
++    chunks.push(Buffer.from('--' + boundary + '--\r\n'));
++    return { body: Buffer.concat(chunks), headers: { 'content-type': 'multipart/form-data; boundary=' + boundary } };
++}
++
++function contentType(response) {
++    return String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
++}
++
++runFeature('D01 source and target public behavior remain equivalent', async () => {
++    const sharePath = tempDir('sharing-differential-');
++    try {
++        makeEvaluatorReadable(sharePath);
++        fs.writeFileSync(path.join(sharePath, 'index.txt'), 'root file content');
++        fs.writeFileSync(path.join(sharePath, 'page.html'), '<html><body>Hello Oracle</body></html>');
++        fs.mkdirSync(path.join(sharePath, 'sub'));
++        fs.writeFileSync(path.join(sharePath, 'sub', 'child.txt'), 'child content');
++        const specialDir = path.join(sharePath, 'quote"目录');
++        fs.mkdirSync(specialDir);
++        fs.writeFileSync(path.join(specialDir, 'inside.txt'), 'special content');
++
++        const options = {
++            sharePath,
++            receive: true,
++            clipboard: false,
++            postUploadRedirectUrl: 'http://127.0.0.1/receive',
++            shareAddress: 'http://127.0.0.1/share/',
++        };
++        const corpus = [
++            { id: 'C01', method: 'GET', path: '/share/index.txt', exactBody: true },
++            { id: 'C02', method: 'GET', path: '/share/page.html', exactBody: true },
++            { id: 'C03', method: 'GET', path: '/share/nonexistent.txt' },
++            { id: 'C04', method: 'GET', path: '/share/sub/child.txt', exactBody: true },
++            { id: 'C05', method: 'GET', path: '/receive', contains: 'uploadForm' },
++            {
++                id: 'C06',
++                method: 'POST',
++                path: '/upload',
++                headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                body: '',
++            },
++            {
++                id: 'C07',
++                method: 'POST',
++                path: '/text',
++                headers: { 'content-type': 'application/json' },
++                body: JSON.stringify({ text: 'oracle test' }),
++                expectedBody: 'Text received.',
++            },
++            {
++                id: 'C08',
++                method: 'POST',
++                path: '/text',
++                headers: { 'content-type': 'application/json' },
++                body: JSON.stringify({ text: '' }),
++            },
++            { id: 'C09', method: 'GET', path: '/qr' },
++            { id: 'C10', method: 'POST', path: '/text', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 0 }) },
++            { id: 'C11', method: 'POST', path: '/text', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: false }) },
++            {
++                id: 'C12', method: 'GET', path: '/share/',
++                headers: { authorization: 'basic ' + Buffer.from('oracle-user:oracle-pass').toString('base64') },
++                options: { auth: { username: 'oracle-user', password: 'oracle-pass' } },
++            },
++            {
++                id: 'C13', method: 'GET', path: '/zip?path=' + encodeURIComponent('quote"目录'),
++                options: { allowZip: true }, headersToCompare: ['content-disposition'],
++            },
++            {
++                id: 'C14', method: 'POST', path: '/upload',
++                ...multipart([{ field: 'other', filename: 'ignored.txt', content: 'must not save' }]),
++            },
++            // Express ignored these bodies; the routes returned missing-data 400,
++            // rather than a framework-level unsupported-media-type 415.
++            {
++                id: 'C15', method: 'POST', path: '/upload',
++                headers: { 'content-type': 'application/octet-stream' },
++                body: 'unparsed binary payload',
++            },
++            {
++                id: 'C16', method: 'POST', path: '/text',
++                headers: { 'content-type': 'application/octet-stream' },
++                body: 'unparsed binary payload',
++            },
++        ];
++
++        for (const item of corpus) {
++            const requestOptions = { ...options, ...(item.options || {}) };
++            const baseResponse = await isolatedHttpAtRepo(BASE_REPO, requestOptions, item, false);
++            const candidateResponse = await isolatedHttpAtRepo(REPO, requestOptions, item, true);
++            assert.strictEqual(candidateResponse.status, baseResponse.status, item.id + ' status');
++            const baseType = contentType(baseResponse);
++            const candidateType = contentType(candidateResponse);
++            if (baseType && candidateType) {
++                assert.ok(
++                    (baseType.startsWith('text/') && candidateType.startsWith('text/')) ||
++                    baseType === candidateType,
++                    item.id + ' content type'
++                );
++            }
++            if (item.exactBody) assert.strictEqual(candidateResponse.text, baseResponse.text, item.id);
++            if (item.contains) assert.match(candidateResponse.text, new RegExp(item.contains), item.id);
++            if (item.expectedBody) assert.strictEqual(candidateResponse.text, item.expectedBody, item.id);
++            for (const header of item.headersToCompare || []) {
++                const meaning = header.toLowerCase() === 'content-disposition' ? contentDispositionMeaning : (value) => value;
++                assert.deepStrictEqual(meaning(candidateResponse.headers[header]), meaning(baseResponse.headers[header]), item.id + ' ' + header);
++            }
++        }
++    } finally {
++        removeDir(sharePath);
++    }
++});
+diff --git a/suite/f2p/FL01-buildapp-instance.js b/suite/f2p/FL01-buildapp-instance.js
+new file mode 100644
+index 0000000..85a557a
+--- /dev/null
++++ b/suite/f2p/FL01-buildapp-instance.js
+@@ -0,0 +1,22 @@
++'use strict';
++
++const { assert, runFeature, tempDir, removeDir, verifyTargetDependencies } = require('../_harness');
++
++runFeature('FL01 buildApp returns a Fastify-compatible instance', async () => {
++    const root = tempDir();
++    try {
++        const evidence = await verifyTargetDependencies({ sharePath: root });
++        assert.deepStrictEqual(evidence.capabilities, {
++            inject: 'function',
++            ready: 'function',
++            close: 'function',
++        });
++        assert.strictEqual(evidence.appVersion, '4.28.1');
++        assert.strictEqual(evidence.fastifyVersion, '4.28.1');
++        assert.strictEqual(evidence.multipartVersion, '8.3.1');
++        assert.ok(['4.28.1', '^4.28.1'].includes(evidence.declaredFastify));
++        assert.ok(['8.3.1', '^8.3.1'].includes(evidence.declaredMultipart));
++    } finally {
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/FL02-buildapp-inject-share.js b/suite/f2p/FL02-buildapp-inject-share.js
+new file mode 100644
+index 0000000..9853542
+--- /dev/null
++++ b/suite/f2p/FL02-buildapp-inject-share.js
+@@ -0,0 +1,18 @@
++'use strict';
++
++const { appModule, assert, fs, path, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('FL02 buildApp supports socket-free file injection', async () => {
++    const root = tempDir();
++    let app;
++    try {
++        fs.writeFileSync(path.join(root, 'inject.txt'), 'injected response', 'utf8');
++        app = appModule.buildApp({ sharePath: root });
++        const response = await app.inject({ method: 'GET', url: '/share/inject.txt' });
++        assert.strictEqual(response.statusCode, 200);
++        assert.strictEqual(response.body, 'injected response');
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/FL03-buildapp-close-rebuild.js b/suite/f2p/FL03-buildapp-close-rebuild.js
+new file mode 100644
+index 0000000..11498c5
+--- /dev/null
++++ b/suite/f2p/FL03-buildapp-close-rebuild.js
+@@ -0,0 +1,15 @@
++'use strict';
++
++const { assert, fs, path, runFeature, tempDir, removeDir, verifyBuildLifecycle } = require('../_harness');
++
++runFeature('FL03 buildApp can close and create a fresh instance', async () => {
++    const root = tempDir();
++    try {
++        fs.writeFileSync(path.join(root, 'fresh.txt'), 'fresh instance', 'utf8');
++        const response = await verifyBuildLifecycle({ sharePath: root }, '/share/fresh.txt');
++        assert.strictEqual(response.statusCode, 200);
++        assert.strictEqual(response.text, 'fresh instance');
++    } finally {
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/FL04-no-express-runtime.js b/suite/f2p/FL04-no-express-runtime.js
+new file mode 100644
+index 0000000..4c0024e
+--- /dev/null
++++ b/suite/f2p/FL04-no-express-runtime.js
+@@ -0,0 +1,21 @@
++'use strict';
++
++const { assert, fs, path, runFeature, tempDir, removeDir, verifyNoLegacyRuntime } = require('../_harness');
++
++runFeature('FL04 migrated server runs without loading Express', async () => {
++    const root = tempDir();
++    try {
++        fs.writeFileSync(path.join(root, 'fastify-only.txt'), 'fastify runtime', 'utf8');
++        const evidence = await verifyNoLegacyRuntime(
++            { sharePath: root },
++            '/share/fastify-only.txt',
++        );
++        assert.strictEqual(evidence.statusCode, 200);
++        assert.strictEqual(evidence.text, 'fastify runtime');
++        assert.ok(evidence.fastifyLoads >= 1);
++        assert.strictEqual(evidence.legacyLoads, 0);
++        assert.strictEqual(evidence.npmTest.code, 0, evidence.npmTest.stderr || evidence.npmTest.stdout);
++    } finally {
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/FL05-once-fastify-lifecycle-close.js b/suite/f2p/FL05-once-fastify-lifecycle-close.js
+new file mode 100644
+index 0000000..6577b83
+--- /dev/null
++++ b/suite/f2p/FL05-once-fastify-lifecycle-close.js
+@@ -0,0 +1,13 @@
++'use strict';
++
++const { assert, runFeature, verifyOnceLifecycle } = require('../_harness');
++
++runFeature('FL05 once mode closes the active server', async () => {
++    const evidence = await verifyOnceLifecycle({});
++    assert.strictEqual(evidence.statusCode, 200);
++    assert.strictEqual(evidence.body, 'once payload');
++    assert.strictEqual(evidence.finishCount, 1);
++    assert.strictEqual(evidence.finishReason, 'download');
++    assert.strictEqual(evidence.closeCount, 1);
++    assert.strictEqual(evidence.listening, false);
++});
+diff --git a/suite/f2p/IR01-inject-receive-form.js b/suite/f2p/IR01-inject-receive-form.js
+new file mode 100644
+index 0000000..af70187
+--- /dev/null
++++ b/suite/f2p/IR01-inject-receive-form.js
+@@ -0,0 +1,24 @@
++'use strict';
++
++const { appModule, assert, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('IR01 Fastify inject renders the receive form', async () => {
++    const root = tempDir();
++    let app;
++    try {
++        app = appModule.buildApp({
++            sharePath: root,
++            receive: true,
++            shareAddress: 'http://device.test/share',
++            postUploadRedirectUrl: 'http://device.test/receive',
++        });
++        const response = await app.inject({ method: 'GET', url: '/receive' });
++        assert.strictEqual(response.statusCode, 200);
++        assert.match(response.headers['content-type'], /^text\/html/);
++        assert.match(response.body, /http:\/\/device\.test\/share/);
++        assert.match(response.body, /http:\/\/device\.test\/receive/);
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/IR02-inject-text-valid.js b/suite/f2p/IR02-inject-text-valid.js
+new file mode 100644
+index 0000000..7af5548
+--- /dev/null
++++ b/suite/f2p/IR02-inject-text-valid.js
+@@ -0,0 +1,22 @@
++'use strict';
++
++const { appModule, assert, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('IR02 Fastify inject accepts a JSON text submission', async () => {
++    const root = tempDir();
++    let app;
++    try {
++        app = appModule.buildApp({ sharePath: root, receive: true });
++        const response = await app.inject({
++            method: 'POST',
++            url: '/text',
++            headers: { 'content-type': 'application/json' },
++            payload: JSON.stringify({ text: 'hello from inject' }),
++        });
++        assert.strictEqual(response.statusCode, 200);
++        assert.strictEqual(response.body, 'Text received.');
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/IR03-inject-text-empty.js b/suite/f2p/IR03-inject-text-empty.js
+new file mode 100644
+index 0000000..9c87298
+--- /dev/null
++++ b/suite/f2p/IR03-inject-text-empty.js
+@@ -0,0 +1,22 @@
++'use strict';
++
++const { appModule, assert, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('IR03 Fastify inject rejects an empty text submission', async () => {
++    const root = tempDir();
++    let app;
++    try {
++        app = appModule.buildApp({ sharePath: root, receive: true });
++        const response = await app.inject({
++            method: 'POST',
++            url: '/text',
++            headers: { 'content-type': 'application/json' },
++            payload: JSON.stringify({ text: '' }),
++        });
++        assert.strictEqual(response.statusCode, 400);
++        assert.strictEqual(response.body, 'No text received.');
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/IR04-inject-multipart-upload.js b/suite/f2p/IR04-inject-multipart-upload.js
+new file mode 100644
+index 0000000..4f3c5f7
+--- /dev/null
++++ b/suite/f2p/IR04-inject-multipart-upload.js
+@@ -0,0 +1,38 @@
++'use strict';
++
++const { appModule, assert, fs, path, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('IR04 Fastify inject accepts a multipart file upload', async () => {
++    const root = tempDir();
++    const boundary = '----sharing-inject-upload';
++    const payload = Buffer.concat([
++        Buffer.from('--' + boundary + '\r\n'),
++        Buffer.from(
++            'Content-Disposition: form-data; name="selected"; filename="inject-upload.txt"\r\n' +
++            'Content-Type: application/octet-stream\r\n\r\n'
++        ),
++        Buffer.from('uploaded through inject'),
++        Buffer.from('\r\n--' + boundary + '--\r\n'),
++    ]);
++    let app;
++    try {
++        app = appModule.buildApp({ sharePath: root, receive: true });
++        const response = await app.inject({
++            method: 'POST',
++            url: '/upload',
++            headers: {
++                'content-type': 'multipart/form-data; boundary=' + boundary,
++                'content-length': String(payload.length),
++            },
++            payload,
++        });
++        assert.strictEqual(response.statusCode, 200);
++        assert.strictEqual(
++            fs.readFileSync(path.join(root, 'inject-upload.txt'), 'utf8'),
++            'uploaded through inject'
++        );
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/f2p/IR05-inject-urlencoded-text.js b/suite/f2p/IR05-inject-urlencoded-text.js
+new file mode 100644
+index 0000000..b700fe2
+--- /dev/null
++++ b/suite/f2p/IR05-inject-urlencoded-text.js
+@@ -0,0 +1,22 @@
++'use strict';
++
++const { appModule, assert, runFeature, tempDir, removeDir } = require('../_harness');
++
++runFeature('IR05 Fastify inject accepts URL-encoded text', async () => {
++    const root = tempDir();
++    let app;
++    try {
++        app = appModule.buildApp({ sharePath: root, receive: true });
++        const response = await app.inject({
++            method: 'POST',
++            url: '/text',
++            headers: { 'content-type': 'application/x-www-form-urlencoded' },
++            payload: 'text=hello+from+form',
++        });
++        assert.strictEqual(response.statusCode, 200);
++        assert.strictEqual(response.body, 'Text received.');
++    } finally {
++        if (app) await app.close();
++        removeDir(root);
++    }
++});
+diff --git a/suite/p2p/P01-file-download.js b/suite/p2p/P01-file-download.js
+new file mode 100644
+index 0000000..23ad5ed
+--- /dev/null
++++ b/suite/p2p/P01-file-download.js
+@@ -0,0 +1,13 @@
++'use strict';
++const { assert, fs, removeDir, tempDir, runFeature, withServer } = require('../_harness');
++runFeature('P01 shared file is downloadable', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(require('path').join(dir, 'hello.txt'), 'hello world');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await require('../_harness').request(server.base, '/share/hello.txt');
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(response.text, 'hello world');
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P02-listing-encoding.js b/suite/p2p/P02-listing-encoding.js
+new file mode 100644
+index 0000000..cefb2d2
+--- /dev/null
++++ b/suite/p2p/P02-listing-encoding.js
+@@ -0,0 +1,15 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer } = require('../_harness');
++runFeature('P02 listing safely displays special file names', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'File #1.txt'), 'hash');
++        fs.writeFileSync(path.join(dir, 'a&b.txt'), 'amp');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await require('../_harness').request(server.base, '/share/');
++            assert.strictEqual(response.status, 200);
++            assert.match(response.text, /title="File #1\.txt"/);
++            assert.match(response.text, /title="a&#38;b\.txt"/);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P03-nested-file.js b/suite/p2p/P03-nested-file.js
+new file mode 100644
+index 0000000..6cc20d9
+--- /dev/null
++++ b/suite/p2p/P03-nested-file.js
+@@ -0,0 +1,14 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer } = require('../_harness');
++runFeature('P03 nested directory file is downloadable', async () => {
++    const dir = tempDir();
++    try {
++        fs.mkdirSync(path.join(dir, 'sub'));
++        fs.writeFileSync(path.join(dir, 'sub', 'child.txt'), 'nested');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await require('../_harness').request(server.base, '/share/sub/child.txt');
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(response.text, 'nested');
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P04-listing-prefix-reachable.js b/suite/p2p/P04-listing-prefix-reachable.js
+new file mode 100644
+index 0000000..437f3ba
+--- /dev/null
++++ b/suite/p2p/P04-listing-prefix-reachable.js
+@@ -0,0 +1,18 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P04 directory listing enumerates shared files', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'reachable.txt'), 'reachable');
++        await withServer({ sharePath: dir }, async (server) => {
++            const listing = await request(server.base, '/share/');
++            assert.strictEqual(listing.status, 200);
++            assert.match(listing.headers['content-type'], /^text\/html/);
++            assert.match(listing.text, /title="reachable\.txt"/);
++            const mixedCase = await request(server.base, '/ShArE/');
++            assert.strictEqual(mixedCase.status, 200);
++            assert.match(mixedCase.text, /href="\/ShArE\/reachable\.txt"/);
++            assert.strictEqual(mixedCase.text, listing.text.replace(/href="\/share/g, 'href="/ShArE'));
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P05-html-as-is.js b/suite/p2p/P05-html-as-is.js
+new file mode 100644
+index 0000000..8bc750c
+--- /dev/null
++++ b/suite/p2p/P05-html-as-is.js
+@@ -0,0 +1,14 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P05 HTML files are served without rewriting', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'page.html'), '<a href="/somewhere">link</a>');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await request(server.base, '/share/page.html');
++            assert.strictEqual(response.status, 200);
++            assert.match(response.text, /href="\/somewhere"/);
++            assert.doesNotMatch(response.text, /href="\/share\/somewhere"/);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P06-url-significant-names.js b/suite/p2p/P06-url-significant-names.js
+new file mode 100644
+index 0000000..48f4a08
+--- /dev/null
++++ b/suite/p2p/P06-url-significant-names.js
+@@ -0,0 +1,22 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P06 URL-significant and Unicode names are reachable', async () => {
++    const dir = tempDir();
++    const names = ['100%done.txt', 'café.txt'];
++    if (process.platform !== 'win32') names.push('back\\slash.txt');
++    try {
++        for (const name of names) fs.writeFileSync(path.join(dir, name), name);
++        await withServer({ sharePath: dir }, async (server) => {
++            const listing = await request(server.base, '/share/');
++            assert.strictEqual(listing.status, 200);
++            for (const name of names) {
++                assert.ok(listing.text.includes('href="/share/' + encodeURIComponent(name) + '"'), name);
++            }
++            for (const name of names) {
++                const response = await request(server.base, '/share/' + encodeURIComponent(name));
++                assert.strictEqual(response.status, 200, name);
++                assert.strictEqual(response.text, name);
++            }
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P07-receive-form.js b/suite/p2p/P07-receive-form.js
+new file mode 100644
+index 0000000..46c434d
+--- /dev/null
++++ b/suite/p2p/P07-receive-form.js
+@@ -0,0 +1,31 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P07 receive form exposes upload controls', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await request(server.base, '/receive');
++            assert.strictEqual(response.status, 200);
++            assert.match(response.text, /uploadForm/);
++            assert.match(response.text, /progress-bar/);
++            assert.match(response.text, /progress-text/);
++            const unregistered = await request(server.base, '/receive;ignored');
++            assert.strictEqual(unregistered.status, 404);
++            // Express automatically answered OPTIONS for registered routes.
++            for (const [route, methods] of [
++                ['/qr', ['GET', 'HEAD']], ['/receive', ['GET', 'HEAD']],
++                ['/upload', ['POST']], ['/text', ['POST']],
++            ]) {
++                const options = await request(server.base, route, { method: 'OPTIONS' });
++                assert.strictEqual(options.status, 200, 'OPTIONS ' + route);
++                assert.strictEqual(options.text, methods.join(','), route);
++                assert.deepStrictEqual(String(options.headers.allow).split(/\s*,\s*/).sort(), methods.sort(), route);
++            }
++            for (const route of ['/receive/', '/RECEIVE']) {
++                const equivalent = await request(server.base, route);
++                assert.strictEqual(equivalent.status, 200, route);
++                assert.strictEqual(equivalent.text, response.text, route);
++            }
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P08-upload-empty.js b/suite/p2p/P08-upload-empty.js
+new file mode 100644
+index 0000000..6fe2e19
+--- /dev/null
++++ b/suite/p2p/P08-upload-empty.js
+@@ -0,0 +1,15 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P08 upload without files returns bad request', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await request(server.base, '/upload', {
++                method: 'POST',
++                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
++                body: '',
++            });
++            assert.strictEqual(response.status, 400);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P09-upload-existing-collision.js b/suite/p2p/P09-upload-existing-collision.js
+new file mode 100644
+index 0000000..3bab869
+--- /dev/null
++++ b/suite/p2p/P09-upload-existing-collision.js
+@@ -0,0 +1,40 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, postMultipart } = require('../_harness');
++runFeature('P09 upload preserves an existing same-named file', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'a.txt'), 'existing');
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: 'a.txt', content: 'new-a' },
++            ]);
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(fs.readFileSync(path.join(dir, 'a.txt'), 'utf8'), 'existing');
++            assert.strictEqual(fs.readFileSync(path.join(dir, 'a (1).txt'), 'utf8'), 'new-a');
++            const ignored = await postMultipart(server.base, '/upload', [
++                { field: 'other', filename: 'ignored.txt', content: 'must not save' },
++            ]);
++            assert.strictEqual(ignored.status, 400);
++            assert.ok(!fs.existsSync(path.join(dir, 'ignored.txt')));
++            // The former upload middleware truncated names before the route's
++            // filename-safety/collision logic, rather than rejecting ENAMETOOLONG.
++            const longName = 'x'.repeat(260) + '.txt';
++            const longUpload = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: longName, content: 'long-name payload' },
++            ]);
++            assert.strictEqual(longUpload.status, 200);
++            assert.strictEqual(fs.readFileSync(path.join(dir, longName.slice(0, 255)), 'utf8'), 'long-name payload');
++            // An unnamed octet-stream with data was a real upload; an empty
++            // unused file input remains covered separately by P45.
++            const before = new Set(fs.readdirSync(dir));
++            const unnamed = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: '', content: 'unnamed payload' },
++            ]);
++            assert.strictEqual(unnamed.status, 200);
++            const added = fs.readdirSync(dir).filter((name) => !before.has(name));
++            assert.strictEqual(added.length, 1);
++            assert.match(added[0], /^tmp-\d+-\d+$/);
++            assert.strictEqual(fs.readFileSync(path.join(dir, added[0]), 'utf8'), 'unnamed payload');
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P10-upload-duplicate-names.js b/suite/p2p/P10-upload-duplicate-names.js
+new file mode 100644
+index 0000000..d5d75bc
+--- /dev/null
++++ b/suite/p2p/P10-upload-duplicate-names.js
+@@ -0,0 +1,19 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, postMultipart } = require('../_harness');
++runFeature('P10 duplicate upload names do not clobber', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: 'dup.txt', content: 'first' },
++                { field: 'selected', filename: 'dup.txt', content: 'second' },
++            ]);
++            assert.strictEqual(response.status, 200);
++            const contents = [
++                fs.readFileSync(path.join(dir, 'dup.txt'), 'utf8'),
++                fs.readFileSync(path.join(dir, 'dup (1).txt'), 'utf8'),
++            ].sort();
++            assert.deepStrictEqual(contents, ['first', 'second']);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P11-upload-symlink.js b/suite/p2p/P11-upload-symlink.js
+new file mode 100644
+index 0000000..a54f8ff
+--- /dev/null
++++ b/suite/p2p/P11-upload-symlink.js
+@@ -0,0 +1,21 @@
++'use strict';
++const { assert, fs, makeCandidateWritable, path, removeDir, tempDir, runFeature, withServer, postMultipart } = require('../_harness');
++runFeature('P11 upload does not follow a symlink outside the share', async () => {
++    const root = tempDir();
++    const dir = path.join(root, 'share');
++    const outside = path.join(root, 'outside.txt');
++    fs.mkdirSync(dir);
++    makeCandidateWritable(dir);
++    try {
++        let linked = true;
++        try { fs.symlinkSync(outside, path.join(dir, 'evil.txt')); } catch (_) { linked = false; }
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: 'evil.txt', content: 'blocked' },
++            ]);
++            assert.strictEqual(response.status, 200);
++            assert.ok(!fs.existsSync(outside));
++            if (linked) assert.strictEqual(fs.readFileSync(path.join(dir, 'evil (1).txt'), 'utf8'), 'blocked');
++        });
++    } finally { removeDir(root); }
++});
+diff --git a/suite/p2p/P12-zip-download.js b/suite/p2p/P12-zip-download.js
+new file mode 100644
+index 0000000..64e6270
+--- /dev/null
++++ b/suite/p2p/P12-zip-download.js
+@@ -0,0 +1,36 @@
++'use strict';
++const { assert, contentDispositionMeaning, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P12 zip download streams an archive', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'inside.txt'), 'inside');
++        const special = path.join(dir, 'quote"目录');
++        fs.mkdirSync(special);
++        fs.writeFileSync(path.join(special, 'inside.txt'), 'special');
++        await withServer({ sharePath: dir, allowZip: true }, async (server) => {
++            const options = await request(server.base, '/zip', { method: 'OPTIONS' });
++            assert.strictEqual(options.status, 200);
++            assert.strictEqual(options.text, 'GET,HEAD');
++            assert.deepStrictEqual(String(options.headers.allow).split(/\s*,\s*/).sort(), ['GET', 'HEAD']);
++            // Express's extended query parser distinguished arrays and objects.
++            // Ignoring bracketed keys silently archives the entire share root.
++            const objectPath = await request(server.base, '/zip?path%5Bx%5D=missing');
++            assert.strictEqual(objectPath.status, 404);
++            const arrayPath = await request(server.base, '/zip?path%5B%5D=' + encodeURIComponent('quote"目录'));
++            assert.strictEqual(arrayPath.status, 200);
++            assert.deepStrictEqual(contentDispositionMeaning(String(arrayPath.headers['content-disposition'] || '')), {
++                type: 'attachment', filename: 'quote"目录.zip',
++            });
++            const archive = await request(server.base, '/zip');
++            assert.strictEqual(archive.status, 200);
++            assert.strictEqual(archive.body.slice(0, 2).toString('latin1'), 'PK');
++            const specialArchive = await request(server.base, '/zip?path=' + encodeURIComponent('quote"目录'));
++            assert.strictEqual(specialArchive.status, 200);
++            assert.strictEqual(specialArchive.body.slice(0, 2).toString('latin1'), 'PK');
++            const disposition = String(specialArchive.headers['content-disposition'] || '');
++            assert.deepStrictEqual(contentDispositionMeaning(disposition), {
++                type: 'attachment', filename: 'quote"目录.zip',
++            });
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P13-zip-symlink.js b/suite/p2p/P13-zip-symlink.js
+new file mode 100644
+index 0000000..c034e4b
+--- /dev/null
++++ b/suite/p2p/P13-zip-symlink.js
+@@ -0,0 +1,20 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P13 zip excludes symlinks', async () => {
++    const root = tempDir();
++    const dir = path.join(root, 'share');
++    fs.mkdirSync(dir);
++    try {
++        fs.writeFileSync(path.join(dir, 'real.txt'), 'real');
++        const linkName = 'outside-link';
++        let linked = true;
++        try { fs.symlinkSync(path.join(root, 'outside.txt'), path.join(dir, linkName)); } catch (_) { linked = false; }
++        await withServer({ sharePath: dir, allowZip: true }, async (server) => {
++            const archive = await request(server.base, '/zip');
++            assert.strictEqual(archive.status, 200);
++            assert.strictEqual(archive.body.slice(0, 2).toString('latin1'), 'PK');
++            assert.ok(archive.body.includes(Buffer.from('real.txt')));
++            if (linked) assert.ok(!archive.body.includes(Buffer.from(linkName)));
++        });
++    } finally { removeDir(root); }
++});
+diff --git a/suite/p2p/P14-clipboard-page.js b/suite/p2p/P14-clipboard-page.js
+new file mode 100644
+index 0000000..26a2c8a
+--- /dev/null
++++ b/suite/p2p/P14-clipboard-page.js
+@@ -0,0 +1,24 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P14 clipboard page exposes clipboard content', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({
++            sharePath: dir,
++            clipboard: true,
++            clipboardText: true,
++            getClipboardData: () => ({ isPath: false, text: 'secret clipboard' }),
++        }, async (server) => {
++            for (const route of ['/', '/clipboard', '/clipboard.txt']) {
++                const options = await request(server.base, route, { method: 'OPTIONS' });
++                assert.strictEqual(options.status, 200, route);
++                assert.strictEqual(options.text, 'GET,HEAD');
++                assert.deepStrictEqual(String(options.headers.allow).split(/\s*,\s*/).sort(), ['GET', 'HEAD'], route);
++            }
++            const page = await request(server.base, '/clipboard');
++            assert.strictEqual(page.status, 200);
++            assert.match(page.text, /secret clipboard/);
++            assert.match(page.text.toLowerCase(), /copy/);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P15-text-route.js b/suite/p2p/P15-text-route.js
+new file mode 100644
+index 0000000..846a7b1
+--- /dev/null
++++ b/suite/p2p/P15-text-route.js
+@@ -0,0 +1,16 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, postJson } = require('../_harness');
++runFeature('P15 text route accepts content', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const valid = await postJson(server.base, '/text', { text: 'hello from test' });
++            assert.strictEqual(valid.status, 200);
++            assert.strictEqual(valid.text, 'Text received.');
++            for (const text of [0, false]) {
++                const invalid = await postJson(server.base, '/text', { text });
++                assert.strictEqual(invalid.status, 400, String(text));
++            }
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P16-share-prefixed-path.js b/suite/p2p/P16-share-prefixed-path.js
+new file mode 100644
+index 0000000..642255b
+--- /dev/null
++++ b/suite/p2p/P16-share-prefixed-path.js
+@@ -0,0 +1,13 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P16 top-level names beginning with share remain reachable', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'sharething.txt'), 'share-prefixed');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await request(server.base, '/share/sharething.txt');
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(response.text, 'share-prefixed');
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P17-token-gating.js b/suite/p2p/P17-token-gating.js
+new file mode 100644
+index 0000000..61000a1
+--- /dev/null
++++ b/suite/p2p/P17-token-gating.js
+@@ -0,0 +1,11 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P17 capability token gates the share route', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, token: 'feature-token' }, async (server) => {
++            assert.strictEqual((await request(server.base, '/share/feature-token/')).status, 200);
++            assert.strictEqual((await request(server.base, '/share/')).status, 404);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P18-cli-help.js b/suite/p2p/P18-cli-help.js
+new file mode 100644
+index 0000000..106d1d1
+--- /dev/null
++++ b/suite/p2p/P18-cli-help.js
+@@ -0,0 +1,6 @@
++'use strict';
++const { assert, execCli, runFeature } = require('../_harness');
++runFeature('P18 CLI help describes the command', async () => {
++    const result = await execCli(['--help']);
++    assert.match(result.stdout, /Share file or directory/);
++});
+diff --git a/suite/p2p/P19-cli-version.js b/suite/p2p/P19-cli-version.js
+new file mode 100644
+index 0000000..7b25912
+--- /dev/null
++++ b/suite/p2p/P19-cli-version.js
+@@ -0,0 +1,6 @@
++'use strict';
++const { assert, execCli, runFeature } = require('../_harness');
++runFeature('P19 CLI version emits semver', async () => {
++    const result = await execCli(['--version']);
++    assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+$/);
++});
+diff --git a/suite/p2p/P20-cli-tunnel.js b/suite/p2p/P20-cli-tunnel.js
+new file mode 100644
+index 0000000..fe73016
+--- /dev/null
++++ b/suite/p2p/P20-cli-tunnel.js
+@@ -0,0 +1,8 @@
++'use strict';
++const { assert, execCli, runFeature } = require('../_harness');
++runFeature('P20 CLI tunnel guide lists supported tunnel tools', async () => {
++    const result = await execCli(['--tunnel']);
++    assert.match(result.stdout, /ngrok/);
++    assert.match(result.stdout, /localtunnel/);
++    assert.match(result.stdout, /cloudflared/);
++});
+diff --git a/suite/p2p/P21-qr-route.js b/suite/p2p/P21-qr-route.js
+new file mode 100644
+index 0000000..4c4b8de
+--- /dev/null
++++ b/suite/p2p/P21-qr-route.js
+@@ -0,0 +1,13 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P21 QR route renders an image and share link', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, shareAddress: 'http://127.0.0.1/share/' }, async (server) => {
++            const response = await request(server.base, '/qr');
++            assert.strictEqual(response.status, 200);
++            assert.match(response.text, /data:image/);
++            assert.match(response.text, /http:\/\/127\.0\.0\.1\/share\//);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P22-basic-auth.js b/suite/p2p/P22-basic-auth.js
+new file mode 100644
+index 0000000..347ff24
+--- /dev/null
++++ b/suite/p2p/P22-basic-auth.js
+@@ -0,0 +1,23 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, request, startServer } = require('../_harness');
++runFeature('P22 configured basic auth protects routes', async () => {
++    const dir = tempDir();
++    let running;
++    try {
++        running = await startServer({
++            sharePath: dir,
++            auth: { username: 'feature-user', password: 'feature-pass' },
++        });
++        const denied = await request(running.base, '/share/');
++        assert.strictEqual(denied.status, 401);
++        const token = Buffer.from('feature-user:feature-pass').toString('base64');
++        for (const scheme of ['Basic', 'basic', 'BASIC']) {
++            const allowed = await request(running.base, '/share/', {
++                headers: { Authorization: scheme + ' ' + token },
++            });
++            assert.strictEqual(allowed.status, 200, scheme);
++        }
++    } finally {
++        if (running) await running.close();
++    }
++});
+diff --git a/suite/p2p/P23-upload-traversal-basename.js b/suite/p2p/P23-upload-traversal-basename.js
+new file mode 100644
+index 0000000..e8e1e98
+--- /dev/null
++++ b/suite/p2p/P23-upload-traversal-basename.js
+@@ -0,0 +1,15 @@
++'use strict';
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, postMultipart } = require('../_harness');
++runFeature('P23 upload strips traversal components from file names', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: '../escape.txt', content: 'safe' },
++            ]);
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(fs.readFileSync(path.join(dir, 'escape.txt'), 'utf8'), 'safe');
++            assert.ok(!fs.existsSync(path.join(path.dirname(dir), 'escape.txt')));
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P24-zip-traversal.js b/suite/p2p/P24-zip-traversal.js
+new file mode 100644
+index 0000000..44be7fa
+--- /dev/null
++++ b/suite/p2p/P24-zip-traversal.js
+@@ -0,0 +1,11 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P24 zip route rejects directory traversal', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, allowZip: true }, async (server) => {
++            const response = await request(server.base, '/zip?path=../../etc');
++            assert.ok([400, 404].includes(response.status));
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P25-clipboard-text-download.js b/suite/p2p/P25-clipboard-text-download.js
+new file mode 100644
+index 0000000..c245a4a
+--- /dev/null
++++ b/suite/p2p/P25-clipboard-text-download.js
+@@ -0,0 +1,17 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P25 clipboard text is downloadable', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({
++            sharePath: dir,
++            clipboard: true,
++            clipboardText: true,
++            getClipboardData: () => ({ isPath: false, text: 'secret clipboard' }),
++        }, async (server) => {
++            const response = await request(server.base, '/clipboard.txt');
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(response.text, 'secret clipboard');
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P26-clipboard-disables-share.js b/suite/p2p/P26-clipboard-disables-share.js
+new file mode 100644
+index 0000000..19f03ed
+--- /dev/null
++++ b/suite/p2p/P26-clipboard-disables-share.js
+@@ -0,0 +1,16 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P26 clipboard mode disables the regular share route', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({
++            sharePath: dir,
++            clipboard: true,
++            clipboardText: true,
++            getClipboardData: () => ({ isPath: false, text: 'secret clipboard' }),
++        }, async (server) => {
++            const response = await request(server.base, '/share/');
++            assert.strictEqual(response.status, 404);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P27-text-empty.js b/suite/p2p/P27-text-empty.js
+new file mode 100644
+index 0000000..74e8552
+--- /dev/null
++++ b/suite/p2p/P27-text-empty.js
+@@ -0,0 +1,11 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, postJson } = require('../_harness');
++runFeature('P27 text route rejects empty content', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const response = await postJson(server.base, '/text', { text: '' });
++            assert.strictEqual(response.status, 400);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P28-zip-token-gating.js b/suite/p2p/P28-zip-token-gating.js
+new file mode 100644
+index 0000000..d719f00
+--- /dev/null
++++ b/suite/p2p/P28-zip-token-gating.js
+@@ -0,0 +1,11 @@
++'use strict';
++const { assert, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++runFeature('P28 capability token gates the zip route', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, allowZip: true, token: 'feature-token' }, async (server) => {
++            assert.strictEqual((await request(server.base, '/zip/feature-token')).status, 200);
++            assert.strictEqual((await request(server.base, '/zip')).status, 404);
++        });
++    } finally { removeDir(dir); }
++});
+diff --git a/suite/p2p/P29-once-listing-keeps-server.js b/suite/p2p/P29-once-listing-keeps-server.js
+new file mode 100644
+index 0000000..d1c817b
+--- /dev/null
++++ b/suite/p2p/P29-once-listing-keeps-server.js
+@@ -0,0 +1,19 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P29 once mode keeps the server after a directory listing', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'once.txt'), 'once payload', 'utf8');
++        const result = await verifyOnceSequence(
++            { sharePath: dir },
++            [{ path: '/share/' }, { path: '/share/once.txt' }]
++        );
++        assert.strictEqual(result.responses[0].status, 200);
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, 'once payload');
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P30-once-404-keeps-server.js b/suite/p2p/P30-once-404-keeps-server.js
+new file mode 100644
+index 0000000..2812c06
+--- /dev/null
++++ b/suite/p2p/P30-once-404-keeps-server.js
+@@ -0,0 +1,19 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P30 once mode keeps the server after a missing file', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'once.txt'), 'once payload', 'utf8');
++        const result = await verifyOnceSequence(
++            { sharePath: dir },
++            [{ path: '/share/missing.txt' }, { path: '/share/once.txt' }]
++        );
++        assert.strictEqual(result.responses[0].status, 404);
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, 'once payload');
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P31-once-download-closes.js b/suite/p2p/P31-once-download-closes.js
+new file mode 100644
+index 0000000..31f83a4
+--- /dev/null
++++ b/suite/p2p/P31-once-download-closes.js
+@@ -0,0 +1,19 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P31 once mode closes after a complete file download', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'once.txt'), 'once payload', 'utf8');
++        const result = await verifyOnceSequence(
++            { sharePath: dir },
++            [{ path: '/share/once.txt', waitMs: 250 }]
++        );
++        assert.strictEqual(result.responses[0].status, 200);
++        assert.strictEqual(result.responses[0].text, 'once payload');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P32-once-range-download.js b/suite/p2p/P32-once-range-download.js
+new file mode 100644
+index 0000000..1ef0d92
+--- /dev/null
++++ b/suite/p2p/P32-once-range-download.js
+@@ -0,0 +1,24 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P32 once mode preserves range download behavior', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'range.txt'), '0123456789', 'utf8');
++        const result = await verifyOnceSequence(
++            { sharePath: dir },
++            [
++                { path: '/share/range.txt', headers: { Range: 'bytes=0-2' } },
++                { path: '/share/range.txt', waitMs: 250 },
++            ]
++        );
++        assert.strictEqual(result.responses[0].status, 206);
++        assert.strictEqual(result.responses[0].text, '012');
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, '0123456789');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P33-once-head-does-not-close.js b/suite/p2p/P33-once-head-does-not-close.js
+new file mode 100644
+index 0000000..b5dfca8
+--- /dev/null
++++ b/suite/p2p/P33-once-head-does-not-close.js
+@@ -0,0 +1,24 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P33 once mode does not count a HEAD request as a download', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'once.txt'), 'once payload', 'utf8');
++        const result = await verifyOnceSequence(
++            { sharePath: dir },
++            [
++                { method: 'HEAD', path: '/share/once.txt' },
++                { path: '/share/once.txt', waitMs: 250 },
++            ]
++        );
++        assert.strictEqual(result.responses[0].status, 200);
++        assert.strictEqual(result.responses[0].text, '');
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, 'once payload');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P34-once-upload-closes.js b/suite/p2p/P34-once-upload-closes.js
+new file mode 100644
+index 0000000..3b0208c
+--- /dev/null
++++ b/suite/p2p/P34-once-upload-closes.js
+@@ -0,0 +1,37 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P34 once mode closes after a successful upload', async () => {
++    const dir = tempDir();
++    const boundary = '----sharing-once-upload';
++    const body = Buffer.concat([
++        Buffer.from('--' + boundary + '\r\n'),
++        Buffer.from(
++            'Content-Disposition: form-data; name="selected"; filename="once-upload.txt"\r\n' +
++            'Content-Type: application/octet-stream\r\n\r\n'
++        ),
++        Buffer.from('once upload payload'),
++        Buffer.from('\r\n--' + boundary + '--\r\n'),
++    ]);
++    try {
++        const result = await verifyOnceSequence(
++            { sharePath: dir, receive: true },
++            [{
++                method: 'POST',
++                path: '/upload',
++                headers: {
++                    'content-type': 'multipart/form-data; boundary=' + boundary,
++                    'content-length': String(body.length),
++                },
++                bodyBase64: body.toString('base64'),
++                waitMs: 250,
++            }]
++        );
++        assert.strictEqual(result.responses[0].status, 200);
++        assert.strictEqual(fs.readFileSync(path.join(dir, 'once-upload.txt'), 'utf8'), 'once upload payload');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P35-once-text-closes.js b/suite/p2p/P35-once-text-closes.js
+new file mode 100644
+index 0000000..55fcee1
+--- /dev/null
++++ b/suite/p2p/P35-once-text-closes.js
+@@ -0,0 +1,28 @@
++'use strict';
++
++const { assert, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P35 once mode closes after a successful text submission', async () => {
++    const dir = tempDir();
++    const body = Buffer.from(JSON.stringify({ text: 'once text payload' }));
++    try {
++        const result = await verifyOnceSequence(
++            { sharePath: dir, receive: true },
++            [{
++                method: 'POST',
++                path: '/text',
++                headers: {
++                    'content-type': 'application/json',
++                    'content-length': String(body.length),
++                },
++                bodyBase64: body.toString('base64'),
++                waitMs: 250,
++            }]
++        );
++        assert.strictEqual(result.responses[0].status, 200);
++        assert.strictEqual(result.responses[0].text, 'Text received.');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P36-once-clipboard-closes.js b/suite/p2p/P36-once-clipboard-closes.js
+new file mode 100644
+index 0000000..e7fc58a
+--- /dev/null
++++ b/suite/p2p/P36-once-clipboard-closes.js
+@@ -0,0 +1,28 @@
++'use strict';
++
++const { assert, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P36 once mode closes after a clipboard download', async () => {
++    const dir = tempDir();
++    try {
++        const result = await verifyOnceSequence(
++            {
++                sharePath: dir,
++                clipboard: true,
++                clipboardText: true,
++                getClipboardData: () => ({ isPath: false, text: 'once clipboard payload' }),
++            },
++            [
++                { path: '/clipboard.txt', headers: { 'if-none-match': '*' }, waitMs: 250 },
++                { path: '/clipboard.txt', waitMs: 250 },
++            ]
++        );
++        assert.strictEqual(result.responses[0].status, 304);
++        assert.strictEqual(result.responses[0].text, '');
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, 'once clipboard payload');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P37-once-invalid-text-keeps-server.js b/suite/p2p/P37-once-invalid-text-keeps-server.js
+new file mode 100644
+index 0000000..0385da8
+--- /dev/null
++++ b/suite/p2p/P37-once-invalid-text-keeps-server.js
+@@ -0,0 +1,31 @@
++'use strict';
++
++const { assert, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P37 once mode ignores invalid text and closes after valid text', async () => {
++    const dir = tempDir();
++    const empty = Buffer.from(JSON.stringify({ text: '' }));
++    const valid = Buffer.from(JSON.stringify({ text: 'valid after empty' }));
++    const request = (body, waitMs) => ({
++        method: 'POST',
++        path: '/text',
++        headers: {
++            'content-type': 'application/json',
++            'content-length': String(body.length),
++        },
++        bodyBase64: body.toString('base64'),
++        waitMs,
++    });
++    try {
++        const result = await verifyOnceSequence(
++            { sharePath: dir, receive: true },
++            [request(empty), request(valid, 250)]
++        );
++        assert.strictEqual(result.responses[0].status, 400);
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(result.responses[1].text, 'Text received.');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P39-share-query-parameters.js b/suite/p2p/P39-share-query-parameters.js
+new file mode 100644
+index 0000000..248c0da
+--- /dev/null
++++ b/suite/p2p/P39-share-query-parameters.js
+@@ -0,0 +1,25 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++
++runFeature('P39 share paths handle query parameters and malformed escapes', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'query.txt'), 'query payload', 'utf8');
++        await withServer({ sharePath: dir }, async (server) => {
++            const response = await request(server.base, '/share/query.txt?download=1&name=%23fragment');
++            assert.strictEqual(response.status, 200);
++            assert.strictEqual(response.text, 'query payload');
++            // app.use mounted serve-handler for these methods too.
++            for (const method of ['POST', 'OPTIONS']) {
++                const otherMethod = await request(server.base, '/share/query.txt?download=1', { method });
++                assert.strictEqual(otherMethod.status, 200, method);
++                assert.strictEqual(otherMethod.text, 'query payload', method);
++            }
++            const malformed = await request(server.base, '/share/%');
++            assert.strictEqual(malformed.status, 500);
++        });
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P40-basic-auth-route-matrix.js b/suite/p2p/P40-basic-auth-route-matrix.js
+new file mode 100644
+index 0000000..0e153fb
+--- /dev/null
++++ b/suite/p2p/P40-basic-auth-route-matrix.js
+@@ -0,0 +1,33 @@
++'use strict';
++
++const { assert, removeDir, tempDir, runFeature, request, startServer } = require('../_harness');
++
++runFeature('P40 basic auth protects every public route', async () => {
++    const dir = tempDir();
++    let running;
++    try {
++        running = await startServer({
++            sharePath: dir,
++            receive: true,
++            allowZip: true,
++            auth: { username: 'matrix-user', password: 'matrix-pass' },
++        });
++        for (const route of ['/qr', '/receive', '/share/', '/zip']) {
++            const denied = await request(running.base, route);
++            assert.strictEqual(denied.status, 401, route);
++            assert.match(String(denied.headers['www-authenticate'] || ''), /^Basic /i, route);
++        }
++        for (const route of ['/upload', '/text']) {
++            const denied = await request(running.base, route, { method: 'POST' });
++            assert.strictEqual(denied.status, 401, route);
++        }
++        const token = Buffer.from('matrix-user:matrix-pass').toString('base64');
++        const allowed = await request(running.base, '/receive', {
++            headers: { authorization: 'Basic ' + token },
++        });
++        assert.strictEqual(allowed.status, 200);
++    } finally {
++        if (running) await running.close();
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P41-range-edge-cases.js b/suite/p2p/P41-range-edge-cases.js
+new file mode 100644
+index 0000000..0882c8d
+--- /dev/null
++++ b/suite/p2p/P41-range-edge-cases.js
+@@ -0,0 +1,27 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++
++runFeature('P41 shared files preserve range and HEAD semantics', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'range-edge.txt'), '0123456789', 'utf8');
++        await withServer({ sharePath: dir }, async (server) => {
++            const suffix = await request(server.base, '/share/range-edge.txt', {
++                headers: { range: 'bytes=-4' },
++            });
++            assert.strictEqual(suffix.status, 206);
++            assert.strictEqual(suffix.text, '6789');
++            assert.strictEqual(suffix.headers['content-range'], 'bytes 6-9/10');
++            const invalid = await request(server.base, '/share/range-edge.txt', {
++                headers: { range: 'bytes=20-30' },
++            });
++            assert.strictEqual(invalid.status, 416);
++            const head = await request(server.base, '/share/range-edge.txt', { method: 'HEAD' });
++            assert.strictEqual(head.status, 200);
++            assert.strictEqual(head.text, '');
++        });
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P42-conditional-get.js b/suite/p2p/P42-conditional-get.js
+new file mode 100644
+index 0000000..7a26fa1
+--- /dev/null
++++ b/suite/p2p/P42-conditional-get.js
+@@ -0,0 +1,59 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++
++runFeature('P42 shared files preserve ETag conditional request semantics', async () => {
++    const dir = tempDir();
++    try {
++        fs.writeFileSync(path.join(dir, 'etag.txt'), 'etag payload', 'utf8');
++        await withServer({ sharePath: dir }, async (server) => {
++            const first = await request(server.base, '/share/etag.txt');
++            assert.strictEqual(first.status, 200);
++            const etag = String(first.headers.etag || '');
++            assert.ok(etag.length > 0);
++            const cached = await request(server.base, '/share/etag.txt', {
++                headers: { 'if-none-match': etag },
++            });
++            assert.strictEqual(cached.status, 304);
++            assert.strictEqual(cached.text, '');
++            const head = await request(server.base, '/share/etag.txt', { method: 'HEAD' });
++            assert.strictEqual(head.status, 200);
++            assert.strictEqual(String(head.headers.etag || ''), etag);
++        });
++        // Express res.send() also supported conditional GET/HEAD on generated
++        // pages and clipboard downloads. Only checking static files misses it.
++        await withServer({
++            sharePath: dir, receive: true, clipboardText: true,
++            shareAddress: 'http://localhost/share/',
++            postUploadRedirectUrl: 'http://localhost/receive',
++            getClipboardData: () => ({ isPath: false, text: 'conditional clipboard' }),
++        }, async (server) => {
++            for (const route of ['/qr', '/receive', '/', '/clipboard', '/clipboard.txt']) {
++                const first = await request(server.base, route);
++                assert.strictEqual(first.status, 200, route);
++                const etag = String(first.headers.etag || '');
++                assert.ok(etag, route + ' validator');
++                for (const method of ['GET', 'HEAD']) {
++                    for (const validator of ['*', etag, '"unrelated", ' + etag.replace(/^W\//, '')]) {
++                        const cached = await request(server.base, route, {
++                            method, headers: { 'if-none-match': validator },
++                        });
++                        assert.strictEqual(cached.status, 304, method + ' ' + route);
++                        assert.strictEqual(cached.text, '', route);
++                    }
++                }
++                for (const headers of [
++                    { 'if-none-match': '"different"' },
++                    { 'if-none-match': etag, 'cache-control': 'no-cache' },
++                    { 'if-none-match': etag, 'if-modified-since': 'Wed, 01 Jan 2031 00:00:00 GMT' },
++                ]) {
++                    const fresh = await request(server.base, route, { headers });
++                    assert.strictEqual(fresh.status, 200, route);
++                    assert.strictEqual(fresh.text, first.text, route);
++                }
++            }
++        });
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P43-text-parser-errors.js b/suite/p2p/P43-text-parser-errors.js
+new file mode 100644
+index 0000000..dea47f9
+--- /dev/null
++++ b/suite/p2p/P43-text-parser-errors.js
+@@ -0,0 +1,153 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, request } = require('../_harness');
++
++runFeature('P43 text route preserves parser and URL-encoded semantics', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const malformed = await request(server.base, '/text', {
++                method: 'POST',
++                headers: { 'content-type': 'application/json' },
++                body: '{"text":',
++            });
++            assert.strictEqual(malformed.status, 400);
++            const boundary = 'sharing-p43-boundary';
++            const multipartHeaders = { 'content-type': 'multipart/form-data; boundary=' + boundary };
++            const jsonField = (value) => '--' + boundary + '\r\n' +
++                'Content-Disposition: form-data; name="text"\r\n' +
++                'Content-Type: application/json\r\n\r\n' + value + '\r\n';
++            const uploadFile = (filename) => '--' + boundary + '\r\n' +
++                'Content-Disposition: form-data; name="selected"; filename="' + filename + '"\r\n' +
++                'Content-Type: application/octet-stream\r\n\r\npayload\r\n';
++            const endMultipart = '--' + boundary + '--\r\n';
++            // Receiving used app-wide multipart middleware. Parse failures
++            // preceded route dispatch, including unknown routes and the share
++            // mount; multipart/mixed was eligible but unsupported (500).
++            fs.writeFileSync(path.join(dir, 'parser-probe.txt'), 'static payload');
++            for (const route of ['/upload', '/text', '/receive', '/missing', '/share/parser-probe.txt', '/qr']) {
++                for (const [type, body] of [
++                    ['multipart/form-data; boundary=' + boundary, 'not a multipart form'],
++                    ['multipart/mixed; boundary=' + boundary, uploadFile('must-not-save.txt') + endMultipart],
++                ]) {
++                    const response = await request(server.base, route, {
++                        method: 'POST', headers: { 'content-type': type }, body,
++                    });
++                    assert.strictEqual(response.status, 500, route + ' ' + type);
++                }
++            }
++            assert.ok(!fs.existsSync(path.join(dir, 'must-not-save.txt')));
++            // Without a semicolon the old middleware did not consider this a
++            // multipart request, so the route's ordinary response still wins.
++            for (const [route, status] of [['/upload', 400], ['/text', 400], ['/missing', 404], ['/share/parser-probe.txt', 200]]) {
++                const response = await request(server.base, route, {
++                    method: 'POST', headers: { 'content-type': 'multipart/form-data' }, body: 'ignored',
++                });
++                assert.strictEqual(response.status, status, route + ' unparsed type');
++            }
++            const emptyField = '--' + boundary + '\r\n' +
++                'Content-Disposition: form-data; name="text"\r\n\r\n\r\n';
++            const repeatedEmpty = await request(server.base, '/text', {
++                method: 'POST', headers: multipartHeaders,
++                body: emptyField + emptyField + endMultipart,
++            });
++            assert.strictEqual(repeatedEmpty.status, 400);
++            // Header controls must fail before a file can be written. Ordinary
++            // text values retain their independent terminal sanitization rules.
++            const unsafeName = 'control\x01.txt';
++            for (const route of ['/upload', '/text']) {
++                const unsafe = await request(server.base, route, {
++                    method: 'POST', headers: multipartHeaders,
++                    body: uploadFile(unsafeName) + endMultipart,
++                });
++                assert.strictEqual(unsafe.status, 500, route + ' malformed part header');
++                assert.ok(!fs.existsSync(path.join(dir, unsafeName)));
++            }
++            const delayedHeaderError = await request(server.base, '/upload', {
++                method: 'POST', headers: multipartHeaders,
++                body: uploadFile('first-before-invalid.txt') + uploadFile(unsafeName) + endMultipart,
++            });
++            assert.strictEqual(delayedHeaderError.status, 500);
++            assert.ok(!fs.existsSync(path.join(dir, 'first-before-invalid.txt')));
++            assert.ok(!fs.existsSync(path.join(dir, unsafeName)));
++            for (const value of ['{bad', '"quoted"']) {
++                const body = jsonField(value) + endMultipart;
++                const textResult = await request(server.base, '/text', {
++                    method: 'POST', headers: multipartHeaders, body,
++                });
++                assert.strictEqual(textResult.status, 200, value);
++                assert.strictEqual(textResult.text, 'Text received.');
++                const uploadResult = await request(server.base, '/upload', {
++                    method: 'POST', headers: multipartHeaders, body,
++                });
++                assert.strictEqual(uploadResult.status, 400, value);
++            }
++            for (const [index, fieldFirst] of [true, false].entries()) {
++                const filename = 'multipart-json-' + index + '.txt';
++                const field = jsonField('{bad');
++                const file = uploadFile(filename);
++                const body = (fieldFirst ? field + file : file + field) + endMultipart;
++                const uploadResult = await request(server.base, '/upload', {
++                    method: 'POST', headers: multipartHeaders, body,
++                });
++                assert.strictEqual(uploadResult.status, 200, filename);
++                assert.strictEqual(fs.readFileSync(path.join(dir, filename), 'utf8'), 'payload');
++            }
++            const form = await request(server.base, '/text', {
++                method: 'POST',
++                headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                body: 'text=hello+from+form',
++            });
++            assert.strictEqual(form.status, 200);
++            assert.strictEqual(form.text, 'Text received.');
++            const empty = await request(server.base, '/text', {
++                method: 'POST',
++                headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                body: 'text=',
++            });
++            assert.strictEqual(empty.status, 400);
++            const formBody = (count) => 'text=hello&' + Array.from(
++                { length: count - 1 }, (_, index) => 'field' + index + '=value'
++            ).join('&');
++            const atLimit = await request(server.base, '/text', {
++                method: 'POST',
++                headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                body: formBody(1000),
++            });
++            assert.strictEqual(atLimit.status, 200);
++            const overLimit = await request(server.base, '/text', {
++                method: 'POST',
++                headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                body: formBody(1001),
++            });
++            assert.strictEqual(overLimit.status, 413);
++            for (const url of ['/text/', '/TEXT/?source=form']) {
++                for (const [count, status] of [[1000, 200], [1001, 413]]) {
++                    const response = await request(server.base, url, {
++                        method: 'POST',
++                        headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                        body: formBody(count),
++                    });
++                    assert.strictEqual(response.status, status, url + ' parameters=' + count);
++                }
++            }
++            const zlib = require('zlib');
++            for (const [encoding, compress] of [['gzip', zlib.gzipSync], ['deflate', zlib.deflateSync]]) {
++                for (const [type, body] of [
++                    ['application/json', JSON.stringify({ text: 'compressed text' })],
++                    ['application/x-www-form-urlencoded', 'text=compressed+text'],
++                ]) {
++                    const response = await request(server.base, '/text', {
++                        method: 'POST',
++                        headers: { 'content-type': type, 'content-encoding': encoding },
++                        body: compress(Buffer.from(body)),
++                    });
++                    assert.strictEqual(response.status, 200, type + ' ' + encoding);
++                    assert.strictEqual(response.text, 'Text received.');
++                }
++            }
++        });
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P44-malformed-basic-auth.js b/suite/p2p/P44-malformed-basic-auth.js
+new file mode 100644
+index 0000000..66f50d4
+--- /dev/null
++++ b/suite/p2p/P44-malformed-basic-auth.js
+@@ -0,0 +1,51 @@
++'use strict';
++
++const { assert, removeDir, tempDir, runFeature, request, startServer } = require('../_harness');
++
++runFeature('P44 malformed basic credentials fail closed', async () => {
++    const dir = tempDir();
++    let running;
++    try {
++        running = await startServer({
++            sharePath: dir,
++            auth: { username: 'auth-user', password: 'auth-pass' },
++        });
++        const malformed = [
++            'Bearer token',
++            'Basic !!!',
++            'Basic ' + Buffer.from('missing-colon').toString('base64'),
++            'Basic ' + Buffer.from('auth-user:wrong').toString('base64'),
++            'Basic ' + Buffer.from(':auth-pass').toString('base64'),
++        ];
++        for (const authorization of malformed) {
++            const response = await request(running.base, '/share/', {
++                headers: { authorization },
++            });
++            assert.strictEqual(response.status, 401, authorization);
++            assert.match(String(response.headers['www-authenticate'] || ''), /^Basic /i);
++        }
++        const valid = 'Basic ' + Buffer.from('auth-user:auth-pass').toString('base64');
++        for (const authorization of [valid, valid.replace(/=+$/, '')]) {
++            const response = await request(running.base, '/share/', {
++                headers: { authorization },
++            });
++            assert.strictEqual(response.status, 200, 'valid credentials: ' + authorization);
++        }
++        for (const [url, authorizedStatus] of [['/share/%', 500], ['/missing/%', 404]]) {
++            for (const authorization of [null, malformed[3]]) {
++                const response = await request(running.base, url, {
++                    headers: authorization ? { authorization } : {},
++                });
++                assert.strictEqual(response.status, 401, url);
++                assert.match(String(response.headers['www-authenticate'] || ''), /^Basic /i);
++            }
++            const response = await request(running.base, url, {
++                headers: { authorization: valid },
++            });
++            assert.strictEqual(response.status, authorizedStatus, url);
++        }
++    } finally {
++        if (running) await running.close();
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P45-zero-byte-upload.js b/suite/p2p/P45-zero-byte-upload.js
+new file mode 100644
+index 0000000..b71676f
+--- /dev/null
++++ b/suite/p2p/P45-zero-byte-upload.js
+@@ -0,0 +1,35 @@
++
++const { assert, fs, path, removeDir, tempDir, runFeature, withServer, postMultipart } = require('../_harness');
++
++runFeature('P45 uploads preserve zero-byte files and ignore unrelated fields', async () => {
++    const dir = tempDir();
++    try {
++        await withServer({ sharePath: dir, receive: true }, async (server) => {
++            const zero = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: 'empty.bin', content: '' },
++            ]);
++            assert.strictEqual(zero.status, 200);
++            assert.strictEqual(fs.statSync(path.join(dir, 'empty.bin')).size, 0);
++            // The original uploader accepted ordinary files larger than the
++            // text parser's independent 5 MiB limit; migration must preserve it.
++            const largeBytes = Buffer.alloc(5 * 1024 * 1024 + 1, 0x61);
++            const large = await postMultipart(server.base, '/upload', [
++                { field: 'selected', filename: 'large.bin', content: largeBytes },
++            ]);
++            assert.strictEqual(large.status, 200);
++            assert.deepStrictEqual(fs.readFileSync(path.join(dir, 'large.bin')), largeBytes);
++            const mixed = await postMultipart(server.base, '/upload', [
++                { field: 'other', filename: 'ignored.bin', content: 'ignore me' },
++                { field: 'selected', filename: 'kept.bin', content: 'keep me' },
++            ]);
++            assert.strictEqual(mixed.status, 200);
++            assert.ok(!fs.existsSync(path.join(dir, 'ignored.bin')));
++            assert.strictEqual(
++                fs.readFileSync(path.join(dir, 'kept.bin'), 'utf8'),
++                'keep me'
++            );
++        });
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P46-auth-token-composition.js b/suite/p2p/P46-auth-token-composition.js
+new file mode 100644
+index 0000000..c351a50
+--- /dev/null
++++ b/suite/p2p/P46-auth-token-composition.js
+@@ -0,0 +1,36 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, request, startServer } = require('../_harness');
++
++runFeature('P46 basic authentication composes with capability tokens', async () => {
++    const dir = tempDir();
++    let running;
++    try {
++        fs.writeFileSync(path.join(dir, 'secret.txt'), 'combined secret', 'utf8');
++        running = await startServer({
++            sharePath: dir,
++            token: 'capability',
++            auth: { username: 'combo-user', password: 'combo-pass' },
++        });
++        const correct = 'Basic ' + Buffer.from('combo-user:combo-pass').toString('base64');
++        const wrong = 'Basic ' + Buffer.from('combo-user:wrong').toString('base64');
++        const noAuth = await request(running.base, '/share/capability/secret.txt');
++        assert.strictEqual(noAuth.status, 401);
++        const wrongAuth = await request(running.base, '/share/capability/secret.txt', {
++            headers: { authorization: wrong },
++        });
++        assert.strictEqual(wrongAuth.status, 401);
++        const wrongToken = await request(running.base, '/share/secret.txt', {
++            headers: { authorization: correct },
++        });
++        assert.strictEqual(wrongToken.status, 404);
++        const allowed = await request(running.base, '/share/capability/secret.txt', {
++            headers: { authorization: correct },
++        });
++        assert.strictEqual(allowed.status, 200);
++        assert.strictEqual(allowed.text, 'combined secret');
++    } finally {
++        if (running) await running.close();
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/P47-once-invalid-upload-keeps-server.js b/suite/p2p/P47-once-invalid-upload-keeps-server.js
+new file mode 100644
+index 0000000..4809c68
+--- /dev/null
++++ b/suite/p2p/P47-once-invalid-upload-keeps-server.js
+@@ -0,0 +1,43 @@
++'use strict';
++
++const { assert, fs, path, removeDir, tempDir, runFeature, verifyOnceSequence } = require('../_harness');
++
++runFeature('P47 once mode ignores an invalid upload and closes after a valid one', async () => {
++    const dir = tempDir();
++    const boundary = '----sharing-once-valid-after-empty';
++    const valid = Buffer.concat([
++        Buffer.from('--' + boundary + '\r\n'),
++        Buffer.from(
++            'Content-Disposition: form-data; name="selected"; filename="after-empty.txt"\r\n' +
++            'Content-Type: application/octet-stream\r\n\r\n'
++        ),
++        Buffer.from('valid after empty upload'),
++        Buffer.from('\r\n--' + boundary + '--\r\n'),
++    ]);
++    try {
++        const result = await verifyOnceSequence(
++            { sharePath: dir, receive: true },
++            [
++                {
++                    method: 'POST',
++                    path: '/upload',
++                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
++                    bodyBase64: Buffer.from('').toString('base64'),
++                },
++                {
++                    method: 'POST',
++                    path: '/upload',
++                    headers: { 'content-type': 'multipart/form-data; boundary=' + boundary },
++                    bodyBase64: valid.toString('base64'),
++                    waitMs: 250,
++                },
++            ]
++        );
++        assert.strictEqual(result.responses[0].status, 400);
++        assert.strictEqual(result.responses[1].status, 200);
++        assert.strictEqual(fs.readFileSync(path.join(dir, 'after-empty.txt'), 'utf8'), 'valid after empty upload');
++        assert.strictEqual(result.listening, false);
++    } finally {
++        removeDir(dir);
++    }
++});
+diff --git a/suite/p2p/U01-network-address-string.js b/suite/p2p/U01-network-address-string.js
+new file mode 100644
+index 0000000..c5bd2a8
+--- /dev/null
++++ b/suite/p2p/U01-network-address-string.js
+@@ -0,0 +1,5 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U01 network address is a string', async () => {
++    assert.strictEqual(typeof await callUtil('getNetworkAddress'), 'string');
++});
+diff --git a/suite/p2p/U02-network-address-ipv4.js b/suite/p2p/U02-network-address-ipv4.js
+new file mode 100644
+index 0000000..dfd3662
+--- /dev/null
++++ b/suite/p2p/U02-network-address-ipv4.js
+@@ -0,0 +1,5 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U02 network address is IPv4', async () => {
++    assert.match(await callUtil('getNetworkAddress'), /^(?:\d{1,3}\.){3}\d{1,3}$/);
++});
+diff --git a/suite/p2p/U03-debug-false.js b/suite/p2p/U03-debug-false.js
+new file mode 100644
+index 0000000..02dcfc2
+--- /dev/null
++++ b/suite/p2p/U03-debug-false.js
+@@ -0,0 +1,5 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U03 debugLog is quiet when debug is false', async () => {
++    assert.deepStrictEqual(await callUtil('debugLog', ['test message'], { debug: false }), []);
++});
+diff --git a/suite/p2p/U04-debug-true.js b/suite/p2p/U04-debug-true.js
+new file mode 100644
+index 0000000..5d820ef
+--- /dev/null
++++ b/suite/p2p/U04-debug-true.js
+@@ -0,0 +1,6 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U04 debugLog emits configured debug message', async () => {
++    const messages = await callUtil('debugLog', ['debug message'], { debug: true });
++    assert.deepStrictEqual(messages, ['debug message']);
++});
+diff --git a/suite/p2p/U05-score-lan-over-virtual.js b/suite/p2p/U05-score-lan-over-virtual.js
+new file mode 100644
+index 0000000..4e1f8c3
+--- /dev/null
++++ b/suite/p2p/U05-score-lan-over-virtual.js
+@@ -0,0 +1,8 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U05 LAN interface outranks a virtual adapter', async () => {
++    assert.ok(
++        await callUtil('scoreInterface', [{ name: 'wlan0', address: '192.168.1.20' }]) >
++        await callUtil('scoreInterface', [{ name: 'docker0', address: '172.17.0.1' }])
++    );
++});
+diff --git a/suite/p2p/U06-network-interface-shape.js b/suite/p2p/U06-network-interface-shape.js
+new file mode 100644
+index 0000000..f02f4c9
+--- /dev/null
++++ b/suite/p2p/U06-network-interface-shape.js
+@@ -0,0 +1,10 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U06 network interfaces expose name and address', async () => {
++    const interfaces = await callUtil('getNetworkInterfaces');
++    assert.ok(Array.isArray(interfaces));
++    for (const item of interfaces) {
++        assert.strictEqual(typeof item.name, 'string');
++        assert.match(item.address, /^(?:\d{1,3}\.){3}\d{1,3}$/);
++    }
++});
+diff --git a/suite/p2p/U07-network-address-fallback.js b/suite/p2p/U07-network-address-fallback.js
+new file mode 100644
+index 0000000..c6a3fea
+--- /dev/null
++++ b/suite/p2p/U07-network-address-fallback.js
+@@ -0,0 +1,5 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U07 missing preferred interface falls back', async () => {
++    assert.strictEqual(typeof await callUtil('getNetworkAddress', ['definitely-missing-interface']), 'string');
++});
+diff --git a/suite/p2p/U08-parse-duration.js b/suite/p2p/U08-parse-duration.js
+new file mode 100644
+index 0000000..5604b23
+--- /dev/null
++++ b/suite/p2p/U08-parse-duration.js
+@@ -0,0 +1,9 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U08 duration parser converts supported units', async () => {
++    assert.strictEqual(await callUtil('parseDuration', ['500ms']), 500);
++    assert.strictEqual(await callUtil('parseDuration', ['30s']), 30000);
++    assert.strictEqual(await callUtil('parseDuration', ['2m']), 120000);
++    assert.strictEqual(await callUtil('parseDuration', ['1h']), 3600000);
++    assert.strictEqual(await callUtil('parseDuration', ['bad']), null);
++});
+diff --git a/suite/p2p/U09-config-defaults.js b/suite/p2p/U09-config-defaults.js
+new file mode 100644
+index 0000000..de28a26
+--- /dev/null
++++ b/suite/p2p/U09-config-defaults.js
+@@ -0,0 +1,8 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U09 config exposes stable defaults', async () => {
++    const config = await callUtil('configDefaults');
++    assert.strictEqual(config.debug, false);
++    assert.strictEqual(config.protocol, 'http');
++    assert.strictEqual(config.port, 7478);
++});
+diff --git a/suite/p2p/U10-start-export.js b/suite/p2p/U10-start-export.js
+new file mode 100644
+index 0000000..4ec2618
+--- /dev/null
++++ b/suite/p2p/U10-start-export.js
+@@ -0,0 +1,5 @@
++'use strict';
++const { assert, callUtil, runFeature } = require('../_harness');
++runFeature('U10 app exports start', async () => {
++    assert.strictEqual(await callUtil('appExportType', ['start']), 'function');
++});

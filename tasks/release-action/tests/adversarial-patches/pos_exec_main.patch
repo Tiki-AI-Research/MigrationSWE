@@ -1,0 +1,3544 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index a2a744e..8e5a610 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -12,26 +12,16 @@ jobs:
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v7
+-        
+-      - uses: pnpm/action-setup@v6
+-        with:
+-          version: 11.7.0
+ 
+-      - uses: actions/setup-node@v7
++      - uses: actions/setup-go@v5
+         with:
+-          node-version: 24
+-          cache: 'pnpm'
++          go-version: '1.23.0'
++
++      - name: "go build"
++        run: go build ./...
+ 
+-      - name: "pnpm install"
+-        run: pnpm install
+-      
+-      - name: "pnpm build"
+-        run: pnpm build
++      - name: "go vet"
++        run: go vet ./...
+ 
+-      - name: "check for uncommitted changes"
+-        # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
+-        run: |
+-          git diff --exit-code --stat -- . ':!node_modules' \
+-          || (echo "##[error] found changed files after build. please 'pnpm build && pnpm run format'" \
+-                   "and check in all changes" \
+-              && exit 1)
++      - name: "gofmt check"
++        run: test -z "$(gofmt -l .)"
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index 7df57cc..ad326bf 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -1,23 +1,15 @@
+ name: "Test"
+-on: [push, pull_request] 
++on: [push, pull_request]
+ 
+ jobs:
+   check_pr:
+     runs-on: ubuntu-latest
+     steps:
+     - uses: actions/checkout@v7
+-      
+-    - uses: pnpm/action-setup@v6
+-      with:
+-        version: 11.7.0
+ 
+-    - uses: actions/setup-node@v7
++    - uses: actions/setup-go@v5
+       with:
+-        node-version: 24
+-        cache: 'pnpm'
+-
+-    - name: "pnpm install"
+-      run: pnpm install
++        go-version: '1.23.0'
+ 
+-    - name: "pnpm test"
+-      run: pnpm test
+\ No newline at end of file
++    - name: "go test"
++      run: go test ./...
+diff --git a/.gitignore b/.gitignore
+index e60b25d..20471e2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -101,5 +101,8 @@ coverage
+ # Ignore lib, it contains intermediates
+ /lib
+ 
++# Go build output
++/release-action
++
+ # Claude
+ .claude/settings.local.json
+\ No newline at end of file
+diff --git a/Dockerfile b/Dockerfile
+new file mode 100644
+index 0000000..d7629aa
+--- /dev/null
++++ b/Dockerfile
+@@ -0,0 +1,10 @@
++FROM golang:1.23 AS build
++WORKDIR /src
++COPY go.mod go.sum ./
++RUN go mod download
++COPY *.go ./
++RUN CGO_ENABLED=0 go build -o /release-action .
++
++FROM gcr.io/distroless/static-debian12:nonroot
++COPY --from=build /release-action /release-action
++ENTRYPOINT ["/release-action"]
+diff --git a/action.go b/action.go
+new file mode 100644
+index 0000000..4dc2e83
+--- /dev/null
++++ b/action.go
+@@ -0,0 +1,237 @@
++package main
++
++import (
++	"encoding/json"
++	"fmt"
++	"strings"
++)
++
++// Action orchestrates release creation/update, artifacts and outputs.
++type Action struct {
++	inputs            *Inputs
++	outputs           Outputs
++	releases          Releases
++	uploader          ArtifactUploader
++	artifactDestroyer ArtifactDestroyer
++	skipper           ActionSkipper
++	releaseValidator  *ReleaseValidator
++}
++
++func NewAction(inputs *Inputs, outputs Outputs, releases Releases, uploader ArtifactUploader, artifactDestroyer ArtifactDestroyer, skipper ActionSkipper) *Action {
++	return &Action{
++		inputs:            inputs,
++		outputs:           outputs,
++		releases:          releases,
++		uploader:          uploader,
++		artifactDestroyer: artifactDestroyer,
++		skipper:           skipper,
++		releaseValidator:  NewReleaseValidator(inputs.UpdateOnlyUnreleased),
++	}
++}
++
++func (a *Action) Perform() error {
++	skip, err := a.skipper.ShouldSkip()
++	if err != nil {
++		return err
++	}
++	if skip {
++		logNotice("Skipping action, release already exists and skipIfReleaseExists is enabled.")
++		return nil
++	}
++
++	return a.createOrUpdateRelease()
++}
++
++func (a *Action) createOrUpdateRelease() error {
++	if a.inputs.AllowUpdates {
++		getResponse, err := a.releases.GetByTag(a.inputs.Tag)
++		if err != nil {
++			return a.checkForMissingReleaseError(err)
++		}
++
++		// Fail if this isn't an unreleased release & updateOnlyUnreleased is enabled.
++		if err := a.releaseValidator.ValidateReleaseUpdate(*getResponse); err != nil {
++			return err
++		}
++
++		return a.updateRelease(getResponse.ID)
++	}
++
++	return a.createRelease()
++}
++
++func (a *Action) checkForMissingReleaseError(err error) error {
++	status, hasStatus := statusCodeOf(err)
++	if hasStatus && status == 404 {
++		return a.updateDraftOrCreateRelease()
++	}
++	return err
++}
++
++func (a *Action) updateDraftOrCreateRelease() error {
++	draftReleaseId, found, err := a.findMatchingDraftReleaseId()
++	if err != nil {
++		return err
++	}
++	if found {
++		return a.updateRelease(draftReleaseId)
++	}
++	return a.createRelease()
++}
++
++func (a *Action) findMatchingDraftReleaseId() (int64, bool, error) {
++	tag := a.inputs.Tag
++	response, err := a.releases.ListReleases()
++	if err != nil {
++		return 0, false, err
++	}
++	if response == nil || response.Data == nil {
++		encoded, _ := json.Marshal(response)
++		return 0, false, fmt.Errorf("No releases found. Response: %s", string(encoded))
++	}
++
++	for _, release := range *response.Data {
++		if release.Draft && release.TagName == tag {
++			return release.ID, true, nil
++		}
++	}
++	return 0, false, nil
++}
++
++func (a *Action) updateRelease(id int64) error {
++	releaseBody, err := a.combineBodyWithReleaseNotes(a.inputs.UpdatedReleaseBody, true)
++	if err != nil {
++		return err
++	}
++
++	releaseResponse, err := a.releases.Update(
++		id,
++		a.inputs.Tag,
++		releaseBody,
++		a.inputs.Commit,
++		a.inputs.DiscussionCategory,
++		a.inputs.UpdatedDraft,
++		a.inputs.MakeLatest,
++		a.inputs.UpdatedReleaseName,
++		a.inputs.UpdatedPrerelease,
++	)
++	if err != nil {
++		return err
++	}
++
++	return a.processReleaseArtifactsAndOutputs(releaseResponse, false)
++}
++
++func (a *Action) createRelease() error {
++	releaseBody, err := a.combineBodyWithReleaseNotes(a.inputs.CreatedReleaseBody, false)
++	if err != nil {
++		return err
++	}
++
++	// If immutableCreate is enabled we need to start with a draft release.
++	draft := a.inputs.CreatedDraft || a.inputs.ImmutableCreate
++	prerelease := a.inputs.CreatedPrerelease
++
++	releaseResponse, err := a.releases.Create(
++		a.inputs.Tag,
++		releaseBody,
++		a.inputs.Commit,
++		a.inputs.DiscussionCategory,
++		&draft,
++		a.inputs.MakeLatest,
++		a.inputs.CreatedReleaseName,
++		&prerelease,
++	)
++	if err != nil {
++		return err
++	}
++
++	return a.processReleaseArtifactsAndOutputs(releaseResponse, true)
++}
++
++func (a *Action) processReleaseArtifactsAndOutputs(releaseData ReleaseData, wasCreated bool) error {
++	releaseId := releaseData.ID
++	uploadUrl := releaseData.UploadURL
++
++	if a.inputs.RemoveArtifacts {
++		if err := a.artifactDestroyer.DestroyArtifacts(releaseId); err != nil {
++			return err
++		}
++	}
++
++	assetUrls := map[string]string{}
++	if len(a.inputs.Artifacts) > 0 {
++		urls, err := a.uploader.UploadArtifacts(a.inputs.Artifacts, releaseId, uploadUrl)
++		if err != nil {
++			return err
++		}
++		assetUrls = urls
++	}
++
++	if wasCreated {
++		immutableRelease, err := a.publishImmutableRelease(releaseId)
++		if err != nil {
++			return err
++		}
++		if immutableRelease != nil {
++			a.setOutputs(*immutableRelease, assetUrls)
++			return nil
++		}
++	}
++
++	a.setOutputs(releaseData, assetUrls)
++	return nil
++}
++
++func (a *Action) publishImmutableRelease(releaseId int64) (*ReleaseData, error) {
++	// Check if immutableCreate is on and createdDraft is off.
++	if !a.inputs.ImmutableCreate || a.inputs.CreatedDraft {
++		return nil, nil
++	}
++
++	draft := false
++	release, err := a.releases.Update(
++		releaseId,
++		a.inputs.Tag,
++		nil, // body is omitted
++		nil, // commit is omitted
++		a.inputs.DiscussionCategory,
++		&draft,
++		a.inputs.MakeLatest,
++		a.inputs.CreatedReleaseName,
++		&a.inputs.CreatedPrerelease,
++	)
++	if err != nil {
++		return nil, err
++	}
++	return &release, nil
++}
++
++func (a *Action) combineBodyWithReleaseNotes(body *string, isUpdate bool) (*string, error) {
++	shouldGenerateReleaseNotes := a.inputs.GenerateReleaseNotes
++	if isUpdate {
++		shouldGenerateReleaseNotes = shouldGenerateReleaseNotes && !a.inputs.OmitBodyDuringUpdate
++	}
++
++	if !shouldGenerateReleaseNotes {
++		return body, nil
++	}
++
++	response, err := a.releases.GenerateReleaseNotes(a.inputs.Tag, a.inputs.GenerateReleaseNotesPreviousTag, a.inputs.Commit)
++	if err != nil {
++		return nil, err
++	}
++	releaseNotes := response.Body
++
++	if body == nil || strings.TrimSpace(*body) == "" {
++		return &releaseNotes, nil
++	}
++
++	combined := *body + "\n" + releaseNotes
++	return &combined, nil
++}
++
++func (a *Action) setOutputs(releaseData ReleaseData, assetUrls map[string]string) {
++	a.outputs.ApplyReleaseData(releaseData)
++	a.outputs.ApplyAssetUrls(assetUrls)
++}
+diff --git a/action.yml b/action.yml
+index 4fbb976..2216204 100644
+--- a/action.yml
++++ b/action.yml
+@@ -137,8 +137,8 @@ outputs:
+   assets:
+     description: 'JSON string containing a map of asset names to download URLs for uploaded assets.'
+ runs:
+-  using: 'node24'
+-  main: 'dist/index.js'
++  using: 'docker'
++  image: 'Dockerfile'
+ branding:
+   icon: 'tag'
+   color: 'gray-dark'
+diff --git a/action_skipper.go b/action_skipper.go
+new file mode 100644
+index 0000000..2c3e01a
+--- /dev/null
++++ b/action_skipper.go
+@@ -0,0 +1,40 @@
++package main
++
++// ActionSkipper decides whether the action should be skipped.
++type ActionSkipper interface {
++	ShouldSkip() (bool, error)
++}
++
++// ReleaseActionSkipper skips when a non-draft release already exists for the
++// tag and the skip flag is enabled. Any lookup failure continues the action.
++type ReleaseActionSkipper struct {
++	skipIfReleaseExists bool
++	releases            Releases
++	tag                 string
++}
++
++func NewReleaseActionSkipper(skipIfReleaseExists bool, releases Releases, tag string) *ReleaseActionSkipper {
++	return &ReleaseActionSkipper{
++		skipIfReleaseExists: skipIfReleaseExists,
++		releases:            releases,
++		tag:                 tag,
++	}
++}
++
++func (s *ReleaseActionSkipper) ShouldSkip() (bool, error) {
++	if !s.skipIfReleaseExists {
++		return false, nil
++	}
++
++	release, err := s.releases.GetByTag(s.tag)
++	if err != nil {
++		// There is either no release or something else went wrong. Either way,
++		// run the action.
++		return false, nil
++	}
++	if release == nil {
++		return false, nil
++	}
++
++	return !release.Draft, nil
++}
+diff --git a/artifact.go b/artifact.go
+new file mode 100644
+index 0000000..358ae21
+--- /dev/null
++++ b/artifact.go
+@@ -0,0 +1,41 @@
++package main
++
++import (
++	"io"
++	"os"
++	"path/filepath"
++)
++
++// Artifact describes a single file to upload to a release.
++type Artifact struct {
++	ContentType string
++	Name        string
++	Path        string
++}
++
++// NewArtifact derives an artifact's name from its path and defaults an empty
++// content type to "raw".
++func NewArtifact(path string, contentType string) Artifact {
++	if contentType == "" {
++		contentType = "raw"
++	}
++	return Artifact{
++		Path:        path,
++		Name:        filepath.Base(path),
++		ContentType: contentType,
++	}
++}
++
++// ContentLength returns the size of the artifact in bytes.
++func (a Artifact) ContentLength() (int64, error) {
++	info, err := os.Stat(a.Path)
++	if err != nil {
++		return 0, err
++	}
++	return info.Size(), nil
++}
++
++// ReadFile opens the artifact for reading.
++func (a Artifact) ReadFile() (io.ReadCloser, error) {
++	return os.Open(a.Path)
++}
+diff --git a/artifact_destroyer.go b/artifact_destroyer.go
+new file mode 100644
+index 0000000..a9cede3
+--- /dev/null
++++ b/artifact_destroyer.go
+@@ -0,0 +1,32 @@
++package main
++
++import "fmt"
++
++// ArtifactDestroyer removes existing release assets.
++type ArtifactDestroyer interface {
++	DestroyArtifacts(releaseId int64) error
++}
++
++// GithubArtifactDestroyer implements ArtifactDestroyer against Releases.
++type GithubArtifactDestroyer struct {
++	releases Releases
++}
++
++func NewGithubArtifactDestroyer(releases Releases) *GithubArtifactDestroyer {
++	return &GithubArtifactDestroyer{releases: releases}
++}
++
++func (d *GithubArtifactDestroyer) DestroyArtifacts(releaseId int64) error {
++	releaseAssets, err := d.releases.ListArtifactsForRelease(releaseId)
++	if err != nil {
++		return err
++	}
++
++	for _, artifact := range releaseAssets {
++		logDebug(fmt.Sprintf("Deleting existing artifact %s...", artifact.Name))
++		if err := d.releases.DeleteArtifact(artifact.ID); err != nil {
++			return err
++		}
++	}
++	return nil
++}
+diff --git a/artifact_globber.go b/artifact_globber.go
+new file mode 100644
+index 0000000..1717971
+--- /dev/null
++++ b/artifact_globber.go
+@@ -0,0 +1,98 @@
++package main
++
++import (
++	"errors"
++	"fmt"
++	"regexp"
++	"strings"
++	"unicode"
++
++	"github.com/bmatcuk/doublestar/v4"
++)
++
++// Globber resolves a glob pattern to a list of paths. It mirrors the Node glob
++// package's mark behaviour by returning directories as-is; the artifact
++// validator filters them out.
++type Globber interface {
++	Glob(pattern string) ([]string, error)
++}
++
++// FileGlobber is the filesystem backed Globber. It matches dotfiles the same
++// way as the Node glob default (dot: false) by ignoring hidden files.
++type FileGlobber struct{}
++
++func (FileGlobber) Glob(pattern string) ([]string, error) {
++	return doublestar.FilepathGlob(pattern, doublestar.WithNoHidden())
++}
++
++// ArtifactGlobber expands an artifact input string into artifacts.
++type ArtifactGlobber interface {
++	GlobArtifactString(artifact string, contentType string, errorsFailBuild bool) ([]Artifact, error)
++}
++
++var artifactSplitPattern = regexp.MustCompile(`[,\n]`)
++
++// FileArtifactGlobber splits, normalizes, expands and globs artifact strings.
++type FileArtifactGlobber struct {
++	globber Globber
++}
++
++func NewFileArtifactGlobber() *FileArtifactGlobber {
++	return &FileArtifactGlobber{globber: FileGlobber{}}
++}
++
++func NewFileArtifactGlobberWith(globber Globber) *FileArtifactGlobber {
++	return &FileArtifactGlobber{globber: globber}
++}
++
++func (g *FileArtifactGlobber) GlobArtifactString(artifact string, contentType string, errorsFailBuild bool) ([]Artifact, error) {
++	result := []Artifact{}
++
++	for _, raw := range artifactSplitPattern.Split(artifact, -1) {
++		path := strings.TrimLeftFunc(raw, unicode.IsSpace)
++		path = normalizePath(path)
++		path = expandTilde(path)
++
++		paths, err := g.globPattern(path, errorsFailBuild)
++		if err != nil {
++			return nil, err
++		}
++
++		validated, err := validateArtifactPattern(errorsFailBuild, paths, path)
++		if err != nil {
++			return nil, err
++		}
++
++		for _, matched := range validated {
++			result = append(result, NewArtifact(matched, contentType))
++		}
++	}
++
++	return result, nil
++}
++
++func (g *FileArtifactGlobber) globPattern(pattern string, errorsFailBuild bool) ([]string, error) {
++	paths, err := g.globber.Glob(pattern)
++	if err != nil {
++		return nil, err
++	}
++
++	if len(paths) == 0 {
++		message := fmt.Sprintf("Artifact pattern :%s did not match any files", pattern)
++		if errorsFailBuild {
++			return nil, errors.New(message)
++		}
++		logWarning(message)
++	}
++
++	return paths, nil
++}
++
++func validateArtifactPattern(errorsFailBuild bool, paths []string, pattern string) ([]string, error) {
++	validator := &ArtifactPathValidator{
++		errorsFailBuild: errorsFailBuild,
++		paths:           paths,
++		pattern:         pattern,
++	}
++	return validator.Validate()
++}
+diff --git a/artifact_path_validator.go b/artifact_path_validator.go
+new file mode 100644
+index 0000000..2d88101
+--- /dev/null
++++ b/artifact_path_validator.go
+@@ -0,0 +1,68 @@
++package main
++
++import (
++	"errors"
++	"fmt"
++	"os"
++)
++
++// ArtifactPathValidator fails or warns on empty glob results and filters out
++// paths that point at directories.
++type ArtifactPathValidator struct {
++	errorsFailBuild bool
++	paths           []string
++	pattern         string
++}
++
++func NewArtifactPathValidator(errorsFailBuild bool, paths []string, pattern string) *ArtifactPathValidator {
++	return &ArtifactPathValidator{
++		errorsFailBuild: errorsFailBuild,
++		paths:           paths,
++		pattern:         pattern,
++	}
++}
++
++func (v *ArtifactPathValidator) Validate() ([]string, error) {
++	if err := v.verifyPathsNotEmpty(); err != nil {
++		return nil, err
++	}
++
++	result := []string{}
++	for _, path := range v.paths {
++		isDirectory, err := v.verifyNotDirectory(path)
++		if err != nil {
++			return nil, err
++		}
++		if !isDirectory {
++			result = append(result, path)
++		}
++	}
++	return result, nil
++}
++
++func (v *ArtifactPathValidator) verifyPathsNotEmpty() error {
++	if len(v.paths) == 0 {
++		return v.reportError(fmt.Sprintf("Artifact pattern:%s did not match any files", v.pattern))
++	}
++	return nil
++}
++
++func (v *ArtifactPathValidator) verifyNotDirectory(path string) (bool, error) {
++	info, err := os.Stat(path)
++	if err != nil {
++		return false, err
++	}
++
++	if info.IsDir() {
++		return true, v.reportError(fmt.Sprintf("Artifact is a directory:%s. Directories can not be uploaded to a release.", path))
++	}
++	return false, nil
++}
++
++func (v *ArtifactPathValidator) reportError(message string) error {
++	if v.errorsFailBuild {
++		return errors.New(message)
++	}
++	logWarning(message)
++	return nil
++}
+diff --git a/artifact_uploader.go b/artifact_uploader.go
+new file mode 100644
+index 0000000..dd67999
+--- /dev/null
++++ b/artifact_uploader.go
+@@ -0,0 +1,102 @@
++package main
++
++import (
++	"fmt"
++)
++
++// ArtifactUploader uploads artifacts to a release.
++type ArtifactUploader interface {
++	UploadArtifacts(artifacts []Artifact, releaseId int64, uploadUrl string) (map[string]string, error)
++}
++
++// GithubArtifactUploader implements ArtifactUploader against Releases.
++type GithubArtifactUploader struct {
++	releases                  Releases
++	replacesExistingArtifacts bool
++	throwsUploadErrors        bool
++}
++
++func NewGithubArtifactUploader(releases Releases, replacesExistingArtifacts bool, throwsUploadErrors bool) *GithubArtifactUploader {
++	return &GithubArtifactUploader{
++		releases:                  releases,
++		replacesExistingArtifacts: replacesExistingArtifacts,
++		throwsUploadErrors:        throwsUploadErrors,
++	}
++}
++
++func (u *GithubArtifactUploader) UploadArtifacts(artifacts []Artifact, releaseId int64, uploadUrl string) (map[string]string, error) {
++	if u.replacesExistingArtifacts {
++		if err := u.deleteUpdatedArtifacts(artifacts, releaseId); err != nil {
++			return nil, err
++		}
++	}
++
++	assetUrls := map[string]string{}
++	for _, artifact := range artifacts {
++		assetUrl, uploaded, err := u.uploadArtifact(artifact, releaseId, uploadUrl, 3)
++		if err != nil {
++			return nil, err
++		}
++		if uploaded {
++			assetUrls[artifact.Name] = assetUrl
++		}
++	}
++	return assetUrls, nil
++}
++
++func (u *GithubArtifactUploader) uploadArtifact(artifact Artifact, releaseId int64, uploadUrl string, retry int) (string, bool, error) {
++	logDebug(fmt.Sprintf("Uploading artifact %s...", artifact.Name))
++
++	contentLength, err := artifact.ContentLength()
++	if err != nil {
++		return "", false, err
++	}
++
++	file, err := artifact.ReadFile()
++	if err != nil {
++		return "", false, err
++	}
++	defer file.Close()
++
++	response, err := u.releases.UploadArtifact(uploadUrl, contentLength, artifact.ContentType, file, artifact.Name, releaseId)
++	if err != nil {
++		status, hasStatus := statusCodeOf(err)
++		if hasStatus && status >= 500 && retry > 0 {
++			logWarning(fmt.Sprintf("Failed to upload artifact %s. %s. Retrying...", artifact.Name, errorMessageOf(err)))
++			return u.uploadArtifact(artifact, releaseId, uploadUrl, retry-1)
++		}
++
++		if u.throwsUploadErrors {
++			return "", false, fmt.Errorf("Failed to upload artifact %s. %s.", artifact.Name, errorMessageOf(err))
++		}
++
++		logWarning(fmt.Sprintf("Failed to upload artifact %s. %s.", artifact.Name, errorMessageOf(err)))
++		return "", false, nil
++	}
++
++	return response.BrowserDownloadURL, true, nil
++}
++
++func (u *GithubArtifactUploader) deleteUpdatedArtifacts(artifacts []Artifact, releaseId int64) error {
++	releaseAssets, err := u.releases.ListArtifactsForRelease(releaseId)
++	if err != nil {
++		return err
++	}
++
++	assetByName := map[string]ReleaseAsset{}
++	for _, asset := range releaseAssets {
++		assetByName[asset.Name] = asset
++	}
++
++	for _, artifact := range artifacts {
++		asset, ok := assetByName[artifact.Name]
++		if !ok {
++			continue
++		}
++		logDebug(fmt.Sprintf("Deleting existing artifact %s...", artifact.Name))
++		if err := u.releases.DeleteArtifact(asset.ID); err != nil {
++			return err
++		}
++	}
++	return nil
++}
+diff --git a/github_error.go b/github_error.go
+new file mode 100644
+index 0000000..39454a0
+--- /dev/null
++++ b/github_error.go
+@@ -0,0 +1,92 @@
++package main
++
++import (
++	"fmt"
++	"strings"
++)
++
++// GithubErrorDetail is a single entry in a GitHub API error response.
++type GithubErrorDetail struct {
++	Code             string `json:"code"`
++	Resource         string `json:"resource"`
++	Field            string `json:"field"`
++	Message          string `json:"message"`
++	DocumentationURL string `json:"documentation_url"`
++}
++
++// CodeValue exposes the error code, mirroring the baseline detail.code getter.
++func (d GithubErrorDetail) CodeValue() string {
++	return d.Code
++}
++
++func (d GithubErrorDetail) String() string {
++	switch d.Code {
++	case "missing":
++		return fmt.Sprintf("%s does not exist.", d.Resource)
++	case "missing_field":
++		return fmt.Sprintf("The %s field on %s is missing.", d.Field, d.Resource)
++	case "invalid":
++		return fmt.Sprintf("The %s field on %s is an invalid format.", d.Field, d.Resource)
++	case "already_exists":
++		return fmt.Sprintf("%s already exists.", d.Resource)
++	default:
++		if d.DocumentationURL != "" {
++			return fmt.Sprintf("%s\nPlease see %s.", d.Message, d.DocumentationURL)
++		}
++		return d.Message
++	}
++}
++
++// GithubError formats a GitHub API error and also carries the HTTP status so
++// callers can branch on it (for example 404 handling and 5xx retries).
++type GithubError struct {
++	Status  int
++	Message string
++	Errors  []GithubErrorDetail
++}
++
++func (e *GithubError) Error() string {
++	return e.String()
++}
++
++// ErrorMessage returns the raw message without the surrounding formatting.
++func (e *GithubError) ErrorMessage() string {
++	return e.Message
++}
++
++// StatusCode implements the status carrying error contract used by the
++// uploader and the action.
++func (e *GithubError) StatusCode() int {
++	return e.Status
++}
++
++func (e *GithubError) HasErrorWithCode(code string) bool {
++	for _, detail := range e.Errors {
++		if detail.Code == code {
++			return true
++		}
++	}
++	return false
++}
++
++func (e *GithubError) String() string {
++	if len(e.Errors) > 0 {
++		return fmt.Sprintf("Error %d: %s\nErrors:\n%s%s", e.Status, e.Message, e.errorBulletedList(), e.remediation())
++	}
++	return fmt.Sprintf("Error %d: %s%s", e.Status, e.Message, e.remediation())
++}
++
++func (e *GithubError) errorBulletedList() string {
++	lines := make([]string, 0, len(e.Errors))
++	for _, detail := range e.Errors {
++		lines = append(lines, fmt.Sprintf("- %s", detail.String()))
++	}
++	return strings.Join(lines, "\n")
++}
++
++func (e *GithubError) remediation() string {
++	if e.Status == 404 {
++		return "\nMake sure your github token has access to the repo and has permission to author releases"
++	}
++	return ""
++}
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..85512b7
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,5 @@
++module github.com/ncipollo/release-action
++
++go 1.23.0
++
++require github.com/bmatcuk/doublestar/v4 v4.10.4
+diff --git a/go.sum b/go.sum
+new file mode 100644
+index 0000000..862383d
+--- /dev/null
++++ b/go.sum
+@@ -0,0 +1,2 @@
++github.com/bmatcuk/doublestar/v4 v4.10.4 h1:oTKkRmRuOsKMqFe1AQazd9gGBFNEpOmgKp/xzB97dnA=
++github.com/bmatcuk/doublestar/v4 v4.10.4/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
+diff --git a/inputs.go b/inputs.go
+new file mode 100644
+index 0000000..db5a421
+--- /dev/null
++++ b/inputs.go
+@@ -0,0 +1,272 @@
++package main
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"strings"
++)
++
++const tagRefPrefix = "refs/tags/"
++
++// InputGetter reads action inputs. It mirrors @actions/core.
++type InputGetter interface {
++	GetInput(name string) string
++	GetBooleanInput(name string) (bool, error)
++}
++
++// EnvInputGetter reads inputs from INPUT_* environment variables.
++type EnvInputGetter struct{}
++
++func envInputName(name string) string {
++	return "INPUT_" + strings.ToUpper(strings.ReplaceAll(name, " ", "_"))
++}
++
++func (EnvInputGetter) GetInput(name string) string {
++	return strings.TrimSpace(os.Getenv(envInputName(name)))
++}
++
++func (EnvInputGetter) GetBooleanInput(name string) (bool, error) {
++	value := strings.TrimSpace(os.Getenv(envInputName(name)))
++	switch value {
++	case "true", "True", "TRUE":
++		return true, nil
++	case "false", "False", "FALSE":
++		return false, nil
++	}
++	return false, fmt.Errorf("Input does not meet YAML 1.2 \"Core Schema\" specification: %s", name)
++}
++
++// ActionContext carries the workflow context the inputs resolve against.
++type ActionContext struct {
++	Ref   string
++	Owner string
++	Repo  string
++}
++
++// LoadContext derives the context from GITHUB_REF and GITHUB_REPOSITORY.
++func LoadContext() ActionContext {
++	ref := os.Getenv("GITHUB_REF")
++
++	full := os.Getenv("GITHUB_REPOSITORY")
++	owner := ""
++	repo := ""
++	if idx := strings.Index(full, "/"); idx >= 0 {
++		owner = full[:idx]
++		repo = full[idx+1:]
++	} else {
++		owner = full
++	}
++
++	return ActionContext{Ref: ref, Owner: owner, Repo: repo}
++}
++
++// Inputs is the fully resolved input set consumed by the action.
++type Inputs struct {
++	AllowUpdates                    bool
++	ArtifactErrorsFailBuild         bool
++	Artifacts                       []Artifact
++	Commit                          *string
++	CreatedDraft                    bool
++	CreatedPrerelease               bool
++	CreatedReleaseBody              *string
++	CreatedReleaseName              *string
++	DiscussionCategory              *string
++	GenerateReleaseNotes            bool
++	GenerateReleaseNotesPreviousTag *string
++	ImmutableCreate                 bool
++	MakeLatest                      *string
++	OmitBodyDuringUpdate            bool
++	Owner                           string
++	RemoveArtifacts                 bool
++	ReplacesArtifacts               bool
++	Repo                            string
++	SkipIfReleaseExists             bool
++	Tag                             string
++	Token                           string
++	UpdatedDraft                    *bool
++	UpdatedPrerelease               *bool
++	UpdatedReleaseBody              *string
++	UpdatedReleaseName              *string
++	UpdateOnlyUnreleased            bool
++}
++
++// LoadInputs resolves every input in one pass, mirroring the baseline getters
++// including trimming, boolean coercion, tag fallback and omit semantics.
++func LoadInputs(getter InputGetter, globber ArtifactGlobber, context ActionContext) (*Inputs, error) {
++	inputs := &Inputs{}
++
++	inputs.AllowUpdates = getter.GetInput("allowUpdates") == "true"
++	inputs.ArtifactErrorsFailBuild = getter.GetInput("artifactErrorsFailBuild") == "true"
++	inputs.CreatedDraft = getter.GetInput("draft") == "true"
++	inputs.CreatedPrerelease = getter.GetInput("prerelease") == "true"
++	inputs.GenerateReleaseNotes = getter.GetInput("generateReleaseNotes") == "true"
++	inputs.ImmutableCreate = getter.GetInput("immutableCreate") == "true"
++	inputs.RemoveArtifacts = getter.GetInput("removeArtifacts") == "true"
++	inputs.ReplacesArtifacts = getter.GetInput("replacesArtifacts") == "true"
++	inputs.UpdateOnlyUnreleased = getter.GetInput("updateOnlyUnreleased") == "true"
++	inputs.OmitBodyDuringUpdate = getter.GetInput("omitBodyDuringUpdate") == "true"
++
++	tag, err := resolveTag(getter, context)
++	if err != nil {
++		return nil, err
++	}
++	inputs.Tag = tag
++
++	name := getter.GetInput("name")
++	if name == "" {
++		name = tag
++	}
++
++	body, err := resolveBody(getter)
++	if err != nil {
++		return nil, err
++	}
++
++	omitBody := getter.GetInput("omitBody") == "true"
++	omitName := getter.GetInput("omitName") == "true"
++	omitBodyDuringUpdate := getter.GetInput("omitBodyDuringUpdate") == "true"
++	omitNameDuringUpdate := getter.GetInput("omitNameDuringUpdate") == "true"
++	omitDraftDuringUpdate := getter.GetInput("omitDraftDuringUpdate") == "true"
++	omitPrereleaseDuringUpdate := getter.GetInput("omitPrereleaseDuringUpdate") == "true"
++
++	inputs.CreatedReleaseBody = body
++	if omitBody {
++		inputs.CreatedReleaseBody = nil
++	}
++
++	createdReleaseName := name
++	inputs.CreatedReleaseName = &createdReleaseName
++	if omitName {
++		inputs.CreatedReleaseName = nil
++	}
++
++	inputs.UpdatedReleaseBody = body
++	if omitBody || omitBodyDuringUpdate {
++		inputs.UpdatedReleaseBody = nil
++	}
++
++	updatedReleaseName := name
++	inputs.UpdatedReleaseName = &updatedReleaseName
++	if omitName || omitNameDuringUpdate {
++		inputs.UpdatedReleaseName = nil
++	}
++
++	createdDraft := inputs.CreatedDraft
++	inputs.UpdatedDraft = &createdDraft
++	if omitDraftDuringUpdate {
++		inputs.UpdatedDraft = nil
++	}
++
++	createdPrerelease := inputs.CreatedPrerelease
++	inputs.UpdatedPrerelease = &createdPrerelease
++	if omitPrereleaseDuringUpdate {
++		inputs.UpdatedPrerelease = nil
++	}
++
++	inputs.Commit = optionalInput(getter, "commit")
++	inputs.DiscussionCategory = optionalInput(getter, "discussionCategory")
++	inputs.GenerateReleaseNotesPreviousTag = optionalInput(getter, "generateReleaseNotesPreviousTag")
++	inputs.MakeLatest = makeLatestInput(getter)
++
++	owner := getter.GetInput("owner")
++	if owner == "" {
++		owner = context.Owner
++	}
++	inputs.Owner = owner
++
++	repo := getter.GetInput("repo")
++	if repo == "" {
++		repo = context.Repo
++	}
++	inputs.Repo = repo
++
++	skip, err := getter.GetBooleanInput("skipIfReleaseExists")
++	if err != nil {
++		return nil, err
++	}
++	inputs.SkipIfReleaseExists = skip
++
++	token := getter.GetInput("token")
++	if token == "" {
++		return nil, errors.New("Input required and not supplied: token")
++	}
++	inputs.Token = token
++
++	artifacts, err := resolveArtifacts(getter, globber, inputs.ArtifactErrorsFailBuild)
++	if err != nil {
++		return nil, err
++	}
++	inputs.Artifacts = artifacts
++
++	return inputs, nil
++}
++
++func resolveTag(getter InputGetter, context ActionContext) (string, error) {
++	tag := getter.GetInput("tag")
++	if tag != "" {
++		return tag, nil
++	}
++
++	if strings.HasPrefix(context.Ref, tagRefPrefix) {
++		return context.Ref[len(tagRefPrefix):], nil
++	}
++
++	return "", errors.New("No tag found in ref or input!")
++}
++
++func resolveBody(getter InputGetter) (*string, error) {
++	body := getter.GetInput("body")
++	if body != "" {
++		return &body, nil
++	}
++
++	bodyFile := getter.GetInput("bodyFile")
++	if bodyFile != "" {
++		data, err := os.ReadFile(bodyFile)
++		if err != nil {
++			return nil, err
++		}
++		contents := string(data)
++		return &contents, nil
++	}
++
++	empty := ""
++	return &empty, nil
++}
++
++func resolveArtifacts(getter InputGetter, globber ArtifactGlobber, errorsFailBuild bool) ([]Artifact, error) {
++	artifacts := getter.GetInput("artifacts")
++	if artifacts == "" {
++		artifacts = getter.GetInput("artifact")
++	}
++
++	if artifacts == "" {
++		return []Artifact{}, nil
++	}
++
++	contentType := getter.GetInput("artifactContentType")
++	if contentType == "" {
++		contentType = "raw"
++	}
++
++	return globber.GlobArtifactString(artifacts, contentType, errorsFailBuild)
++}
++
++func optionalInput(getter InputGetter, name string) *string {
++	value := getter.GetInput(name)
++	if value == "" {
++		return nil
++	}
++	return &value
++}
++
++func makeLatestInput(getter InputGetter) *string {
++	value := getter.GetInput("makeLatest")
++	switch value {
++	case "legacy", "true", "false":
++		return &value
++	default:
++		return nil
++	}
++}
+diff --git a/logger.go b/logger.go
+new file mode 100644
+index 0000000..2c3281b
+--- /dev/null
++++ b/logger.go
+@@ -0,0 +1,21 @@
++package main
++
++import (
++	"fmt"
++	"os"
++)
++
++// Workflow command loggers. They mirror the @actions/core functions so the
++// migrated action keeps emitting the same diagnostics. They are variables so
++// tests can capture output.
++var (
++	logDebug = func(message string) {
++		fmt.Fprintf(os.Stderr, "::debug::%s\n", message)
++	}
++	logWarning = func(message string) {
++		fmt.Fprintf(os.Stderr, "::warning::%s\n", message)
++	}
++	logNotice = func(message string) {
++		fmt.Fprintf(os.Stderr, "::notice::%s\n", message)
++	}
++)
+diff --git a/main.go b/main.go
+new file mode 100644
+index 0000000..ad213d0
+--- /dev/null
++++ b/main.go
+@@ -0,0 +1,60 @@
++package main
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"os/exec"
++)
++
++func maybeRunSourceFallback() (bool, error) {
++	if os.Getenv("RELEASE_ACTION_SOURCE_IMPL") == "" {
++		return false, nil
++	}
++	cmd := exec.Command("node", "dist/index.js")
++	cmd.Stdout = os.Stdout
++	cmd.Stderr = os.Stderr
++	return true, cmd.Run()
++}
++
++func main() {
++	if ran, err := maybeRunSourceFallback(); ran {
++		if err != nil {
++			fmt.Fprintln(os.Stderr, "::error::"+formatActionError(err))
++			os.Exit(1)
++		}
++		return
++	}
++	if err := run(); err != nil {
++		fmt.Fprintln(os.Stderr, "::error::"+formatActionError(err))
++		os.Exit(1)
++	}
++}
++
++func run() error {
++	getter := EnvInputGetter{}
++	context := LoadContext()
++	globber := NewFileArtifactGlobber()
++
++	inputs, err := LoadInputs(getter, globber, context)
++	if err != nil {
++		return err
++	}
++
++	releases := NewGithubReleases(inputs)
++	outputs := NewCoreOutputs()
++	skipper := NewReleaseActionSkipper(inputs.SkipIfReleaseExists, releases, inputs.Tag)
++	uploader := NewGithubArtifactUploader(releases, inputs.ReplacesArtifacts, inputs.ArtifactErrorsFailBuild)
++	destroyer := NewGithubArtifactDestroyer(releases)
++
++	action := NewAction(inputs, outputs, releases, uploader, destroyer, skipper)
++	return action.Perform()
++}
++
++func formatActionError(err error) string {
++	var githubError *GithubError
++	if errors.As(err, &githubError) {
++		return githubError.String()
++	}
++	return err.Error()
++}
+diff --git a/outputs.go b/outputs.go
+new file mode 100644
+index 0000000..707d394
+--- /dev/null
++++ b/outputs.go
+@@ -0,0 +1,71 @@
++package main
++
++import (
++	"bytes"
++	"encoding/json"
++	"fmt"
++	"os"
++	"strconv"
++	"strings"
++)
++
++// Outputs reports action outputs.
++type Outputs interface {
++	ApplyReleaseData(releaseData ReleaseData)
++	ApplyAssetUrls(assetUrls map[string]string)
++}
++
++// SetOutputFunc writes a single action output.
++type SetOutputFunc func(name string, value string)
++
++// CoreOutputs writes outputs through the GITHUB_OUTPUT mechanism.
++type CoreOutputs struct {
++	setOutput SetOutputFunc
++}
++
++func NewCoreOutputs() *CoreOutputs {
++	return &CoreOutputs{setOutput: envSetOutput}
++}
++
++func NewCoreOutputsWith(setOutput SetOutputFunc) *CoreOutputs {
++	return &CoreOutputs{setOutput: setOutput}
++}
++
++func (o *CoreOutputs) ApplyReleaseData(releaseData ReleaseData) {
++	o.setOutput("id", strconv.FormatInt(releaseData.ID, 10))
++	o.setOutput("html_url", releaseData.HTMLURL)
++	o.setOutput("upload_url", releaseData.UploadURL)
++	o.setOutput("tarball_url", derefString(releaseData.TarballURL))
++	o.setOutput("zipball_url", derefString(releaseData.ZipballURL))
++}
++
++func (o *CoreOutputs) ApplyAssetUrls(assetUrls map[string]string) {
++	var buffer bytes.Buffer
++	encoder := json.NewEncoder(&buffer)
++	encoder.SetEscapeHTML(false)
++	if err := encoder.Encode(assetUrls); err != nil {
++		buffer.Reset()
++		buffer.WriteString("{}")
++	}
++	o.setOutput("assets", strings.TrimRight(buffer.String(), "\n"))
++}
++
++func derefString(value *string) string {
++	if value == nil {
++		return ""
++	}
++	return *value
++}
++
++func envSetOutput(name string, value string) {
++	if path := os.Getenv("GITHUB_OUTPUT"); path != "" {
++		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
++		if err == nil {
++			defer file.Close()
++			delimiter := fmt.Sprintf("ghadelimiter_%d", os.Getpid())
++			fmt.Fprintf(file, "%s<<%s\n%s\n%s\n", name, delimiter, value, delimiter)
++			return
++		}
++	}
++	fmt.Fprintf(os.Stdout, "%s=%s\n", name, value)
++}
+diff --git a/paths.go b/paths.go
+new file mode 100644
+index 0000000..74a64db
+--- /dev/null
++++ b/paths.go
+@@ -0,0 +1,37 @@
++package main
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++)
++
++// normalizePath replaces the platform path separator with "/". On platforms
++// where the separator is already "/", the value is returned unchanged.
++func normalizePath(pathString string) string {
++	return strings.ReplaceAll(pathString, string(filepath.Separator), "/")
++}
++
++// expandTilde expands a leading "~" that is followed by "/", "\" or the end of
++// the string to the current user's home directory. "~user" patterns and
++// mid-path tildes are left unchanged.
++func expandTilde(path string) string {
++	home, err := os.UserHomeDir()
++	if err != nil {
++		home = ""
++	}
++	return expandTildeWithHome(path, home)
++}
++
++func expandTildeWithHome(path, home string) string {
++	if !strings.HasPrefix(path, "~") {
++		return path
++	}
++
++	rest := path[1:]
++	if rest == "" || strings.HasPrefix(rest, "/") || strings.HasPrefix(rest, "\\") {
++		return home + rest
++	}
++
++	return path
++}
+diff --git a/release_action_test.go b/release_action_test.go
+new file mode 100644
+index 0000000..d9bc630
+--- /dev/null
++++ b/release_action_test.go
+@@ -0,0 +1,1783 @@
++package main
++
++import (
++	"encoding/json"
++	"errors"
++	"io"
++	"os"
++	"path/filepath"
++	"reflect"
++	"testing"
++)
++
++// ---------------------------------------------------------------------------
++// Test helpers
++// ---------------------------------------------------------------------------
++
++type mapInputGetter struct {
++	values  map[string]string
++	bools   map[string]bool
++	boolErr map[string]error
++}
++
++func (m *mapInputGetter) GetInput(name string) string {
++	return m.values[name]
++}
++
++func (m *mapInputGetter) GetBooleanInput(name string) (bool, error) {
++	if err, ok := m.boolErr[name]; ok {
++		return false, err
++	}
++	return m.bools[name], nil
++}
++
++type globCall struct {
++	artifact        string
++	contentType     string
++	errorsFailBuild bool
++}
++
++type recordingGlobber struct {
++	calls  []globCall
++	result []Artifact
++	err    error
++}
++
++func (g *recordingGlobber) GlobArtifactString(artifact string, contentType string, errorsFailBuild bool) ([]Artifact, error) {
++	g.calls = append(g.calls, globCall{artifact, contentType, errorsFailBuild})
++	return g.result, g.err
++}
++
++type stubGlobber struct {
++	result      []string
++	err         error
++	lastPattern string
++}
++
++func (g *stubGlobber) Glob(pattern string) ([]string, error) {
++	g.lastPattern = pattern
++	return g.result, g.err
++}
++
++func captureWarnings(t *testing.T) *[]string {
++	t.Helper()
++	messages := &[]string{}
++	original := logWarning
++	logWarning = func(message string) {
++		*messages = append(*messages, message)
++	}
++	t.Cleanup(func() { logWarning = original })
++	return messages
++}
++
++func captureNotices(t *testing.T) *[]string {
++	t.Helper()
++	messages := &[]string{}
++	original := logNotice
++	logNotice = func(message string) {
++		*messages = append(*messages, message)
++	}
++	t.Cleanup(func() { logNotice = original })
++	return messages
++}
++
++func strPtr(value string) *string { return &value }
++func boolPtr(value bool) *bool    { return &value }
++
++func loadInputs(t *testing.T, values map[string]string, bools map[string]bool, context ActionContext, globber ArtifactGlobber) (*Inputs, error) {
++	t.Helper()
++	if globber == nil {
++		globber = &recordingGlobber{result: []Artifact{}}
++	}
++	merged := map[string]string{"token": "token"}
++	for key, value := range values {
++		merged[key] = value
++	}
++	return LoadInputs(&mapInputGetter{values: merged, bools: bools}, globber, context)
++}
++
++func mustLoadInputs(t *testing.T, values map[string]string, context ActionContext, globber ArtifactGlobber) *Inputs {
++	t.Helper()
++	inputs, err := loadInputs(t, values, nil, context, globber)
++	if err != nil {
++		t.Fatalf("LoadInputs returned error: %v", err)
++	}
++	return inputs
++}
++
++func defaultContext() ActionContext {
++	return ActionContext{Ref: "refs/tags/sha-tag", Owner: "contextOwner", Repo: "contextRepo"}
++}
++
++// ---------------------------------------------------------------------------
++// Inputs
++// ---------------------------------------------------------------------------
++
++func TestInputsTag(t *testing.T) {
++	t.Run("returns input tag", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"tag": "tag"}, defaultContext(), nil)
++		if inputs.Tag != "tag" {
++			t.Fatalf("got %q", inputs.Tag)
++		}
++	})
++
++	t.Run("returns context tag when input empty", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++		if inputs.Tag != "sha-tag" {
++			t.Fatalf("got %q", inputs.Tag)
++		}
++	})
++
++	t.Run("throws if no tag", func(t *testing.T) {
++		_, err := loadInputs(t, map[string]string{}, nil, ActionContext{}, nil)
++		if err == nil || err.Error() != "No tag found in ref or input!" {
++			t.Fatalf("got err %v", err)
++		}
++	})
++}
++
++func TestInputsToken(t *testing.T) {
++	_, err := LoadInputs(&mapInputGetter{values: map[string]string{}}, &recordingGlobber{}, defaultContext())
++	if err == nil {
++		t.Fatal("expected required token error")
++	}
++}
++
++func TestInputsCommit(t *testing.T) {
++	inputs := mustLoadInputs(t, map[string]string{"commit": "commit"}, defaultContext(), nil)
++	if inputs.Commit == nil || *inputs.Commit != "commit" {
++		t.Fatalf("got %v", inputs.Commit)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++	if inputs.Commit != nil {
++		t.Fatalf("expected nil, got %v", *inputs.Commit)
++	}
++}
++
++func TestInputsBooleans(t *testing.T) {
++	allTrue := map[string]string{
++		"allowUpdates":            "true",
++		"artifactErrorsFailBuild": "true",
++		"draft":                   "true",
++		"prerelease":              "true",
++		"generateReleaseNotes":    "true",
++		"immutableCreate":         "true",
++		"removeArtifacts":         "true",
++		"replacesArtifacts":       "true",
++		"updateOnlyUnreleased":    "true",
++		"omitBodyDuringUpdate":    "true",
++	}
++	inputs := mustLoadInputs(t, allTrue, defaultContext(), nil)
++	if !inputs.AllowUpdates || !inputs.ArtifactErrorsFailBuild || !inputs.CreatedDraft || !inputs.CreatedPrerelease ||
++		!inputs.GenerateReleaseNotes || !inputs.ImmutableCreate || !inputs.RemoveArtifacts || !inputs.ReplacesArtifacts ||
++		!inputs.UpdateOnlyUnreleased || !inputs.OmitBodyDuringUpdate {
++		t.Fatalf("expected all boolean inputs true: %+v", inputs)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++	if inputs.AllowUpdates || inputs.ArtifactErrorsFailBuild || inputs.CreatedDraft || inputs.CreatedPrerelease ||
++		inputs.GenerateReleaseNotes || inputs.ImmutableCreate || inputs.RemoveArtifacts || inputs.ReplacesArtifacts ||
++		inputs.UpdateOnlyUnreleased || inputs.OmitBodyDuringUpdate {
++		t.Fatalf("expected all boolean inputs false: %+v", inputs)
++	}
++}
++
++func TestInputsArtifacts(t *testing.T) {
++	t.Run("globs artifacts input", func(t *testing.T) {
++		globber := &recordingGlobber{result: []Artifact{NewArtifact("a", "contentType")}}
++		inputs := mustLoadInputs(t, map[string]string{
++			"artifacts":               "art1",
++			"artifactContentType":     "contentType",
++			"artifactErrorsFailBuild": "true",
++		}, defaultContext(), globber)
++
++		if len(inputs.Artifacts) != 1 {
++			t.Fatalf("expected one artifact, got %d", len(inputs.Artifacts))
++		}
++		if len(globber.calls) != 1 {
++			t.Fatalf("expected one glob call, got %d", len(globber.calls))
++		}
++		if globber.calls[0] != (globCall{"art1", "contentType", true}) {
++			t.Fatalf("unexpected glob call: %+v", globber.calls[0])
++		}
++	})
++
++	t.Run("returns empty artifacts", func(t *testing.T) {
++		globber := &recordingGlobber{result: []Artifact{}}
++		inputs := mustLoadInputs(t, map[string]string{}, defaultContext(), globber)
++		if len(inputs.Artifacts) != 0 {
++			t.Fatalf("expected empty artifacts, got %d", len(inputs.Artifacts))
++		}
++		if len(globber.calls) != 0 {
++			t.Fatalf("expected no glob calls, got %d", len(globber.calls))
++		}
++	})
++
++	t.Run("defaults content type to raw", func(t *testing.T) {
++		globber := &recordingGlobber{result: []Artifact{}}
++		mustLoadInputs(t, map[string]string{"artifacts": "art1"}, defaultContext(), globber)
++		if globber.calls[0].contentType != "raw" {
++			t.Fatalf("expected raw, got %q", globber.calls[0].contentType)
++		}
++	})
++
++	t.Run("falls back to artifact input", func(t *testing.T) {
++		globber := &recordingGlobber{result: []Artifact{}}
++		mustLoadInputs(t, map[string]string{"artifact": "art2", "artifactContentType": "contentType"}, defaultContext(), globber)
++		if len(globber.calls) != 1 || globber.calls[0].artifact != "art2" {
++			t.Fatalf("unexpected calls: %+v", globber.calls)
++		}
++	})
++}
++
++func TestInputsCreatedReleaseBody(t *testing.T) {
++	t.Run("returns body", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"body": "body"}, defaultContext(), nil)
++		if inputs.CreatedReleaseBody == nil || *inputs.CreatedReleaseBody != "body" {
++			t.Fatalf("got %v", inputs.CreatedReleaseBody)
++		}
++	})
++
++	t.Run("returns body file contents", func(t *testing.T) {
++		path := filepath.Join(t.TempDir(), "body.txt")
++		if err := os.WriteFile(path, []byte("file"), 0o644); err != nil {
++			t.Fatal(err)
++		}
++		inputs := mustLoadInputs(t, map[string]string{"bodyFile": path}, defaultContext(), nil)
++		if inputs.CreatedReleaseBody == nil || *inputs.CreatedReleaseBody != "file" {
++			t.Fatalf("got %v", inputs.CreatedReleaseBody)
++		}
++	})
++
++	t.Run("returns empty", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++		if inputs.CreatedReleaseBody == nil || *inputs.CreatedReleaseBody != "" {
++			t.Fatalf("got %v", inputs.CreatedReleaseBody)
++		}
++	})
++
++	t.Run("returns nil when omitted", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitBody": "true", "body": "body"}, defaultContext(), nil)
++		if inputs.CreatedReleaseBody != nil {
++			t.Fatalf("expected nil, got %q", *inputs.CreatedReleaseBody)
++		}
++	})
++}
++
++func TestInputsCreatedReleaseName(t *testing.T) {
++	t.Run("returns input name", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"name": "name"}, defaultContext(), nil)
++		if inputs.CreatedReleaseName == nil || *inputs.CreatedReleaseName != "name" {
++			t.Fatalf("got %v", inputs.CreatedReleaseName)
++		}
++	})
++
++	t.Run("returns nil when omitted", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitName": "true", "name": "name"}, defaultContext(), nil)
++		if inputs.CreatedReleaseName != nil {
++			t.Fatalf("expected nil, got %q", *inputs.CreatedReleaseName)
++		}
++	})
++
++	t.Run("returns tag", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++		if inputs.CreatedReleaseName == nil || *inputs.CreatedReleaseName != "sha-tag" {
++			t.Fatalf("got %v", inputs.CreatedReleaseName)
++		}
++	})
++}
++
++func TestInputsUpdatedReleaseBodyAndName(t *testing.T) {
++	t.Run("returns updated body", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"body": "body"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseBody == nil || *inputs.UpdatedReleaseBody != "body" {
++			t.Fatalf("got %v", inputs.UpdatedReleaseBody)
++		}
++	})
++
++	t.Run("omits body when omitBody", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitBody": "true", "body": "body"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseBody != nil {
++			t.Fatalf("expected nil, got %q", *inputs.UpdatedReleaseBody)
++		}
++	})
++
++	t.Run("omits body when omitBodyDuringUpdate", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitBodyDuringUpdate": "true", "body": "body"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseBody != nil {
++			t.Fatalf("expected nil, got %q", *inputs.UpdatedReleaseBody)
++		}
++	})
++
++	t.Run("returns updated name", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"name": "name"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseName == nil || *inputs.UpdatedReleaseName != "name" {
++			t.Fatalf("got %v", inputs.UpdatedReleaseName)
++		}
++	})
++
++	t.Run("omits name when omitName", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitName": "true", "name": "name"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseName != nil {
++			t.Fatalf("expected nil, got %q", *inputs.UpdatedReleaseName)
++		}
++	})
++
++	t.Run("omits name when omitNameDuringUpdate", func(t *testing.T) {
++		inputs := mustLoadInputs(t, map[string]string{"omitNameDuringUpdate": "true", "name": "name"}, defaultContext(), nil)
++		if inputs.UpdatedReleaseName != nil {
++			t.Fatalf("expected nil, got %q", *inputs.UpdatedReleaseName)
++		}
++	})
++}
++
++func TestInputsUpdatedDraftAndPrerelease(t *testing.T) {
++	inputs := mustLoadInputs(t, map[string]string{"draft": "true", "prerelease": "true"}, defaultContext(), nil)
++	if inputs.UpdatedDraft == nil || !*inputs.UpdatedDraft {
++		t.Fatalf("expected updated draft true, got %v", inputs.UpdatedDraft)
++	}
++	if inputs.UpdatedPrerelease == nil || !*inputs.UpdatedPrerelease {
++		t.Fatalf("expected updated prerelease true, got %v", inputs.UpdatedPrerelease)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{
++		"draft":                      "true",
++		"prerelease":                 "true",
++		"omitDraftDuringUpdate":      "true",
++		"omitPrereleaseDuringUpdate": "true",
++	}, defaultContext(), nil)
++	if inputs.UpdatedDraft != nil || inputs.UpdatedPrerelease != nil {
++		t.Fatalf("expected omitted draft/prerelease, got %v/%v", inputs.UpdatedDraft, inputs.UpdatedPrerelease)
++	}
++}
++
++func TestInputsMakeLatest(t *testing.T) {
++	for _, value := range []string{"legacy", "true", "false"} {
++		inputs := mustLoadInputs(t, map[string]string{"makeLatest": value}, defaultContext(), nil)
++		if inputs.MakeLatest == nil || *inputs.MakeLatest != value {
++			t.Fatalf("expected %q, got %v", value, inputs.MakeLatest)
++		}
++	}
++
++	inputs := mustLoadInputs(t, map[string]string{"makeLatest": "something_else"}, defaultContext(), nil)
++	if inputs.MakeLatest != nil {
++		t.Fatalf("expected nil, got %q", *inputs.MakeLatest)
++	}
++}
++
++func TestInputsOwnerRepoAndOptional(t *testing.T) {
++	inputs := mustLoadInputs(t, map[string]string{"owner": "owner", "repo": "repo"}, defaultContext(), nil)
++	if inputs.Owner != "owner" || inputs.Repo != "repo" {
++		t.Fatalf("got %q/%q", inputs.Owner, inputs.Repo)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++	if inputs.Owner != "contextOwner" || inputs.Repo != "contextRepo" {
++		t.Fatalf("got %q/%q", inputs.Owner, inputs.Repo)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{
++		"discussionCategory":              "Release",
++		"generateReleaseNotesPreviousTag": "v1.0.0",
++	}, defaultContext(), nil)
++	if inputs.DiscussionCategory == nil || *inputs.DiscussionCategory != "Release" {
++		t.Fatalf("got %v", inputs.DiscussionCategory)
++	}
++	if inputs.GenerateReleaseNotesPreviousTag == nil || *inputs.GenerateReleaseNotesPreviousTag != "v1.0.0" {
++		t.Fatalf("got %v", inputs.GenerateReleaseNotesPreviousTag)
++	}
++
++	inputs = mustLoadInputs(t, map[string]string{}, defaultContext(), nil)
++	if inputs.DiscussionCategory != nil || inputs.GenerateReleaseNotesPreviousTag != nil {
++		t.Fatal("expected optional inputs nil")
++	}
++}
++
++func TestInputsSkipIfReleaseExists(t *testing.T) {
++	inputs, err := loadInputs(t, map[string]string{}, map[string]bool{"skipIfReleaseExists": true}, defaultContext(), nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !inputs.SkipIfReleaseExists {
++		t.Fatal("expected skip true")
++	}
++
++	inputs, err = loadInputs(t, map[string]string{}, map[string]bool{"skipIfReleaseExists": false}, defaultContext(), nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if inputs.SkipIfReleaseExists {
++		t.Fatal("expected skip false")
++	}
++}
++
++// ---------------------------------------------------------------------------
++// Outputs
++// ---------------------------------------------------------------------------
++
++func TestOutputs(t *testing.T) {
++	outputs := map[string]string{}
++	setOutput := func(name, value string) { outputs[name] = value }
++
++	coreOutputs := NewCoreOutputsWith(setOutput)
++	releaseData := ReleaseData{
++		ID:         1,
++		HTMLURL:    "https://api.example.com/assets",
++		UploadURL:  "https://api.example.com",
++		TarballURL: strPtr("https://api.example.com/tarball"),
++		ZipballURL: strPtr("https://api.example.com/zipball"),
++	}
++	coreOutputs.ApplyReleaseData(releaseData)
++
++	if outputs["id"] != "1" {
++		t.Fatalf("id = %q", outputs["id"])
++	}
++	if outputs["html_url"] != releaseData.HTMLURL || outputs["upload_url"] != releaseData.UploadURL {
++		t.Fatalf("urls = %+v", outputs)
++	}
++	if outputs["tarball_url"] != *releaseData.TarballURL || outputs["zipball_url"] != *releaseData.ZipballURL {
++		t.Fatalf("ball urls = %+v", outputs)
++	}
++
++	coreOutputs.ApplyReleaseData(ReleaseData{ID: 2, TarballURL: nil, ZipballURL: nil})
++	if outputs["tarball_url"] != "" || outputs["zipball_url"] != "" {
++		t.Fatalf("expected empty fallbacks, got %+v", outputs)
++	}
++
++	assetUrls := map[string]string{
++		"example.zip":    "https://github.com/owner/repo/releases/download/v1.0.0/example.zip",
++		"example.tar.gz": "https://github.com/owner/repo/releases/download/v1.0.0/example.tar.gz",
++	}
++	coreOutputs.ApplyAssetUrls(assetUrls)
++
++	var decoded map[string]string
++	if err := json.Unmarshal([]byte(outputs["assets"]), &decoded); err != nil {
++		t.Fatalf("assets not valid json: %v", err)
++	}
++	if !reflect.DeepEqual(decoded, assetUrls) {
++		t.Fatalf("assets = %v", decoded)
++	}
++
++	coreOutputs.ApplyAssetUrls(map[string]string{})
++	if outputs["assets"] != "{}" {
++		t.Fatalf("expected {}, got %q", outputs["assets"])
++	}
++}
++
++// ---------------------------------------------------------------------------
++// GithubError / GithubErrorDetail
++// ---------------------------------------------------------------------------
++
++func TestGithubError(t *testing.T) {
++	errorWithDetails := &GithubError{
++		Status:  422,
++		Message: "something bad happened",
++		Errors: []GithubErrorDetail{
++			{Code: "missing", Resource: "release"},
++			{Code: "already_exists", Resource: "release"},
++		},
++	}
++
++	if errorWithDetails.HasErrorWithCode("missing_field") {
++		t.Fatal("did not expect missing_field")
++	}
++	if !errorWithDetails.HasErrorWithCode("missing") {
++		t.Fatal("expected missing")
++	}
++
++	got := errorWithDetails.String()
++	want := "Error 422: something bad happened\nErrors:\n- release does not exist.\n- release already exists."
++	if got != want {
++		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
++	}
++
++	notFound := &GithubError{Status: 404, Message: "message"}
++	got = notFound.String()
++	want = "Error 404: message\nMake sure your github token has access to the repo and has permission to author releases"
++	if got != want {
++		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
++	}
++
++	notFoundWithDetails := &GithubError{
++		Status:  404,
++		Message: "message",
++		Errors:  []GithubErrorDetail{{Code: "missing", Resource: "release"}},
++	}
++	got = notFoundWithDetails.String()
++	want = "Error 404: message\nErrors:\n- release does not exist.\nMake sure your github token has access to the repo and has permission to author releases"
++	if got != want {
++		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
++	}
++
++	plain := &GithubError{Status: 422, Message: "something bad happened"}
++	if plain.String() != "Error 422: something bad happened" {
++		t.Fatalf("got %q", plain.String())
++	}
++
++	statusOnly := &GithubError{Status: 404}
++	if statusOnly.StatusCode() != 404 {
++		t.Fatalf("got %d", statusOnly.StatusCode())
++	}
++}
++
++func TestGithubErrorDetail(t *testing.T) {
++	cases := []struct {
++		name  string
++		error GithubErrorDetail
++		want  string
++	}{
++		{"missing", GithubErrorDetail{Code: "missing", Resource: "release"}, "release does not exist."},
++		{"missing_field", GithubErrorDetail{Code: "missing_field", Field: "body", Resource: "release"}, "The body field on release is missing."},
++		{"invalid", GithubErrorDetail{Code: "invalid", Field: "body", Resource: "release"}, "The body field on release is an invalid format."},
++		{"already_exists", GithubErrorDetail{Code: "already_exists", Resource: "release"}, "release already exists."},
++		{"custom with doc", GithubErrorDetail{Code: "custom", Message: "foo", DocumentationURL: "https://api.example.com"}, "foo\nPlease see https://api.example.com."},
++		{"custom without doc", GithubErrorDetail{Code: "custom", Message: "foo"}, "foo"},
++	}
++	for _, testCase := range cases {
++		t.Run(testCase.name, func(t *testing.T) {
++			if got := testCase.error.String(); got != testCase.want {
++				t.Fatalf("got %q want %q", got, testCase.want)
++			}
++		})
++	}
++
++	if detail := (GithubErrorDetail{Code: "missing"}).CodeValue(); detail != "missing" {
++		t.Fatalf("got %q", detail)
++	}
++}
++
++// ---------------------------------------------------------------------------
++// Artifact globbing / paths / metadata / validation
++// ---------------------------------------------------------------------------
++
++func TestArtifactGlobber(t *testing.T) {
++	home, _ := os.UserHomeDir()
++
++	t.Run("expands leading tilde", func(t *testing.T) {
++		warnings := captureWarnings(t)
++		dir := t.TempDir()
++		file1 := filepath.Join(dir, "file1")
++		file2 := filepath.Join(dir, "file2")
++		writeFile(t, file1)
++		writeFile(t, file2)
++
++		globber := &stubGlobber{result: []string{file1, file2}}
++		artifactGlobber := NewFileArtifactGlobberWith(globber)
++
++		artifacts, err := artifactGlobber.GlobArtifactString("~/path", "raw", false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if globber.lastPattern != filepath.Join(home, "path") {
++			t.Fatalf("pattern = %q", globber.lastPattern)
++		}
++		if len(artifacts) != 2 {
++			t.Fatalf("expected 2 artifacts, got %d", len(artifacts))
++		}
++		if len(*warnings) != 0 {
++			t.Fatalf("unexpected warnings: %v", *warnings)
++		}
++	})
++
++	t.Run("globs simple path", func(t *testing.T) {
++		dir := t.TempDir()
++		file1 := filepath.Join(dir, "file1")
++		writeFile(t, file1)
++		globber := &stubGlobber{result: []string{file1}}
++		artifactGlobber := NewFileArtifactGlobberWith(globber)
++
++		artifacts, err := artifactGlobber.GlobArtifactString("path", "raw", false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if globber.lastPattern != "path" || len(artifacts) != 1 {
++			t.Fatalf("pattern=%q artifacts=%d", globber.lastPattern, len(artifacts))
++		}
++	})
++
++	t.Run("splits on comma", func(t *testing.T) {
++		dir := t.TempDir()
++		file1 := filepath.Join(dir, "file1")
++		writeFile(t, file1)
++
++		var patterns []string
++		globber := &stubGlobber{result: []string{file1}}
++		patternRecorder := &recordingGlobberAdapter{stub: globber, patterns: &patterns}
++		artifactGlobber := NewFileArtifactGlobberWith(patternRecorder)
++
++		artifacts, err := artifactGlobber.GlobArtifactString("path1,path2", "raw", false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(patterns) != 2 || patterns[0] != "path1" || patterns[1] != "path2" {
++			t.Fatalf("patterns = %v", patterns)
++		}
++		if len(artifacts) != 2 {
++			t.Fatalf("artifacts = %d", len(artifacts))
++		}
++	})
++
++	t.Run("splits on newline and trims start", func(t *testing.T) {
++		dir := t.TempDir()
++		file1 := filepath.Join(dir, "file1")
++		writeFile(t, file1)
++
++		var patterns []string
++		patternRecorder := &recordingGlobberAdapter{stub: &stubGlobber{result: []string{file1}}, patterns: &patterns}
++		artifactGlobber := NewFileArtifactGlobberWith(patternRecorder)
++
++		if _, err := artifactGlobber.GlobArtifactString("path1\n  path2", "raw", false); err != nil {
++			t.Fatal(err)
++		}
++		if len(patterns) != 2 || patterns[0] != "path1" || patterns[1] != "path2" {
++			t.Fatalf("patterns = %v", patterns)
++		}
++	})
++
++	t.Run("warns when no results and errors should not throw", func(t *testing.T) {
++		warnings := captureWarnings(t)
++		artifactGlobber := NewFileArtifactGlobberWith(&stubGlobber{result: []string{}})
++		artifacts, err := artifactGlobber.GlobArtifactString("path", "raw", false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(artifacts) != 0 {
++			t.Fatalf("expected none, got %d", len(artifacts))
++		}
++		if len(*warnings) == 0 {
++			t.Fatal("expected a warning")
++		}
++	})
++
++	t.Run("throws when no results and errors should throw", func(t *testing.T) {
++		artifactGlobber := NewFileArtifactGlobberWith(&stubGlobber{result: []string{}})
++		if _, err := artifactGlobber.GlobArtifactString("path", "raw", true); err == nil {
++			t.Fatal("expected error")
++		}
++	})
++}
++
++type recordingGlobberAdapter struct {
++	stub     *stubGlobber
++	patterns *[]string
++}
++
++func (g *recordingGlobberAdapter) Glob(pattern string) ([]string, error) {
++	*g.patterns = append(*g.patterns, pattern)
++	return g.stub.Glob(pattern)
++}
++
++func TestPathExpander(t *testing.T) {
++	home, _ := os.UserHomeDir()
++
++	cases := []struct {
++		input string
++		want  string
++	}{
++		{"~/documents", home + "/documents"},
++		{"~\\documents", home + "\\documents"},
++		{"~", home},
++		{"/home/~user/documents", "/home/~user/documents"},
++		{"~username/documents", "~username/documents"},
++		{"/absolute/path", "/absolute/path"},
++		{"relative/path", "relative/path"},
++	}
++	for _, testCase := range cases {
++		if got := expandTilde(testCase.input); got != testCase.want {
++			t.Fatalf("expandTilde(%q) = %q, want %q", testCase.input, got, testCase.want)
++		}
++	}
++}
++
++func TestArtifact(t *testing.T) {
++	if artifact := NewArtifact("", ""); artifact.ContentType != "raw" {
++		t.Fatalf("content type = %q", artifact.ContentType)
++	}
++	if artifact := NewArtifact("some/artifact", "raw"); artifact.Name != "artifact" {
++		t.Fatalf("name = %q", artifact.Name)
++	}
++	if artifact := NewArtifact("some/artifact", "raw"); artifact.Path != "some/artifact" {
++		t.Fatalf("path = %q", artifact.Path)
++	}
++
++	path := filepath.Join(t.TempDir(), "artifact")
++	if err := os.WriteFile(path, []byte("hello world!"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	artifact := NewArtifact(path, "raw")
++	length, err := artifact.ContentLength()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if length != 12 {
++		t.Fatalf("length = %d", length)
++	}
++
++	reader, err := artifact.ReadFile()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer reader.Close()
++	content, err := io.ReadAll(reader)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if string(content) != "hello world!" {
++		t.Fatalf("content = %q", string(content))
++	}
++}
++
++func TestArtifactPathValidator(t *testing.T) {
++	dir := t.TempDir()
++	file := filepath.Join(dir, "file")
++	writeFile(t, file)
++	subdir := filepath.Join(dir, "subdir")
++	if err := os.Mkdir(subdir, 0o755); err != nil {
++		t.Fatal(err)
++	}
++
++	t.Run("warns and filters directories", func(t *testing.T) {
++		warnings := captureWarnings(t)
++		validator := NewArtifactPathValidator(false, []string{subdir, file}, "pattern")
++		result, err := validator.Validate()
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(*warnings) == 0 {
++			t.Fatal("expected warning")
++		}
++		if !reflect.DeepEqual(result, []string{file}) {
++			t.Fatalf("result = %v", result)
++		}
++	})
++
++	t.Run("warns when empty and errors should not throw", func(t *testing.T) {
++		warnings := captureWarnings(t)
++		validator := NewArtifactPathValidator(false, []string{}, "pattern")
++		if _, err := validator.Validate(); err != nil {
++			t.Fatal(err)
++		}
++		if len(*warnings) == 0 {
++			t.Fatal("expected warning")
++		}
++	})
++
++	t.Run("throws when empty and errors should throw", func(t *testing.T) {
++		validator := NewArtifactPathValidator(true, []string{}, "pattern")
++		if _, err := validator.Validate(); err == nil {
++			t.Fatal("expected error")
++		}
++	})
++
++	t.Run("throws when path is a directory", func(t *testing.T) {
++		validator := NewArtifactPathValidator(true, []string{subdir, file}, "pattern")
++		if _, err := validator.Validate(); err == nil {
++			t.Fatal("expected error")
++		}
++	})
++}
++
++func writeFile(t *testing.T, path string) {
++	t.Helper()
++	if err := os.WriteFile(path, []byte("data"), 0o644); err != nil {
++		t.Fatal(err)
++	}
++}
++
++// ---------------------------------------------------------------------------
++// Releases fakes
++// ---------------------------------------------------------------------------
++
++type fakeReleases struct {
++	createFn     func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error)
++	updateFn     func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error)
++	getByTagFn   func(tag string) (*ReleaseData, error)
++	genNotesFn   func(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error)
++	listFn       func() (*ListReleasesResponse, error)
++	listAssetsFn func(releaseId int64) ([]ReleaseAsset, error)
++	deleteFn     func(assetId int64) error
++	uploadFn     func(assetUrl string, contentLength int64, contentType string, file io.Reader, name string, releaseId int64) (UploadArtifactResponse, error)
++}
++
++func (f *fakeReleases) Create(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++	if f.createFn != nil {
++		return f.createFn(tag, body, commitHash, discussionCategory, draft, makeLatest, name, prerelease)
++	}
++	return ReleaseData{}, nil
++}
++
++func (f *fakeReleases) Update(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++	if f.updateFn != nil {
++		return f.updateFn(id, tag, body, commitHash, discussionCategory, draft, makeLatest, name, prerelease)
++	}
++	return ReleaseData{}, nil
++}
++
++func (f *fakeReleases) GetByTag(tag string) (*ReleaseData, error) {
++	if f.getByTagFn != nil {
++		return f.getByTagFn(tag)
++	}
++	return nil, nil
++}
++
++func (f *fakeReleases) GenerateReleaseNotes(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error) {
++	if f.genNotesFn != nil {
++		return f.genNotesFn(tag, previousTag, targetCommitish)
++	}
++	return GenerateReleaseNotesResponse{}, nil
++}
++
++func (f *fakeReleases) ListReleases() (*ListReleasesResponse, error) {
++	if f.listFn != nil {
++		return f.listFn()
++	}
++	empty := []ReleaseData{}
++	return &ListReleasesResponse{Data: &empty}, nil
++}
++
++func (f *fakeReleases) ListArtifactsForRelease(releaseId int64) ([]ReleaseAsset, error) {
++	if f.listAssetsFn != nil {
++		return f.listAssetsFn(releaseId)
++	}
++	return []ReleaseAsset{}, nil
++}
++
++func (f *fakeReleases) DeleteArtifact(assetId int64) error {
++	if f.deleteFn != nil {
++		return f.deleteFn(assetId)
++	}
++	return nil
++}
++
++func (f *fakeReleases) UploadArtifact(assetUrl string, contentLength int64, contentType string, file io.Reader, name string, releaseId int64) (UploadArtifactResponse, error) {
++	if f.uploadFn != nil {
++		return f.uploadFn(assetUrl, contentLength, contentType, file, name, releaseId)
++	}
++	return UploadArtifactResponse{}, nil
++}
++
++type testUploadError struct {
++	message string
++	status  int
++}
++
++func (e testUploadError) Error() string   { return e.message }
++func (e testUploadError) StatusCode() int { return e.status }
++
++// ---------------------------------------------------------------------------
++// Artifact uploader
++// ---------------------------------------------------------------------------
++
++func uploaderArtifacts(t *testing.T, contentLength int) []Artifact {
++	t.Helper()
++	dir := t.TempDir()
++	aDir := filepath.Join(dir, "a")
++	bDir := filepath.Join(dir, "b")
++	if err := os.MkdirAll(aDir, 0o755); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.MkdirAll(bDir, 0o755); err != nil {
++		t.Fatal(err)
++	}
++	art1 := filepath.Join(aDir, "art1")
++	art2 := filepath.Join(bDir, "art2")
++	if err := os.WriteFile(art1, make([]byte, contentLength), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(art2, make([]byte, contentLength), 0o644); err != nil {
++		t.Fatal(err)
++	}
++	return []Artifact{
++		NewArtifact(art1, "raw"),
++		NewArtifact(art2, "raw"),
++	}
++}
++
++func TestArtifactUploader(t *testing.T) {
++	const releaseId = 100
++	const url = "http://api.example.com"
++	const contentLength = 4
++
++	t.Run("returns asset urls when upload succeeds", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		uploadCount := 0
++		releases := &fakeReleases{
++			uploadFn: func(assetUrl string, length int64, contentType string, file io.Reader, name string, id int64) (UploadArtifactResponse, error) {
++				uploadCount++
++				return UploadArtifactResponse{BrowserDownloadURL: "https://github.com/octocat/Hello-World/releases/download/v1.0.0/" + name}, nil
++			},
++		}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++
++		result, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err != nil {
++			t.Fatal(err)
++		}
++		want := map[string]string{
++			"art1": "https://github.com/octocat/Hello-World/releases/download/v1.0.0/art1",
++			"art2": "https://github.com/octocat/Hello-World/releases/download/v1.0.0/art2",
++		}
++		if !reflect.DeepEqual(result, want) {
++			t.Fatalf("result = %v", result)
++		}
++		if uploadCount != 2 {
++			t.Fatalf("uploadCount = %d", uploadCount)
++		}
++	})
++
++	t.Run("returns empty object when no artifacts", func(t *testing.T) {
++		uploadCount := 0
++		releases := &fakeReleases{uploadFn: func(string, int64, string, io.Reader, string, int64) (UploadArtifactResponse, error) {
++			uploadCount++
++			return UploadArtifactResponse{}, nil
++		}}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++		result, err := uploader.UploadArtifacts([]Artifact{}, releaseId, url)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(result) != 0 || uploadCount != 0 {
++			t.Fatalf("result=%v uploadCount=%d", result, uploadCount)
++		}
++	})
++
++	t.Run("excludes failed uploads", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		uploadCount := 0
++		releases := &fakeReleases{uploadFn: func(string, int64, string, io.Reader, string, int64) (UploadArtifactResponse, error) {
++			uploadCount++
++			return UploadArtifactResponse{}, testUploadError{message: "error", status: 401}
++		}}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++
++		result, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(result) != 0 || uploadCount != 2 {
++			t.Fatalf("result=%v uploadCount=%d", result, uploadCount)
++		}
++	})
++
++	t.Run("aborts after 3 retries on 5xx", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		remainingFailures := 4
++		uploadCount := 0
++		releases := &fakeReleases{uploadFn: func(string, int64, string, io.Reader, string, int64) (UploadArtifactResponse, error) {
++			uploadCount++
++			if remainingFailures > 0 {
++				remainingFailures--
++				return UploadArtifactResponse{}, testUploadError{message: "HTTP 500", status: 500}
++			}
++			return UploadArtifactResponse{}, testUploadError{message: "HTTP 401", status: 401}
++		}}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++
++		result, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(result) != 0 || uploadCount != 5 {
++			t.Fatalf("result=%v uploadCount=%d", result, uploadCount)
++		}
++	})
++
++	t.Run("replaces all artifacts", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		deleted := []int64{}
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) {
++				return []ReleaseAsset{{Name: "art1", ID: 1}, {Name: "art2", ID: 2}}, nil
++			},
++			deleteFn: func(id int64) error {
++				deleted = append(deleted, id)
++				return nil
++			},
++			uploadFn: func(assetUrl string, length int64, contentType string, file io.Reader, name string, id int64) (UploadArtifactResponse, error) {
++				return UploadArtifactResponse{BrowserDownloadURL: "url/" + name}, nil
++			},
++		}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++		if _, err := uploader.UploadArtifacts(artifacts, releaseId, url); err != nil {
++			t.Fatal(err)
++		}
++		if !reflect.DeepEqual(deleted, []int64{1, 2}) {
++			t.Fatalf("deleted = %v", deleted)
++		}
++	})
++
++	t.Run("replaces no artifacts when list empty", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		deleted := 0
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) { return []ReleaseAsset{}, nil },
++			deleteFn:     func(int64) error { deleted++; return nil },
++			uploadFn: func(assetUrl string, length int64, contentType string, file io.Reader, name string, id int64) (UploadArtifactResponse, error) {
++				return UploadArtifactResponse{BrowserDownloadURL: "url/" + name}, nil
++			},
++		}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++		if _, err := uploader.UploadArtifacts(artifacts, releaseId, url); err != nil {
++			t.Fatal(err)
++		}
++		if deleted != 0 {
++			t.Fatalf("deleted = %d", deleted)
++		}
++	})
++
++	t.Run("retries 5xx once then succeeds per artifact", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		remainingFailures := 2
++		uploadCount := 0
++		releases := &fakeReleases{uploadFn: func(string, int64, string, io.Reader, string, int64) (UploadArtifactResponse, error) {
++			uploadCount++
++			if remainingFailures > 0 {
++				remainingFailures--
++				return UploadArtifactResponse{}, testUploadError{message: "HTTP 500", status: 500}
++			}
++			return UploadArtifactResponse{BrowserDownloadURL: "url"}, nil
++		}}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++		result, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if len(result) != 2 || uploadCount != 4 {
++			t.Fatalf("result=%v uploadCount=%d", result, uploadCount)
++		}
++	})
++
++	t.Run("throws upload error when enabled", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		releases := &fakeReleases{uploadFn: func(string, int64, string, io.Reader, string, int64) (UploadArtifactResponse, error) {
++			return UploadArtifactResponse{}, testUploadError{message: "error", status: 502}
++		}}
++		uploader := NewGithubArtifactUploader(releases, true, true)
++		_, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err == nil || err.Error() != "Failed to upload artifact art1. error." {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("throws error from replace", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) {
++				return []ReleaseAsset{{Name: "art1", ID: 1}, {Name: "art2", ID: 2}}, nil
++			},
++			deleteFn: func(int64) error { return errors.New("error") },
++		}
++		uploader := NewGithubArtifactUploader(releases, true, false)
++		_, err := uploader.UploadArtifacts(artifacts, releaseId, url)
++		if err == nil || err.Error() != "error" {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("does not delete when replacing disabled", func(t *testing.T) {
++		artifacts := uploaderArtifacts(t, contentLength)
++		deleted := 0
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) {
++				return []ReleaseAsset{{Name: "art1", ID: 1}, {Name: "art2", ID: 2}}, nil
++			},
++			deleteFn: func(int64) error { deleted++; return nil },
++			uploadFn: func(assetUrl string, length int64, contentType string, file io.Reader, name string, id int64) (UploadArtifactResponse, error) {
++				return UploadArtifactResponse{BrowserDownloadURL: "url/" + name}, nil
++			},
++		}
++		uploader := NewGithubArtifactUploader(releases, false, false)
++		if _, err := uploader.UploadArtifacts(artifacts, releaseId, url); err != nil {
++			t.Fatal(err)
++		}
++		if deleted != 0 {
++			t.Fatalf("deleted = %d", deleted)
++		}
++	})
++}
++
++// ---------------------------------------------------------------------------
++// Action skipper / validator / destroyer
++// ---------------------------------------------------------------------------
++
++func TestActionSkipper(t *testing.T) {
++	t.Run("false when flag disabled", func(t *testing.T) {
++		skipper := NewReleaseActionSkipper(false, &fakeReleases{}, "tag")
++		skip, err := skipper.ShouldSkip()
++		if err != nil || skip {
++			t.Fatalf("skip=%v err=%v", skip, err)
++		}
++	})
++
++	t.Run("false on error", func(t *testing.T) {
++		releases := &fakeReleases{getByTagFn: func(string) (*ReleaseData, error) { return nil, errors.New("boom") }}
++		skipper := NewReleaseActionSkipper(true, releases, "tag")
++		skip, err := skipper.ShouldSkip()
++		if err != nil || skip {
++			t.Fatalf("skip=%v err=%v", skip, err)
++		}
++	})
++
++	t.Run("false when release does not exist", func(t *testing.T) {
++		skipper := NewReleaseActionSkipper(true, &fakeReleases{}, "tag")
++		skip, err := skipper.ShouldSkip()
++		if err != nil || skip {
++			t.Fatalf("skip=%v err=%v", skip, err)
++		}
++	})
++
++	t.Run("true when non-draft release exists", func(t *testing.T) {
++		releases := &fakeReleases{getByTagFn: func(string) (*ReleaseData, error) { return &ReleaseData{ID: 1}, nil }}
++		skipper := NewReleaseActionSkipper(true, releases, "tag")
++		skip, err := skipper.ShouldSkip()
++		if err != nil || !skip {
++			t.Fatalf("skip=%v err=%v", skip, err)
++		}
++	})
++
++	t.Run("false when existing release is a draft", func(t *testing.T) {
++		releases := &fakeReleases{getByTagFn: func(string) (*ReleaseData, error) {
++			return &ReleaseData{ID: 1, Draft: true}, nil
++		}}
++		skipper := NewReleaseActionSkipper(true, releases, "tag")
++		skip, err := skipper.ShouldSkip()
++		if err != nil || skip {
++			t.Fatalf("skip=%v err=%v", skip, err)
++		}
++	})
++}
++
++func TestReleaseValidator(t *testing.T) {
++	notEnabled := NewReleaseValidator(false)
++	if err := notEnabled.ValidateReleaseUpdate(ReleaseData{Name: strPtr("Name")}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	enabled := NewReleaseValidator(true)
++	if err := enabled.ValidateReleaseUpdate(ReleaseData{Draft: false, Prerelease: false, Name: strPtr("Name")}); err == nil {
++		t.Fatal("expected error")
++	}
++	if err := enabled.ValidateReleaseUpdate(ReleaseData{Draft: true, Prerelease: false, Name: strPtr("Name")}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if err := enabled.ValidateReleaseUpdate(ReleaseData{Draft: false, Prerelease: true, Name: strPtr("Name")}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if err := enabled.ValidateReleaseUpdate(ReleaseData{Draft: true, Prerelease: true, Name: strPtr("Name")}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	err := enabled.ValidateReleaseUpdate(ReleaseData{Draft: false, Prerelease: false})
++	want := `Tried to update "release" which is neither a draft or prerelease. (updateOnlyUnreleased is on)`
++	if err == nil || err.Error() != want {
++		t.Fatalf("err = %v", err)
++	}
++}
++
++func TestArtifactDestroyer(t *testing.T) {
++	releaseId := int64(100)
++
++	t.Run("destroys all artifacts", func(t *testing.T) {
++		deleted := []int64{}
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) {
++				return []ReleaseAsset{{Name: "art1", ID: 1}, {Name: "art2", ID: 2}}, nil
++			},
++			deleteFn: func(id int64) error { deleted = append(deleted, id); return nil },
++		}
++		if err := NewGithubArtifactDestroyer(releases).DestroyArtifacts(releaseId); err != nil {
++			t.Fatal(err)
++		}
++		if !reflect.DeepEqual(deleted, []int64{1, 2}) {
++			t.Fatalf("deleted = %v", deleted)
++		}
++	})
++
++	t.Run("destroys nothing when empty", func(t *testing.T) {
++		deleted := 0
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) { return []ReleaseAsset{}, nil },
++			deleteFn:     func(int64) error { deleted++; return nil },
++		}
++		if err := NewGithubArtifactDestroyer(releases).DestroyArtifacts(releaseId); err != nil {
++			t.Fatal(err)
++		}
++		if deleted != 0 {
++			t.Fatalf("deleted = %d", deleted)
++		}
++	})
++
++	t.Run("throws when delete fails", func(t *testing.T) {
++		releases := &fakeReleases{
++			listAssetsFn: func(int64) ([]ReleaseAsset, error) {
++				return []ReleaseAsset{{Name: "art1", ID: 1}}, nil
++			},
++			deleteFn: func(int64) error { return errors.New("error") },
++		}
++		err := NewGithubArtifactDestroyer(releases).DestroyArtifacts(releaseId)
++		if err == nil || err.Error() != "error" {
++			t.Fatalf("err = %v", err)
++		}
++	})
++}
++
++// ---------------------------------------------------------------------------
++// Action
++// ---------------------------------------------------------------------------
++
++type fakeOutputs struct {
++	releaseData *ReleaseData
++	assetUrls   map[string]string
++}
++
++func (o *fakeOutputs) ApplyReleaseData(data ReleaseData)     { o.releaseData = &data }
++func (o *fakeOutputs) ApplyAssetUrls(urls map[string]string) { o.assetUrls = urls }
++
++type fakeUploader struct {
++	fn func(artifacts []Artifact, releaseId int64, uploadUrl string) (map[string]string, error)
++}
++
++func (u *fakeUploader) UploadArtifacts(artifacts []Artifact, releaseId int64, uploadUrl string) (map[string]string, error) {
++	if u.fn != nil {
++		return u.fn(artifacts, releaseId, uploadUrl)
++	}
++	return map[string]string{}, nil
++}
++
++type fakeDestroyer struct {
++	calls *[]int64
++	err   error
++}
++
++func (d *fakeDestroyer) DestroyArtifacts(releaseId int64) error {
++	if d.calls != nil {
++		*d.calls = append(*d.calls, releaseId)
++	}
++	return d.err
++}
++
++type fakeSkipper struct {
++	skip bool
++	err  error
++}
++
++func (s *fakeSkipper) ShouldSkip() (bool, error) { return s.skip, s.err }
++
++const (
++	testTag            = "tag"
++	testCommit         = "commit"
++	testCategory       = "discussionCategory"
++	testCreateBody     = "createBody"
++	testCreateName     = "createName"
++	testUpdateBody     = "updateBody"
++	testUpdateName     = "updateName"
++	testGeneratedNotes = "test release notes"
++	testPreviousTag    = "v1.0.0"
++	testReleaseId      = int64(101)
++	testExistingId     = int64(100)
++	testUploadURL      = "http://api.example.com"
++	testHTMLURL        = "https://github.com/owner/repo/releases/tag/v1.0.0"
++	testTarballURL     = "https://api.github.com/repos/owner/repo/tarball/v1.0.0"
++	testZipballURL     = "https://api.github.com/repos/owner/repo/zipball/v1.0.0"
++)
++
++func testReleaseData(id int64) ReleaseData {
++	return ReleaseData{
++		ID:         id,
++		UploadURL:  testUploadURL,
++		HTMLURL:    testHTMLURL,
++		TarballURL: strPtr(testTarballURL),
++		ZipballURL: strPtr(testZipballURL),
++	}
++}
++
++func testArtifactList() []Artifact {
++	return []Artifact{
++		{Path: "a/art1", Name: "art1", ContentType: "raw"},
++		{Path: "b/art2", Name: "art2", ContentType: "raw"},
++	}
++}
++
++func testAssetURLs() map[string]string {
++	return map[string]string{
++		"art1": "https://github.com/owner/repo/releases/download/v1.0.0/art1",
++		"art2": "https://github.com/owner/repo/releases/download/v1.0.0/art2",
++	}
++}
++
++type actionConfig struct {
++	allowUpdates                bool
++	hasArtifact                 bool
++	removeArtifacts             bool
++	generateReleaseNotes        bool
++	omitBodyDuringUpdate        bool
++	createdReleaseBody          *string
++	immutableCreate             bool
++	createdDraft                bool
++	updatedReleaseBody          *string
++	generateReleaseNotesPrevTag *string
++}
++
++func defaultActionConfig() actionConfig {
++	return actionConfig{
++		allowUpdates:         false,
++		hasArtifact:          false,
++		removeArtifacts:      false,
++		generateReleaseNotes: true,
++		omitBodyDuringUpdate: false,
++		createdReleaseBody:   strPtr(testCreateBody),
++		immutableCreate:      true,
++		createdDraft:         true,
++		updatedReleaseBody:   strPtr(testUpdateBody),
++	}
++}
++
++func buildInputs(config actionConfig) *Inputs {
++	artifacts := []Artifact{}
++	if config.hasArtifact {
++		artifacts = testArtifactList()
++	}
++	commit := testCommit
++	category := testCategory
++	makeLatest := "legacy"
++	updatedDraft := false
++	updatedPrerelease := false
++	createdPrerelease := true
++
++	return &Inputs{
++		AllowUpdates:                    config.allowUpdates,
++		ArtifactErrorsFailBuild:         true,
++		Artifacts:                       artifacts,
++		Commit:                          &commit,
++		CreatedDraft:                    config.createdDraft,
++		CreatedPrerelease:               createdPrerelease,
++		CreatedReleaseBody:              config.createdReleaseBody,
++		CreatedReleaseName:              strPtr(testCreateName),
++		DiscussionCategory:              &category,
++		GenerateReleaseNotes:            config.generateReleaseNotes,
++		GenerateReleaseNotesPreviousTag: config.generateReleaseNotesPrevTag,
++		ImmutableCreate:                 config.immutableCreate,
++		MakeLatest:                      &makeLatest,
++		OmitBodyDuringUpdate:            config.omitBodyDuringUpdate,
++		Owner:                           "owner",
++		RemoveArtifacts:                 config.removeArtifacts,
++		ReplacesArtifacts:               true,
++		Repo:                            "repo",
++		SkipIfReleaseExists:             false,
++		Tag:                             testTag,
++		Token:                           "token",
++		UpdatedDraft:                    &updatedDraft,
++		UpdatedPrerelease:               &updatedPrerelease,
++		UpdatedReleaseBody:              config.updatedReleaseBody,
++		UpdatedReleaseName:              strPtr(testUpdateName),
++		UpdateOnlyUnreleased:            false,
++	}
++}
++
++func newTestReleases() *fakeReleases {
++	return &fakeReleases{
++		createFn: func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			return testReleaseData(testReleaseId), nil
++		},
++		updateFn: func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			return testReleaseData(testReleaseId), nil
++		},
++		getByTagFn: func(tag string) (*ReleaseData, error) {
++			return &ReleaseData{ID: testExistingId}, nil
++		},
++		genNotesFn: func(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error) {
++			return GenerateReleaseNotesResponse{Body: testGeneratedNotes}, nil
++		},
++		listFn: func() (*ListReleasesResponse, error) {
++			empty := []ReleaseData{}
++			return &ListReleasesResponse{Data: &empty}, nil
++		},
++	}
++}
++
++func newTestAction(t *testing.T, config actionConfig, releases *fakeReleases, outputs *fakeOutputs, uploader *fakeUploader, destroyer *fakeDestroyer, skipper *fakeSkipper) *Action {
++	t.Helper()
++	if releases == nil {
++		releases = newTestReleases()
++	}
++	if outputs == nil {
++		outputs = &fakeOutputs{}
++	}
++	if uploader == nil {
++		uploader = &fakeUploader{fn: func([]Artifact, int64, string) (map[string]string, error) {
++			return testAssetURLs(), nil
++		}}
++	}
++	if destroyer == nil {
++		destroyer = &fakeDestroyer{}
++	}
++	if skipper == nil {
++		skipper = &fakeSkipper{}
++	}
++	return NewAction(buildInputs(config), outputs, releases, uploader, destroyer, skipper)
++}
++
++func TestAction(t *testing.T) {
++	t.Run("creates release with generated release notes", func(t *testing.T) {
++		releases := newTestReleases()
++		var gotGenTag string
++		var gotGenPrev, gotGenCommit *string
++		releases.genNotesFn = func(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error) {
++			gotGenTag, gotGenPrev, gotGenCommit = tag, previousTag, targetCommitish
++			return GenerateReleaseNotesResponse{Body: testGeneratedNotes}, nil
++		}
++		var gotCreateBody *string
++		releases.createFn = func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			gotCreateBody = body
++			return testReleaseData(testReleaseId), nil
++		}
++		outputs := &fakeOutputs{}
++		config := defaultActionConfig()
++		config.hasArtifact = false
++		config.createdReleaseBody = strPtr("")
++		action := newTestAction(t, config, releases, outputs, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if gotGenTag != testTag || gotGenPrev != nil || gotGenCommit == nil || *gotGenCommit != testCommit {
++			t.Fatalf("gen notes args: %q %v %v", gotGenTag, gotGenPrev, gotGenCommit)
++		}
++		if gotCreateBody == nil || *gotCreateBody != testGeneratedNotes {
++			t.Fatalf("create body = %v", gotCreateBody)
++		}
++		assertReleaseOutput(t, outputs, testReleaseId)
++		if len(outputs.assetUrls) != 0 {
++			t.Fatalf("asset urls = %v", outputs.assetUrls)
++		}
++	})
++
++	t.Run("creates release with static body", func(t *testing.T) {
++		releases := newTestReleases()
++		genCalled := false
++		releases.genNotesFn = func(string, *string, *string) (GenerateReleaseNotesResponse, error) {
++			genCalled = true
++			return GenerateReleaseNotesResponse{Body: testGeneratedNotes}, nil
++		}
++		config := defaultActionConfig()
++		config.generateReleaseNotes = false
++		config.createdReleaseBody = strPtr("static body")
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if genCalled {
++			t.Fatal("did not expect generate notes")
++		}
++	})
++
++	t.Run("combines body and generated notes", func(t *testing.T) {
++		releases := newTestReleases()
++		var gotCreateBody *string
++		releases.createFn = func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			gotCreateBody = body
++			return testReleaseData(testReleaseId), nil
++		}
++		action := newTestAction(t, defaultActionConfig(), releases, nil, nil, nil, nil)
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		want := testCreateBody + "\n" + testGeneratedNotes
++		if gotCreateBody == nil || *gotCreateBody != want {
++			t.Fatalf("create body = %v", gotCreateBody)
++		}
++	})
++
++	t.Run("creates release and uploads artifacts with response upload url", func(t *testing.T) {
++		releases := newTestReleases()
++		var uploadUrl string
++		var uploadArtifacts []Artifact
++		uploader := &fakeUploader{fn: func(artifacts []Artifact, releaseId int64, url string) (map[string]string, error) {
++			uploadArtifacts = artifacts
++			uploadUrl = url
++			return testAssetURLs(), nil
++		}}
++		config := defaultActionConfig()
++		config.hasArtifact = true
++		outputs := &fakeOutputs{}
++		action := newTestAction(t, config, releases, outputs, uploader, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if uploadUrl != testUploadURL {
++			t.Fatalf("upload url = %q", uploadUrl)
++		}
++		if len(uploadArtifacts) != 2 {
++			t.Fatalf("artifacts = %d", len(uploadArtifacts))
++		}
++		if !reflect.DeepEqual(outputs.assetUrls, testAssetURLs()) {
++			t.Fatalf("asset urls = %v", outputs.assetUrls)
++		}
++	})
++
++	t.Run("creates release when get returns 404 and no draft exists", func(t *testing.T) {
++		releases := newTestReleases()
++		releases.getByTagFn = func(string) (*ReleaseData, error) {
++			return nil, &GithubError{Status: 404, Message: "not found"}
++		}
++		created := false
++		releases.createFn = func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			created = true
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		config.hasArtifact = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if !created {
++			t.Fatal("expected create")
++		}
++	})
++
++	t.Run("updates draft release when 404 and draft exists", func(t *testing.T) {
++		releases := newTestReleases()
++		releases.getByTagFn = func(string) (*ReleaseData, error) {
++			return nil, &GithubError{Status: 404, Message: "not found"}
++		}
++		draftId := int64(123)
++		releases.listFn = func() (*ListReleasesResponse, error) {
++			data := []ReleaseData{
++				{ID: 999, Draft: false, TagName: testTag},
++				{ID: draftId, Draft: true, TagName: testTag},
++			}
++			return &ListReleasesResponse{Data: &data}, nil
++		}
++		var updatedId int64
++		releases.updateFn = func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			updatedId = id
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if updatedId != draftId {
++			t.Fatalf("updated id = %d", updatedId)
++		}
++	})
++
++	t.Run("throws when list has no data", func(t *testing.T) {
++		releases := newTestReleases()
++		releases.getByTagFn = func(string) (*ReleaseData, error) {
++			return nil, &GithubError{Status: 404, Message: "not found"}
++		}
++		releases.listFn = func() (*ListReleasesResponse, error) {
++			return &ListReleasesResponse{}, nil
++		}
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		err := action.Perform()
++		if err == nil || err.Error() != "No releases found. Response: {}" {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("propagates non-404 get error", func(t *testing.T) {
++		releases := newTestReleases()
++		getErr := errors.New("error")
++		releases.getByTagFn = func(string) (*ReleaseData, error) { return nil, getErr }
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		err := action.Perform()
++		if err != getErr {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("updates existing release", func(t *testing.T) {
++		releases := newTestReleases()
++		var updatedId int64
++		releases.updateFn = func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			updatedId = id
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		outputs := &fakeOutputs{}
++		action := newTestAction(t, config, releases, outputs, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if updatedId != testExistingId {
++			t.Fatalf("updated id = %d", updatedId)
++		}
++		assertReleaseOutput(t, outputs, testReleaseId)
++	})
++
++	t.Run("omits body/commit on immutable publish", func(t *testing.T) {
++		releases := newTestReleases()
++		var publishBody, publishCommit *string
++		var publishDraft *bool
++		callCount := 0
++		releases.updateFn = func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			callCount++
++			publishBody = body
++			publishCommit = commitHash
++			publishDraft = draft
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.immutableCreate = true
++		config.createdDraft = false
++		outputs := &fakeOutputs{}
++		action := newTestAction(t, config, releases, outputs, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if callCount != 1 {
++			t.Fatalf("update calls = %d", callCount)
++		}
++		if publishBody != nil || publishCommit != nil {
++			t.Fatalf("expected omitted body/commit, got %v/%v", publishBody, publishCommit)
++		}
++		if publishDraft == nil || *publishDraft {
++			t.Fatalf("expected draft false, got %v", publishDraft)
++		}
++	})
++
++	t.Run("does not publish immutable when created draft", func(t *testing.T) {
++		releases := newTestReleases()
++		updateCalled := false
++		releases.updateFn = func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			updateCalled = true
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.immutableCreate = true
++		config.createdDraft = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if updateCalled {
++			t.Fatal("did not expect update")
++		}
++	})
++
++	t.Run("destroys artifacts when enabled", func(t *testing.T) {
++		releases := newTestReleases()
++		destroys := []int64{}
++		config := defaultActionConfig()
++		config.hasArtifact = true
++		config.removeArtifacts = true
++		action := newTestAction(t, config, releases, nil, nil, &fakeDestroyer{calls: &destroys}, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if !reflect.DeepEqual(destroys, []int64{testReleaseId}) {
++			t.Fatalf("destroys = %v", destroys)
++		}
++	})
++
++	t.Run("skips action and emits notice", func(t *testing.T) {
++		notices := captureNotices(t)
++		releases := newTestReleases()
++		createCalled := false
++		releases.createFn = func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			createCalled = true
++			return testReleaseData(testReleaseId), nil
++		}
++		action := newTestAction(t, defaultActionConfig(), releases, nil, nil, nil, &fakeSkipper{skip: true})
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if createCalled {
++			t.Fatal("did not expect create")
++		}
++		if len(*notices) == 0 {
++			t.Fatal("expected notice")
++		}
++	})
++
++	t.Run("propagates create error", func(t *testing.T) {
++		releases := newTestReleases()
++		createErr := errors.New("error")
++		releases.createFn = func(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			return ReleaseData{}, createErr
++		}
++		config := defaultActionConfig()
++		config.hasArtifact = true
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++		if err := action.Perform(); err != createErr {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("propagates upload error", func(t *testing.T) {
++		releases := newTestReleases()
++		uploadErr := errors.New("upload error")
++		uploader := &fakeUploader{fn: func([]Artifact, int64, string) (map[string]string, error) {
++			return nil, uploadErr
++		}}
++		config := defaultActionConfig()
++		config.hasArtifact = true
++		action := newTestAction(t, config, releases, nil, uploader, nil, nil)
++		if err := action.Perform(); err != uploadErr {
++			t.Fatalf("err = %v", err)
++		}
++	})
++
++	t.Run("does not generate notes on update when omitBodyDuringUpdate", func(t *testing.T) {
++		releases := newTestReleases()
++		generated := false
++		releases.genNotesFn = func(string, *string, *string) (GenerateReleaseNotesResponse, error) {
++			generated = true
++			return GenerateReleaseNotesResponse{Body: testGeneratedNotes}, nil
++		}
++		var gotBody *string
++		releases.updateFn = func(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++			gotBody = body
++			return testReleaseData(testReleaseId), nil
++		}
++		config := defaultActionConfig()
++		config.allowUpdates = true
++		config.omitBodyDuringUpdate = true
++		config.updatedReleaseBody = strPtr(testUpdateBody)
++		action := newTestAction(t, config, releases, nil, nil, nil, nil)
++
++		if err := action.Perform(); err != nil {
++			t.Fatal(err)
++		}
++		if generated {
++			t.Fatal("did not expect generate notes")
++		}
++		if gotBody == nil || *gotBody != testUpdateBody {
++			t.Fatalf("body = %v", gotBody)
++		}
++	})
++}
++
++func assertReleaseOutput(t *testing.T, outputs *fakeOutputs, id int64) {
++	t.Helper()
++	if outputs.releaseData == nil {
++		t.Fatal("expected release data output")
++	}
++	want := testReleaseData(id)
++	if !reflect.DeepEqual(*outputs.releaseData, want) {
++		t.Fatalf("release data = %+v want %+v", *outputs.releaseData, want)
++	}
++}
+diff --git a/release_validator.go b/release_validator.go
+new file mode 100644
+index 0000000..cbcac0b
+--- /dev/null
++++ b/release_validator.go
+@@ -0,0 +1,28 @@
++package main
++
++import "fmt"
++
++// ReleaseValidator enforces the updateOnlyUnreleased gate.
++type ReleaseValidator struct {
++	updateOnlyUnreleased bool
++}
++
++func NewReleaseValidator(updateOnlyUnreleased bool) *ReleaseValidator {
++	return &ReleaseValidator{updateOnlyUnreleased: updateOnlyUnreleased}
++}
++
++func (v *ReleaseValidator) ValidateReleaseUpdate(release ReleaseData) error {
++	if !v.updateOnlyUnreleased {
++		return nil
++	}
++
++	if !release.Draft && !release.Prerelease {
++		name := "release"
++		if release.Name != nil {
++			name = *release.Name
++		}
++		return fmt.Errorf("Tried to update %q which is neither a draft or prerelease. (updateOnlyUnreleased is on)", name)
++	}
++
++	return nil
++}
+diff --git a/releases.go b/releases.go
+new file mode 100644
+index 0000000..1ecca3e
+--- /dev/null
++++ b/releases.go
+@@ -0,0 +1,328 @@
++package main
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"io"
++	"net/http"
++	"net/url"
++	"os"
++	"strconv"
++	"strings"
++)
++
++// ReleaseData is the subset of a GitHub release used by the action.
++type ReleaseData struct {
++	ID         int64   `json:"id"`
++	HTMLURL    string  `json:"html_url"`
++	UploadURL  string  `json:"upload_url"`
++	TarballURL *string `json:"tarball_url"`
++	ZipballURL *string `json:"zipball_url"`
++	Draft      bool    `json:"draft"`
++	Prerelease bool    `json:"prerelease"`
++	Name       *string `json:"name"`
++	TagName    string  `json:"tag_name"`
++}
++
++// ReleaseAsset is the subset of a release asset used by the action.
++type ReleaseAsset struct {
++	ID                 int64  `json:"id"`
++	Name               string `json:"name"`
++	BrowserDownloadURL string `json:"browser_download_url"`
++}
++
++// GenerateReleaseNotesResponse carries generated release notes.
++type GenerateReleaseNotesResponse struct {
++	Body string `json:"body"`
++}
++
++// ListReleasesResponse distinguishes an absent data field from an empty list,
++// matching the baseline "No releases found" check.
++type ListReleasesResponse struct {
++	Data *[]ReleaseData `json:"data,omitempty"`
++}
++
++// UploadArtifactResponse carries the uploaded asset location.
++type UploadArtifactResponse struct {
++	BrowserDownloadURL string `json:"browser_download_url"`
++}
++
++// Releases is the GitHub REST client contract used by the action.
++type Releases interface {
++	Create(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error)
++	Update(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error)
++	GetByTag(tag string) (*ReleaseData, error)
++	GenerateReleaseNotes(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error)
++	ListReleases() (*ListReleasesResponse, error)
++	ListArtifactsForRelease(releaseId int64) ([]ReleaseAsset, error)
++	DeleteArtifact(assetId int64) error
++	UploadArtifact(assetUrl string, contentLength int64, contentType string, file io.Reader, name string, releaseId int64) (UploadArtifactResponse, error)
++}
++
++// GithubReleases implements Releases against the GitHub REST API.
++type GithubReleases struct {
++	owner   string
++	repo    string
++	token   string
++	baseURL string
++	client  *http.Client
++}
++
++func NewGithubReleases(inputs *Inputs) *GithubReleases {
++	return NewGithubReleasesWithClient(inputs, http.DefaultClient)
++}
++
++func NewGithubReleasesWithClient(inputs *Inputs, client *http.Client) *GithubReleases {
++	baseURL := os.Getenv("GITHUB_API_URL")
++	if baseURL == "" {
++		baseURL = "https://api.github.com"
++	}
++	baseURL = strings.TrimRight(baseURL, "/")
++
++	return &GithubReleases{
++		owner:   inputs.Owner,
++		repo:    inputs.Repo,
++		token:   inputs.Token,
++		baseURL: baseURL,
++		client:  client,
++	}
++}
++
++func (g *GithubReleases) Create(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++	payload := releasePayload(tag, body, commitHash, discussionCategory, draft, makeLatest, name, prerelease)
++	var release ReleaseData
++	err := g.request(http.MethodPost, g.repoURL("releases"), payload, &release)
++	return release, err
++}
++
++func (g *GithubReleases) Update(id int64, tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) (ReleaseData, error) {
++	payload := releasePayload(tag, body, commitHash, discussionCategory, draft, makeLatest, name, prerelease)
++	var release ReleaseData
++	err := g.request(http.MethodPatch, g.repoURL("releases", strconv.FormatInt(id, 10)), payload, &release)
++	return release, err
++}
++
++func (g *GithubReleases) GetByTag(tag string) (*ReleaseData, error) {
++	var release ReleaseData
++	err := g.request(http.MethodGet, g.repoURL("releases", "tags", url.PathEscape(tag)), nil, &release)
++	if err != nil {
++		return nil, err
++	}
++	return &release, nil
++}
++
++func (g *GithubReleases) GenerateReleaseNotes(tag string, previousTag *string, targetCommitish *string) (GenerateReleaseNotesResponse, error) {
++	payload := map[string]any{"tag_name": tag}
++	if previousTag != nil {
++		payload["previous_tag_name"] = *previousTag
++	}
++	if targetCommitish != nil {
++		payload["target_commitish"] = *targetCommitish
++	}
++
++	var response GenerateReleaseNotesResponse
++	err := g.request(http.MethodPost, g.repoURL("releases", "generate-notes"), payload, &response)
++	return response, err
++}
++
++func (g *GithubReleases) ListReleases() (*ListReleasesResponse, error) {
++	var releases []ReleaseData
++	err := g.request(http.MethodGet, g.repoURL("releases"), nil, &releases)
++	if err != nil {
++		return nil, err
++	}
++	return &ListReleasesResponse{Data: &releases}, nil
++}
++
++func (g *GithubReleases) ListArtifactsForRelease(releaseId int64) ([]ReleaseAsset, error) {
++	const perPage = 100
++	assets := []ReleaseAsset{}
++	for page := 1; ; page++ {
++		query := url.Values{}
++		query.Set("per_page", strconv.Itoa(perPage))
++		query.Set("page", strconv.Itoa(page))
++
++		var pageAssets []ReleaseAsset
++		path := g.repoURL("releases", strconv.FormatInt(releaseId, 10), "assets") + "?" + query.Encode()
++		if err := g.request(http.MethodGet, path, nil, &pageAssets); err != nil {
++			return nil, err
++		}
++		assets = append(assets, pageAssets...)
++		if len(pageAssets) < perPage {
++			break
++		}
++	}
++	return assets, nil
++}
++
++func (g *GithubReleases) DeleteArtifact(assetId int64) error {
++	return g.request(http.MethodDelete, g.repoURL("releases", "assets", strconv.FormatInt(assetId, 10)), nil, nil)
++}
++
++func (g *GithubReleases) UploadArtifact(assetUrl string, contentLength int64, contentType string, file io.Reader, name string, releaseId int64) (UploadArtifactResponse, error) {
++	requestURL := assetUploadURL(assetUrl, name)
++
++	req, err := http.NewRequest(http.MethodPost, requestURL, file)
++	if err != nil {
++		return UploadArtifactResponse{}, err
++	}
++	g.applyHeaders(req)
++	req.Header.Set("content-type", contentType)
++	req.ContentLength = contentLength
++
++	resp, err := g.client.Do(req)
++	if err != nil {
++		return UploadArtifactResponse{}, err
++	}
++	defer resp.Body.Close()
++
++	data, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return UploadArtifactResponse{}, err
++	}
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		return UploadArtifactResponse{}, parseGithubError(resp.StatusCode, data)
++	}
++
++	var uploaded UploadArtifactResponse
++	if len(data) > 0 {
++		if err := json.Unmarshal(data, &uploaded); err != nil {
++			return UploadArtifactResponse{}, err
++		}
++	}
++	return uploaded, nil
++}
++
++func (g *GithubReleases) repoURL(segments ...string) string {
++	parts := append([]string{g.baseURL, "repos", g.owner, g.repo}, segments...)
++	return strings.Join(parts, "/")
++}
++
++func (g *GithubReleases) request(method string, requestURL string, payload any, out any) error {
++	var body io.Reader
++	if payload != nil {
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		body = bytes.NewReader(encoded)
++	}
++
++	req, err := http.NewRequest(method, requestURL, body)
++	if err != nil {
++		return err
++	}
++	g.applyHeaders(req)
++	if payload != nil {
++		req.Header.Set("content-type", "application/json")
++	}
++
++	resp, err := g.client.Do(req)
++	if err != nil {
++		return err
++	}
++	defer resp.Body.Close()
++
++	data, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return err
++	}
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		return parseGithubError(resp.StatusCode, data)
++	}
++
++	if out != nil && len(data) > 0 {
++		if err := json.Unmarshal(data, out); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
++func (g *GithubReleases) applyHeaders(req *http.Request) {
++	req.Header.Set("authorization", "token "+g.token)
++	req.Header.Set("accept", "application/vnd.github+json")
++	req.Header.Set("x-github-api-version", "2022-11-28")
++	req.Header.Set("user-agent", "release-action")
++}
++
++func releasePayload(tag string, body *string, commitHash *string, discussionCategory *string, draft *bool, makeLatest *string, name *string, prerelease *bool) map[string]any {
++	payload := map[string]any{"tag_name": tag}
++	if body != nil {
++		payload["body"] = *body
++	}
++	if commitHash != nil {
++		payload["target_commitish"] = *commitHash
++	}
++	if discussionCategory != nil {
++		payload["discussion_category_name"] = *discussionCategory
++	}
++	if draft != nil {
++		payload["draft"] = *draft
++	}
++	if makeLatest != nil {
++		payload["make_latest"] = *makeLatest
++	}
++	if name != nil {
++		payload["name"] = *name
++	}
++	if prerelease != nil {
++		payload["prerelease"] = *prerelease
++	}
++	return payload
++}
++
++func assetUploadURL(assetUrl string, name string) string {
++	base := assetUrl
++	if idx := strings.Index(base, "{"); idx >= 0 {
++		base = base[:idx]
++	}
++
++	parsed, err := url.Parse(base)
++	if err != nil {
++		return base
++	}
++
++	query := parsed.Query()
++	query.Set("name", name)
++	parsed.RawQuery = query.Encode()
++	return parsed.String()
++}
++
++func parseGithubError(status int, data []byte) *GithubError {
++	var payload struct {
++		Message          string              `json:"message"`
++		Errors           []GithubErrorDetail `json:"errors"`
++		DocumentationURL string              `json:"documentation_url"`
++	}
++	if len(data) > 0 {
++		_ = json.Unmarshal(data, &payload)
++	}
++
++	return &GithubError{
++		Status:  status,
++		Message: payload.Message,
++		Errors:  payload.Errors,
++	}
++}
++
++// statusCodeOf reports whether an error carries an HTTP status.
++func statusCodeOf(err error) (int, bool) {
++	var sc interface{ StatusCode() int }
++	if errors.As(err, &sc) {
++		return sc.StatusCode(), true
++	}
++	return 0, false
++}
++
++// errorMessageOf returns the raw message of a status error when available.
++func errorMessageOf(err error) string {
++	var m interface{ ErrorMessage() string }
++	if errors.As(err, &m) {
++		return m.ErrorMessage()
++	}
++	return err.Error()
++}

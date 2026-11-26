@@ -1,0 +1,405 @@
+{
+  "schema_version": "migration-p2p-side-report:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "side": "target",
+  "repo_root": "$REPO_ROOT",
+  "projection": {
+    "kind": "status-wrapper",
+    "value": {
+      "result": "PASS"
+    }
+  },
+  "observations": [
+    {
+      "observation_id": "P2P-020",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/webhooks.test.js",
+          "name": "falls back to default agent when destination agentId is unknown",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-001",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/onboarding-openclaw.test.js",
+          "name": "preserves existing gateway HTTP endpoint settings when API exposure is opted in",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-002",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-002 mirrors webhook gateway responses and logs failures",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-003",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-003 preserves setup UI shell routing and auth gating",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-004",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/helpers.test.js",
+          "name": "does not use raw x-forwarded-for as the client key fallback",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-005",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "drops query token when authorization header already exists",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-019 moves webhook query tokens into authorization headers",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-006",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "sets auth cookie on success and allows protected API by cookie",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-007",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/gmail-push.test.js",
+          "name": "falls back to email+historyId dedupe when messageId is missing",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-008",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/routes-watchdog.test.js",
+          "name": "returns log tail as plain text on GET /api/watchdog/logs",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-009",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "removes expired operations after subscriber disconnect",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-010",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-010 streams status SSE frames and clears timers on disconnect",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-011",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-011 preserves the required public route table",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-012",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "keeps explicit JSON body values over query params",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-012 merges query parameters with explicit body precedence",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-013",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-013 rejects oversized JSON and raw bodies before handlers",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-014",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-014 authenticates WebSocket upgrades before bridging",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/chat-ws.test.js",
+          "name": "connects as the direct-local backend client that preserves operator scopes",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-015",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "sets auth cookie on success and allows protected API by cookie",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "rejects query-string token auth",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-016",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-016 enforces the /v1 limit and disabled-feature gating",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-017",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "returns 503 when setup password is unset",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-018",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-018 exposes the public health contract",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-019",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "moves query token into authorization header without body logging leak",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-019 moves webhook query tokens into authorization headers",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-021",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-021 selects the client IP from trusted proxy hops",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/routes-auth.test.js",
+          "name": "applies global throttling when proxy-derived client keys rotate",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-022",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/routes-agents.test.js",
+          "name": "streams operation events on GET /api/operations/:id/events",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "stores and replays published events to subscribers",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/operation-events.test.js",
+          "name": "removes expired operations after subscriber disconnect",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-023",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-023 suppresses duplicate Gmail push deliveries",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/gmail-push.test.js",
+          "name": "ignores duplicate deliveries by Pub/Sub messageId",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "observation_id": "P2P-024",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      },
+      "tests": [
+        {
+          "file": "tests/server/p2p-probes.test.js",
+          "name": "P2P-024 rewrites webhook paths and converts GET hooks to POST",
+          "status": "PASS"
+        },
+        {
+          "file": "tests/server/webhook-middleware.test.js",
+          "name": "maps hook query params into forwarded JSON body",
+          "status": "PASS"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 24,
+    "passed": 24,
+    "failed": 0
+  }
+}

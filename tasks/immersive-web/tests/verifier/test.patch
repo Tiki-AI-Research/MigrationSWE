@@ -1,0 +1,226 @@
+diff --git a/test/hidden-migration.test.js b/test/hidden-migration.test.js
+new file mode 100644
+index 0000000..f686753
+--- /dev/null
++++ b/test/hidden-migration.test.js
+@@ -0,0 +1,107 @@
++import { describe, it, expect } from 'vitest';
++import fs from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { JSDOM } from 'jsdom';
++import { createRequire } from 'node:module';
++
++const __dirname = path.dirname(fileURLToPath(import.meta.url));
++const rootDir = path.resolve(__dirname, '..');
++const normalPath = path.resolve(rootDir, 'build/webvr-polyfill.js');
++const minPath = path.resolve(rootDir, 'build/webvr-polyfill.min.js');
++const licensePath = path.resolve(rootDir, 'build/licenses.txt');
++const require = createRequire(import.meta.url);
++
++describe('Hidden Migration Target Verification (F2P)', () => {
++  it('produces both UMD artifacts with license banner and build/licenses.txt asset', () => {
++    // Both build/webvr-polyfill.js and build/webvr-polyfill.min.js must exist
++    expect(fs.existsSync(normalPath)).toBe(true);
++    expect(fs.existsSync(minPath)).toBe(true);
++    expect(fs.existsSync(licensePath)).toBe(true);
++
++    const normalContent = fs.readFileSync(normalPath, 'utf8');
++    const minContent = fs.readFileSync(minPath, 'utf8');
++
++    // License comment or copyright preserved in both artifacts
++    expect(normalContent).toContain('Apache License');
++    expect(minContent).toContain('Apache License');
++  });
++
++  it('UMD build artifacts do not contain unresolved require calls in browser global mode', () => {
++    const normalContent = fs.readFileSync(normalPath, 'utf8');
++    const minContent = fs.readFileSync(minPath, 'utf8');
++
++    // When loaded in a browser-like DOM without Node require, evaluating must succeed
++    const dom = new JSDOM('', { runScripts: 'dangerously' });
++    expect(() => {
++      dom.window.eval(normalContent);
++    }).not.toThrow();
++    expect(typeof dom.window.WebVRPolyfill).toBe('function');
++
++    const domMin = new JSDOM('', { runScripts: 'dangerously' });
++    expect(() => {
++      domMin.window.eval(minContent);
++    }).not.toThrow();
++    expect(typeof domMin.window.WebVRPolyfill).toBe('function');
++  });
++
++  it('UMD and minified UMD expose identical public constructors, methods and version', () => {
++    const domNormal = new JSDOM('', { runScripts: 'dangerously' });
++    domNormal.window.eval(fs.readFileSync(normalPath, 'utf8'));
++    const NormalPolyfill = domNormal.window.WebVRPolyfill;
++
++    const domMin = new JSDOM('', { runScripts: 'dangerously' });
++    domMin.window.eval(fs.readFileSync(minPath, 'utf8'));
++    const MinPolyfill = domMin.window.WebVRPolyfill;
++
++    expect(NormalPolyfill.version).toBe(MinPolyfill.version);
++    expect(typeof NormalPolyfill.VRDisplay).toBe('function');
++    expect(typeof MinPolyfill.VRDisplay).toBe('function');
++    expect(typeof NormalPolyfill.VRFrameData).toBe('function');
++    expect(typeof MinPolyfill.VRFrameData).toBe('function');
++
++    const normalInst = new NormalPolyfill();
++    const minInst = new MinPolyfill();
++    expect(typeof normalInst.getVRDisplays).toBe('function');
++    expect(typeof minInst.getVRDisplays).toBe('function');
++    expect(typeof normalInst.enable).toBe('function');
++    expect(typeof minInst.enable).toBe('function');
++  });
++
++  it('CommonJS load of built artifact in Node with window mock initializes polyfill correctly', () => {
++    const dom = new JSDOM('');
++    global.window = dom.window;
++    global.document = dom.window.document;
++    global.navigator = dom.window.navigator;
++
++    delete require.cache[require.resolve(normalPath)];
++    const Polyfill = require(normalPath);
++
++    expect(typeof Polyfill).toBe('function');
++    expect(Polyfill.version).toBeDefined();
++    const inst = new Polyfill();
++    expect(typeof inst.getVRDisplays).toBe('function');
++  });
++
++  it('package scripts and build scripts properly bind vite, vitest and build-vite.mjs', () => {
++    const pkgPath = path.resolve(rootDir, 'package.json');
++    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
++
++    expect(pkg.scripts.build).toContain('scripts/build-vite.mjs');
++    expect(pkg.scripts['build-min']).toContain('scripts/build-vite.mjs');
++    expect(pkg.scripts.test).toContain('vitest');
++
++    // Check build-vite script exists
++    const buildScriptPath = path.resolve(rootDir, 'scripts/build-vite.mjs');
++    expect(fs.existsSync(buildScriptPath)).toBe(true);
++
++    // Check vite and vitest config exist
++    expect(fs.existsSync(path.resolve(rootDir, 'vite.config.mjs'))).toBe(true);
++    expect(fs.existsSync(path.resolve(rootDir, 'vitest.config.mjs'))).toBe(true);
++
++    // Check legacy configs are deleted
++    expect(fs.existsSync(path.resolve(rootDir, '.babelrc'))).toBe(false);
++    expect(fs.existsSync(path.resolve(rootDir, 'rollup.config.js'))).toBe(false);
++    expect(fs.existsSync(path.resolve(rootDir, 'rollup.config.min.js'))).toBe(false);
++  });
++});
+diff --git a/test/smoke.test.js b/test/smoke.test.js
+new file mode 100644
+index 0000000..347091c
+--- /dev/null
++++ b/test/smoke.test.js
+@@ -0,0 +1,107 @@
++import { describe, it, expect } from 'vitest';
++import fs from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { JSDOM } from 'jsdom';
++import { createRequire } from 'node:module';
++
++const __dirname = path.dirname(fileURLToPath(import.meta.url));
++const rootDir = path.resolve(__dirname, '..');
++const normalPath = path.resolve(rootDir, 'build/webvr-polyfill.js');
++const minPath = path.resolve(rootDir, 'build/webvr-polyfill.min.js');
++
++const require = createRequire(import.meta.url);
++
++describe('Build artifacts smoke tests', () => {
++  it('loads normal UMD artifact via CommonJS with window only', () => {
++    if (!fs.existsSync(normalPath) || !fs.existsSync(minPath)) {
++      const { execSync } = require('node:child_process');
++      execSync('node scripts/build-vite.mjs', { cwd: rootDir });
++    }
++
++    const dom = new JSDOM('');
++    global.window = dom.window;
++    delete global.document;
++    delete global.navigator;
++
++    delete require.cache[require.resolve(normalPath)];
++    const Polyfill = require(normalPath);
++
++    expect(typeof Polyfill).toBe('function');
++    expect(typeof Polyfill.VRDisplay).toBe('function');
++    expect(typeof Polyfill.VRFrameData).toBe('function');
++    expect(Polyfill.version).toBe('0.10.12');
++
++    const polyfill = new Polyfill();
++    expect(typeof polyfill.getVRDisplays).toBe('function');
++  });
++
++  it('loads minified UMD artifact via CommonJS with window only', () => {
++    if (!fs.existsSync(normalPath) || !fs.existsSync(minPath)) {
++      const { execSync } = require('node:child_process');
++      execSync('node scripts/build-vite.mjs', { cwd: rootDir });
++    }
++
++    const dom = new JSDOM('');
++    global.window = dom.window;
++    delete global.document;
++    delete global.navigator;
++
++    delete require.cache[require.resolve(minPath)];
++    const PolyfillMin = require(minPath);
++
++    expect(typeof PolyfillMin).toBe('function');
++    expect(typeof PolyfillMin.VRDisplay).toBe('function');
++    expect(typeof PolyfillMin.VRFrameData).toBe('function');
++    expect(PolyfillMin.version).toBe('0.10.12');
++
++    const polyfill = new PolyfillMin();
++    expect(typeof polyfill.getVRDisplays).toBe('function');
++  });
++
++  it('loads normal UMD artifact in browser-like global environment', () => {
++    if (!fs.existsSync(normalPath) || !fs.existsSync(minPath)) {
++      const { execSync } = require('node:child_process');
++      execSync('node scripts/build-vite.mjs', { cwd: rootDir });
++    }
++
++    const dom = new JSDOM('', { runScripts: 'dangerously' });
++    const code = fs.readFileSync(normalPath, 'utf8');
++    dom.window.eval(code);
++
++    const WebVRPolyfill = dom.window.WebVRPolyfill;
++    expect(typeof WebVRPolyfill).toBe('function');
++    expect(typeof WebVRPolyfill.VRDisplay).toBe('function');
++    expect(typeof WebVRPolyfill.VRFrameData).toBe('function');
++    expect(WebVRPolyfill.version).toBe('0.10.12');
++
++    const polyfill = new WebVRPolyfill();
++    expect(typeof polyfill.getVRDisplays).toBe('function');
++    expect(typeof dom.window.navigator.getVRDisplays).toBe('function');
++    expect(typeof dom.window.VRDisplay).toBe('function');
++    expect(typeof dom.window.VRFrameData).toBe('function');
++  });
++
++  it('loads minified UMD artifact in browser-like global environment', () => {
++    if (!fs.existsSync(normalPath) || !fs.existsSync(minPath)) {
++      const { execSync } = require('node:child_process');
++      execSync('node scripts/build-vite.mjs', { cwd: rootDir });
++    }
++
++    const dom = new JSDOM('', { runScripts: 'dangerously' });
++    const code = fs.readFileSync(minPath, 'utf8');
++    dom.window.eval(code);
++
++    const WebVRPolyfill = dom.window.WebVRPolyfill;
++    expect(typeof WebVRPolyfill).toBe('function');
++    expect(typeof WebVRPolyfill.VRDisplay).toBe('function');
++    expect(typeof WebVRPolyfill.VRFrameData).toBe('function');
++    expect(WebVRPolyfill.version).toBe('0.10.12');
++
++    const polyfill = new WebVRPolyfill();
++    expect(typeof polyfill.getVRDisplays).toBe('function');
++    expect(typeof dom.window.navigator.getVRDisplays).toBe('function');
++    expect(typeof dom.window.VRDisplay).toBe('function');
++    expect(typeof dom.window.VRFrameData).toBe('function');
++  });
++});

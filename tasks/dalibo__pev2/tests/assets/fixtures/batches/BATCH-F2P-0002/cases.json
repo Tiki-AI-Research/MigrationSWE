@@ -1,0 +1,216 @@
+{
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "description": "Concrete inputs and expected target postconditions for each observation owned by BATCH-F2P-0002. Target technology: Rust 1.83.0 (pev2-core). Source technology: TypeScript 5.9.3.",
+  "cases": [
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": ["R055"],
+      "surface": "pev2_core::create_plan nodeId assignment and ctes collection",
+      "input": "JSON whose root Aggregate has a descendant Seq Scan with an Output array under a CTE/InitPlan",
+      "expected": {
+        "isVerbose": true,
+        "ctes_len": 1,
+        "root_nodeid": 1,
+        "root_plans_with_output": false
+      }
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": ["R051"],
+      "surface": "pev2_core::get_plan_content missing-Plan error",
+      "input": "{\"foo\": 1}",
+      "expected": { "error": "Invalid plan" }
+    },
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": ["R055"],
+      "surface": "pev2_core::create_plan isVerbose",
+      "input": "JSON whose root Aggregate has a descendant Seq Scan with Output under a CTE/InitPlan",
+      "expected": { "isVerbose": true, "descendants_searched": true }
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": ["R050"],
+      "surface": "pev2_core::create_plan maxIo",
+      "input": "root I/O Timings: read=2 write=4; child I/O Timings: read=1 write=2",
+      "expected": { "maxIo": 3.0 }
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": ["R048"],
+      "surface": "pev2_core::from_text fractional rows marker",
+      "input": "a node line with rows=0.25",
+      "expected": { "Actual Rows": 0.25, "*Actual Rows Is Fractional": true }
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": ["R041"],
+      "surface": "pev2_core::cleanup_source",
+      "input": "│  Seq Scan on t  │\\nQUERY PLAN\\n(1 row)\\n",
+      "expected": { "result": "  Seq Scan on t  \\n\\n" }
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": ["R055"],
+      "surface": "pev2_core::create_plan isVerbose",
+      "input": "JSON whose root Aggregate has a descendant Seq Scan with Output under a CTE/InitPlan",
+      "expected": { "isVerbose": true }
+    },
+    {
+      "observation_id": "F2P-032",
+      "requirement_ids": ["R043"],
+      "surface": "pev2_core::from_json",
+      "input": "pgAdmin doubled-quote payload \"[\\n {\\n \\\"\\\"Plan\\\"\\\": { \\\"\\\"Node Type\\\"\\\": \\\"\\\"Seq Scan\\\"\\\" }\\n }\\n]\"",
+      "expected": { "Plan.Node Type": "Seq Scan" }
+    },
+    {
+      "observation_id": "F2P-033",
+      "requirement_ids": ["R049"],
+      "surface": "pev2_core::create_plan maxEstimateFactor",
+      "input": "Seq Scan on foo (cost=0.00..1.00 rows=10 width=4) (actual time=0.1..0.2 rows=100 loops=1)",
+      "expected": { "maxEstimateFactor_analyzed": 20.0, "maxEstimateFactor_plain": 1.0 }
+    },
+    {
+      "observation_id": "F2P-034",
+      "requirement_ids": ["R048"],
+      "surface": "pev2_core::from_text fractional rows marker",
+      "input": "a node line with rows=0.25",
+      "expected": { "Actual Rows": 0.25, "*Actual Rows Is Fractional": true }
+    },
+    {
+      "observation_id": "F2P-035",
+      "requirement_ids": ["R047"],
+      "surface": "pev2_core::from_text never-executed handling",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": {
+        "Actual Loops": 0,
+        "Actual Rows": 0,
+        "Actual Total Time": 0,
+        "Actual Startup Time": 0
+      }
+    },
+    {
+      "observation_id": "F2P-036",
+      "requirement_ids": ["R051"],
+      "surface": "pev2_core::get_plan_content missing-Plan error",
+      "input": "{\"foo\": 1}",
+      "expected": { "error": "Invalid plan" }
+    },
+    {
+      "observation_id": "F2P-037",
+      "requirement_ids": ["R055"],
+      "surface": "pev2_core::from_source routing plus helpers",
+      "input": "pure JSON document, plain EXPLAIN text and a Filter line",
+      "expected": {
+        "json_routed_directly": true,
+        "text_routed_to_from_text": true,
+        "split_into_lines_nonempty": true,
+        "should_show_prop_filter_true": true
+      }
+    },
+    {
+      "observation_id": "F2P-038",
+      "requirement_ids": ["R041"],
+      "surface": "pev2_core::cleanup_source",
+      "input": "│  Seq Scan on t  │\\nQUERY PLAN\\n(1 row)\\n",
+      "expected": { "result": "  Seq Scan on t  \\n\\n" }
+    },
+    {
+      "observation_id": "F2P-039",
+      "requirement_ids": ["R047"],
+      "surface": "pev2_core::from_text never-executed handling",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": {
+        "Actual Loops": 0,
+        "Actual Rows": 0,
+        "Actual Total Time": 0,
+        "Actual Startup Time": 0
+      }
+    },
+    {
+      "observation_id": "F2P-040",
+      "requirement_ids": ["R054"],
+      "surface": "pev2_core::parse_node_type index scan and crate dependency policy",
+      "input": "Index Scan using idx on t; Cargo manifest and crate sources",
+      "expected": {
+        "Node Type": "Index Scan",
+        "Index Name": "idx",
+        "Relation Name": "t",
+        "Scan Direction": "Forward",
+        "no_build_rs": true,
+        "no_runtime_delegation_tokens": true,
+        "allowed_dependencies_only": true
+      }
+    },
+    {
+      "observation_id": "F2P-041",
+      "requirement_ids": ["R045"],
+      "surface": "pev2_core::parse_node_type aggregate handling",
+      "input": "HashAggregate",
+      "expected": {
+        "Node Type": "Aggregate",
+        "Partial Mode": "Simple",
+        "Strategy": "Hashed",
+        "Planned Partitions": 0
+      }
+    },
+    {
+      "observation_id": "F2P-042",
+      "requirement_ids": ["R036"],
+      "surface": "pev2_core no Node.js/TypeScript runtime delegation",
+      "input": "Seq Scan on t (cost=0.00..1.00 rows=1 width=4); crate sources",
+      "expected": {
+        "from_source_ok_without_node": true,
+        "no_child_process_tokens": true
+      }
+    },
+    {
+      "observation_id": "F2P-043",
+      "requirement_ids": ["R043"],
+      "surface": "pev2_core::from_json",
+      "input": "pgAdmin doubled-quote payload",
+      "expected": { "Plan.Node Type": "Seq Scan" }
+    },
+    {
+      "observation_id": "F2P-044",
+      "requirement_ids": ["R041"],
+      "surface": "pev2_core::cleanup_source",
+      "input": "│  Seq Scan on t  │\\nQUERY PLAN\\n(1 row)\\n",
+      "expected": { "result": "  Seq Scan on t  \\n\\n" }
+    },
+    {
+      "observation_id": "F2P-045",
+      "requirement_ids": ["R051"],
+      "surface": "pev2_core::from_source invalid input",
+      "input": "not a plan",
+      "expected": { "is_error": true }
+    },
+    {
+      "observation_id": "F2P-046",
+      "requirement_ids": ["R047"],
+      "surface": "pev2_core::from_text never-executed handling",
+      "input": "Hash  (cost=6.12..6.12 rows=212 width=1346) (never executed)",
+      "expected": {
+        "Actual Loops": 0,
+        "Actual Rows": 0,
+        "Actual Total Time": 0,
+        "Actual Startup Time": 0
+      }
+    },
+    {
+      "observation_id": "F2P-047",
+      "requirement_ids": ["R052"],
+      "surface": "pev2_core::split_balanced",
+      "input": "a,(b,c),d split on ,",
+      "expected": { "result": ["a", "(b,c)", "d"] }
+    },
+    {
+      "observation_id": "F2P-048",
+      "requirement_ids": ["R048"],
+      "surface": "pev2_core::from_text fractional rows marker",
+      "input": "a node line with rows=0.25",
+      "expected": { "Actual Rows": 0.25, "*Actual Rows Is Fractional": true }
+    }
+  ]
+}

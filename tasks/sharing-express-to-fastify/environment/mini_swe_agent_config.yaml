@@ -1,0 +1,36 @@
+# Mini-SWE-Agent config for sharing-express-to-fastify evaluation.
+# Model: gemini-3.8-flash via an OpenAI-compatible gateway.
+# Proxies are cleared so the agent only reaches the API endpoint.
+
+model:
+  model_name: "openai/gemini-3.8-flash"
+  model_kwargs:
+    custom_llm_provider: "openai"
+    api_base: "https://api.openai.com/v1"
+    # Reject unsupported parameters instead of silently dropping reasoning.
+    drop_params: false
+    # API key injected at runtime via OPENAI_API_KEY env var.
+
+agent:
+  mode: yolo
+  step_limit: 250
+  system_template: |
+    You are an autonomous coding agent. Solve the requested task by inspecting
+    and editing the repository in the current workspace.
+
+    Every response must call the provided bash tool with one command
+    (or commands connected with && or ||), preceded by a short THOUGHT section.
+    Use the tool to inspect files, make changes, or run validation. When the
+    task is complete, submit by calling the bash tool with exactly this command:
+    echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+    This submission command is required to terminate Mini-SWE-Agent normally.
+    Do not push to a remote repository; Harbor collects the local working-tree diff.
+  instance_template: |
+    Please solve this issue:
+
+    {{task}}
+
+    Work directly in the current workspace. Inspect the existing implementation,
+    make the minimal necessary changes, and run relevant tests before submitting.
+    Do not run git push. Once the tests pass, submit immediately using the bash
+    tool to run echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT.

@@ -1,0 +1,489 @@
+{
+  "schema_version": "migration-test-probes:v1",
+  "batch_id": "BATCH-F2P-0002",
+  "kind": "F2P",
+  "target_technology": {
+    "language_name": "Go",
+    "language_version": "1.25.0",
+    "name": "Kong",
+    "version": "1.8.1"
+  },
+  "source_technology": {
+    "language_name": "Go",
+    "language_version": "1.25.0",
+    "name": "Cobra",
+    "version": "1.10.2"
+  },
+  "technology_predicate": "go.mod requires github.com/alecthomas/kong v1.8.1; the built binary's module metadata (go version -m) lists github.com/alecthomas/kong; none of the in-scope migrated production files import github.com/spf13/cobra. The predicate is checked against those three facts alone: the reference implementation's file names, struct names and call sites are implementation details and are deliberately never asserted (a migration may mount the Kong root in a file of its own choosing).",
+  "observations": [
+    {
+      "observation_id": "F2P-032",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "main.go::out-of-scope Cobra commands and app installers",
+      "projection": "dependency-execution",
+      "predicates": [
+        "scope_policy",
+        "legacy_command_help",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade chart verify --help",
+        "arkade docker gen --help",
+        "arkade fstail --help",
+        "arkade gha bump --help",
+        "arkade oci publish --help",
+        "arkade oci login --help",
+        "arkade system install go --help"
+      ],
+      "expected_target": "scope contains only wiring, dependency metadata, supporting assets and permitted test adaptation; legacy Cobra leaves stay reachable"
+    },
+    {
+      "observation_id": "F2P-037",
+      "requirement_ids": [
+        "R053"
+      ],
+      "surface": "hidden deprecated oci install path flag",
+      "projection": "target-condition",
+      "predicates": [
+        "hidden_oci_path_flag",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade oci install --path=/tmp/x",
+        "arkade oci install --help"
+      ],
+      "expected_target": "deprecated --path parses while hidden and image-name validation still runs"
+    },
+    {
+      "observation_id": "F2P-038",
+      "requirement_ids": [
+        "R060"
+      ],
+      "surface": "oci install and publish aliases declared on Kong nodes",
+      "projection": "target-condition",
+      "predicates": [
+        "oci_install_aliases",
+        "oci_publish_aliases",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade oci i --help",
+        "arkade oci extract --help",
+        "arkade oci push --help",
+        "arkade oci export --help"
+      ],
+      "expected_target": "install aliases and publish aliases resolve on Kong nodes"
+    },
+    {
+      "observation_id": "F2P-040",
+      "requirement_ids": [
+        "R052"
+      ],
+      "surface": "presence-aware release booleans",
+      "projection": "target-condition",
+      "predicates": [
+        "presence_aware_release_bool",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade release v1.2.3 t --dry-run",
+        "arkade release v1.2.3 t --prerelease=false --dry-run"
+      ],
+      "expected_target": "omitted --prerelease defaults true while explicit false is preserved"
+    },
+    {
+      "observation_id": "F2P-041",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "cmd/install.go::tool catalog, app catalog and supported platforms unchanged",
+      "projection": "target-execution-path",
+      "predicates": [
+        "install_print_table",
+        "flag_scope_install_get",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade install --print-table",
+        "arkade install argocd --print-table",
+        "arkade get --print-table"
+      ],
+      "expected_target": "print-table is local to install and does not leak"
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": [
+        "R056"
+      ],
+      "surface": "main.go::dispatch of every accepted command, alias and subcommand",
+      "projection": "target-execution-path",
+      "predicates": [
+        "hidden_release_aliases",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade --help",
+        "arkade release --help",
+        "arkade r --help",
+        "arkade rel --help"
+      ],
+      "expected_target": "release is hidden from root help while aliases remain accepted"
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "cmd/install.go::install flag scope and inheritance",
+      "projection": "target-execution-path",
+      "predicates": [
+        "install_unknown_app_errors",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade install kubectl",
+        "arkade install does-not-exist"
+      ],
+      "expected_target": "historical no-such-app messages are preserved"
+    },
+    {
+      "observation_id": "F2P-035",
+      "requirement_ids": [
+        "R040"
+      ],
+      "surface": "main.go::help availability for root and every command",
+      "projection": "dependency-execution",
+      "predicates": [
+        "help_available",
+        "no_cobra_in_migrated_files",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade --help",
+        "arkade install --help",
+        "arkade get --help",
+        "arkade release --help",
+        "arkade oci --help",
+        "arkade system --help"
+      ],
+      "expected_target": "help works across root and commands and migrated files are Cobra-free"
+    },
+    {
+      "observation_id": "F2P-036",
+      "requirement_ids": [
+        "R057"
+      ],
+      "surface": "main.go::root invocation with no subcommand",
+      "projection": "target-execution-path",
+      "predicates": [
+        "root_no_subcommand",
+        "error_and_success_streams",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade",
+        "arkade not-a-command",
+        "arkade get --nope",
+        "arkade version --json"
+      ],
+      "expected_target": "no-subcommand root help, error propagation to stderr and JSON success on stdout"
+    },
+    {
+      "observation_id": "F2P-039",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "main.go::top-level command and alias acceptance",
+      "projection": "target-execution-path",
+      "predicates": [
+        "top_level_aliases",
+        "install_unknown_app_errors",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade d",
+        "arkade g --help",
+        "arkade i --help",
+        "arkade rel --help",
+        "arkade chart --help",
+        "arkade oci --help"
+      ],
+      "expected_target": "top-level command and alias tokens are accepted"
+    },
+    {
+      "observation_id": "F2P-042",
+      "requirement_ids": [
+        "R051"
+      ],
+      "surface": "cmd/get_test.go::get version syntax, destination and option behavior",
+      "projection": "target-execution-path",
+      "predicates": [
+        "get_flags",
+        "get_flag_scope",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade get --help",
+        "arkade get helm --kubeconfig=/tmp/k"
+      ],
+      "expected_target": "get flags keep names/defaults and install persistent flags do not leak"
+    },
+    {
+      "observation_id": "F2P-043",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "cmd/install.go::install kubeconfig/wait and Kubernetes/Helm effects",
+      "projection": "target-execution-path",
+      "predicates": [
+        "install_print_table",
+        "flag_scope_install_get",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade install --print-table",
+        "arkade install argocd --print-table",
+        "arkade get --print-table"
+      ],
+      "expected_target": "install kubeconfig/wait remain scoped to app invocations"
+    },
+    {
+      "observation_id": "F2P-044",
+      "requirement_ids": [
+        "R058"
+      ],
+      "surface": "cmd/install.go::install guidance, unknown-app errors and known-app dispatch",
+      "projection": "target-execution-path",
+      "predicates": [
+        "install_alias_help",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade install nginx-ingress --help",
+        "arkade install gatekeeper --help",
+        "arkade install binfmt --help",
+        "arkade install sealed-secret --help",
+        "arkade install nfs-client-provisioner --help"
+      ],
+      "expected_target": "app aliases map to canonical catalogue keys"
+    },
+    {
+      "observation_id": "F2P-046",
+      "requirement_ids": [
+        "R051"
+      ],
+      "surface": "cmd/get.go::get flag names, shorthands and defaults",
+      "projection": "target-execution-path",
+      "predicates": [
+        "get_flags",
+        "get_flag_scope",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade get --help",
+        "arkade get helm --kubeconfig=/tmp/k"
+      ],
+      "expected_target": "get flag names, shorthands and defaults are preserved"
+    },
+    {
+      "observation_id": "F2P-047",
+      "requirement_ids": [
+        "R061"
+      ],
+      "surface": "cmd/system/install.go::system/oci/chart/docker/gha/fstail subcommand flags",
+      "projection": "target-execution-path",
+      "predicates": [
+        "system_registry_flags",
+        "legacy_system_go_flags",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade s i registry --help",
+        "arkade system install go --help"
+      ],
+      "expected_target": "system aliases and Kong/legacy children expose their flags"
+    },
+    {
+      "observation_id": "F2P-048",
+      "requirement_ids": [
+        "R058"
+      ],
+      "surface": "cmd/install.go::install print-table output",
+      "projection": "target-execution-path",
+      "predicates": [
+        "install_print_table",
+        "install_alias_help",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade install --print-table",
+        "arkade install nginx-ingress --help",
+        "arkade install gatekeeper --help",
+        "arkade install binfmt --help",
+        "arkade install sealed-secret --help",
+        "arkade install nfs-client-provisioner --help"
+      ],
+      "expected_target": "install table and alias help remain available"
+    },
+    {
+      "observation_id": "F2P-045",
+      "requirement_ids": [
+        "R043"
+      ],
+      "surface": "main.go::runtime entry",
+      "projection": "dependency-execution",
+      "predicates": [
+        "scope_policy",
+        "kong_runtime_entry",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade version",
+        "arkade get --format list"
+      ],
+      "expected_target": "main.go calls cmd.Run which builds the Kong root grammar"
+    },
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "main.go::exit statuses for parse, handler and success paths",
+      "projection": "target-execution-path",
+      "predicates": [
+        "root_no_subcommand",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade",
+        "arkade version",
+        "arkade get --format list"
+      ],
+      "expected_target": "no-subcommand root behavior comes from the hidden Kong default node"
+    },
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "main.go::flag contract across every command and subcommand",
+      "projection": "target-execution-path",
+      "predicates": [
+        "help_available",
+        "get_flags",
+        "install_flags",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade",
+        "arkade get --help",
+        "arkade install --help"
+      ],
+      "expected_target": "flags keep names, shorthands, defaults, persistence and command scope"
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "main.go::no change to download/checksum/archive/Helm/Kubernetes side effects",
+      "projection": "target-execution-path",
+      "predicates": [
+        "get_alias_d",
+        "handler_preservation",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade d"
+      ],
+      "expected_target": "d resolves to get and prints the get catalogue containing kubectl and helm"
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "main.go::existing test behavioral assertions",
+      "projection": "target-execution-path",
+      "predicates": [
+        "legacy_command_help",
+        "no_test_weakening",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade chart verify --help",
+        "arkade docker upgrade --help",
+        "arkade gha bump --help",
+        "arkade oci publish --help",
+        "arkade oci login --help",
+        "arkade fstail --help",
+        "arkade system install go --help"
+      ],
+      "expected_target": "existing legacy command checks remain reachable as Kong leaves"
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "main.go::dispatch of every accepted command, alias and subcommand",
+      "projection": "target-execution-path",
+      "predicates": [
+        "root_no_subcommand",
+        "dispatch_help_matrix",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade",
+        "arkade install --help",
+        "arkade get --help",
+        "arkade release --help",
+        "arkade chart --help",
+        "arkade docker --help",
+        "arkade system --help",
+        "arkade oci --help",
+        "arkade fstail --help"
+      ],
+      "expected_target": "every accepted command and alias dispatches to its handler"
+    },
+    {
+      "observation_id": "F2P-033",
+      "requirement_ids": [
+        "R057"
+      ],
+      "surface": "main.go::exit statuses for parse, handler and success paths",
+      "projection": "target-execution-path",
+      "predicates": [
+        "error_and_success_streams",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade not-a-command",
+        "arkade get --nope",
+        "arkade version --json"
+      ],
+      "expected_target": "Kong parse errors and handler errors propagate with correct streams"
+    },
+    {
+      "observation_id": "F2P-034",
+      "requirement_ids": [
+        "R029"
+      ],
+      "surface": "main.go::dispatch of every accepted command, alias and subcommand",
+      "projection": "target-execution-path",
+      "predicates": [
+        "hidden_release_aliases",
+        "kong_technology"
+      ],
+      "invocations": [
+        "arkade --help",
+        "arkade release --help",
+        "arkade rel --help",
+        "arkade r --help"
+      ],
+      "expected_target": "release is hidden without disabling aliases"
+    }
+  ]
+}

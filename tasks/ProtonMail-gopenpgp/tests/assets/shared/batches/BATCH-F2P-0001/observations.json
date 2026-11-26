@@ -1,0 +1,290 @@
+[
+  {
+    "id": "F2P-001",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R027"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt verifyHandle nil and non-nil behavior",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt verifyHandle nil and non-nil behavior. Behavior: Input: two otherwise identical messages, one passed a non-nil verifyHandle and one passed nil. Expected: the first produces exactly one OnVerified(constants.SIGNATURE_OK) call; the second produces zero OnVerified calls.. Required postcondition: Input: a multipart/alternative message with a text/plain part containing 'plain' and a text/html part containing '<p>html</p>'. Expected: OnBody receives ('<p>html</p>', 'text/html'). go-message exposes no body collector equivalent to go-mime's BodyCollector, so the html-over-plain selection must be reimplemented on the go-message tree; a naive migration that removes go-mime without reimplementing selection cannot build or produces the wrong body.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-002",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt OnEncryptedHeaders value",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt OnEncryptedHeaders value. Behavior: Input: any successfully parsed message. Expected: OnEncryptedHeaders is called exactly once with the empty string and it is the final callback, after OnBody and all OnAttachment calls.. Required postcondition: Input: a base64 application/octet-stream attachment part carrying Content-Type and Content-Transfer-Encoding headers. Expected: the headers string passed to OnAttachment is the raw header block re-serialized from go-message's message.Header through go-message/textproto.WriteHeader (containing lines such as 'Content-Type: application/octet-stream'), not a net/textproto.MIMEHeader map or a go-mime header string; reusing go-mime's header representation fails to compile or emits a different block.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-003",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "surface": "mime/mime.go::exported mime package API",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: exported mime package API. Behavior: Input: consumer code that imports github.com/ProtonMail/gopenpgp/v3/mime. Expected: all previously exported identifiers (Decrypt, MIMECallbacks and its methods) still exist with the same signatures and callback behavior; removing or renaming any of them breaks compilation.. Required postcondition: Input: a decrypted message with a text/plain part declaring charset=iso-8859-1 and containing the single byte 0xE9. Expected: OnBody receives the UTF-8 string containing U+00E9. go-message decodes non-UTF-8 charsets only when the blank import github.com/emersion/go-message/charset sets message.CharsetReader; a naive config-only migration that omits that import leaves the charset unknown and the byte is not transcoded.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-004",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R001"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt function signature",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt function signature. Behavior: Input: consumer code calling Decrypt(message, crypto.Armor, decHandle, nil, callbacks). Expected: it compiles unchanged; Decrypt keeps the exact five-parameter signature with messageEncoding int8 and a verifyHandle parameter that accepts nil.. Required postcondition: Input: a decrypted PGP/MIME message whose body is multipart/mixed with a text/plain part (Content-Transfer-Encoding: quoted-printable, charset=iso-8859-1) plus a base64 attachment. Expected: OnBody receives the UTF-8-decoded text and OnAttachment receives the decoded attachment bytes, so go-message must supply traversal, transfer-encoding/charset decoding, body and attachment collection and multipart/signed extraction; a migration that only swaps the module path while keeping go-mime's VisitAll, BodyCollector or GetRawMimePart call sites does not compile or does not decode.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-005",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R026"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt unreadable-MIME error path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt unreadable-MIME error path. Behavior: Input: a successful decryption whose bytes are not a readable MIME message (no valid header block). Expected: Decrypt calls OnError with an error whose Error() string begins with the literal \"mime: \".. Required postcondition: Input: a multipart/mixed message whose first part declares Content-Transfer-Encoding: x-unknown and is followed by a base64 attachment. Expected: Decrypt still delivers the attachment via OnAttachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownEncoding that the target ignores; a migration that aborts on that error regresses to OnError.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-008",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R025"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt decryption-failure path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt decryption-failure path. Behavior: Input: a decryptionHandle whose Decrypt returns a non-nil error. Expected: Decrypt calls OnError exactly once with that same error and invokes no other callback.. Required postcondition: Input: a multipart/mixed message whose first part declares charset=x-unknown and is followed by a base64 application/octet-stream attachment. Expected: Decrypt still calls OnAttachment for the attachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownCharset that the target swallows; a migration that treats any NextPart error as fatal calls OnError instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-012",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R029"
+    ],
+    "surface": "mime/signature_collector.go::mime.Decrypt OnError signature-error type",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/signature_collector.go; surface: mime.Decrypt OnError signature-error type. Behavior: Input: a message whose signature cannot be verified. Expected: each error passed to OnError satisfies errors.As(err, *crypto.SignatureVerificationError) and its Status equals the matching constant; a plain fmt.Errorf without the typed cause fails this check.. Required postcondition: Input: a multipart/signed message with a valid detached signature. Expected: the signed first part is read as raw transfer-encoded bytes from the low-level go-message textproto multipart reader and the detached signature is read from the second textproto part before decoding, so a valid signature verifies; reading the already-decoded Entity.Body instead changes the verified bytes and fails, because go-message has no GetRawMimePart equivalent that go-mime provided.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-015",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R030"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt OnBody value",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt OnBody value. Behavior: Input: a message whose text/plain body contains the invalid UTF-8 byte 0xFF between ASCII text. Expected: OnBody is called exactly once with the body text in which 0xFF is replaced by U+FFFD and with the part's MIME type string.. Required postcondition: Input: a multipart/mixed message whose first part is text/plain with Content-Disposition: attachment; filename=a.txt, followed by a plain text/plain part. Expected: the dispositioned part is delivered via OnAttachment (raw header block plus decoded bytes) and only the plain part via OnBody. go-message exposes Content-Disposition through Header.ContentDisposition(), so a migration that classifies parts only by media type mis-delivers the first part as body.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-018",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R002"
+    ],
+    "surface": "go.mod and go.sum module requirement graph",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Input: go.mod and go.sum after migration, then `go list -m github.com/emersion/go-message` and `go list -m github.com/ProtonMail/go-mime`. Expected: the first resolves to v0.18.0 and the second fails with no required module, while `go test ./mime` still decodes a quoted-printable ISO-8859-1 part, proving the swap did not regress charset decoding (go-message requires the go-message/charset import that go-mime supplied internally)."
+  },
+  {
+    "id": "F2P-006",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "surface": "mime/mime.go::mime.MIMECallbacks interface method set",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.MIMECallbacks interface method set. Behavior: Input: a concrete type assigned to mime.MIMECallbacks. Expected: it compiles only if it implements exactly OnBody(string,string), OnAttachment(string,[]byte), OnEncryptedHeaders(string), OnVerified(int) and OnError(error); missing or renamed methods fail to satisfy the interface.. Required postcondition: Input: a base64 application/octet-stream attachment part carrying Content-Type and Content-Transfer-Encoding headers. Expected: the headers string passed to OnAttachment is the raw header block re-serialized from go-message's message.Header through go-message/textproto.WriteHeader (containing lines such as 'Content-Type: application/octet-stream'), not a net/textproto.MIMEHeader map or a go-mime header string; reusing go-mime's header representation fails to compile or emits a different block.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-007",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R001"
+    ],
+    "surface": "mime/signature_collector.go::mime.Decrypt OnVerified status values",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/signature_collector.go; surface: mime.Decrypt OnVerified status values. Behavior: Input: messages exercising each signature outcome. Expected: every OnVerified argument is one of constants.SIGNATURE_OK (0), SIGNATURE_NOT_SIGNED (1), SIGNATURE_NO_VERIFIER (2), SIGNATURE_FAILED (3) or SIGNATURE_BAD_CONTEXT (4), and never any other integer.. Required postcondition: Input: a decrypted PGP/MIME message whose body is multipart/mixed with a text/plain part (Content-Transfer-Encoding: quoted-printable, charset=iso-8859-1) plus a base64 attachment. Expected: OnBody receives the UTF-8-decoded text and OnAttachment receives the decoded attachment bytes, so go-message must supply traversal, transfer-encoding/charset decoding, body and attachment collection and multipart/signed extraction; a migration that only swaps the module path while keeping go-mime's VisitAll, BodyCollector or GetRawMimePart call sites does not compile or does not decode.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-011",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R025"
+    ],
+    "surface": "mime/mime.go::working-tree patch",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: working-tree patch. Behavior: Input: the collected patch from /workspace/repo. Expected: the change set is an uncommitted working-tree diff against commit 0cb393362a994a485e76cae41e73531a882c55ad and every created or modified file is present in the working tree, not only in a commit or outside the checkout.. Required postcondition: Input: a multipart/mixed message whose first part declares charset=x-unknown and is followed by a base64 application/octet-stream attachment. Expected: Decrypt still calls OnAttachment for the attachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownCharset that the target swallows; a migration that treats any NextPart error as fatal calls OnError instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-014",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt multipart/signed verification",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt multipart/signed verification. Behavior: Input: a multipart/signed message whose signed first part has trailing spaces, tabs and CR before each line ending and a valid detached signature. Expected: the signed content is trimmed per line, canonicalized to CRLF, and passed to PGPVerify.VerifyDetached(canonicalBody, signature, crypto.Armor) so verification succeeds; verifying the untrimmed or decoded body fails.. Required postcondition: Input: a decrypted message with a text/plain part declaring charset=iso-8859-1 and containing the single byte 0xE9. Expected: OnBody receives the UTF-8 string containing U+00E9. go-message decodes non-UTF-8 charsets only when the blank import github.com/emersion/go-message/charset sets message.CharsetReader; a naive config-only migration that omits that import leaves the charset unknown and the byte is not transcoded.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-020",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt callback invocation order",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt callback invocation order. Behavior: Input: a decryptable, parseable PGP/MIME message with two attachments. Expected: the recorded callback sequence is OnVerified/OnError first, then exactly one OnBody, then two OnAttachment calls in MIME order, then a final OnEncryptedHeaders(\"\").. Required postcondition: Input: a base64 application/octet-stream attachment part carrying Content-Type and Content-Transfer-Encoding headers. Expected: the headers string passed to OnAttachment is the raw header block re-serialized from go-message's message.Header through go-message/textproto.WriteHeader (containing lines such as 'Content-Type: application/octet-stream'), not a net/textproto.MIMEHeader map or a go-mime header string; reusing go-mime's header representation fails to compile or emits a different block.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-022",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R025"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt dual signature-failure path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt dual signature-failure path. Behavior: Input: a message where both the embedded OpenPGP signature and the PGP/MIME signature fail. Expected: OnError is called twice (embedded status first, then PGP/MIME status) and OnVerified is called once with max(embeddedStatus, mimeStatus) under SIGNATURE_FAILED (3) > SIGNATURE_NO_VERIFIER (2) > SIGNATURE_NOT_SIGNED (1) > SIGNATURE_OK (0).. Required postcondition: Input: a multipart/mixed message whose first part declares charset=x-unknown and is followed by a base64 application/octet-stream attachment. Expected: Decrypt still calls OnAttachment for the attachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownCharset that the target swallows; a migration that treats any NextPart error as fatal calls OnError instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-009",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "surface": "mime/mime.go::mime.MIMECallbacks interface method set",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.MIMECallbacks interface method set. Behavior: Input: a concrete type assigned to mime.MIMECallbacks. Expected: it compiles only if it implements exactly OnBody(string,string), OnAttachment(string,[]byte), OnEncryptedHeaders(string), OnVerified(int) and OnError(error); missing or renamed methods fail to satisfy the interface.. Required postcondition: Input: a decrypted message with a text/plain part declaring charset=iso-8859-1 and containing the single byte 0xE9. Expected: OnBody receives the UTF-8 string containing U+00E9. go-message decodes non-UTF-8 charsets only when the blank import github.com/emersion/go-message/charset sets message.CharsetReader; a naive config-only migration that omits that import leaves the charset unknown and the byte is not transcoded.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-010",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R026"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt decryption-failure path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt decryption-failure path. Behavior: Input: a decryptionHandle whose Decrypt returns a non-nil error. Expected: Decrypt calls OnError exactly once with that same error and invokes no other callback.. Required postcondition: Input: a multipart/mixed message whose first part declares Content-Transfer-Encoding: x-unknown and is followed by a base64 attachment. Expected: Decrypt still delivers the attachment via OnAttachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownEncoding that the target ignores; a migration that aborts on that error regresses to OnError.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-013",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R001"
+    ],
+    "surface": "mime/mime.go::exported mime package API",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: exported mime package API. Behavior: Input: consumer code that imports github.com/ProtonMail/gopenpgp/v3/mime. Expected: all previously exported identifiers (Decrypt, MIMECallbacks and its methods) still exist with the same signatures and callback behavior; removing or renaming any of them breaks compilation.. Required postcondition: Input: a decrypted PGP/MIME message whose body is multipart/mixed with a text/plain part (Content-Transfer-Encoding: quoted-printable, charset=iso-8859-1) plus a base64 attachment. Expected: OnBody receives the UTF-8-decoded text and OnAttachment receives the decoded attachment bytes, so go-message must supply traversal, transfer-encoding/charset decoding, body and attachment collection and multipart/signed extraction; a migration that only swaps the module path while keeping go-mime's VisitAll, BodyCollector or GetRawMimePart call sites does not compile or does not decode.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-016",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt function signature",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt function signature. Behavior: Input: consumer code calling Decrypt(message, crypto.Armor, decHandle, nil, callbacks). Expected: it compiles unchanged; Decrypt keeps the exact five-parameter signature with messageEncoding int8 and a verifyHandle parameter that accepts nil.. Required postcondition: Input: a base64 application/octet-stream attachment part carrying Content-Type and Content-Transfer-Encoding headers. Expected: the headers string passed to OnAttachment is the raw header block re-serialized from go-message's message.Header through go-message/textproto.WriteHeader (containing lines such as 'Content-Type: application/octet-stream'), not a net/textproto.MIMEHeader map or a go-mime header string; reusing go-mime's header representation fails to compile or emits a different block.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-017",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R026"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt multipart/signed verification",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt multipart/signed verification. Behavior: Input: a multipart/signed message whose signed first part has trailing spaces, tabs and CR before each line ending and a valid detached signature. Expected: the signed content is trimmed per line, canonicalized to CRLF, and passed to PGPVerify.VerifyDetached(canonicalBody, signature, crypto.Armor) so verification succeeds; verifying the untrimmed or decoded body fails.. Required postcondition: Input: a multipart/mixed message whose first part declares Content-Transfer-Encoding: x-unknown and is followed by a base64 attachment. Expected: Decrypt still delivers the attachment via OnAttachment with no OnError, because go-message's NextPart returns an error verifying IsUnknownEncoding that the target ignores; a migration that aborts on that error regresses to OnError.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-019",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R030"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt verifyHandle nil and non-nil behavior",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt verifyHandle nil and non-nil behavior. Behavior: Input: two otherwise identical messages, one passed a non-nil verifyHandle and one passed nil. Expected: the first produces exactly one OnVerified(constants.SIGNATURE_OK) call; the second produces zero OnVerified calls.. Required postcondition: Input: a multipart/mixed message whose first part is text/plain with Content-Disposition: attachment; filename=a.txt, followed by a plain text/plain part. Expected: the dispositioned part is delivered via OnAttachment (raw header block plus decoded bytes) and only the plain part via OnBody. go-message exposes Content-Disposition through Header.ContentDisposition(), so a migration that classifies parts only by media type mis-delivers the first part as body.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-021",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R028"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt unreadable-MIME error path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt unreadable-MIME error path. Behavior: Input: a successful decryption whose bytes are not a readable MIME message (no valid header block). Expected: Decrypt calls OnError with an error whose Error() string begins with the literal \"mime: \".. Required postcondition: Input: a base64 application/octet-stream attachment part carrying Content-Type and Content-Transfer-Encoding headers. Expected: the headers string passed to OnAttachment is the raw header block re-serialized from go-message's message.Header through go-message/textproto.WriteHeader (containing lines such as 'Content-Type: application/octet-stream'), not a net/textproto.MIMEHeader map or a go-mime header string; reusing go-mime's header representation fails to compile or emits a different block.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-023",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R027"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt callback invocation order",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt callback invocation order. Behavior: Input: a decryptable, parseable PGP/MIME message with two attachments. Expected: the recorded callback sequence is OnVerified/OnError first, then exactly one OnBody, then two OnAttachment calls in MIME order, then a final OnEncryptedHeaders(\"\").. Required postcondition: Input: a multipart/alternative message with a text/plain part containing 'plain' and a text/html part containing '<p>html</p>'. Expected: OnBody receives ('<p>html</p>', 'text/html'). go-message exposes no body collector equivalent to go-mime's BodyCollector, so the html-over-plain selection must be reimplemented on the go-message tree; a naive migration that removes go-mime without reimplementing selection cannot build or produces the wrong body.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  },
+  {
+    "id": "F2P-024",
+    "kind": "F2P",
+    "family": "target-runtime",
+    "contract_requirement_ids": [
+      "R024"
+    ],
+    "surface": "mime/mime.go::mime.Decrypt decryption-failure path",
+    "source_expectation": "FAIL",
+    "target_expectation": "PASS",
+    "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: mime/mime.go; surface: mime.Decrypt decryption-failure path. Behavior: Input: a decryptionHandle whose Decrypt returns a non-nil error. Expected: Decrypt calls OnError exactly once with that same error and invokes no other callback.. Required postcondition: Input: a decrypted message with a text/plain part declaring charset=iso-8859-1 and containing the single byte 0xE9. Expected: OnBody receives the UTF-8 string containing U+00E9. go-message decodes non-UTF-8 charsets only when the blank import github.com/emersion/go-message/charset sets message.CharsetReader; a naive config-only migration that omits that import leaves the charset unknown and the byte is not transcoded.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not."
+  }
+]

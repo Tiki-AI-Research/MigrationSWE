@@ -1,0 +1,42 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "migration": {
+    "source": { "language_name": "Rust", "language_version": "2024" },
+    "target": { "language_name": "Go", "language_version": "1.25.0" }
+  },
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "target_probe_file": "target/batches/BATCH-F2P-0001/f2p_probes_test.go",
+  "source_expectation_file": "source/batches/BATCH-F2P-0001/source_expectations.json",
+  "fixtures": [
+    "fixtures/batches/BATCH-F2P-0001/config.toml",
+    "fixtures/batches/BATCH-F2P-0001/skins.json",
+    "fixtures/batches/BATCH-F2P-0001/sample.pgn"
+  ],
+  "observations": [
+    { "id": "F2P-001", "requirement_id": "R042", "probe": "TestF2P_001_BotDifficultyPresets", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-002", "requirement_id": "R050", "probe": "TestF2P_002_PgnDirectoryAndExitCodes", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-003", "requirement_id": "R043", "probe": "TestF2P_003_PgnLoadErrorsAndSplit", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-004", "requirement_id": "R053", "probe": "TestF2P_004_EventStreamParsing", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-005", "requirement_id": "R049", "probe": "TestF2P_005_SkinRoundTripAndUpdate", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-006", "requirement_id": "R047", "probe": "TestF2P_006_GetGameInfo", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-007", "requirement_id": "R039", "probe": "TestF2P_007_ConfigPersistShape", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-009", "requirement_id": "R048", "probe": "TestF2P_009_BoardStreamEmission", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-016", "requirement_id": "R044", "probe": "TestF2P_016_TcpNonBlocking", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-017", "requirement_id": "R002", "probe": "TestF2P_017_RunPgnNoTerminal", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-018", "requirement_id": "R040", "probe": "TestF2P_018_CliDepthBounds", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-019", "requirement_id": "R031", "probe": "TestF2P_019_DependencyPolicy", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-020", "requirement_id": "R045", "probe": "TestF2P_020_TcpJoinCapacityRelay", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-023", "requirement_id": "R051", "probe": "TestF2P_023_GoModManifest", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-010", "requirement_id": "R047", "probe": "TestF2P_010_MakeMoveResignErrors", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-011", "requirement_id": "R043", "probe": "TestF2P_011_PgnNavigation", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-012", "requirement_id": "R049", "probe": "TestF2P_012_ConfigTomlAndSkins", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-013", "requirement_id": "R047", "probe": "TestF2P_013_SeekFlowErrorMapping", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-014", "requirement_id": "R042", "probe": "TestF2P_014_UciHandshakeAndSpawn", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-015", "requirement_id": "R047", "probe": "TestF2P_015_JoinAccept", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-021", "requirement_id": "R053", "probe": "TestF2P_021_BoardStreamStatusMapping", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-022", "requirement_id": "R002", "probe": "TestF2P_022_GoModuleSurface", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-024", "requirement_id": "R049", "probe": "TestF2P_024_ExternalFormats", "source_expectation": "FAIL", "target_expectation": "PASS" },
+    { "id": "F2P-008", "requirement_id": "R043", "probe": "TestF2P_008_PgnSuffixAndStopOnIllegal", "source_expectation": "FAIL", "target_expectation": "PASS" }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "migration-p2p-fixtures:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "steps": [
+    { "id": "first", "label": "Step 1" },
+    { "id": "second", "label": "Step 2" },
+    { "id": "third", "label": "Step 3" }
+  ],
+  "schema_steps": [
+    { "id": "name", "schema": "StringSchema" },
+    { "id": "done" }
+  ],
+  "current_index": 1,
+  "accept_value": "Ada",
+  "reject_value": "",
+  "probe": {
+    "path": "shared/batches/BATCH-P2P-0002/p2p_probe.py",
+    "observations": ["P2P-026", "P2P-029", "P2P-036", "P2P-037"]
+  },
+  "behavior_tests": {
+    "source": "packages/core/src/tests/utils.test.ts",
+    "target": "crates/stepperize-core/tests/utils.rs"
+  },
+  "cases": [
+    { "observation_id": "P2P-025", "operation": "getStepStatus", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-026", "operation": "exports", "surface": "@stepperize/react#./primitives", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-027", "operation": "parseStep", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-028", "operation": "getInitialStepIndex", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-029", "operation": "docs.registry.blocks", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-030", "operation": "StepMap.get", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-031", "operation": "all-migrated-operations", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-032", "operation": "StepMap.first/last", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-033", "operation": "matchStep", "input_class": "invalid", "scenario": "error" },
+    { "observation_id": "P2P-034", "operation": "validateStep", "input_class": "invalid", "scenario": "error" },
+    { "observation_id": "P2P-035", "operation": "validateStep", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-036", "operation": "exports", "surface": "@stepperize/react#.", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-037", "operation": "protected-public-artifacts", "input_class": "valid", "scenario": "normal" },
+    { "observation_id": "P2P-038", "operation": "StepMap.indexOf", "input_class": "valid", "scenario": "normal" }
+  ]
+}

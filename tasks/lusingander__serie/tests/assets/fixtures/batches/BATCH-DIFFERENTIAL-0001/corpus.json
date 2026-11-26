@@ -1,0 +1,763 @@
+{
+  "schema_version": "serie-differential-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "source_baseline": {
+    "repository_url": "https://github.com/lusingander/serie",
+    "base_commit_hash": "605702602d2de9275d6df2d1162248d4d503b72e",
+    "language": "Rust 2021"
+  },
+  "normalization": {
+    "helper": "shared/batches/BATCH-DIFFERENTIAL-0001/normalize.py",
+    "drop_fields": [
+      "committer_date_unix",
+      "duration_ms",
+      "absolute_path"
+    ],
+    "sort_refs": "kind,name,target,message",
+    "sort_edges": "associated_line_pos_x,pos_x,edge_type",
+    "edge_type_order": [
+      "vertical",
+      "horizontal",
+      "up",
+      "down",
+      "left",
+      "right",
+      "right_top",
+      "right_bottom",
+      "left_top",
+      "left_bottom"
+    ],
+    "date_format": "RFC3339 with original fixed offset"
+  },
+  "cases": [
+    {
+      "id": "DIFF-CASE-OUT-OF-SCOPE",
+      "observations": [
+        "DIFF-001",
+        "DIFF-027"
+      ],
+      "kind": "diff",
+      "description": "Rust TUI, image, color/keybind, clipboard, and external-command modules are unchanged relative to the baseline.",
+      "compare": "normalized-diff",
+      "protected_paths": [
+        "src/app.rs",
+        "src/view/**",
+        "src/widget/**",
+        "src/protocol.rs",
+        "src/graph/image.rs",
+        "src/graph/geometry.rs",
+        "src/color.rs",
+        "src/keybind.rs",
+        "src/config.rs",
+        "src/external.rs",
+        "src/main.rs"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "target/batches/BATCH-DIFFERENTIAL-0001/core/diffbatch0001_test.go"
+    },
+    {
+      "id": "DIFF-CASE-COMMIT-RECORD",
+      "observations": [
+        "DIFF-002",
+        "DIFF-003",
+        "DIFF-014"
+      ],
+      "kind": "load",
+      "description": "Commit records expose ten fields, preserve fixed-offset RFC3339 dates, split parents on spaces, and expose full and seven-character short hashes.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "initial subject",
+          "date": "2024-02-03T04:05:06-05:00"
+        }
+      ],
+      "load": {
+        "order": "chronological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "commit_hash is a 40-character hash and short hash is its first seven characters",
+        "author_name/author_email/committer_name/committer_email/subject/body are populated",
+        "author_date and committer_date format as 2024-02-03T04:05:06-05:00",
+        "parent_commit_hashes is empty for a root commit and split on spaces otherwise"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001CommitRecordAndHash"
+    },
+    {
+      "id": "DIFF-CASE-REFS-HEAD",
+      "observations": [
+        "DIFF-004",
+        "DIFF-011",
+        "DIFF-013",
+        "DIFF-017",
+        "DIFF-018"
+      ],
+      "kind": "load",
+      "description": "Refs distinguish tags, branches, remote branches, and stashes; stash refs carry messages; HEAD distinguishes branch, detached, and none; validation errors are stable.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "base",
+          "date": "2024-01-01T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "tag",
+            "zlite"
+          ]
+        },
+        {
+          "op": "git",
+          "args": [
+            "tag",
+            "-a",
+            "aannot",
+            "-m",
+            "annotated"
+          ]
+        },
+        {
+          "op": "git",
+          "args": [
+            "branch",
+            "bbranch"
+          ]
+        },
+        {
+          "op": "git",
+          "args": [
+            "update-ref",
+            "refs/remotes/origin/mmote",
+            "HEAD"
+          ]
+        },
+        {
+          "op": "write",
+          "path": "work.txt",
+          "content": "dirty\n"
+        },
+        {
+          "op": "git",
+          "args": [
+            "stash",
+            "push",
+            "--include-untracked",
+            "-m",
+            "stash message"
+          ]
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "--detach"
+          ]
+        }
+      ],
+      "load": {
+        "order": "chronological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "variants": [
+        "bare repository accepted",
+        "non-repository rejected with not a git repository (or any of the parent directories)",
+        "empty repository rejected with no commits in the repository"
+      ],
+      "assertions": [
+        "all_refs orders tag, branch, remote branch, stash",
+        "stash ref message contains the stash list message",
+        "HEAD kind is branch, detached, or none without collapsing states"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001RefsStashHead"
+    },
+    {
+      "id": "DIFF-CASE-QUERY-API",
+      "observations": [
+        "DIFF-005"
+      ],
+      "kind": "load",
+      "description": "Read-only queries commit, all_commits, parents_hash, children_hash, refs, all_refs, head, and commit_detail return the same data as the Rust core.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "one",
+          "date": "2024-01-01T01:00:00+00:00"
+        },
+        {
+          "op": "commit",
+          "message": "two",
+          "date": "2024-01-02T01:00:00+00:00"
+        }
+      ],
+      "load": {
+        "order": "chronological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "each query returns the source-corpus value after normalization"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001CommitRecordAndHash"
+    },
+    {
+      "id": "DIFF-CASE-LOADER-PARAMS",
+      "observations": [
+        "DIFF-006",
+        "DIFF-023"
+      ],
+      "kind": "load",
+      "description": "Loader accepts path, chronological/topological order, optional max-count, and mailmap; repeated results are deterministic.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c1",
+          "date": "2024-01-01T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "-b",
+            "side"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c2",
+          "date": "2024-01-02T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c3",
+          "date": "2024-01-03T01:00:00+00:00"
+        },
+        {
+          "op": "merge",
+          "branches": [
+            "side"
+          ],
+          "date": "2024-01-04T01:00:00+00:00"
+        }
+      ],
+      "load_matrix": [
+        {
+          "order": "chronological",
+          "max_count": null,
+          "mailmap": false
+        },
+        {
+          "order": "topological",
+          "max_count": null,
+          "mailmap": false
+        },
+        {
+          "order": "chronological",
+          "max_count": 2,
+          "mailmap": false
+        },
+        {
+          "order": "chronological",
+          "max_count": null,
+          "mailmap": true
+        }
+      ],
+      "assertions": [
+        "chronological commits equal git log --date-order",
+        "topological commits equal git log --topo-order",
+        "max_count truncates the loaded commit set",
+        "twenty repeated loads and graph calculations are identical"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001LoaderOrderMailmapDeterminism"
+    },
+    {
+      "id": "DIFF-CASE-COMMIT-DETAIL",
+      "observations": [
+        "DIFF-007"
+      ],
+      "kind": "load",
+      "description": "Root commits report ls-tree additions; non-root diffs report add/modify/delete/rename and ignore unknown statuses.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "write",
+          "path": "a.txt",
+          "content": "one\n"
+        },
+        {
+          "op": "git",
+          "args": [
+            "add",
+            "-A"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "root",
+          "date": "2024-02-01T01:00:00+00:00"
+        },
+        {
+          "op": "write",
+          "path": "a.txt",
+          "content": "two\n"
+        },
+        {
+          "op": "git",
+          "args": [
+            "add",
+            "-A"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "modify",
+          "date": "2024-02-02T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "mv",
+            "a.txt",
+            "b.txt"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "rename",
+          "date": "2024-02-03T01:00:00+00:00"
+        }
+      ],
+      "load": {
+        "order": "chronological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "root commit yields add a.txt",
+        "second commit yields modify a.txt",
+        "rename commit yields rename from a.txt to b.txt",
+        "unknown T status entries are ignored"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001CommitDetail"
+    },
+    {
+      "id": "DIFF-CASE-GRAPH",
+      "observations": [
+        "DIFF-008",
+        "DIFF-009",
+        "DIFF-010",
+        "DIFF-019",
+        "DIFF-021",
+        "DIFF-022",
+        "DIFF-023"
+      ],
+      "kind": "graph",
+      "description": "Graph calculation returns ordered commits, every commit position, one edge row per commit, and a max lane covering branch, detour, and truncated-parent lanes.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c1",
+          "date": "2024-01-01T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "-b",
+            "one"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c2",
+          "date": "2024-01-02T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c3",
+          "date": "2024-01-03T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "-b",
+            "two"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "c4",
+          "date": "2024-01-04T01:00:00+00:00"
+        },
+        {
+          "op": "git",
+          "args": [
+            "checkout",
+            "master"
+          ]
+        },
+        {
+          "op": "merge",
+          "branches": [
+            "one"
+          ],
+          "date": "2024-01-05T01:00:00+00:00"
+        },
+        {
+          "op": "merge",
+          "branches": [
+            "two"
+          ],
+          "date": "2024-01-06T01:00:00+00:00"
+        }
+      ],
+      "load": {
+        "order": "topological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "pos_y equals row index for every commit",
+        "each edge exposes edge_type, pos_x, and associated_line_pos_x",
+        "each row is sorted by (associated_line_pos_x,pos_x,edge_type) with duplicates removed",
+        "max_pos_x covers all lanes",
+        "with max_count=1 the truncated first-parent row emits a down edge"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001GraphInvariants"
+    },
+    {
+      "id": "DIFF-CASE-GRAPH-SHAPES",
+      "observations": [
+        "DIFF-020"
+      ],
+      "kind": "graph",
+      "description": "Commit, branch, merge, and overlap-detour shapes are reproduced; a merge whose direct lane path overlaps another lane is emitted as a detour.",
+      "fixtures": [
+        "branch_001",
+        "merge_001",
+        "merge_003",
+        "merge_004",
+        "stash_001",
+        "orphan_001",
+        "complex_001"
+      ],
+      "load": {
+        "order": "topological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "normalized edge rows equal the source-corpus rows for each fixture"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001GraphInvariants"
+    },
+    {
+      "id": "DIFF-CASE-CONFIG",
+      "observations": [
+        "DIFF-012"
+      ],
+      "kind": "config",
+      "description": "Existing config.toml layout preserves core.option.order chrono/topo and core.git.mailmap true/false while ignoring UI-only sections.",
+      "config": "[ui]\ntheme = \"dark\"\n\n[core.option]\norder = \"topo\"\n\n[core.git]\nmailmap = true\n",
+      "assertions": [
+        "order parses as topo",
+        "mailmap parses as true",
+        "UI-only sections are ignored",
+        "chrono/false are preserved as well"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001CoreConfigSemantics"
+    },
+    {
+      "id": "DIFF-CASE-MAILMAP",
+      "observations": [
+        "DIFF-015"
+      ],
+      "kind": "load",
+      "description": "Mailmap enabled replaces identities; disabled uses raw identities; absent .mailmap leaves identities unchanged.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "write",
+          "path": ".mailmap",
+          "content": "Mapped Name <mapped@example.com> Diff Author <diff-author@example.com>\n"
+        },
+        {
+          "op": "write",
+          "path": "x.txt",
+          "content": "x\n"
+        },
+        {
+          "op": "git",
+          "args": [
+            "add",
+            "-A"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "mapped",
+          "date": "2024-02-01T01:00:00+00:00"
+        }
+      ],
+      "load_matrix": [
+        {
+          "order": "chronological",
+          "max_count": null,
+          "mailmap": true
+        },
+        {
+          "order": "chronological",
+          "max_count": null,
+          "mailmap": false
+        }
+      ],
+      "assertions": [
+        "mailmap=true yields Mapped Name",
+        "mailmap=false yields Diff Author",
+        "no .mailmap leaves identities unchanged"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001LoaderOrderMailmapDeterminism"
+    },
+    {
+      "id": "DIFF-CASE-STASH-INSERTION",
+      "observations": [
+        "DIFF-016"
+      ],
+      "kind": "load",
+      "description": "Each stash is inserted immediately before its first-parent commit; a stash whose first parent is outside the loaded set is omitted from the sequence but remains a stash reference.",
+      "setup": [
+        {
+          "op": "git",
+          "args": [
+            "init",
+            "-b",
+            "master"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "base",
+          "date": "2024-01-01T01:00:00+00:00"
+        },
+        {
+          "op": "write",
+          "path": "stash.txt",
+          "content": "dirty\n"
+        },
+        {
+          "op": "git",
+          "args": [
+            "stash",
+            "push",
+            "--include-untracked",
+            "-m",
+            "stash message"
+          ]
+        },
+        {
+          "op": "commit",
+          "message": "tip",
+          "date": "2024-01-02T01:00:00+00:00"
+        }
+      ],
+      "load": {
+        "order": "chronological",
+        "max_count": null,
+        "mailmap": false
+      },
+      "assertions": [
+        "stash commit appears immediately before its first parent",
+        "stash ref remains exposed",
+        "stash excluded by max_count is omitted from the sequence"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001RefsStashHead"
+    },
+    {
+      "id": "DIFF-CASE-CLI",
+      "observations": [
+        "DIFF-024"
+      ],
+      "kind": "cli",
+      "description": "If a CLI is provided, -n/--max-count and -o/--order keep existing names and values and override config.",
+      "conditional": "cli-present",
+      "commands": [
+        [
+          "serie-core",
+          "-n",
+          "2",
+          "{repo}"
+        ],
+        [
+          "serie-core",
+          "--max-count",
+          "2",
+          "--order",
+          "topo",
+          "{repo}"
+        ]
+      ],
+      "assertions": [
+        "explicit CLI values override config values",
+        "UI-only options remain out of scope"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001CoreConfigSemantics"
+    },
+    {
+      "id": "DIFF-CASE-PUBLIC-CAPABILITIES",
+      "observations": [
+        "DIFF-025"
+      ],
+      "kind": "composite",
+      "description": "Every required public capability and contract remains available.",
+      "requires": [
+        "DIFF-CASE-COMMIT-RECORD",
+        "DIFF-CASE-REFS-HEAD",
+        "DIFF-CASE-QUERY-API",
+        "DIFF-CASE-LOADER-PARAMS",
+        "DIFF-CASE-COMMIT-DETAIL",
+        "DIFF-CASE-GRAPH",
+        "DIFF-CASE-CONFIG"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "TestDiffB0001GraphInvariants"
+    },
+    {
+      "id": "DIFF-CASE-CHANGE-SCOPE",
+      "observations": [
+        "DIFF-026",
+        "DIFF-028"
+      ],
+      "kind": "diff",
+      "description": "The repository diff adds only the Go module, Go core, tests/fixtures, and wiring; schema, config, CLI names, and public fields are untouched.",
+      "compare": "normalized-diff",
+      "allowed_added_paths": [
+        "go.mod",
+        "go.sum",
+        "core/**",
+        "cmd/**",
+        "**/*_test.go"
+      ],
+      "protected_paths": [
+        "config.schema.json",
+        "src/**",
+        "tests/**"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "target/batches/BATCH-DIFFERENTIAL-0001/core/diffbatch0001_test.go"
+    },
+    {
+      "id": "DIFF-CASE-PROTECTED-TESTS",
+      "observations": [
+        "DIFF-029",
+        "DIFF-030"
+      ],
+      "kind": "diff",
+      "description": "Protected Rust tests, PNG snapshots, and public fixtures stay present and unchanged; added Go tests preserve the mirrored assertions.",
+      "compare": "normalized-diff",
+      "protected_paths": [
+        "src/tests/**",
+        "tests/graph/**"
+      ],
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "probe": "target/batches/BATCH-DIFFERENTIAL-0001/core/diffbatch0001_test.go"
+    }
+  ]
+}

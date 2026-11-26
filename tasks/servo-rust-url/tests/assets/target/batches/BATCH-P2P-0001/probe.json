@@ -1,0 +1,152 @@
+{
+  "schema_version": "migration-asset-probe:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "scope": "target",
+  "language": "Go",
+  "target_root": "/input/target",
+  "native_test_command": [
+    "go",
+    "test",
+    "-count=1",
+    "./..."
+  ],
+  "auxiliary_projection_program": "target/batches/BATCH-P2P-0001/probe.go",
+  "environment": {
+    "CGO_ENABLED": "0",
+    "GOPROXY": "off",
+    "GOTOOLCHAIN": "local"
+  },
+  "normalization": "canonical-json",
+  "corpus": "shared/batches/BATCH-P2P-0001/corpus.json",
+  "observations": [
+    {
+      "observation_id": "P2P-001",
+      "requirement_ids": [
+        "R017"
+      ],
+      "test": "url::TestOrigin",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-001"
+    },
+    {
+      "observation_id": "P2P-002",
+      "requirement_ids": [
+        "R012"
+      ],
+      "test": "url::TestQueryPairs + formurlencoded::TestParse",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-002"
+    },
+    {
+      "observation_id": "P2P-003",
+      "requirement_ids": [
+        "R015"
+      ],
+      "test": "idna::TestDomainToASCII",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-003"
+    },
+    {
+      "observation_id": "P2P-004",
+      "requirement_ids": [
+        "R014"
+      ],
+      "test": "percentencoding::TestDecodeUTF8Error",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-004"
+    },
+    {
+      "observation_id": "P2P-005",
+      "requirement_ids": [
+        "R010"
+      ],
+      "test": "url::TestPathSegmentsMut",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-005"
+    },
+    {
+      "observation_id": "P2P-006",
+      "requirement_ids": [
+        "R007"
+      ],
+      "test": "url::TestParseHostIPv6",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-006"
+    },
+    {
+      "observation_id": "P2P-007",
+      "requirement_ids": [
+        "R011"
+      ],
+      "test": "url::TestQueryPairsMut",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-007"
+    },
+    {
+      "observation_id": "P2P-008",
+      "requirement_ids": [
+        "R013"
+      ],
+      "test": "percentencoding::TestEncode",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-008"
+    },
+    {
+      "observation_id": "P2P-009",
+      "requirement_ids": [
+        "R018"
+      ],
+      "test": "url::TestSentinelsDistinct",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-009"
+    },
+    {
+      "observation_id": "P2P-010",
+      "requirement_ids": [
+        "R005"
+      ],
+      "test": "url::TestInvalidIPv6",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-010"
+    },
+    {
+      "observation_id": "P2P-011",
+      "requirement_ids": [
+        "R003"
+      ],
+      "test": "url::TestParseIssueList",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-011"
+    },
+    {
+      "observation_id": "P2P-012",
+      "requirement_ids": [
+        "R004"
+      ],
+      "test": "url::TestParseDataURL",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-012"
+    },
+    {
+      "observation_id": "P2P-013",
+      "requirement_ids": [
+        "R009"
+      ],
+      "test": "url::TestSetPath",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-013"
+    },
+    {
+      "observation_id": "P2P-014",
+      "requirement_ids": [
+        "R016"
+      ],
+      "test": "idna::TestPunycodeVectors",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-014"
+    },
+    {
+      "observation_id": "P2P-015",
+      "requirement_ids": [
+        "R006"
+      ],
+      "test": "url::TestJoin + url::TestRelativeWithoutBase",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-015"
+    },
+    {
+      "observation_id": "P2P-016",
+      "requirement_ids": [
+        "R008"
+      ],
+      "test": "url::TestPorts",
+      "expected": "shared/batches/BATCH-P2P-0001/corpus.json#P2P-016"
+    }
+  ]
+}

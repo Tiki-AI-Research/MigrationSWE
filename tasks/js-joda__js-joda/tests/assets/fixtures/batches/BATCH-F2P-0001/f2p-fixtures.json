@@ -1,0 +1,52 @@
+{
+  "schema": "migration-asset-fixture:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "migration": {
+    "name": "js-joda",
+    "category": "version_upgrade",
+    "sourceVersion": "6.1.0",
+    "targetVersion": "6.3.2"
+  },
+  "packages": ["core", "timezone", "locale", "extra", "examples"],
+  "knownFixes": [
+    "instant-parse-offset",
+    "negative-duration-minute-boundary",
+    "pre-epoch-truncation-floor",
+    "prefixed-fixed-zone-id",
+    "parsed-excess-days-zero"
+  ],
+  "expectedCoreVersion": "6.3.2",
+  "staleCorePins": [
+    {
+      "literal": "\"@js-joda/core\": \"^6.1.0\"",
+      "paths": [
+        "packages/timezone/package.json",
+        "packages/locale/package.json",
+        "packages/locale/package-lock.json"
+      ]
+    }
+  ],
+  "staleLocalePeers": [
+    {
+      "literal": "\"@js-joda/locale\": \">=5.1.0\"",
+      "paths": ["packages/locale/packages/*/package.json"]
+    }
+  ],
+  "coreEntryPoints": {
+    "main": "dist/js-joda.js",
+    "module": "dist/js-joda.esm.js",
+    "typings": "typings/js-joda.d.ts"
+  },
+  "behaviorExpectations": {
+    "instantOffsetParse": "2024-03-07T07:30:00Z",
+    "negativeDurationMinuteBoundary": "PT-1M-59.999999999S",
+    "preEpochTruncationFloor": "Instant.ofEpochSecond(-1,-1000000).truncatedTo(SECONDS) === Instant.ofEpochSecond(-2)",
+    "prefixedFixedZoneId": "UTC+01:00",
+    "parsedExcessDaysZero": "P0D",
+    "timezoneSummerOffset": "-04:00",
+    "timezoneWinterOffset": "-05:00",
+    "localeMonthEnUs": "January",
+    "localeMonthDe": "Januar"
+  }
+}

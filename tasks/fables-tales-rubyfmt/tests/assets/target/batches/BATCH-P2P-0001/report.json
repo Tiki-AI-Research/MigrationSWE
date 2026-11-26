@@ -1,0 +1,900 @@
+{
+  "binary": "rubyfmt-target",
+  "failed": [],
+  "native_suite": {
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "./..."
+    ],
+    "cwd": "/input/target",
+    "result": "PASS",
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": "ok  \trubyfmt\t0.001s\n?   \trubyfmt/cmd/rubyfmt\t[no test files]\nok  \trubyfmt/internal/cli\t0.715s\nok  \trubyfmt/internal/formatter\t0.947s\n?   \trubyfmt/internal/prism\t[no test files]\n"
+  },
+  "native_tests": {
+    "P2P-001": {
+      "fixture_case": "foo",
+      "fixture_input": "fixtures/small/rspec_its_expected.rb",
+      "native_test": "TestFixtures/small_rspec_its",
+      "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+      "probe_result": "PASS",
+      "projection": {
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "./internal/formatter",
+          "-run",
+          "^TestFixtures$/^small_rspec_its$"
+        ],
+        "cwd": "/input/target",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "",
+        "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+      },
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    "P2P-008": {
+      "fixture_case": "foo",
+      "fixture_input": "fixtures/small/rspec_its_actual.rb",
+      "native_test": "TestFixtures/small_rspec_its",
+      "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+      "probe_result": "PASS",
+      "projection": {
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "./internal/formatter",
+          "-run",
+          "^TestFixtures$/^small_rspec_its$"
+        ],
+        "cwd": "/input/target",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "",
+        "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+      },
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    "P2P-018": {
+      "fixture_case": "bees",
+      "fixture_input": "fixtures/small/rspec_its_actual.rb",
+      "native_test": "TestFixtures/small_rspec_its",
+      "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+      "probe_result": "PASS",
+      "projection": {
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "./internal/formatter",
+          "-run",
+          "^TestFixtures$/^small_rspec_its$"
+        ],
+        "cwd": "/input/target",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "",
+        "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+      },
+      "value": {
+        "case": "bees",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 211,
+        "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+      }
+    },
+    "P2P-030": {
+      "fixture_case": "a",
+      "fixture_input": "fixtures/small/rspec_its_expected.rb",
+      "native_test": "TestFixtures/small_rspec_its",
+      "probe": "shared/batches/BATCH-P2P-0001/p2p_probe.py",
+      "probe_result": "PASS",
+      "projection": {
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "./internal/formatter",
+          "-run",
+          "^TestFixtures$/^small_rspec_its$"
+        ],
+        "cwd": "/input/target",
+        "result": "PASS",
+        "returncode": 0,
+        "stderr_tail": "",
+        "stdout_tail": "=== RUN   TestFixtures\n=== RUN   TestFixtures/small_rspec_its\n=== PAUSE TestFixtures/small_rspec_its\n=== CONT  TestFixtures/small_rspec_its\n--- PASS: TestFixtures (0.50s)\n    --- PASS: TestFixtures/small_rspec_its (0.01s)\nPASS\nok  \trubyfmt/internal/formatter\t0.510s\n"
+      },
+      "value": {
+        "case": "a",
+        "chunk_count": 5,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 209,
+        "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+      }
+    }
+  },
+  "observations": [
+    {
+      "id": "P2P-030",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "a",
+        "chunk_count": 5,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 209,
+        "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+      }
+    },
+    {
+      "id": "P2P-002",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-003",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-004",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-005",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-009",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-010",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-012",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-013",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-014",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-015",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-016",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-017",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-019",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-020",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-021",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-022",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-023",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-024",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-026",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-027",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-031",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-032",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-033",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-034",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-035",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-036",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-007",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-011",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-025",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-028",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-029",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P2P-001",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    {
+      "id": "P2P-008",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    {
+      "id": "P2P-018",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "bees",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 211,
+        "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+      }
+    }
+  ],
+  "repo": "/input/target",
+  "required_runtime_observations": [
+    "P2P-030",
+    "P2P-002",
+    "P2P-003",
+    "P2P-004",
+    "P2P-005",
+    "P2P-006",
+    "P2P-009",
+    "P2P-010",
+    "P2P-012",
+    "P2P-013",
+    "P2P-014",
+    "P2P-015",
+    "P2P-016",
+    "P2P-017",
+    "P2P-019",
+    "P2P-020",
+    "P2P-021",
+    "P2P-022",
+    "P2P-023",
+    "P2P-024",
+    "P2P-026",
+    "P2P-027",
+    "P2P-031",
+    "P2P-032",
+    "P2P-033",
+    "P2P-034",
+    "P2P-035",
+    "P2P-036",
+    "P2P-007",
+    "P2P-011",
+    "P2P-025",
+    "P2P-028",
+    "P2P-029",
+    "P2P-001",
+    "P2P-008",
+    "P2P-018"
+  ],
+  "results": {
+    "P2P-001": {
+      "fixture_case": "foo",
+      "fixture_input": "fixtures/small/rspec_its_expected.rb",
+      "fixture_native_result": "PASS",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    "P2P-002": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-003": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-004": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-005": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-006": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-007": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-008": {
+      "fixture_case": "foo",
+      "fixture_input": "fixtures/small/rspec_its_actual.rb",
+      "fixture_native_result": "PASS",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "foo",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 269,
+        "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+      }
+    },
+    "P2P-009": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-010": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-011": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-012": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-013": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-014": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-015": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-016": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-017": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-018": {
+      "fixture_case": "bees",
+      "fixture_input": "fixtures/small/rspec_its_actual.rb",
+      "fixture_native_result": "PASS",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "bees",
+        "chunk_count": 4,
+        "file": "fixtures/small/rspec_its_actual.rb",
+        "formatted_length": 211,
+        "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+      }
+    },
+    "P2P-019": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-020": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-021": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-022": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-023": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-024": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-025": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-026": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-027": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-028": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-029": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-030": {
+      "fixture_case": "a",
+      "fixture_input": "fixtures/small/rspec_its_expected.rb",
+      "fixture_native_result": "PASS",
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "case": "a",
+        "chunk_count": 5,
+        "file": "fixtures/small/rspec_its_expected.rb",
+        "formatted_length": 209,
+        "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+      }
+    },
+    "P2P-031": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-032": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-033": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-034": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-035": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    },
+    "P2P-036": {
+      "result": "PASS",
+      "status": "PASS",
+      "value": {
+        "result": "PASS"
+      }
+    }
+  },
+  "side": "target",
+  "suite": {
+    "P2P-015": {
+      "result": "PASS",
+      "tests": "go test -count=1 ./..."
+    }
+  },
+  "total": 36,
+  "values": {
+    "P2P-001": {
+      "case": "foo",
+      "chunk_count": 4,
+      "file": "fixtures/small/rspec_its_expected.rb",
+      "formatted_length": 269,
+      "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+    },
+    "P2P-002": {
+      "result": "PASS"
+    },
+    "P2P-003": {
+      "result": "PASS"
+    },
+    "P2P-004": {
+      "result": "PASS"
+    },
+    "P2P-005": {
+      "result": "PASS"
+    },
+    "P2P-006": {
+      "result": "PASS"
+    },
+    "P2P-007": {
+      "result": "PASS"
+    },
+    "P2P-008": {
+      "case": "foo",
+      "chunk_count": 4,
+      "file": "fixtures/small/rspec_its_actual.rb",
+      "formatted_length": 269,
+      "formatted_sha256": "eea388236e38220f18a312a55174af5ce406600f55fa184c935d358d19bce22d"
+    },
+    "P2P-009": {
+      "result": "PASS"
+    },
+    "P2P-010": {
+      "result": "PASS"
+    },
+    "P2P-011": {
+      "result": "PASS"
+    },
+    "P2P-012": {
+      "result": "PASS"
+    },
+    "P2P-013": {
+      "result": "PASS"
+    },
+    "P2P-014": {
+      "result": "PASS"
+    },
+    "P2P-015": {
+      "result": "PASS"
+    },
+    "P2P-016": {
+      "result": "PASS"
+    },
+    "P2P-017": {
+      "result": "PASS"
+    },
+    "P2P-018": {
+      "case": "bees",
+      "chunk_count": 4,
+      "file": "fixtures/small/rspec_its_actual.rb",
+      "formatted_length": 211,
+      "formatted_sha256": "0bc7764d240730690cd242015eb0a90d48c6b37d12f3d10dddcbcdf69c611082"
+    },
+    "P2P-019": {
+      "result": "PASS"
+    },
+    "P2P-020": {
+      "result": "PASS"
+    },
+    "P2P-021": {
+      "result": "PASS"
+    },
+    "P2P-022": {
+      "result": "PASS"
+    },
+    "P2P-023": {
+      "result": "PASS"
+    },
+    "P2P-024": {
+      "result": "PASS"
+    },
+    "P2P-025": {
+      "result": "PASS"
+    },
+    "P2P-026": {
+      "result": "PASS"
+    },
+    "P2P-027": {
+      "result": "PASS"
+    },
+    "P2P-028": {
+      "result": "PASS"
+    },
+    "P2P-029": {
+      "result": "PASS"
+    },
+    "P2P-030": {
+      "case": "a",
+      "chunk_count": 5,
+      "file": "fixtures/small/rspec_its_expected.rb",
+      "formatted_length": 209,
+      "formatted_sha256": "a1abac2f8f92ad5c8381ec93d9d495cb7c75ab02268edd5913115a8084606623"
+    },
+    "P2P-031": {
+      "result": "PASS"
+    },
+    "P2P-032": {
+      "result": "PASS"
+    },
+    "P2P-033": {
+      "result": "PASS"
+    },
+    "P2P-034": {
+      "result": "PASS"
+    },
+    "P2P-035": {
+      "result": "PASS"
+    },
+    "P2P-036": {
+      "result": "PASS"
+    }
+  }
+}

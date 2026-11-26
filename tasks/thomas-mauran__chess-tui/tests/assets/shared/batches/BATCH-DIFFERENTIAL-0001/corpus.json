@@ -1,0 +1,438 @@
+{
+  "schema_version": "shared-case-corpus:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "kind": "DIFFERENTIAL",
+  "source": "rust",
+  "target": "go",
+  "family": "shared-case-corpus",
+  "normalization": {
+    "whitespace": "collapse runs of whitespace to a single space and trim",
+    "enum_tokens": "uppercase display_mode/log_level and status tokens",
+    "error_paths": "replace the OS-specific text after \"Cannot read '<path>':\" with the token <err>",
+    "map_order": "serialize maps with sorted keys",
+    "network": "replace ephemeral host:port pairs with <addr>",
+    "time": "strip timestamps and durations from results"
+  },
+  "probes": {
+    "source": "source/batches/BATCH-DIFFERENTIAL-0001/probe_source.sh",
+    "source_oracle": "source/batches/BATCH-DIFFERENTIAL-0001/differential_source.rs",
+    "target": "target/batches/BATCH-DIFFERENTIAL-0001/differential_target_test.go"
+  },
+  "observation_ids": [
+    "DIFF-001", "DIFF-002", "DIFF-003", "DIFF-004", "DIFF-005", "DIFF-006",
+    "DIFF-007", "DIFF-008", "DIFF-009", "DIFF-010", "DIFF-011", "DIFF-012",
+    "DIFF-013", "DIFF-014", "DIFF-015", "DIFF-016", "DIFF-017", "DIFF-018",
+    "DIFF-019", "DIFF-020", "DIFF-021", "DIFF-022", "DIFF-023", "DIFF-024",
+    "DIFF-025", "DIFF-026", "DIFF-027", "DIFF-028", "DIFF-029", "DIFF-030",
+    "DIFF-031", "DIFF-032"
+  ],
+  "fixtures_root": "fixtures/batches/BATCH-DIFFERENTIAL-0001",
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "observation_id": "DIFF-001",
+      "requirement_ids": ["R001"],
+      "surface": "Go module public surface for the migrated responsibilities",
+      "input": { "command": "go build ./..." },
+      "expected": {
+        "build": "ok",
+        "reachable": [
+          "config.Load",
+          "config.Persist",
+          "pgn.FromFile",
+          "pgn.FromPGNString",
+          "chess.NewGameBoard",
+          "tcp.NewGameServer",
+          "uci.Bot.GetMove",
+          "lichess.NewClient"
+        ],
+        "terminal_ui": false
+      }
+    },
+    {
+      "id": "DIFF-002",
+      "observation_id": "DIFF-002",
+      "requirement_ids": ["R003"],
+      "surface": "CONFIG_DIR/chess-tui/config.toml on disk and skins.json",
+      "fixture": "config_full.toml",
+      "expected": {
+        "keys": [
+          "engine_path",
+          "display_mode",
+          "log_level",
+          "bot_depth",
+          "bot_difficulty",
+          "selected_skin_name",
+          "lichess_token",
+          "sound_enabled",
+          "animations_enabled"
+        ],
+        "round_trip": "byte-stable keys",
+        "skins_schema": ["skins", "piece_styles"]
+      }
+    },
+    {
+      "id": "DIFF-003",
+      "observation_id": "DIFF-003",
+      "requirement_ids": ["R004"],
+      "surface": "config.Load fallback behavior",
+      "inputs": ["missing", "empty", "config_invalid.toml"],
+      "expected": {
+        "display_mode": "DEFAULT",
+        "log_level": "OFF",
+        "bot_depth": 10,
+        "selected_skin_name": "Default",
+        "sound_enabled": true,
+        "animations_enabled": false,
+        "engine_path": null,
+        "bot_difficulty": null,
+        "lichess_token": null,
+        "error": null
+      }
+    },
+    {
+      "id": "DIFF-004",
+      "observation_id": "DIFF-004",
+      "requirement_ids": ["R005"],
+      "surface": "config.Persist write-failure handling",
+      "inputs": ["EROFS", "EACCES"],
+      "expected": { "returns": null, "logged": "warning" }
+    },
+    {
+      "id": "DIFF-005",
+      "observation_id": "DIFF-005",
+      "requirement_ids": ["R006"],
+      "surface": "config.Persist read-modify-write merge",
+      "fixture": "config_partial.toml",
+      "expected": {
+        "engine_path": "/usr/bin/stockfish",
+        "bot_depth": 5,
+        "sound_enabled": false
+      }
+    },
+    {
+      "id": "DIFF-006",
+      "observation_id": "DIFF-006",
+      "requirement_ids": ["R007"],
+      "surface": "difficulty parsing",
+      "expected": {
+        "easy": 0,
+        "Easy": 0,
+        "medium": 1,
+        "MEDIUM": 1,
+        "hard": 2,
+        "magnus": 3,
+        "Magnus": 3,
+        "unknown": null
+      }
+    },
+    {
+      "id": "DIFF-007",
+      "observation_id": "DIFF-007",
+      "requirement_ids": ["R008"],
+      "surface": "bot depth as an 8-bit unsigned value",
+      "expected": { "255": 255, "256": "error", "-1": "error" }
+    },
+    {
+      "id": "DIFF-008",
+      "observation_id": "DIFF-008",
+      "requirement_ids": ["R009"],
+      "surface": "bot difficulty preset tables",
+      "expected": {
+        "depth": [1, 4, 8, 20],
+        "elo": [400, 900, 1500, 2700],
+        "movetime_ms": [25, 120, 500, 12000],
+        "full_strength": { "depth": "base", "movetime": null, "elo": null }
+      }
+    },
+    {
+      "id": "DIFF-009",
+      "observation_id": "DIFF-009",
+      "requirement_ids": ["R010"],
+      "surface": "UCI bot GetMove engine protocol",
+      "expected": {
+        "order": ["uci", "uciok", "setoption", "position fen <FEN>", "go ...", "bestmove"],
+        "missing_binary": "Failed to spawn engine process",
+        "broken_handshake": "error",
+        "unparsable_fen": "error",
+        "exit_without_bestmove": "error"
+      }
+    },
+    {
+      "id": "DIFF-010",
+      "observation_id": "DIFF-010",
+      "requirement_ids": ["R011"],
+      "surface": "PGN file/string load errors and multi-game splitting",
+      "fixtures": ["multi_game.pgn"],
+      "expected": {
+        "unreadable": "Cannot read '<path>': <err>",
+        "multi_game_count": 2,
+        "no_valid_games": "No valid games found in PGN"
+      }
+    },
+    {
+      "id": "DIFF-011",
+      "observation_id": "DIFF-011",
+      "requirement_ids": ["R012"],
+      "surface": "PGN header extraction",
+      "expected": {
+        "title": "Event",
+        "white_default": "?",
+        "black_default": "?",
+        "result_default": "*",
+        "termination": "Termination"
+      }
+    },
+    {
+      "id": "DIFF-012",
+      "observation_id": "DIFF-012",
+      "requirement_ids": ["R013"],
+      "surface": "PGN movetext cleaning",
+      "fixtures": ["sample.pgn"],
+      "expected": {
+        "plies": 10,
+        "last_san": "Be7",
+        "cleaned": ["comments", "nested_variations", "move_numbers", "nag_tokens", "result_tokens", "trailing_annotations"],
+        "stop": "first-illegal-or-unparsable",
+        "no_moves": "No moves parsed from game '<title>'"
+      }
+    },
+    {
+      "id": "DIFF-013",
+      "observation_id": "DIFF-013",
+      "requirement_ids": ["R014"],
+      "surface": "PGN navigation state",
+      "expected": {
+        "next_clamps_final": true,
+        "prev_clamps_start": true,
+        "prev_clears_banner": true,
+        "goto_start": 0,
+        "goto_end": "final",
+        "is_at_end_requires_moves": true
+      }
+    },
+    {
+      "id": "DIFF-014",
+      "observation_id": "DIFF-014",
+      "requirement_ids": ["R015"],
+      "surface": "ResultSummary mapping",
+      "expected": {
+        "1-0": "<white> (White) won",
+        "0-1": "<black> (Black) won",
+        "1/2-1/2": "Draw",
+        "other": "raw result"
+      }
+    },
+    {
+      "id": "DIFF-015",
+      "observation_id": "DIFF-015",
+      "requirement_ids": ["R016"],
+      "surface": "auto-play speed and tick",
+      "expected": {
+        "speeds": [0.5, 1, 1.5, 2, 2.5, 3, 4],
+        "clamp": true,
+        "tick_accumulator": 1.0,
+        "tick_advance": 1,
+        "disable_at_final": true
+      }
+    },
+    {
+      "id": "DIFF-016",
+      "observation_id": "DIFF-016",
+      "requirement_ids": ["R017"],
+      "surface": "TCP multiplayer listen address",
+      "expected": { "address": "0.0.0.0:2308", "NetworkPort": 2308, "accepts": true }
+    },
+    {
+      "id": "DIFF-017",
+      "observation_id": "DIFF-017",
+      "requirement_ids": ["R018"],
+      "surface": "TCP join handshake",
+      "expected": {
+        "first": "host",
+        "joiner_color": "w|b",
+        "host_start": "s",
+        "third": "Game is already full"
+      }
+    },
+    {
+      "id": "DIFF-018",
+      "observation_id": "DIFF-018",
+      "requirement_ids": ["R019"],
+      "surface": "TCP move wire format and buffer size",
+      "expected": { "wire": "<from><to>[q|r|b|n]", "example": "e7e8q", "NetworkBufferSize": 5 }
+    },
+    {
+      "id": "DIFF-019",
+      "observation_id": "DIFF-019",
+      "requirement_ids": ["R020"],
+      "surface": "TCP relay and ended broadcast",
+      "expected": {
+        "forwarded_to_other": true,
+        "echo_to_sender": false,
+        "on_disconnect_or_ended": "broadcast ended and stop"
+      }
+    },
+    {
+      "id": "DIFF-020",
+      "observation_id": "DIFF-020",
+      "requirement_ids": ["R021"],
+      "surface": "TCP peer read errors and start signal",
+      "expected": {
+        "peer_ended": "Game ended by the other opponent",
+        "bad_color": "Failed to get color from stream",
+        "start_accepts": "s",
+        "not_started": [false, null]
+      }
+    },
+    {
+      "id": "DIFF-021",
+      "observation_id": "DIFF-021",
+      "requirement_ids": ["R022"],
+      "surface": "Lichess base URL, User-Agent and bearer auth",
+      "expected": {
+        "base_url": "https://lichess.org/api",
+        "user_agent": "chess-tui (https://github.com/thomas-mauran/chess-tui)",
+        "authorization": "Bearer <token>"
+      }
+    },
+    {
+      "id": "DIFF-022",
+      "observation_id": "DIFF-022",
+      "requirement_ids": ["R023"],
+      "surface": "Lichess seek flow and error mapping",
+      "expected": {
+        "stream_before_seek": "/stream/event",
+        "correspondence_days": 3,
+        "403": "Token missing permissions. Please generate a new token with 'board:play' scope enabled.",
+        "429": "Rate limit exceeded. Please wait a minute before trying again.",
+        "401": "Invalid token. Please check your token or generate a new one.",
+        "400": "Invalid seek parameters: <body>"
+      }
+    },
+    {
+      "id": "DIFF-023",
+      "observation_id": "DIFF-023",
+      "requirement_ids": ["R024"],
+      "surface": "Lichess join flow and error mapping",
+      "expected": {
+        "prefer_ongoing_color": true,
+        "fallback": "POST /challenge/{id}/accept then poll up to 30s",
+        "403": "Cannot join this game. You may not be a participant.",
+        "401": "Invalid token. Please check your token or generate a new one."
+      }
+    },
+    {
+      "id": "DIFF-024",
+      "observation_id": "DIFF-024",
+      "requirement_ids": ["R025"],
+      "surface": "Lichess make_move and resign endpoints/errors",
+      "expected": {
+        "make_move": "POST /board/game/{id}/move/{move}",
+        "make_move_error": "Failed to make move: <status>",
+        "resign": "POST /board/game/{id}/resign",
+        "resign_error": "Failed to resign game: <status> - <body>"
+      }
+    },
+    {
+      "id": "DIFF-025",
+      "observation_id": "DIFF-025",
+      "requirement_ids": ["R026"],
+      "surface": "Lichess board stream parsing and status mapping",
+      "expected": {
+        "emits": ["<new moves>", "INIT_MOVES:<n>", "GAME_STATUS:<status>"],
+        "ignore": ["chatLine", "blank keep-alive"],
+        "status_map": {
+          "mate|checkmate": "GAME_STATUS:checkmate",
+          "draw|stalemate|repetition|insufficient|fifty": "GAME_STATUS:draw",
+          "resign": "GAME_STATUS:resign",
+          "aborted": "GAME_STATUS:aborted"
+        },
+        "404": "stop",
+        "reconnect_seconds": 5
+      }
+    },
+    {
+      "id": "DIFF-026",
+      "observation_id": "DIFF-026",
+      "requirement_ids": ["R027"],
+      "surface": "Lichess event stream handling",
+      "expected": {
+        "handled": ["gameStart", "gameFinish", "challenge", "challengeCanceled", "challengeDeclined"],
+        "blank_lines": "keep-alive",
+        "reconnect_seconds": 5
+      }
+    },
+    {
+      "id": "DIFF-027",
+      "observation_id": "DIFF-027",
+      "requirement_ids": ["R028"],
+      "surface": "Lichess game info fetch",
+      "expected": {
+        "endpoint": "GET /stream/game/{id}",
+        "turns_default": 0,
+        "last_move": "lastMove",
+        "empty_or_unparsable": "error"
+      }
+    },
+    {
+      "id": "DIFF-028",
+      "observation_id": "DIFF-028",
+      "requirement_ids": ["R029"],
+      "surface": "CLI --pgn file/directory handling and exit codes",
+      "fixtures": ["sample.pgn", "multi_game.pgn"],
+      "expected": {
+        "directory_order": "sorted",
+        "directory_no_valid": { "stderr": "Failed to load PGN", "exit": 1 },
+        "file_load_failure": { "stderr": "Failed to load PGN", "exit": 1 }
+      }
+    },
+    {
+      "id": "DIFF-029",
+      "observation_id": "DIFF-029",
+      "requirement_ids": ["R030"],
+      "surface": "public capability surface",
+      "expected": {
+        "cli_options": [
+          "-e/--engine-path",
+          "-d/--depth",
+          "--difficulty",
+          "-l/--lichess-token",
+          "--no-sound",
+          "--skin",
+          "--update-skins",
+          "-p/--pgn"
+        ],
+        "contracts": ["config", "uci", "tcp", "pgn", "lichess"]
+      }
+    },
+    {
+      "id": "DIFF-030",
+      "observation_id": "DIFF-030",
+      "requirement_ids": ["R034"],
+      "surface": "external formats and cross-boundary contracts",
+      "expected": {
+        "config_keys_stable": true,
+        "cli_names_stable": true,
+        "skins_json_round_trip": true,
+        "tcp_wire_stable": true,
+        "pgn_behavior_stable": true,
+        "lichess_contract_stable": true
+      }
+    },
+    {
+      "id": "DIFF-031",
+      "observation_id": "DIFF-031",
+      "requirement_ids": ["R035"],
+      "surface": "evaluation integrity",
+      "expected": { "skipped_checks": 0, "weakened_assertions": 0, "hardcoded_inputs": 0 }
+    },
+    {
+      "id": "DIFF-032",
+      "observation_id": "DIFF-032",
+      "requirement_ids": ["R036"],
+      "surface": "protected assets",
+      "expected": { "evaluation_assets_modified": false, "fixtures_modified": false, "contracts_modified": false }
+    }
+  ]
+}

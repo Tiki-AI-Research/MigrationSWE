@@ -1,0 +1,15 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "relation": "equal_after_normalization",
+  "source": {
+    "repo": "/input/source",
+    "command": "git diff --exit-code",
+    "projection": {"result": "PASS"}
+  },
+  "target": {
+    "repo": "/input/target",
+    "command": "CGO_ENABLED=0 go test ./...",
+    "projection": {"result": "PASS"}
+  }
+}

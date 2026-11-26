@@ -1,0 +1,24 @@
+{
+  "schema_version": "migration-asset-skeleton:v1",
+  "batch_id": "BATCH-SKELETON-0001",
+  "scope": "target",
+  "language": {"name": "Go", "language_name": "Go", "version": "1.23.0", "language_version": "1.23.0"},
+  "runtime": {
+    "executor": {"id": "command", "version": "1"},
+    "technology": {
+      "framework": {"name": "Go", "version": "1.23.0"},
+      "language": {"name": "Go", "version": "1.23.0"},
+      "toolchain": {"name": "Go", "version": "1.23.0"}
+    },
+    "preflight_commands": [["go", "version"], ["go", "env", "GOVERSION"]],
+    "native_test_commands": [["go", "test", "-count=1", "./..."], ["gotestsum", "--junitfile={report}", "--", "./..."]],
+    "build_commands": [["go", "build", "./..."], ["go", "vet", "./..."]],
+    "environment_keys": ["GOCACHE", "GOPATH", "GOTOOLCHAIN"],
+    "workspace_materializations": []
+  },
+  "harness_entry": "target/runner",
+  "harness_command": ["{assets}/target/runner", "{report}"],
+  "placeholder_paths": {"{assets}": "/assets", "{report}": "/logs/result.json", "{repo}": "/workspace/repo"},
+  "target_root": "/input/target",
+  "notes": "Target-side probes execute against the reference target at /input/target. No runner is authored by this batch."
+}

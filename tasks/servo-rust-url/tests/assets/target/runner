@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Target-side integration entrypoint (owned by BATCH-INTEGRATION-0001).
+
+Usage: target/runner <report-path> [repo-root]
+
+Builds the consolidated Go projection against the candidate ``github.com/servo/rust-url``
+module and writes a ``migration-observations:v6`` report covering every P2P, F2P
+and DIFFERENTIAL observation. P2P/DIFFERENTIAL projections are compared against
+the frozen source-side reference in shared/integration/expected.json; F2P
+postconditions are evaluated directly.
+"""
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(ROOT, "shared", "integration"))
+
+import harness  # noqa: E402
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.stderr.write("usage: target/runner <report-path> [repo-root]\n")
+        return 2
+    report_path = sys.argv[1]
+    repo_root = sys.argv[2] if len(sys.argv) > 2 else None
+    harness.run_report("target", os.path.abspath(__file__), report_path, repo_root)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

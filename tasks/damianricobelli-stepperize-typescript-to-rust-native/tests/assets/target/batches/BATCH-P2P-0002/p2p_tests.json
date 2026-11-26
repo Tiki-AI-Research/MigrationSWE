@@ -1,0 +1,48 @@
+{
+  "schema_version": "migration-p2p-side-tests:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "side": "target",
+  "language": "Rust",
+  "runner_hint": "cargo test",
+  "reference_test_file": "crates/stepperize-core/tests/utils.rs",
+  "behavior_test_file": "tests/p2p_behavior.rs",
+  "projection_file": "shared/batches/BATCH-P2P-0002/p2p_projection.json",
+  "mapping": {
+    "P2P-025": ["step_statuses_use_active_previous_upcoming"],
+    "P2P-026": ["probe:P2P-026"],
+    "P2P-027": ["parse_step_returns_known_ids_only"],
+    "P2P-028": ["get_initial_step_index_defaults_to_zero"],
+    "P2P-029": ["probe:P2P-029"],
+    "P2P-030": ["create_step_map_gets_steps_by_id_and_index"],
+    "P2P-031": ["create_step_map_returns_steps_and_ids", "create_step_map_gets_steps_by_id_and_index", "create_step_map_returns_positions_and_neighbors", "create_step_map_empty_boundaries", "get_initial_step_index_defaults_to_zero", "get_initial_data_returns_a_defensive_copy", "validate_step_succeeds_without_a_schema", "validate_step_returns_success_with_the_validated_value", "validate_step_returns_issues_when_the_schema_fails", "validate_step_fails_for_an_unknown_step_id", "validate_step_supports_async_validators", "step_statuses_use_active_previous_upcoming", "parse_step_returns_known_ids_only", "match_step_runs_the_handler_for_the_provided_id", "match_step_fails_when_no_exhaustive_handler_exists", "match_step_fails_for_an_unknown_step_id"],
+    "P2P-032": ["create_step_map_returns_positions_and_neighbors", "create_step_map_empty_boundaries"],
+    "P2P-033": ["match_step_fails_for_an_unknown_step_id"],
+    "P2P-034": ["validate_step_returns_issues_when_the_schema_fails"],
+    "P2P-035": ["validate_step_succeeds_without_a_schema"],
+    "P2P-036": ["probe:P2P-036"],
+    "P2P-037": ["probe:P2P-037"],
+    "P2P-038": ["create_step_map_returns_positions_and_neighbors"]
+  },
+  "commands": [
+    {
+      "observation_ids": ["P2P-025", "P2P-027", "P2P-028", "P2P-030", "P2P-031", "P2P-032", "P2P-033", "P2P-034", "P2P-035", "P2P-038"],
+      "cwd": "{repo}",
+      "timeout_sec": 1500,
+      "argv": ["timeout", "1500", "cargo", "test", "--workspace", "--locked", "--offline"],
+      "description": "Run the native Rust crate tests that implement the migrated behavior."
+    },
+    {
+      "observation_ids": ["P2P-026", "P2P-029", "P2P-036", "P2P-037"],
+      "cwd": "{repo}",
+      "timeout_sec": 300,
+      "argv": ["timeout", "300", "python3", "shared/batches/BATCH-P2P-0002/p2p_probe.py", "--repo", ".", "--observation", "P2P-026", "--observation", "P2P-029", "--observation", "P2P-036", "--observation", "P2P-037"],
+      "description": "Deterministic probe for the out-of-scope artifacts that the Rust crate does not implement; identical on both sides."
+    }
+  ],
+  "executable_projection": {
+    "P2P-026": { "source": "probe", "observation": "P2P-026", "timeout_sec": 300 },
+    "P2P-029": { "source": "probe", "observation": "P2P-029", "timeout_sec": 300 },
+    "P2P-036": { "source": "probe", "observation": "P2P-036", "timeout_sec": 300 },
+    "P2P-037": { "source": "probe", "observation": "P2P-037", "timeout_sec": 300 }
+  }
+}

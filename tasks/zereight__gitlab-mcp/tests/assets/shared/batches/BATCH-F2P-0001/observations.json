@@ -1,0 +1,33 @@
+{
+  "schema_version": "migration-f2p-observation-map:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "migration": "TypeScript 5.9.3 -> Python 3.13.0 (mcp-server sub-project)",
+  "source_expectation": "FAIL",
+  "target_expectation": "PASS",
+  "observations": [
+    {"id": "F2P-001", "predicate": "pred_updated_at_format", "requirement_ids": ["R042"], "surface": "mcp-server/src/utils.ts::state file read-modify-write ordering"},
+    {"id": "F2P-002", "predicate": "pred_read_prd_indent", "requirement_ids": ["R041"], "surface": "mcp-server/src/prd-tools.ts::omg_read_prd result text"},
+    {"id": "F2P-003", "predicate": "pred_story_id_format", "requirement_ids": ["R045"], "surface": "mcp-server/src/prd-tools.ts::generated story ids"},
+    {"id": "F2P-004", "predicate": "pred_phase_index_coercion", "requirement_ids": ["R044"], "surface": "mcp-server/src/workflow-tools.ts::omg_get_phase_info result text"},
+    {"id": "F2P-005", "predicate": "pred_tools_list_and_startup", "requirement_ids": ["R006"], "surface": "mcp-server/src/index.ts::tools/list and startup failure"},
+    {"id": "F2P-006", "predicate": "pred_changed_paths_scope", "requirement_ids": ["R036"], "surface": "changed-path set of the migration"},
+    {"id": "F2P-007", "predicate": "pred_no_node_delegation", "requirement_ids": ["R035"], "surface": "runtime dependency graph of the migrated server"},
+    {"id": "F2P-008", "predicate": "pred_packaging_entrypoint", "requirement_ids": ["R046"], "surface": "mcp-server/pyproject.toml::console entrypoint"},
+    {"id": "F2P-009", "predicate": "pred_compact_json_ensure_ascii", "requirement_ids": ["R040"], "surface": "mcp-server/src/utils.ts::compact JSON serialization"},
+    {"id": "F2P-013", "predicate": "pred_no_node_source_scan", "requirement_ids": ["R034"], "surface": "mcp-server production sources"},
+    {"id": "F2P-014", "predicate": "pred_team_line_formatting", "requirement_ids": ["R043"], "surface": "omg_check_completion team line formatting"},
+    {"id": "F2P-018", "predicate": "pred_stdio_identity", "requirement_ids": ["R001"], "surface": "mcp-server/src/index.ts::protected public artifacts"},
+    {"id": "F2P-011", "predicate": "pred_story_id_format", "requirement_ids": ["R045"], "surface": "mcp-server/src/prd-tools.ts::story ids persisted in prd.json"},
+    {"id": "F2P-020", "predicate": "pred_no_node_delegation", "requirement_ids": ["R035"], "surface": "mcp-server/src/utils.ts::runtime entry"},
+    {"id": "F2P-010", "predicate": "pred_updated_at_format", "requirement_ids": ["R042"], "surface": "mcp-server/src/utils.ts::safe_write_file updated_at"},
+    {"id": "F2P-012", "predicate": "pred_story_id_format", "requirement_ids": ["R045"], "surface": "mcp-server/src/prd-tools.ts::list of acceptance criteria"},
+    {"id": "F2P-015", "predicate": "pred_read_prd_indent", "requirement_ids": ["R041"], "surface": "mcp-server/src/prd-tools.ts::PRD title formatting"},
+    {"id": "F2P-016", "predicate": "pred_no_node_delegation", "requirement_ids": ["R035"], "surface": "mcp-server/src/utils.ts::runtime entry"},
+    {"id": "F2P-017", "predicate": "pred_updated_at_format", "requirement_ids": ["R042"], "surface": "mcp-server/src/utils.ts::public capability set"},
+    {"id": "F2P-019", "predicate": "pred_read_prd_indent", "requirement_ids": ["R041"], "surface": "mcp-server/src/prd-tools.ts::PRD description formatting"},
+    {"id": "F2P-021", "predicate": "pred_story_id_format", "requirement_ids": ["R045"], "surface": "mcp-server/src/prd-tools.ts::omg_update_story result text"},
+    {"id": "F2P-022", "predicate": "pred_read_prd_indent", "requirement_ids": ["R041"], "surface": "mcp-server/src/prd-tools.ts::story description formatting"},
+    {"id": "F2P-023", "predicate": "pred_read_prd_indent", "requirement_ids": ["R041"], "surface": "mcp-server/src/prd-tools.ts::list of acceptance criteria"},
+    {"id": "F2P-024", "predicate": "pred_updated_at_format", "requirement_ids": ["R042"], "surface": "mcp-server/src/utils.ts::safe_read_file updated_at"}
+  ]
+}

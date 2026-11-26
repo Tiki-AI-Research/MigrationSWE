@@ -1,0 +1,264 @@
+{
+  "schema_version": "migration-p2p-cases:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "shared_corpus": true,
+  "observation_order": [
+    "P2P-039",
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-028",
+    "P2P-029",
+    "P2P-030",
+    "P2P-031",
+    "P2P-032",
+    "P2P-033",
+    "P2P-034",
+    "P2P-035",
+    "P2P-036",
+    "P2P-037",
+    "P2P-038",
+    "P2P-040",
+    "P2P-041",
+    "P2P-042"
+  ],
+  "observations": [
+    {
+      "id": "P2P-039",
+      "requirement_ids": ["R009", "R012", "R014", "R017", "R018", "R029", "R030", "R031", "R032", "R033"],
+      "surface": "exports:./lib/*.js",
+      "probe": "package-exports",
+      "input": "packages/element-ai-vue/package.json",
+      "expected": {
+        "exportsLibJsPresent": true,
+        "require": "./lib/*.js",
+        "types": "./lib/*.d.ts"
+      }
+    },
+    {
+      "id": "P2P-025",
+      "requirement_ids": ["R047"],
+      "surface": "existing test suite",
+      "probe": "existing-test-suite",
+      "input": "packages/utils/__tests__/typewriter.test.ts",
+      "expected": {
+        "unchanged": true,
+        "suitePassed": true
+      }
+    },
+    {
+      "id": "P2P-026",
+      "requirement_ids": ["R008"],
+      "surface": "defaultCustomPlugins options effects",
+      "probe": "default-plugin-options",
+      "input": {
+        "rawHtml": "<b>x</b>",
+        "math": "$\\RR$"
+      },
+      "expected": {
+        "remarkRehypeOptions": { "allowDangerousHtml": true },
+        "rehypeKatexOptionsEqual": true,
+        "rawHtmlPreserved": true,
+        "rrMacroApplied": true
+      }
+    },
+    {
+      "id": "P2P-027",
+      "requirement_ids": ["R038"],
+      "surface": "processMarkdownToHtml raw HTML passthrough",
+      "probe": "raw-html-passthrough",
+      "input": "<div class=\"x\">hi</div>\n\ninline <b>raw</b>",
+      "expected": {
+        "blockHtmlPreserved": true,
+        "inlineHtmlPreserved": true,
+        "noEscapedMarkup": true
+      }
+    },
+    {
+      "id": "P2P-028",
+      "requirement_ids": ["R034"],
+      "surface": "katexProcess normalization rules",
+      "probe": "katex-normalization",
+      "input": {
+        "bracket": "\\[x\\]",
+        "paren": "\\(x\\)",
+        "multilineSingle": "$a\nb$",
+        "multilineDouble": "$$a\nb$$"
+      },
+      "expected": {
+        "bracket": "$$x$$",
+        "paren": "$x$",
+        "multilineSingleTrimmed": "$$a\nb$$",
+        "multilineDoublePadded": true
+      }
+    },
+    {
+      "id": "P2P-029",
+      "requirement_ids": ["R041"],
+      "surface": "public capability contracts",
+      "probe": "public-capabilities",
+      "expected": {
+        "runtimeExports": {
+          "createBaseProcessor": "function",
+          "processMarkdownToParts": "function",
+          "processMarkdownToHtml": "function",
+          "katexProcess": "function",
+          "defaultCustomPlugins": "object"
+        },
+        "typecheckClean": true
+      }
+    },
+    {
+      "id": "P2P-030",
+      "requirement_ids": ["R011"],
+      "surface": "katexProcess delimiter normalization",
+      "probe": "katex-normalization",
+      "input": {
+        "bracket": "\\[x\\]",
+        "paren": "\\(x\\)",
+        "multilineSingle": "$a\nb$",
+        "multilineDouble": "$$a\nb$$"
+      },
+      "expected": {
+        "bracket": "$$x$$",
+        "paren": "$x$",
+        "multilineSingleTrimmed": "$$a\nb$$",
+        "multilineDoublePadded": true
+      }
+    },
+    {
+      "id": "P2P-031",
+      "requirement_ids": ["R005"],
+      "surface": "MiddlewarePluginItem type",
+      "probe": "middleware-plugin-item",
+      "expected": {
+        "typecheckAccepted": true,
+        "typecheckRejectsMissingKey": true,
+        "runtimeKey": "k",
+        "runtimeOptions": { "x": 1 },
+        "pluginSawOptions": true
+      }
+    },
+    {
+      "id": "P2P-032",
+      "requirement_ids": ["R027"],
+      "surface": "processMarkdownToHtml sub and superscript",
+      "probe": "sub-superscript",
+      "input": "~x~ ^x^",
+      "expected": {
+        "sub": true,
+        "sup": true
+      }
+    },
+    {
+      "id": "P2P-033",
+      "requirement_ids": ["R022"],
+      "surface": "processMarkdownToHtml GFM task lists",
+      "probe": "task-list",
+      "input": "- [x] done\n- [ ] todo",
+      "expected": {
+        "checkboxCount": 2,
+        "disabledCount": 2,
+        "checkedCount": 1,
+        "firstChecked": true,
+        "secondChecked": false
+      }
+    },
+    {
+      "id": "P2P-034",
+      "requirement_ids": ["R040"],
+      "surface": "createBaseProcessor processor reuse",
+      "probe": "processor-reuse",
+      "input": ["a", "b", "$x$", "$y$"],
+      "expected": {
+        "firstParts": "<p>a</p>",
+        "secondParts": "<p>b</p>",
+        "thirdHasX": true,
+        "fourthHasY": true,
+        "independent": true
+      }
+    },
+    {
+      "id": "P2P-035",
+      "requirement_ids": ["R020"],
+      "surface": "processMarkdownToHtml hard line breaks",
+      "probe": "hard-line-breaks",
+      "input": "a\nb",
+      "expected": {
+        "brBetween": true
+      }
+    },
+    {
+      "id": "P2P-036",
+      "requirement_ids": ["R037"],
+      "surface": "processMarkdownToHtml invalid math handling",
+      "probe": "invalid-math",
+      "input": "$\\frac{1}{$",
+      "expected": {
+        "didNotReject": true,
+        "katexError": true,
+        "errorColor": "#cc0000"
+      }
+    },
+    {
+      "id": "P2P-037",
+      "requirement_ids": ["R015"],
+      "surface": "Markdown and document editor remarkPlugins prop",
+      "probe": "component-remark-plugins-prop",
+      "expected": {
+        "markdownMounted": true,
+        "markdownParts": 1,
+        "editorMounted": true,
+        "nonArrayWarned": true
+      }
+    },
+    {
+      "id": "P2P-038",
+      "requirement_ids": ["R016"],
+      "surface": "processMarkdownToParts HTML part content",
+      "probe": "html-part-vnode",
+      "input": "**bold**",
+      "expected": {
+        "contentIsVNode": true,
+        "contentIsNotString": true,
+        "renderedContainsStrong": true
+      }
+    },
+    {
+      "id": "P2P-040",
+      "requirement_ids": ["R019"],
+      "surface": "processMarkdownToParts empty input",
+      "probe": "empty-input",
+      "input": "",
+      "expected": {
+        "isArray": true,
+        "length": 0
+      }
+    },
+    {
+      "id": "P2P-041",
+      "requirement_ids": ["R048"],
+      "surface": "remarkPlugins prop name and type",
+      "probe": "component-props-declaration",
+      "expected": {
+        "markdownRemarkPlugins": "Array",
+        "editorRemarkPlugins": "Array",
+        "markdownDefaultArray": true,
+        "editorDefaultArray": true,
+        "markdownSourceDeclaresMiddlewarePluginItemArray": true,
+        "editorSourceDeclaresMiddlewarePluginItemArray": true
+      }
+    },
+    {
+      "id": "P2P-042",
+      "requirement_ids": ["R010"],
+      "surface": "processMarkdownToHtml raw HTML allowance",
+      "probe": "raw-html-allowance",
+      "input": "<div>x</div>",
+      "expected": {
+        "output": "<div>x</div>"
+      }
+    }
+  ]
+}

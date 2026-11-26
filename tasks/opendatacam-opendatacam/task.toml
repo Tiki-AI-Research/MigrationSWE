@@ -1,0 +1,61 @@
+schema_version = "1.3"
+artifacts = [
+    "/logs/artifacts/model.patch",
+]
+
+[task]
+name = "tikiai/opendatacam-opendatacam"
+description = "Migrate the OpenDataCam HTTP server from Express 4.17.1 to Fastify 4.28.1."
+
+[metadata]
+category = "Framework_migration"
+language = "javascript"
+repository_id = "2376d46c-d809-49dc-bf11-48758ed8fdac"
+task_id = "tp-45bac29dc6ed3d5c7ce34d508453d4da"
+repository_url = "https://github.com/opendatacam/opendatacam"
+base_commit_hash = "7080baa3e212c85fb1283a22a49d82019edeeb87"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 43
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:opendatacam-opendatacam-verifier-image-20261126"
+image_digest = "sha256:78ae64345b1246c3f10c4f9c117104c9653087f9b5e7f27fb9a0044ff4d60332"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 7080baa3e212c85fb1283a22a49d82019edeeb87 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:opendatacam-opendatacam-task-image-20261126"
+image_digest = "sha256:96c4a52b53f99830c4dff990147b05f3ea34c31f10bc4b4a12bd9fe85a3334b6"

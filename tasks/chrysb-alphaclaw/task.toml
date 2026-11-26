@@ -1,0 +1,58 @@
+schema_version = "1.3"
+
+[task]
+name = "tikiai/chrysb-alphaclaw"
+description = "Migrate the AlphaClaw HTTP backend from Express 5.2.1 to Hono 4.13.7."
+
+[metadata]
+category = "Framework_migration"
+language = "javascript"
+repository_id = "c30e9ef0-8848-494c-90c6-644fdd6507b9"
+task_id = "tp-0bb53be47fc317a7deb9b70f94fa115f"
+repository_url = "https://github.com/chrysb/alphaclaw"
+base_commit_hash = "dfe3b2f09b0200a21481e51e9a9b240376d09061"
+
+[metadata.tests]
+fail_to_pass_count = 72
+pass_to_pass_count = 40
+
+[verifier]
+network_mode = "allowlist"
+allowed_hosts = []
+environment_mode = "separate"
+user = "root"
+timeout_sec = 3600.0
+
+[verifier.environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:chrysb-alphaclaw-verifier-image-20261126"
+image_digest = "sha256:cdf2b52f434533a88bbe18a4bca74419e15e86c2b571cc18b8f2ac020e71b573"
+[[verifier.collect]]
+command = "cd /workspace/repo && mkdir -p /logs/artifacts && git add -A -- . && git diff --binary --cached 26030b3bca40dedc5350357a0a1c45b97db41bf7 > /logs/artifacts/model.patch"
+timeout_sec = 300.0
+
+[agent]
+network_mode = "allowlist"
+allowed_hosts = [
+    "api.openai.com",
+]
+timeout_sec = 7200
+user = "agent"
+
+[environment]
+network_mode = "public"
+allowed_hosts = []
+build_timeout_sec = 3600.0
+os = "linux"
+cpus = 2
+memory_mb = 4096
+storage_mb = 20480
+
+docker_image = "docker.io/tikiaiteam/migration:chrysb-alphaclaw-task-image-20261126"
+image_digest = "sha256:52f60ca9d288e4281d686d0389a16fcc086f2e323da772200e4d83dbc8390152"

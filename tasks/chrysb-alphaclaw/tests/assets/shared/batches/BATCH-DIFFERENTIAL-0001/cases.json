@@ -1,0 +1,2666 @@
+{
+  "schema_version": "migration-differential-cases:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "family": "shared-case-corpus",
+  "projection": "normalized-result",
+  "fixtures_ref": "../../../fixtures/batches/BATCH-DIFFERENTIAL-0001/fixtures.json",
+  "cases": [
+    {
+      "id": "DIFF-001",
+      "observation_id": "DIFF-001",
+      "requirement_ids": [
+        "R003"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "health is public",
+              "request": {
+                "method": "GET",
+                "path": "/health"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "status": [
+                    "healthy",
+                    "starting"
+                  ],
+                  "gateway": [
+                    "running",
+                    "starting"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "protected api requires setup auth",
+              "request": {
+                "method": "GET",
+                "path": "/api/agents"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            },
+            {
+              "name": "login keeps the registered auth route",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "openclaw route remains proxied",
+              "request": {
+                "method": "GET",
+                "path": "/openclaw/x",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "GET",
+                  "path": "/x"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-002",
+      "observation_id": "DIFF-002",
+      "requirement_ids": [
+        "R004"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "successful login",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                },
+                "set_cookie": {
+                  "name": "setup_token",
+                  "includes": [
+                    "HttpOnly",
+                    "SameSite=Lax",
+                    "Path=/",
+                    "Max-Age=604800"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-003",
+      "observation_id": "DIFF-003",
+      "requirement_ids": [
+        "R005"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "LOGIN_RATE_MAX_ATTEMPTS": "3",
+            "LOGIN_RATE_WINDOW_MS": "600000"
+          },
+          "steps": [
+            {
+              "name": "first invalid password",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "ok": false,
+                  "error": "Invalid credentials"
+                }
+              }
+            },
+            {
+              "name": "second invalid password",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "ok": false,
+                  "error": "Invalid credentials"
+                }
+              }
+            },
+            {
+              "name": "third invalid password trips the throttle",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ],
+                "json": {
+                  "ok": false,
+                  "error": "Too many attempts. Try again shortly.",
+                  "retryAfterSec": {
+                    "number_gte": 1
+                  }
+                }
+              }
+            },
+            {
+              "name": "throttled client stays locked",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ],
+                "json": {
+                  "ok": false,
+                  "error": "Too many attempts. Try again shortly.",
+                  "retryAfterSec": {
+                    "number_gte": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-004",
+      "observation_id": "DIFF-004",
+      "requirement_ids": [
+        "R006"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": ""
+          },
+          "steps": [
+            {
+              "name": "missing password keeps the existing 503",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"anything\"}"
+              },
+              "expect": {
+                "status": 503,
+                "json": {
+                  "ok": false,
+                  "error": {
+                    "string_includes": "SETUP_PASSWORD"
+                  }
+                }
+              }
+            },
+            {
+              "name": "status stays reachable without a session",
+              "request": {
+                "method": "GET",
+                "path": "/api/auth/status"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "authEnabled": false
+                }
+              }
+            },
+            {
+              "name": "logout stays reachable without a session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/logout"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-005",
+      "observation_id": "DIFF-005",
+      "requirement_ids": [
+        "R007"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "status reports enabled",
+              "request": {
+                "method": "GET",
+                "path": "/api/auth/status"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "authEnabled": true
+                }
+              }
+            },
+            {
+              "name": "logout clears the cookie",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/logout"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                },
+                "set_cookie": {
+                  "name": "setup_token",
+                  "includes": [
+                    "Expires=Thu, 01 Jan 1970",
+                    "Path=/"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": ""
+          },
+          "steps": [
+            {
+              "name": "status reports disabled",
+              "request": {
+                "method": "GET",
+                "path": "/api/auth/status"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "authEnabled": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-006",
+      "observation_id": "DIFF-006",
+      "requirement_ids": [
+        "R008"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "create a session cookie",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "cookie reaches a protected api route",
+              "request": {
+                "method": "GET",
+                "path": "/api/agents",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200
+              }
+            },
+            {
+              "name": "query string token is not accepted",
+              "request": {
+                "method": "GET",
+                "path": "/api/agents",
+                "query_token_from_session": true
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-007",
+      "observation_id": "DIFF-007",
+      "requirement_ids": [
+        "R009"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "google callback bypasses setup auth",
+              "request": {
+                "method": "GET",
+                "path": "/auth/google/callback"
+              },
+              "expect": {
+                "status_not_in": [
+                  401,
+                  503
+                ]
+              },
+              "normalize": {
+                "ignore": true
+              }
+            },
+            {
+              "name": "codex callback bypasses setup auth",
+              "request": {
+                "method": "GET",
+                "path": "/auth/codex/callback"
+              },
+              "expect": {
+                "status_not_in": [
+                  401,
+                  503
+                ]
+              },
+              "normalize": {
+                "ignore": true
+              }
+            },
+            {
+              "name": "oauth callback bypasses setup auth",
+              "request": {
+                "method": "GET",
+                "path": "/oauth/unknown"
+              },
+              "expect": {
+                "status_not_in": [
+                  401,
+                  503
+                ]
+              },
+              "normalize": {
+                "ignore": true
+              }
+            },
+            {
+              "name": "unauthenticated api gets json 401",
+              "request": {
+                "method": "GET",
+                "path": "/api/agents"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            },
+            {
+              "name": "unauthenticated setup page redirects",
+              "request": {
+                "method": "GET",
+                "path": "/setup"
+              },
+              "expect": {
+                "status": 302,
+                "headers": {
+                  "location": "/login.html"
+                }
+              }
+            },
+            {
+              "name": "health is public",
+              "request": {
+                "method": "GET",
+                "path": "/health"
+              },
+              "expect": {
+                "status": 200
+              }
+            },
+            {
+              "name": "login page is public",
+              "request": {
+                "method": "GET",
+                "path": "/login.html"
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/html"
+                  }
+                }
+              }
+            },
+            {
+              "name": "public static assets are not redirected",
+              "request": {
+                "method": "GET",
+                "path": "/assets/icons/telegram.svg"
+              },
+              "expect": {
+                "status": 200
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-008",
+      "observation_id": "DIFF-008",
+      "requirement_ids": [
+        "R010"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "webhook receives raw bytes",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/test",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"a\":1}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/test",
+                  "body_exact": "{\"a\":1}"
+                }
+              }
+            },
+            {
+              "name": "hooks path receives raw bytes",
+              "request": {
+                "method": "POST",
+                "path": "/hooks/test",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"a\":1}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/test",
+                  "body_exact": "{\"a\":1}"
+                }
+              }
+            },
+            {
+              "name": "raw bytes with whitespace are preserved exactly",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/test",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{ \"a\" : 1 }\n"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/test",
+                  "body_exact": "{ \"a\" : 1 }\n"
+                }
+              }
+            },
+            {
+              "name": "oversized gmail raw body is rejected",
+              "request": {
+                "method": "POST",
+                "path": "/gmail-pubsub",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body_bytes": 5242881,
+                "body_fill": "x"
+              },
+              "expect": {
+                "status": 413,
+                "gateway_not_invoked": true
+              },
+              "normalize": {
+                "headers": false,
+                "body": false
+              }
+            },
+            {
+              "name": "oversized raw webhook is rejected",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/test",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body_bytes": 5242881,
+                "body_fill": "x"
+              },
+              "expect": {
+                "status": 413,
+                "gateway_not_invoked": true
+              },
+              "normalize": {
+                "headers": false,
+                "body": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-009",
+      "observation_id": "DIFF-009",
+      "requirement_ids": [
+        "R011"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "json api limit is 5 MB",
+              "request": {
+                "method": "POST",
+                "path": "/api/env",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "session": "setup",
+                "body_bytes": 5242881,
+                "body_fill": "x",
+                "body_prefix": "{\"vars\":{\"X\":\"",
+                "body_suffix": "\"}}"
+              },
+              "expect": {
+                "status": 413
+              }
+            },
+            {
+              "name": "enabled v1 limit is 50 MB",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer fixture-gateway-token"
+                },
+                "body_bytes": 52428801,
+                "body_fill": "x",
+                "body_prefix": "{\"model\":\"",
+                "body_suffix": "\"}"
+              },
+              "expect": {
+                "status": 413,
+                "gateway_not_invoked": true
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": false
+                }
+              }
+            }
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "disabled v1 returns 404 before parsing",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 404,
+                "json": {
+                  "error": "Not found"
+                },
+                "gateway_not_invoked": true
+              }
+            }
+          ]
+        }
+      ],
+      "normalize": {
+        "headers": false,
+        "body": false
+      }
+    },
+    {
+      "id": "DIFF-010",
+      "observation_id": "DIFF-010",
+      "requirement_ids": [
+        "R012"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "openclaw strips its prefix",
+              "request": {
+                "method": "GET",
+                "path": "/openclaw/abc",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "GET",
+                  "path": "/abc"
+                }
+              }
+            },
+            {
+              "name": "unregistered api path falls through to the gateway",
+              "request": {
+                "method": "GET",
+                "path": "/api/unknown-route-with-no-setup-handler",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "GET",
+                  "path": "/api/unknown-route-with-no-setup-handler"
+                }
+              }
+            },
+            {
+              "name": "registered api path stays local",
+              "request": {
+                "method": "GET",
+                "path": "/api/auth/status",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "gateway_not_invoked": true
+              }
+            },
+            {
+              "name": "v1 models proxies with the configured bearer",
+              "request": {
+                "method": "GET",
+                "path": "/v1/models",
+                "headers": {
+                  "authorization": "Bearer fixture-gateway-token"
+                }
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "GET",
+                  "path": "/v1/models"
+                }
+              }
+            },
+            {
+              "name": "v1 models rejects a wrong bearer",
+              "request": {
+                "method": "GET",
+                "path": "/v1/models",
+                "headers": {
+                  "authorization": "Bearer wrong"
+                }
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-011",
+      "observation_id": "DIFF-011",
+      "requirement_ids": [
+        "R013"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token",
+            "gateway_response": {
+              "status": 201,
+              "headers": {
+                "x-test": "yes"
+              },
+              "body": "ok"
+            }
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "non-v1 proxy mirrors status headers and body",
+              "request": {
+                "method": "GET",
+                "path": "/openclaw/x",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 201,
+                "headers": {
+                  "x-test": "yes"
+                },
+                "body": "ok"
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token",
+            "gateway_response": {
+              "status": 200,
+              "headers": {
+                "connection": "keep-alive",
+                "set-cookie": "leak=1",
+                "x-request-id": "req-1"
+              },
+              "body": "data"
+            }
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "v1 proxy strips hop-by-hop and set-cookie",
+              "request": {
+                "method": "GET",
+                "path": "/v1/models",
+                "headers": {
+                  "authorization": "Bearer fixture-gateway-token"
+                }
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "x-request-id": "req-1"
+                },
+                "headers_absent": [
+                  "set-cookie"
+                ],
+                "body": "data"
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "gateway_unreachable": true
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "unreachable gateway returns 502",
+              "request": {
+                "method": "GET",
+                "path": "/openclaw/x",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 502,
+                "json": {
+                  "error": "Gateway unavailable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-012",
+      "observation_id": "DIFF-012",
+      "requirement_ids": [
+        "R014"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "health is public and normalized",
+              "request": {
+                "method": "GET",
+                "path": "/health"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "status": [
+                    "healthy",
+                    "starting"
+                  ],
+                  "gateway": [
+                    "running",
+                    "starting"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "gateway_unreachable": true
+          },
+          "steps": [
+            {
+              "name": "gateway-down health is starting",
+              "request": {
+                "method": "GET",
+                "path": "/health"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "status": "starting",
+                  "gateway": "starting"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-013",
+      "observation_id": "DIFF-013",
+      "requirement_ids": [
+        "R015"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "root redirects without a session",
+              "request": {
+                "method": "GET",
+                "path": "/"
+              },
+              "expect": {
+                "status": 302,
+                "headers": {
+                  "location": "/login.html"
+                }
+              }
+            },
+            {
+              "name": "setup redirects without a session",
+              "request": {
+                "method": "GET",
+                "path": "/setup"
+              },
+              "expect": {
+                "status": 302,
+                "headers": {
+                  "location": "/login.html"
+                }
+              }
+            },
+            {
+              "name": "login creates a session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "root serves setup ui with a session",
+              "request": {
+                "method": "GET",
+                "path": "/",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "body_includes": [
+                  "<!doctype html",
+                  "alphaclaw"
+                ]
+              }
+            },
+            {
+              "name": "setup serves setup ui with a session",
+              "request": {
+                "method": "GET",
+                "path": "/setup",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "body_includes": [
+                  "<!doctype html",
+                  "alphaclaw"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-014",
+      "observation_id": "DIFF-014",
+      "requirement_ids": [
+        "R016"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "login html is public",
+              "request": {
+                "method": "GET",
+                "path": "/login.html"
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/html"
+                  }
+                }
+              }
+            },
+            {
+              "name": "css is served from the public root",
+              "request": {
+                "method": "GET",
+                "path": "/css/theme.css"
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/css"
+                  }
+                }
+              }
+            },
+            {
+              "name": "unserved asset follows protected non-api behavior",
+              "request": {
+                "method": "GET",
+                "path": "/assets/not-in-public"
+              },
+              "expect": {
+                "status": 302,
+                "headers": {
+                  "location": "/login.html"
+                }
+              }
+            },
+            {
+              "name": "authenticated unserved asset proxies",
+              "request": {
+                "method": "GET",
+                "path": "/assets/not-in-public",
+                "session": "setup"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "GET",
+                  "path": "/assets/not-in-public"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-015",
+      "observation_id": "DIFF-015",
+      "requirement_ids": [
+        "R017"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "status stream is incremental",
+              "request": {
+                "method": "GET",
+                "path": "/api/events/status",
+                "session": "setup",
+                "stream": true,
+                "observe_ms": 17000
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/event-stream"
+                  }
+                },
+                "frames": {
+                  "initial_event": "status",
+                  "initial_within_ms": 2000,
+                  "status_repeat_interval_ms": {
+                    "min": 1500,
+                    "max": 2500
+                  },
+                  "keepalive_interval_ms": {
+                    "min": 14000,
+                    "max": 16000
+                  },
+                  "keepalive_comment": ": keepalive",
+                  "disconnect_stops_timers": true
+                }
+              },
+              "normalize": {
+                "body": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-016",
+      "observation_id": "DIFF-016",
+      "requirement_ids": [
+        "R018"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "operation_id": "op-diff-016",
+            "operation_events": [
+              {
+                "type": "started",
+                "data": {
+                  "step": 1
+                }
+              },
+              {
+                "type": "finished",
+                "data": {
+                  "step": 2
+                }
+              }
+            ]
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "operation stream replays and delivers live events",
+              "request": {
+                "method": "GET",
+                "path": "/api/operations/op-diff-016/events",
+                "session": "setup",
+                "stream": true,
+                "live_event": {
+                  "type": "live",
+                  "data": {
+                    "step": 3
+                  }
+                }
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/event-stream"
+                  }
+                },
+                "frames": {
+                  "preamble": ": connected",
+                  "replayed_events": [
+                    "started",
+                    "finished"
+                  ],
+                  "live_events": [
+                    "live"
+                  ],
+                  "disconnect_cleans_up": true
+                }
+              },
+              "normalize": {
+                "body": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-017",
+      "observation_id": "DIFF-017",
+      "requirement_ids": [
+        "R019"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "openclaw upgrade is rejected before bridging",
+              "websocket": {
+                "path": "/openclaw/x"
+              },
+              "expect": {
+                "http_status": 401,
+                "closed_before_bridge": true
+              }
+            },
+            {
+              "name": "terminal upgrade is rejected before bridging",
+              "websocket": {
+                "path": "/api/watchdog/terminal/ws"
+              },
+              "expect": {
+                "http_status": 401,
+                "closed_before_bridge": true
+              }
+            },
+            {
+              "name": "chat upgrade is rejected before bridging",
+              "websocket": {
+                "path": "/api/ws/chat"
+              },
+              "expect": {
+                "http_status": 401,
+                "closed_before_bridge": true
+              }
+            },
+            {
+              "name": "login for authenticated upgrades",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "authenticated chat socket echoes",
+              "websocket": {
+                "path": "/api/ws/chat",
+                "session": "setup",
+                "send": "ping"
+              },
+              "expect": {
+                "opened": true,
+                "echo_includes": "ping"
+              }
+            },
+            {
+              "name": "unmatched upgrade proxies",
+              "websocket": {
+                "path": "/other/ws",
+                "session": "setup"
+              },
+              "expect": {
+                "gateway_upgrade": {
+                  "path": "/other/ws"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-018",
+      "observation_id": "DIFF-018",
+      "requirement_ids": [
+        "R020"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "PORT": "4317"
+          },
+          "fixtures": {
+            "onboarded": true
+          },
+          "process": {
+            "listen_host": "0.0.0.0",
+            "listen_port": 4317,
+            "startup_log_includes": "4317",
+            "onboarding_boot_called": true
+          }
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "onboarded": false
+          },
+          "process": {
+            "listen_host": "0.0.0.0",
+            "listen_port": 3000,
+            "startup_log_includes": "Awaiting onboarding",
+            "onboarding_boot_called": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "DIFF-019",
+      "observation_id": "DIFF-019",
+      "requirement_ids": [
+        "R021"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "signals": {
+            "SIGTERM": {
+              "gmail_stop_calls": 1,
+              "terminal_dispose_calls": 1
+            },
+            "SIGINT": {
+              "gmail_stop_calls": 1,
+              "terminal_dispose_calls": 1
+            }
+          },
+          "expect": {
+            "dispose_even_if_gmail_stop_rejects": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "DIFF-020",
+      "observation_id": "DIFF-020",
+      "requirement_ids": [
+        "R022"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "LOGIN_RATE_MAX_ATTEMPTS": "2",
+            "LOGIN_RATE_GLOBAL_MAX_ATTEMPTS": "3",
+            "LOGIN_RATE_WINDOW_MS": "600000"
+          },
+          "steps": [
+            {
+              "name": "failure one",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            },
+            {
+              "name": "success clears the client count",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200
+              }
+            },
+            {
+              "name": "next failure is not throttled",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "LOGIN_RATE_MAX_ATTEMPTS": "1",
+            "LOGIN_RATE_GLOBAL_MAX_ATTEMPTS": "2",
+            "TRUST_PROXY_HOPS": "1"
+          },
+          "steps": [
+            {
+              "name": "first rotated client key",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.10"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429
+              }
+            },
+            {
+              "name": "second rotated client key hits the global lock",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.11"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-021",
+      "observation_id": "DIFF-021",
+      "requirement_ids": [
+        "R023"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "TRUST_PROXY_HOPS": "1",
+            "LOGIN_RATE_MAX_ATTEMPTS": "2",
+            "LOGIN_RATE_GLOBAL_MAX_ATTEMPTS": "99"
+          },
+          "steps": [
+            {
+              "name": "forwarded client one first failure",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.7"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            },
+            {
+              "name": "forwarded client two first failure stays independent",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.8"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            },
+            {
+              "name": "forwarded client one second failure locks its key",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.7"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ]
+              }
+            },
+            {
+              "name": "forwarded client two second failure locks its key",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.8"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "TRUST_PROXY_HOPS": "0",
+            "LOGIN_RATE_MAX_ATTEMPTS": "2",
+            "LOGIN_RATE_GLOBAL_MAX_ATTEMPTS": "99"
+          },
+          "steps": [
+            {
+              "name": "socket client first failure",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.7"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            },
+            {
+              "name": "second forwarded value still uses the socket key and locks it",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.8"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 401
+              }
+            },
+            {
+              "name": "repeated request remains locked",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-forwarded-for": "198.51.100.7"
+                },
+                "body": "{\"password\":\"wrong\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-022",
+      "observation_id": "DIFF-022",
+      "requirement_ids": [
+        "R024"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "api json limit rejects before handler",
+              "request": {
+                "method": "POST",
+                "path": "/api/env",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "session": "setup",
+                "body_bytes": 5242881,
+                "body_fill": "x"
+              },
+              "expect": {
+                "status": 413,
+                "handler_side_effect": false,
+                "gateway_not_invoked": true
+              }
+            },
+            {
+              "name": "webhook raw limit rejects before gateway",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/test",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body_bytes": 5242881,
+                "body_fill": "x"
+              },
+              "expect": {
+                "status": 413,
+                "handler_side_effect": false,
+                "gateway_not_invoked": true
+              }
+            },
+            {
+              "name": "v1 json limit rejects before gateway",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer fixture-gateway-token"
+                },
+                "body_bytes": 52428801,
+                "body_fill": "x"
+              },
+              "expect": {
+                "status": 413,
+                "handler_side_effect": false,
+                "gateway_not_invoked": true
+              }
+            }
+          ]
+        }
+      ],
+      "normalize": {
+        "headers": false,
+        "body": false
+      }
+    },
+    {
+      "id": "DIFF-023",
+      "observation_id": "DIFF-023",
+      "requirement_ids": [
+        "R025"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "webhook path is rewritten to hooks",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/foo"
+                }
+              }
+            },
+            {
+              "name": "get hook is forwarded as post",
+              "request": {
+                "method": "GET",
+                "path": "/hooks/foo"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/foo"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-024",
+      "observation_id": "DIFF-024",
+      "requirement_ids": [
+        "R026"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "query token becomes bearer",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo?token=abc",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/foo",
+                  "query_absent": [
+                    "token"
+                  ],
+                  "headers": {
+                    "authorization": "Bearer abc"
+                  }
+                }
+              }
+            },
+            {
+              "name": "existing authorization wins",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo?token=abc",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer xyz"
+                },
+                "body": "{}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/foo",
+                  "query_absent": [
+                    "token"
+                  ],
+                  "headers": {
+                    "authorization": "Bearer xyz"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-025",
+      "observation_id": "DIFF-025",
+      "requirement_ids": [
+        "R027"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "query merges into body with body precedence",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo?a=1&b=2",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"b\":\"body\",\"c\":3}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/foo?a=1&b=2",
+                  "json_body": {
+                    "a": "1",
+                    "b": "body",
+                    "c": 3
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-026",
+      "observation_id": "DIFF-026",
+      "requirement_ids": [
+        "R028"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "first gmail push is forwarded",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/gmail",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"payload\":{\"inbox\":\"a@example.com\",\"messages\":[{\"id\":\"dup-1\"}]}}"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/gmail"
+                }
+              }
+            },
+            {
+              "name": "second identical gmail push is deduped",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/gmail",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"payload\":{\"inbox\":\"a@example.com\",\"messages\":[{\"id\":\"dup-1\"}]}}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true,
+                  "deduped": true
+                },
+                "gateway_not_invoked": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-027",
+      "observation_id": "DIFF-027",
+      "requirement_ids": [
+        "R029"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "gateway_response": {
+              "status": 202,
+              "headers": {
+                "x-hook": "yes"
+              },
+              "body": "accepted"
+            }
+          },
+          "steps": [
+            {
+              "name": "webhook mirrors gateway response",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{}"
+              },
+              "expect": {
+                "status": 202,
+                "headers": {
+                  "x-hook": "yes"
+                },
+                "body": "accepted",
+                "request_log": {
+                  "status": 202
+                }
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "gateway_unreachable": true
+          },
+          "steps": [
+            {
+              "name": "gateway failure is logged and surfaced",
+              "request": {
+                "method": "POST",
+                "path": "/webhook/foo",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{}"
+              },
+              "expect": {
+                "status": 502,
+                "json": {
+                  "error": "Gateway unavailable"
+                },
+                "request_log": {
+                  "status": 502,
+                  "gatewayStatus": 502
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-028",
+      "observation_id": "DIFF-028",
+      "requirement_ids": [
+        "R030"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "WEBHOOK_TOKEN": "fixture-webhook-token"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "create webhook with an oauth callback",
+              "request": {
+                "method": "POST",
+                "path": "/api/webhooks",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "session": "setup",
+                "body": "{\"name\":\"fixture-hook\",\"oauthCallback\":true}"
+              },
+              "expect": {
+                "status": 201
+              },
+              "save": {
+                "oauth_callback_id": "body.webhook.oauthCallbackId"
+              },
+              "normalize": {
+                "ignore": true
+              }
+            },
+            {
+              "name": "known oauth callback is forwarded",
+              "request": {
+                "method": "GET",
+                "path": "/oauth/${oauth_callback_id}?code=abc"
+              },
+              "expect": {
+                "status": 200,
+                "gateway": {
+                  "method": "POST",
+                  "path": "/hooks/fixture-hook?code=abc",
+                  "headers": {
+                    "authorization": "Bearer fixture-webhook-token"
+                  }
+                }
+              }
+            },
+            {
+              "name": "unknown oauth callback is not forwarded",
+              "request": {
+                "method": "GET",
+                "path": "/oauth/unknown"
+              },
+              "expect": {
+                "status": 404,
+                "json": {
+                  "error": "Not found"
+                },
+                "gateway_not_invoked": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-029",
+      "observation_id": "DIFF-029",
+      "requirement_ids": [
+        "R031"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "v1 upstream request is normalized",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions?x=1",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer fixture-gateway-token",
+                  "host": "example.test",
+                  "cookie": "setup_token=secret",
+                  "content-encoding": "identity"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "gateway": {
+                  "method": "POST",
+                  "path": "/v1/chat/completions?x=1",
+                  "headers_absent": [
+                    "transfer-encoding",
+                    "content-encoding",
+                    "cookie"
+                  ],
+                  "headers": {
+                    "content-type": "application/json",
+                    "content-length": "13"
+                  },
+                  "body_exact": "{\"model\":\"m\"}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-030",
+      "observation_id": "DIFF-030",
+      "requirement_ids": [
+        "R032"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "OPENAI_COMPAT_API_RATE_MAX_ATTEMPTS": "2"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "missing bearer",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            },
+            {
+              "name": "wrong bearer trips the throttle",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer wrong"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 429,
+                "headers_present": [
+                  "retry-after"
+                ],
+                "json": {
+                  "error": "Too many attempts. Try again shortly."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password",
+            "OPENAI_COMPAT_API_RATE_MAX_ATTEMPTS": "3"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token"
+          },
+          "steps": [
+            {
+              "name": "missing bearer",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            },
+            {
+              "name": "wrong bearer",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer wrong"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            },
+            {
+              "name": "successful auth clears the failure count",
+              "request": {
+                "method": "GET",
+                "path": "/v1/models",
+                "headers": {
+                  "authorization": "Bearer fixture-gateway-token"
+                }
+              },
+              "expect": {
+                "status": 200
+              }
+            },
+            {
+              "name": "next bad attempt is not locked",
+              "request": {
+                "method": "GET",
+                "path": "/v1/models",
+                "headers": {
+                  "authorization": "Bearer wrong"
+                }
+              },
+              "expect": {
+                "status": 401,
+                "json": {
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-031",
+      "observation_id": "DIFF-031",
+      "requirement_ids": [
+        "R033"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "fixtures": {
+            "alphaclaw_config": {
+              "features": {
+                "openaiCompatApi": {
+                  "enabled": true
+                }
+              }
+            },
+            "gateway_token": "fixture-gateway-token",
+            "gateway_response": {
+              "status": 200,
+              "headers": {
+                "connection": "keep-alive",
+                "set-cookie": "leak=1",
+                "x-request-id": "req-31"
+              },
+              "body": "data"
+            }
+          },
+          "steps": [
+            {
+              "name": "v1 response streams and strips unsafe headers",
+              "request": {
+                "method": "POST",
+                "path": "/v1/chat/completions",
+                "headers": {
+                  "content-type": "application/json",
+                  "authorization": "Bearer fixture-gateway-token"
+                },
+                "body": "{\"model\":\"m\"}"
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "x-request-id": "req-31"
+                },
+                "headers_absent": [
+                  "set-cookie"
+                ],
+                "body": "data",
+                "streamed": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "DIFF-032",
+      "observation_id": "DIFF-032",
+      "requirement_ids": [
+        "R034"
+      ],
+      "runs": [
+        {
+          "server_env": {
+            "SETUP_PASSWORD": "fixture-setup-password"
+          },
+          "steps": [
+            {
+              "name": "login for setup session",
+              "request": {
+                "method": "POST",
+                "path": "/api/auth/login",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"password\":\"fixture-setup-password\"}"
+              },
+              "expect": {
+                "status": 200,
+                "json": {
+                  "ok": true
+                }
+              }
+            },
+            {
+              "name": "status sse headers and payload",
+              "request": {
+                "method": "GET",
+                "path": "/api/events/status",
+                "session": "setup",
+                "stream": true,
+                "observe_ms": 2500
+              },
+              "expect": {
+                "status": 200,
+                "headers": {
+                  "content-type": {
+                    "string_includes": "text/event-stream"
+                  },
+                  "cache-control": {
+                    "string_includes": "no-cache"
+                  },
+                  "x-accel-buffering": "no"
+                },
+                "first_event": {
+                  "name": "status",
+                  "json_fields": [
+                    "status",
+                    "watchdogStatus",
+                    "doctorStatus",
+                    "timestamp"
+                  ]
+                }
+              },
+              "normalize": {
+                "body": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

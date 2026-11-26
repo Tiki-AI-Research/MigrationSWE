@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "status": "ready",
+  "task_id": "sharing-express-to-fastify",
+  "source_technology": "Express 4",
+  "target_technology": "Fastify 4",
+  "persistent_state_involved": false,
+  "declared_not_allowed_fallbacks": [
+    "require('express')",
+    "require('express-fileupload')",
+    "require('express-basic-auth')",
+    "from 'express'",
+    "string-concatenated, aliased, or dynamic-property legacy module loading",
+    "child_process spawn/exec/fork launching or bridging to a legacy server",
+    "loopback HTTP, RPC, or socket forwarding to a legacy server"
+  ],
+  "public_contract": {
+    "package_name": "easy-sharing",
+    "main": "bin/index.js",
+    "bin": {
+      "sharing": "./bin/index.js",
+      "easy-sharing": "./bin/index.js"
+    },
+    "engines_node": ">=14.18.0",
+    "exports": ["start", "buildApp"],
+    "http_routes": [
+      "GET /qr",
+      "GET /receive",
+      "POST /upload",
+      "POST /text",
+      "GET /share",
+      "GET /share/*",
+      "GET /zip",
+      "GET /clipboard",
+      "GET /clipboard.txt"
+    ],
+    "cli_flags": [
+      "--port", "--ip", "--interface", "--clipboard", "--receive",
+      "--username", "--password", "--ssl", "--cert", "--key",
+      "--token", "--secure", "--once", "--timeout", "--tunnel",
+      "--open", "--debug", "--help", "--version"
+    ]
+  },
+  "migration_units": [
+    {
+      "unit_id": "fastify_dependencies",
+      "type": "dependency",
+      "description": "Dependencies must include fastify and @fastify/multipart, and must not include express, express-fileupload, or express-basic-auth in production dependencies.",
+      "source_fact": "package.json dependencies include express, express-fileupload, express-basic-auth",
+      "target": "package.json dependencies have exact fastify@4.28.1 and @fastify/multipart@8.3.1 versions, with legacy express packages removed and a Node 14.18-compatible locked dependency tree",
+      "verification": "package.json has exact fastify and @fastify/multipart versions, lacks express, express-fileupload, express-basic-auth, and package-lock.json engine ranges accept Node 14.18.0",
+      "f2p_evidence": ["f2p::FL01-buildapp-instance"],
+      "allowed_exceptions": [],
+      "evidence": "Static parse of package.json dependencies"
+    },
+    {
+      "unit_id": "app_exports_contract",
+      "type": "api",
+      "description": "bin/app.js must export start and buildApp functions preserving public interface.",
+      "source_fact": "bin/app.js exports start(options) returning the native Express HTTP server",
+      "target": "bin/app.js exports start and buildApp; buildApp returns a real Fastify instance with inject/ready/close",
+      "verification": "require('./bin/app.js') yields typeof start === 'function' and typeof buildApp === 'function'",
+      "f2p_evidence": ["f2p::FL01-buildapp-instance", "f2p::FL02-buildapp-inject-share", "f2p::FL03-buildapp-close-rebuild"],
+      "allowed_exceptions": [],
+      "evidence": "Static analysis of module.exports in bin/app.js"
+    },
+    {
+      "unit_id": "no_express_in_production",
+      "type": "runtime",
+      "description": "Production files under bin/ must not require express, express-fileupload, or express-basic-auth.",
+      "source_fact": "bin/app.js uses require('express'), require('express-fileupload'), require('express-basic-auth')",
+      "target": "bin/ files free of express require calls; Fastify is the sole HTTP framework",
+      "verification": "Static scan of bin/*.js ensures no require('express*') or from 'express*'",
+      "f2p_evidence": ["f2p::FL04-no-express-runtime"],
+      "allowed_exceptions": [],
+      "evidence": "Regex scan of bin/**/*.js"
+    }
+  ]
+}

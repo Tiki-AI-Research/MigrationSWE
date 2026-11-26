@@ -1,0 +1,98 @@
+{
+  "batch_id": "BATCH-F2P-0003",
+  "schema_version": "migration-asset-f2p-fixtures:v1",
+  "default_origin": "http://127.0.0.1:8080",
+  "wisp_paths": ["/cron/", "/wisp/"],
+  "github_keys": ["router", "wisp"],
+  "cases": [
+    {
+      "id": "F2P-CASE-001",
+      "observation_ids": ["F2P-068", "F2P-055", "F2P-058", "F2P-060", "F2P-061"],
+      "requirement_ids": ["R031", "R033", "R035"],
+      "request": { "method": "GET", "path": "/", "headers": {} },
+      "expect": {
+        "status": 200,
+        "headers_absent": ["x-powered-by", "content-security-policy"],
+        "headers_present": { "x-content-type-options": "nosniff" }
+      }
+    },
+    {
+      "id": "F2P-CASE-002",
+      "observation_ids": ["F2P-056", "F2P-060", "F2P-065"],
+      "requirement_ids": ["R033"],
+      "request": { "method": "GET", "path": "/assets/js/card.js", "headers": {} },
+      "expect": {
+        "status": 200,
+        "body_non_empty": true,
+        "content_type_contains": "javascript"
+      }
+    },
+    {
+      "id": "F2P-CASE-003",
+      "observation_ids": ["F2P-050", "F2P-051", "F2P-059", "F2P-063", "F2P-064", "F2P-070"],
+      "requirement_ids": ["R034"],
+      "request": {
+        "method": "GET",
+        "path": "/documentation",
+        "headers": { "sec-fetch-dest": "document", "cookie": "HistoryHide=true" }
+      },
+      "expect": { "status": 404 }
+    },
+    {
+      "id": "F2P-CASE-004",
+      "observation_ids": ["F2P-052", "F2P-062"],
+      "requirement_ids": ["R030"],
+      "request": { "method": "GET", "path": "///documentation//", "headers": {} },
+      "expect": { "status": 200, "body_equals": "/documentation" }
+    },
+    {
+      "id": "F2P-CASE-005",
+      "observation_ids": ["F2P-054", "F2P-066"],
+      "requirement_ids": ["R037"],
+      "request": { "method": "GET", "path": "/github/router", "headers": {} },
+      "expect": { "status": 302, "header_present": "location" }
+    },
+    {
+      "id": "F2P-CASE-006",
+      "observation_ids": ["F2P-057", "F2P-062"],
+      "requirement_ids": ["R039"],
+      "request": { "method": "GET", "path": "/robots.txt", "headers": {} },
+      "precondition": { "config.usingSEO": true },
+      "expect": { "content_type_contains": "text/plain" }
+    },
+    {
+      "id": "F2P-CASE-007",
+      "observation_ids": ["F2P-053", "F2P-071", "F2P-049"],
+      "requirement_ids": ["R036"],
+      "request": { "method": "GET", "path": "/cron/", "headers": { "upgrade": "websocket" } },
+      "expect": { "status": 101 }
+    },
+    {
+      "id": "F2P-CASE-008",
+      "observation_ids": ["F2P-067"],
+      "requirement_ids": ["R038"],
+      "request": { "method": "GET", "path": "/", "headers": {} },
+      "expect": { "esm_default_imports": ["express", "helmet"], "status": 200 }
+    },
+    {
+      "id": "F2P-CASE-009",
+      "observation_ids": ["F2P-069"],
+      "requirement_ids": ["R027"],
+      "request": { "method": "MANIFEST", "path": "package.json" },
+      "expect": {
+        "dependencies_present": ["express", "helmet"],
+        "dependencies_absent": ["fastify", "@fastify/static", "@fastify/helmet"]
+      }
+    },
+    {
+      "id": "F2P-CASE-010",
+      "observation_ids": ["F2P-072"],
+      "requirement_ids": ["R024"],
+      "request": { "method": "SOURCE", "path": "src/server.mjs" },
+      "expect": {
+        "imports_present": ["express"],
+        "imports_absent": ["fastify", "@fastify/static", "@fastify/helmet"]
+      }
+    }
+  ]
+}

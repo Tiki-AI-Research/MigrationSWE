@@ -1,0 +1,13 @@
+diff --git a/packages/core/src/__runtime_probe.js b/packages/core/src/__runtime_probe.js
+new file mode 100644
+index 0000000..d10c2b4
+--- /dev/null
++++ b/packages/core/src/__runtime_probe.js
+@@ -0,0 +1,7 @@
++'use strict';
++// Adversarial: spawn the source runtime from inside the migrated package.
++const { execSync } = require('child_process');
++function fallback(value) {
++  return execSync('node -e "process.stdout.write(String(1))"').toString() || value;
++}
++module.exports = { fallback };

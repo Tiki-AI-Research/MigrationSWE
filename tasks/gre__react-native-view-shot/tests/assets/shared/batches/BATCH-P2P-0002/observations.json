@@ -1,0 +1,199 @@
+{
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "P2P",
+  "side_agnostic": true,
+  "test_command": ["npm", "test", "--", "--ci", "--runInBand"],
+  "build_command": ["npm", "run", "build"],
+  "timeout_seconds": 1800,
+  "observations": [
+    {
+      "id": "P2P-033",
+      "surface": "test:src/__tests__/ViewShot.test.tsx#calls onCapture callback on successful capture",
+      "requirement_ids": ["R012", "R013", "R019", "R020", "R021", "R022", "R030", "R031", "R034"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "calls onCapture callback on successful capture"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "calls onCapture callback on successful capture"]
+    },
+    {
+      "id": "P2P-036",
+      "surface": "test:src/__tests__/validateOptions.test.ts#calls native captureScreen with validated options",
+      "requirement_ids": ["R007", "R008", "R009", "R012", "R034"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/validateOptions.test.ts",
+        "name": "calls native captureScreen with validated options"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/validateOptions.test.ts", "-t", "calls native captureScreen with validated options"]
+    },
+    {
+      "id": "P2P-027",
+      "surface": "test:src/__tests__/validateOptions.test.ts#releaseCapture path confinement (relative-path-only deletion)",
+      "requirement_ids": ["R028"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/validateOptions.test.ts",
+        "name": "warns and does not call native when uri is not a string"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/validateOptions.test.ts", "-t", "warns and does not call native when uri is not a string"]
+    },
+    {
+      "id": "P2P-028",
+      "surface": "test:src/__tests__/validateOptions.test.ts#Windows C# releaseCapture contract",
+      "requirement_ids": ["R017"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/validateOptions.test.ts",
+        "name": "calls native releaseCapture with uri"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/validateOptions.test.ts", "-t", "calls native releaseCapture with uri"]
+    },
+    {
+      "id": "P2P-034",
+      "surface": "test:src/__tests__/RNViewShot.web.test.ts#data-uri result serialization",
+      "requirement_ids": ["R016"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/RNViewShot.web.test.ts",
+        "name": "returns data-uri when result is data-uri"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/RNViewShot.web.test.ts", "-t", "returns data-uri when result is data-uri"]
+    },
+    {
+      "id": "P2P-039",
+      "surface": "test:src/__tests__/captureRef.test.ts#failed capture rejection",
+      "requirement_ids": ["R025"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/captureRef.test.ts",
+        "name": "throws when RNViewShot is undefined"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/captureRef.test.ts", "-t", "throws when RNViewShot is undefined"]
+    },
+    {
+      "id": "P2P-026",
+      "surface": "exports:.",
+      "requirement_ids": ["R003", "R032"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "static captureRef and releaseCapture are exposed"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "static captureRef and releaseCapture are exposed"]
+    },
+    {
+      "id": "P2P-029",
+      "surface": "test:src/__tests__/ViewShot.test.tsx#ViewShot captureMode \"mount\"",
+      "requirement_ids": ["R029"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "capture() waits for first layout before calling captureRef"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "capture() waits for first layout before calling captureRef"]
+    },
+    {
+      "id": "P2P-030",
+      "surface": "Public package surface of react-native-view-shot (JS exports and native module contract)",
+      "requirement_ids": ["R003"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "static captureRef and releaseCapture are exposed"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "static captureRef and releaseCapture are exposed"]
+    },
+    {
+      "id": "P2P-031",
+      "surface": "test:src/__tests__/RNViewShot.web.test.ts#result mode data-uri",
+      "requirement_ids": ["R021"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/RNViewShot.web.test.ts",
+        "name": "returns data-uri when result is data-uri"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/RNViewShot.web.test.ts", "-t", "returns data-uri when result is data-uri"]
+    },
+    {
+      "id": "P2P-032",
+      "surface": "test:src/__tests__/ViewShot.test.tsx#ViewShot instance method capture()",
+      "requirement_ids": ["R014"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "ref.current.capture() resolves via native captureRef after first layout"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "ref.current.capture() resolves via native captureRef after first layout"]
+    },
+    {
+      "id": "P2P-035",
+      "surface": "test:src/__tests__/ViewShot.test.tsx#ViewShot React component (default export)",
+      "requirement_ids": ["R013"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "renders with collapsable={false} and onLayout"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "renders with collapsable={false} and onLayout"]
+    },
+    {
+      "id": "P2P-037",
+      "surface": "test:src/__tests__/validateOptions.test.ts#Public JS export captureScreen(options)",
+      "requirement_ids": ["R011"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/validateOptions.test.ts",
+        "name": "calls native captureScreen with validated options"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/validateOptions.test.ts", "-t", "calls native captureScreen with validated options"]
+    },
+    {
+      "id": "P2P-038",
+      "surface": "Change confinement to library production sources, dependency configuration, and build assets",
+      "requirement_ids": ["R033"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "suite": true,
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand"]
+    },
+    {
+      "id": "P2P-040",
+      "surface": "test:src/__tests__/ViewShot.test.tsx#ViewShot captureMode \"continuous\" requestAnimationFrame loop",
+      "requirement_ids": ["R031"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/ViewShot.test.tsx",
+        "name": "starts requestAnimationFrame loop for continuous mode"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/ViewShot.test.tsx", "-t", "starts requestAnimationFrame loop for continuous mode"]
+    },
+    {
+      "id": "P2P-025",
+      "surface": "test:src/__tests__/RNViewShot.web.test.ts#should capture cross-origin images with CORS",
+      "requirement_ids": ["R013", "R014", "R033"],
+      "projection": "observable-result",
+      "expectation": "PASS",
+      "jest": {
+        "file": "src/__tests__/RNViewShot.web.test.ts",
+        "name": "calls html2canvas with useCORS: true"
+      },
+      "invocation": ["npm", "test", "--", "--ci", "--runInBand", "src/__tests__/RNViewShot.web.test.ts", "-t", "calls html2canvas with useCORS: true"]
+    }
+  ]
+}

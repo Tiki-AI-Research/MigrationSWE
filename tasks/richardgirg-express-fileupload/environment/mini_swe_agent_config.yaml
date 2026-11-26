@@ -1,0 +1,34 @@
+# Mini-SWE-Agent config. The model name and API key are supplied by Harbor at
+# runtime; this file only pins the gateway and the local execution mode.
+
+model:
+  model_name: "openai/placeholder"
+  model_kwargs:
+    custom_llm_provider: "openai"
+    api_base: "https://api.openai.com/v1"
+    # API key injected at runtime via OPENAI_API_KEY env var.
+
+agent:
+  mode: yolo
+  step_limit: 250
+  system_template: |
+    You are an autonomous coding agent. Solve the requested task by inspecting
+    and editing the repository in the current workspace.
+
+    Every response must contain exactly one bash code block with one command
+    (or commands connected with && or ||), preceded by a short THOUGHT section.
+    Use the command to inspect files, make changes, or run validation. After
+    completing all task-required validation and delivery steps, execute
+    `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` as your final command. The
+    local runner ends the session when this exact marker is the first output
+    line of a successful command. Do not push to a remote repository; Harbor
+    collects the committed diff.
+  instance_template: |
+    Please solve this issue:
+
+    {{task}}
+
+    Work directly in the current workspace. Inspect the existing implementation,
+    make the minimal necessary changes, and run relevant tests before submitting.
+    Do not run git push. Complete the required validation and delivery steps,
+    then run `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` to submit.

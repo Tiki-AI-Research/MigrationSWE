@@ -1,0 +1,155 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "schema_version": "p2p-fixtures:v1",
+  "note": "Declarative input/expected corpus shared by the source and target P2P probes. Only normalized, observable values are compared (existence, structure, ordering, status/type/code, and normalized numeric/boolean values).",
+  "cases": [
+    {
+      "id": "tag-resolution",
+      "observation_ids": ["P2P-007", "P2P-012"],
+      "requirement_ids": ["R004", "R007"],
+      "cases": [
+        {"input": {"tag": "v9.9.9", "ref": "refs/heads/main"}, "expected": {"tag": "v9.9.9"}},
+        {"input": {"tag": "", "ref": "refs/tags/v1.2.3"}, "expected": {"tag": "v1.2.3"}},
+        {"input": {"tag": "", "ref": "refs/heads/main"}, "expected": {"error": true}}
+      ]
+    },
+    {
+      "id": "boolean-coercion",
+      "observation_ids": ["P2P-019", "P2P-021"],
+      "requirement_ids": ["R012"],
+      "cases": [
+        {"input": {"skipIfReleaseExists": ["true", "True", "TRUE"]}, "expected": {"skipIfReleaseExists": true}},
+        {"input": {"skipIfReleaseExists": ["false", "False", "FALSE"]}, "expected": {"skipIfReleaseExists": false}},
+        {"input": {"skipIfReleaseExists": "yes"}, "expected": {"error": true}},
+        {"input": {"immutableCreate": "TRUE"}, "expected": {"immutableCreate": false}},
+        {"input": {"immutableCreate": "true"}, "expected": {"immutableCreate": true}}
+      ]
+    },
+    {
+      "id": "make-latest",
+      "observation_ids": ["P2P-004"],
+      "requirement_ids": ["R011"],
+      "cases": [
+        {"input": {"makeLatest": "legacy"}, "expected": {"make_latest": "legacy"}},
+        {"input": {"makeLatest": "true"}, "expected": {"make_latest": "true"}},
+        {"input": {"makeLatest": "false"}, "expected": {"make_latest": "false"}},
+        {"input": {"makeLatest": "sometimes"}, "expected": {"make_latest": null}}
+      ]
+    },
+    {
+      "id": "artifacts-fallback",
+      "observation_ids": ["P2P-006"],
+      "requirement_ids": ["R009"],
+      "cases": [
+        {"input": {"artifacts": "", "artifact": "dist/*.bin"}, "expected": {"source": "artifact"}},
+        {"input": {"artifacts": "", "artifactContentType": ""}, "expected": {"content_type": "raw"}}
+      ]
+    },
+    {
+      "id": "artifact-metadata",
+      "observation_ids": ["P2P-003", "P2P-015"],
+      "requirement_ids": ["R019"],
+      "cases": [
+        {"input": {"path": "dist/app.bin", "size": 17}, "expected": {"name": "app.bin", "content_length": 17}}
+      ]
+    },
+    {
+      "id": "glob-validation",
+      "observation_ids": ["P2P-010"],
+      "requirement_ids": ["R017", "R018"],
+      "cases": [
+        {"input": {"patterns": "dist/*.nope", "artifactErrorsFailBuild": true}, "expected": {"error": true}},
+        {"input": {"patterns": "dist/*.nope", "artifactErrorsFailBuild": false}, "expected": {"error": false}},
+        {"input": {"patterns": "dist/a.bin", "isDirectory": true}, "expected": {"uploaded": false}}
+      ]
+    },
+    {
+      "id": "upload-retry-and-replacement",
+      "observation_ids": ["P2P-002", "P2P-014", "P2P-017"],
+      "requirement_ids": ["R020", "R021", "R022"],
+      "cases": [
+        {"input": {"status": 500}, "expected": {"attempts": 4}},
+        {"input": {"status": 400, "artifactErrorsFailBuild": false}, "expected": {"attempts": 1, "in_assets": false}},
+        {"input": {"replacesArtifacts": true, "existing": ["a", "b"], "uploading": ["b"]}, "expected": {"deleted": ["b"]}},
+        {"input": {"removeArtifacts": true, "existing": ["a", "b"]}, "expected": {"deleted": ["a", "b"]}}
+      ]
+    },
+    {
+      "id": "outputs",
+      "observation_ids": ["P2P-013", "P2P-016"],
+      "requirement_ids": ["R005", "R023"],
+      "cases": [
+        {"input": {"id": 42, "tarball_url": null, "zipball_url": null}, "expected": {"id": "42", "tarball_url": "", "zipball_url": ""}},
+        {"input": {"assets": {"a<b>&c": "https://x/a"}}, "expected": {"assets": "{\"a<b>&c\":\"https://x/a\"}"}}
+      ]
+    },
+    {
+      "id": "skip-existing",
+      "observation_ids": ["P2P-018"],
+      "requirement_ids": ["R015"],
+      "cases": [
+        {"input": {"skipIfReleaseExists": true, "existing": {"draft": false}}, "expected": {"skipped": true}},
+        {"input": {"skipIfReleaseExists": true, "lookupError": true}, "expected": {"continue": true}}
+      ]
+    },
+    {
+      "id": "update-only-unreleased",
+      "observation_ids": ["P2P-005"],
+      "requirement_ids": ["R016"],
+      "cases": [
+        {"input": {"updateOnlyUnreleased": true, "release": {"draft": false, "prerelease": false}}, "expected": {"error": true}},
+        {"input": {"updateOnlyUnreleased": true, "release": {"draft": true, "prerelease": false}}, "expected": {"error": false}},
+        {"input": {"updateOnlyUnreleased": true, "release": {"draft": false, "prerelease": true}}, "expected": {"error": false}}
+      ]
+    },
+    {
+      "id": "name-and-body",
+      "observation_ids": ["P2P-020"],
+      "requirement_ids": ["R024"],
+      "cases": [
+        {"input": {"name": "", "tag": "v1"}, "expected": {"name": "v1"}},
+        {"input": {"body": "B", "bodyFile": "f"}, "expected": {"body": "B"}},
+        {"input": {"body": "", "bodyFile": "f"}, "expected": {"body": "file:f"}},
+        {"input": {"body": "", "bodyFile": ""}, "expected": {"body": ""}}
+      ]
+    },
+    {
+      "id": "github-error-format",
+      "observation_ids": ["P2P-009", "P2P-011"],
+      "requirement_ids": ["R028"],
+      "cases": [
+        {"input": {"status": 404, "message": "Not Found", "detail": {"code": "missing", "resource": "Release"}},
+         "expected": {"lines": ["Error 404: Not Found", "Errors:", "- Release does not exist.", "Make sure your github token has access to the repo and has permission to author releases"]}},
+        {"input": {"status": 422, "message": "Validation Failed", "detail": {"code": "missing_field", "resource": "Release", "field": "tag_name"}},
+         "expected": {"lines": ["Error 422: Validation Failed", "Errors:", "- The tag_name field on Release is missing."]}},
+        {"input": {"status": 422, "message": "Validation Failed", "detail": {"code": "invalid", "resource": "Release", "field": "tag_name"}},
+         "expected": {"lines": ["Error 422: Validation Failed", "Errors:", "- The tag_name field on Release is an invalid format."]}},
+        {"input": {"status": 422, "message": "Validation Failed", "detail": {"code": "already_exists", "resource": "Release"}},
+         "expected": {"lines": ["Error 422: Validation Failed", "Errors:", "- Release already exists."]}},
+        {"input": {"status": 500, "message": "Boom", "detail": {"code": "custom", "message": "oh no", "documentation_url": "https://docs.example/x"}},
+         "expected": {"lines": ["Error 500: Boom", "Errors:", "- oh no\nPlease see https://docs.example/x."]}}
+      ]
+    },
+    {
+      "id": "release-lookup-status",
+      "observation_ids": ["P2P-001", "P2P-008"],
+      "requirement_ids": ["R013", "R014"],
+      "cases": [
+        {"input": {"allowUpdates": true, "getByTagStatus": 404, "draftExists": false}, "expected": {"operation": "create"}},
+        {"input": {"allowUpdates": true, "getByTagStatus": 404, "draftExists": true}, "expected": {"operation": "update"}},
+        {"input": {"allowUpdates": true, "getByTagStatus": 500}, "expected": {"error": true}},
+        {"input": {"allowUpdates": false}, "expected": {"operation": "create"}}
+      ]
+    },
+    {
+      "id": "release-notes-and-immutable",
+      "observation_ids": ["P2P-023"],
+      "requirement_ids": ["R006", "R025", "R026", "R027"],
+      "cases": [
+        {"input": {"generateReleaseNotes": true, "body": "B", "notes": "N"}, "expected": {"body": "B\nN"}},
+        {"input": {"generateReleaseNotes": true, "body": "", "notes": "N"}, "expected": {"body": "N"}},
+        {"input": {"immutableCreate": true, "draft": false}, "expected": {"sequence": ["POST", "upload", "PATCH"]}}
+      ]
+    }
+  ]
+}

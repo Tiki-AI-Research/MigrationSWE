@@ -1,0 +1,96 @@
+{
+  "requirements": [
+    {
+      "assertion": "The shiv command still accepts -e/--entry-point, -c/--console-script, -o/--output-file, -p/--python, --site-packages, --build-id, --compressed/--uncompressed, --compile-pyc, -E/--extend-pythonpath, and --help/--halp.",
+      "id": "R001",
+      "instruction_quote": "- `shiv` MUST continue to support `-h`, `--help`, `--halp`, `--version`, `-e`/`--entry-point`, `-c`/`--console-script`, `-o`/`--output-file`, `-p`/`--python`, `--site-packages`, `--build-id`, `--compressed`, `--uncompressed`, `--compile-pyc`, `-E`/`--extend-pythonpath`, `--reproducible`, `--no-modify`, `--preamble`, and `--root`.",
+      "kind": "preserve",
+      "observable_surface": "shiv console-script CLI option set"
+    },
+    {
+      "assertion": "shiv-info still accepts a positional pyz path and the -j/--json output option.",
+      "id": "R002",
+      "instruction_quote": "- `shiv-info <pyz>` MUST continue to support `-h`, `--help`, `--halp`, and `-j`/`--json`.",
+      "kind": "preserve",
+      "observable_surface": "shiv-info console-script CLI option set"
+    },
+    {
+      "assertion": "Missing pip args, missing output file, disallowed pip args, over-long shebang, and failed pip install still produce the same exit codes and error text.",
+      "id": "R003",
+      "instruction_quote": "- A request that lacks both dependency-installation arguments and `--site-packages` MUST fail with status 1 and report `You must supply PIP ARGS or --site-packages!`.\n- A request that supplies input without `-o`/`--output-file` MUST fail with status 1 and report `You must provide an output file option! (--output-file/-o)`.\n- A failed dependency installation MUST fail with status 1 and report `Pip install failed!`.\n- The disallowed options `-t`, `--target`, `--editable`, `-d`, `--download`, `--user`, and `--prefix`, including applicable equals forms, MUST fail with status 1 and identify the supplied argument and its reason.\n- A Python interpreter value longer than 128 characters for the zipapp shebang MUST fail with status 1 and report `Shebang is too long, it would exceed BINPRM_BUF_SIZE! Consider /usr/bin/env`.",
+      "kind": "preserve",
+      "observable_surface": "CLI exit codes and error text"
+    },
+    {
+      "assertion": "A pyz built for the hello package still executes and prints 'hello world'.",
+      "id": "R004",
+      "instruction_quote": "- A module entry point for the hello package MUST still print `hello world` when the archive is run. Module-entry and console-script modes MUST remain distinct.",
+      "kind": "preserve",
+      "observable_surface": "built zipapp runtime stdout"
+    },
+    {
+      "assertion": "shiv-info text output still identifies the archive path and its metadata and JSON output is still valid JSON; both views describe the same archive state, including build identifier, timestamp, interpreter, entry-point mode, compression, extraction settings, reproducibility, and recorded source hashes. Recorded environment.json fields are reported with their recorded values; the interpreter and compression state may be carried by an explicitly recognized equivalent representation.",
+      "id": "R005",
+      "instruction_quote": "- `shiv-info` text output MUST identify the archive path and its metadata. JSON output MUST be valid JSON. Both views MUST describe the same archive state, including build identifier, timestamp, interpreter, entry-point mode, compression, extraction settings, reproducibility, and recorded source hashes.",
+      "kind": "preserve",
+      "observable_surface": "shiv-info textual and JSON output, including derived interpreter and compression state"
+    },
+    {
+      "assertion": "Unrecognized arguments passed to shiv are still forwarded to pip install unchanged.",
+      "id": "R006",
+      "instruction_quote": "- Arguments not consumed by shiv MUST reach dependency installation in their original order and spelling. This includes repeated options, positional arguments, values that begin with a dash, and equals-form options. Options that shiv explicitly disallows MUST still be rejected rather than forwarded.",
+      "kind": "preserve",
+      "observable_surface": "shiv unknown-argument pass-through"
+    },
+    {
+      "assertion": "The project declares and uses click 8.1.7 and no longer uses click 6.7.",
+      "id": "R007",
+      "instruction_quote": "1. Use Click 8.1.7 exactly; do not retain a dependency on Click 6.7.",
+      "kind": "target_postcondition",
+      "observable_surface": "declared and installed click dependency version"
+    },
+    {
+      "assertion": "All public CLI commands, options, exit codes, and error formatting remain backward-compatible with existing specifications.",
+      "id": "R008",
+      "instruction_quote": "2. Do not remove, rename, weaken, or reinterpret existing public commands, options, supported packaging capabilities, runtime modes, error statuses, or documented diagnostics.",
+      "kind": "preserve",
+      "observable_surface": "public CLI contract"
+    },
+    {
+      "assertion": "Unrecognized flags and options intended for dependency installation continue to be forwarded to pip install unchanged.",
+      "id": "R009",
+      "instruction_quote": "- Arguments not consumed by shiv MUST reach dependency installation in their original order and spelling. This includes repeated options, positional arguments, values that begin with a dash, and equals-form options. Options that shiv explicitly disallows MUST still be rejected rather than forwarded.",
+      "kind": "preserve",
+      "observable_surface": "dependency-install argument pass-through"
+    },
+    {
+      "assertion": "Packaging and execution of zipapps continue to produce valid executables that execute correctly.",
+      "id": "R010",
+      "instruction_quote": "- A successful archive MUST be a readable, runnable zipapp with the expected bootstrap and metadata, one effective entry for each archive path, and preserved source permissions where supported. The output MUST be executable on platforms that support executable zipapps. For a newly created archive, its final POSIX mode MUST follow the established umask behavior; overwriting an archive MUST retain its existing read/write permissions while ensuring executable bits remain available.",
+      "kind": "preserve",
+      "observable_surface": "zipapp packaging and execution"
+    },
+    {
+      "id": "R011",
+      "kind": "preserve",
+      "observable_surface": "archive and extraction replacement on failure",
+      "assertion": "Archive and extraction publication are all-or-nothing: a failed replacement leaves the complete previous result readable and byte-identical, a failed first attempt leaves nothing that could be mistaken for a result, two concurrent builds leave one complete archive, and a corrupt member causes extraction to fail without damaging a prior result or blocking a later valid extraction.",
+      "instruction_quote": "- If the first extraction or build fails, no partial target or archive may remain that could be mistaken for a successful result.\n- If replacing an existing valid extraction or archive fails at any point, the complete previous result MUST remain readable and runnable, with its contents and bytes unchanged where byte identity is part of the existing behavior."
+    },
+    {
+      "id": "R012",
+      "kind": "preserve",
+      "observable_surface": "file lock acquisition and release",
+      "assertion": "A file lock provides mutual exclusion across threads and processes using the same path, honours a finite timeout and polling interval, raises TimeoutError identifying the lock path, and releases after normal exit and exceptions; competing builds of one output path therefore leave one complete, member-unique archive with no temporary residue.",
+      "instruction_quote": "- A file lock MUST provide mutual exclusion across threads and processes using the same path. An already-held lock MUST block another acquisition until release.\n- A finite timeout and polling interval MUST control waiting. A timed-out acquisition MUST raise `TimeoutError` identifying the lock path, MUST not enter the protected operation, and MUST not prevent a later acquisition."
+    },
+    {
+      "id": "R013",
+      "kind": "target_postcondition",
+      "observable_surface": "shiv-info reported interpreter and compression state",
+      "assertion": "Both shiv-info views express the archive's interpreter and compression state, using an explicitly recognized representation, so the two views describe the same complete archive state.",
+      "instruction_quote": "- `shiv-info` text output MUST identify the archive path and its metadata. JSON output MUST be valid JSON. Both views MUST describe the same archive state, including build identifier, timestamp, interpreter, entry-point mode, compression, extraction settings, reproducibility, and recorded source hashes."
+    }
+  ],
+  "schema_version": "migration-requirements:v1"
+}

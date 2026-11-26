@@ -1,0 +1,622 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "dependency_batch_ids": [
+    "BATCH-SKELETON-0001"
+  ],
+  "report_format": "p2p-report:v1",
+  "source": {
+    "root": "/input/source",
+    "harness": "source/batches/BATCH-P2P-0001/run_p2p.sh",
+    "native_test_command": [
+      "pnpm",
+      "-r",
+      "test"
+    ],
+    "native_test_commands": [
+      [
+        "pnpm",
+        "-r",
+        "test"
+      ]
+    ],
+    "timeout_sec": 600
+  },
+  "target": {
+    "root": "/input/target",
+    "harness": "target/batches/BATCH-P2P-0001/run_p2p.sh",
+    "native_test_command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--locked",
+      "--offline"
+    ],
+    "native_test_commands": [
+      [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      [
+        "pnpm",
+        "-r",
+        "test"
+      ]
+    ],
+    "timeout_sec": 600
+  },
+  "observations": [
+    {
+      "id": "P2P-009",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "ids": [
+          "first",
+          "second",
+          "third"
+        ]
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#createStepMap > returns steps and ids",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#create_step_map_returns_steps_and_ids",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "createStepMap > returns steps and ids"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "create_step_map_returns_steps_and_ids"
+      }
+    },
+    {
+      "id": "P2P-011",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "copy_equal": true,
+        "input_unchanged": true,
+        "absent_empty": true
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#getInitialData > returns a defensive copy",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#get_initial_data_returns_a_defensive_copy",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "getInitialData > returns a defensive copy"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "get_initial_data_returns_a_defensive_copy"
+      }
+    },
+    {
+      "id": "P2P-012",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "next_first": "second",
+        "prev_third": "second",
+        "neighbors_second": {
+          "prev": "first",
+          "next": "third"
+        },
+        "neighbors_first": {
+          "prev": null,
+          "next": "second"
+        },
+        "unknown": null
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#createStepMap > returns positions and neighbors",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#create_step_map_returns_positions_and_neighbors",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "createStepMap > returns positions and neighbors"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "create_step_map_returns_positions_and_neighbors"
+      }
+    },
+    {
+      "id": "P2P-013",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "first": "previous",
+        "second": "active",
+        "third": "upcoming"
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#step statuses > uses active/previous/upcoming",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#step_statuses_use_active_previous_upcoming",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "step statuses > uses active/previous/upcoming"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "step_statuses_use_active_previous_upcoming"
+      }
+    },
+    {
+      "id": "P2P-014",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "Step 2"
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#matchStep > runs the handler for the provided id",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#match_step_runs_the_handler_for_the_provided_id",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "matchStep > runs the handler for the provided id"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "match_step_runs_the_handler_for_the_provided_id"
+      }
+    },
+    {
+      "id": "P2P-016",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "exports": [
+          "createStepMap",
+          "getInitialStepIndex",
+          "parseStep",
+          "getInitialData",
+          "validateStep",
+          "getStepStatus",
+          "getStepStatuses",
+          "matchStep"
+        ]
+      },
+      "source_surface": "packages/core/src/index.ts#exported capability set",
+      "target_surface": "crates/stepperize-core/src/lib.rs#reexports",
+      "source_projection": {
+        "runner": "suite",
+        "command": [
+          "pnpm",
+          "-r",
+          "test"
+        ]
+      },
+      "target_projection": {
+        "runner": "build",
+        "command": [
+          "cargo",
+          "test",
+          "--workspace",
+          "--locked",
+          "--offline",
+          "--no-run"
+        ]
+      }
+    },
+    {
+      "id": "P2P-018",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "success": true,
+        "data": "Ada"
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#validateStep > returns success with the parsed value when the schema passes",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#validate_step_returns_success_with_the_validated_value",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "validateStep > returns success with the parsed value when the schema passes"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "validate_step_returns_success_with_the_validated_value"
+      }
+    },
+    {
+      "id": "P2P-019",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "error": "not_found",
+        "display": "Step \"missing\" not found."
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#validateStep > throws for an unknown step id",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#validate_step_fails_for_an_unknown_step_id",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "validateStep > throws for an unknown step id"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "validate_step_fails_for_an_unknown_step_id"
+      }
+    },
+    {
+      "id": "P2P-021",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#assertion integrity",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#assertion integrity",
+      "source_projection": {
+        "runner": "suite",
+        "command": [
+          "pnpm",
+          "-r",
+          "test"
+        ]
+      },
+      "target_projection": {
+        "runner": "suite",
+        "command": [
+          "cargo",
+          "test",
+          "--workspace",
+          "--locked",
+          "--offline"
+        ]
+      }
+    },
+    {
+      "id": "P2P-022",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "sync": "Ada",
+        "async": "Ada"
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#validateStep > returns success with the parsed value when the schema passes",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#validate_step_supports_async_validators",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "validateStep > returns success with the parsed value when the schema passes"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "validate_step_supports_async_validators"
+      }
+    },
+    {
+      "id": "P2P-024",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "at0": "first",
+        "at9": null
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#createStepMap > gets steps by id and index",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#create_step_map_gets_steps_by_id_and_index",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "createStepMap > gets steps by id and index"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "create_step_map_gets_steps_by_id_and_index"
+      }
+    },
+    {
+      "id": "P2P-003",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "has_second": true,
+        "has_missing": false
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#createStepMap > returns positions and neighbors",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#create_step_map_returns_positions_and_neighbors",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "createStepMap > returns positions and neighbors"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "create_step_map_returns_positions_and_neighbors"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "error": "no_handler",
+        "display": "No match handler found for step \"third\"."
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#matchStep > throws when no exhaustive handler exists",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#match_step_fails_when_no_exhaustive_handler_exists",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "matchStep > throws when no exhaustive handler exists"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "match_step_fails_when_no_exhaustive_handler_exists"
+      }
+    },
+    {
+      "id": "P2P-005",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/utils.test.ts#getStatuses",
+      "target_surface": "packages/react/src/tests/utils.test.ts#getStatuses",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/utils.test.ts",
+        "test": "getStatuses"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/utils.test.ts",
+        "test": "getStatuses"
+      }
+    },
+    {
+      "id": "P2P-010",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "unknown": null,
+        "null": null,
+        "undefined": null,
+        "number": null
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#parseStep > returns undefined for unknown or malformed values",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#parse_step_returns_known_ids_only",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "parseStep > returns undefined for unknown or malformed values"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "parse_step_returns_known_ids_only"
+      }
+    },
+    {
+      "id": "P2P-017",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "ids": [
+          "first",
+          "second",
+          "third"
+        ]
+      },
+      "source_surface": "packages/core/src/tests/utils.test.ts#createStepMap",
+      "target_surface": "crates/stepperize-core/tests/utils.rs#create_step_map_returns_steps_and_ids",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/core",
+        "path": "packages/core/src/tests/utils.test.ts",
+        "test": "createStepMap"
+      },
+      "target_projection": {
+        "runner": "cargo",
+        "path": "crates/stepperize-core/tests/utils.rs",
+        "test": "create_step_map_returns_steps_and_ids"
+      }
+    },
+    {
+      "id": "P2P-001",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/define-stepper.test.tsx#supports controlled flow data",
+      "target_surface": "packages/react/src/tests/define-stepper.test.tsx#supports controlled flow data",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/define-stepper.test.tsx",
+        "test": "supports controlled flow data"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/define-stepper.test.tsx",
+        "test": "supports controlled flow data"
+      }
+    },
+    {
+      "id": "P2P-002",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "apps/docs/src/lib/seo.test.ts#replaces double-escaped ampersands in OG image copy",
+      "target_surface": "apps/docs/src/lib/seo.test.ts#replaces double-escaped ampersands in OG image copy",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/seo.test.ts",
+        "test": "replaces double-escaped ampersands in OG image copy"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/seo.test.ts",
+        "test": "replaces double-escaped ampersands in OG image copy"
+      }
+    },
+    {
+      "id": "P2P-004",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/define-stepper.test.tsx#throws for duplicate step ids",
+      "target_surface": "packages/react/src/tests/define-stepper.test.tsx#throws for duplicate step ids",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/define-stepper.test.tsx",
+        "test": "throws for duplicate step ids"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/define-stepper.test.tsx",
+        "test": "throws for duplicate step ids"
+      }
+    },
+    {
+      "id": "P2P-007",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "apps/docs/src/lib/blocks/catalog.test.ts#built registry (run registry:build first)",
+      "target_surface": "apps/docs/src/lib/blocks/catalog.test.ts#built registry (run registry:build first)",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/blocks/catalog.test.ts",
+        "test": "built registry (run registry:build first)"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/blocks/catalog.test.ts",
+        "test": "built registry (run registry:build first)"
+      }
+    },
+    {
+      "id": "P2P-008",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "apps/docs/src/lib/seo.test.ts#SEO and OG image boundary",
+      "target_surface": "apps/docs/src/lib/seo.test.ts#SEO and OG image boundary",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/seo.test.ts",
+        "test": "SEO and OG image boundary"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "docs",
+        "path": "apps/docs/src/lib/seo.test.ts",
+        "test": "SEO and OG image boundary"
+      }
+    },
+    {
+      "id": "P2P-015",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/utils.test.ts#getStatuses",
+      "target_surface": "packages/react/src/tests/utils.test.ts#getStatuses",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/utils.test.ts",
+        "test": "getStatuses"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/utils.test.ts",
+        "test": "getStatuses"
+      }
+    },
+    {
+      "id": "P2P-020",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/primitives.test.tsx#Stepper.Trigger respects preventDefault in onClick",
+      "target_surface": "packages/react/src/tests/primitives.test.tsx#Stepper.Trigger respects preventDefault in onClick",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/primitives.test.tsx",
+        "test": "Stepper.Trigger respects preventDefault in onClick"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/primitives.test.tsx",
+        "test": "Stepper.Trigger respects preventDefault in onClick"
+      }
+    },
+    {
+      "id": "P2P-023",
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_surface": "packages/react/src/tests/primitives.test.tsx#Stepper.Items can render items without passing step to Item",
+      "target_surface": "packages/react/src/tests/primitives.test.tsx#Stepper.Items can render items without passing step to Item",
+      "source_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/primitives.test.tsx",
+        "test": "Stepper.Items can render items without passing step to Item"
+      },
+      "target_projection": {
+        "runner": "vitest",
+        "package": "@stepperize/react",
+        "path": "packages/react/src/tests/primitives.test.tsx",
+        "test": "Stepper.Items can render items without passing step to Item"
+      }
+    }
+  ]
+}

@@ -1,0 +1,308 @@
+{
+  "schema_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "projection_policy": {
+    "sha256": {
+      "normalization": "digest_map",
+      "description": "Both sides emit {\"<relative path>\": \"<sha256>\"} for the same root artifacts."
+    },
+    "canonical": {
+      "normalization": "canonical_value",
+      "description": "Both sides emit the shared canonical projection declared in canonical_value."
+    }
+  },
+  "probes": [
+    {
+      "observation_id": "P2P-004",
+      "surface": "test:test/test-auth-retry.ts#token refresh failure returns original 401 response",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["auth-retry.ts"]},
+      "target": {"kind": "file_digest", "paths": ["auth-retry.ts"]}
+    },
+    {
+      "observation_id": "P2P-005",
+      "surface": "test:schemas.ts#event page location",
+      "requirement_ids": ["R002", "R037"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["schemas.ts"]},
+      "target": {"kind": "file_digest", "paths": ["schemas.ts"]}
+    },
+    {
+      "observation_id": "P2P-002",
+      "surface": "recommendation payload of `omg_select_model`",
+      "requirement_ids": ["R027"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/model-router.ts",
+        "literals": ["claude-sonnet-4.6", "gpt-4.1", "gpt-4.1-mini"]
+      },
+      "target": {
+        "kind": "target_unittest",
+        "tests": [
+          "tests.test_run_tests.GenerateIdTest",
+          "tests.test_tool_schemas.ToolSchemaParityTest"
+        ]
+      }
+    },
+    {
+      "observation_id": "P2P-007",
+      "surface": "`omg_read_prd` result text",
+      "requirement_ids": ["R013"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/prd-tools.ts",
+        "literals": ["No PRD found. Create one with ralph or omg-autopilot.", "total_stories", "criteria_count"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.ReadPrdSerializationTest"]}
+    },
+    {
+      "observation_id": "P2P-008",
+      "surface": "`omg_clear_state` result text and file deletion",
+      "requirement_ids": ["R011"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/state-tools.ts",
+        "literals": ["No state directory", "cleared", "all", "-state.json"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-009",
+      "surface": "`omg_write_memory` result text",
+      "requirement_ids": ["R022"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/memory-tools.ts",
+        "literals": ["MAX_VALUE_LENGTH", "MAX_ENTRIES", "created", "updated"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-010",
+      "surface": "`safe_json_parse` object-only parsing and key stripping",
+      "requirement_ids": ["R031"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/utils.ts",
+        "literals": ["safeJsonParse", "__proto__", "constructor", "prototype"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_run_tests.SafeJsonParseTest"]}
+    },
+    {
+      "observation_id": "P2P-011",
+      "surface": "`omg_list_active` result text",
+      "requirement_ids": ["R012"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/state-tools.ts",
+        "literals": ["active_modes", "current_phase", "updated_at"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-012",
+      "surface": "`omg_delete_memory` result text",
+      "requirement_ids": ["R023"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/memory-tools.ts",
+        "literals": ["deleted", "key"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-013",
+      "surface": "root repository tree outside `mcp-server/`",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["index.ts", "schemas.ts", "package.json"]},
+      "target": {"kind": "file_digest", "paths": ["index.ts", "schemas.ts", "package.json"]}
+    },
+    {
+      "observation_id": "P2P-014",
+      "surface": "`omg_verify_story` result text",
+      "requirement_ids": ["R016"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/prd-tools.ts",
+        "literals": ["all_passing", "All stories pass. PRD is complete.", "remaining"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.ReadPrdSerializationTest"]}
+    },
+    {
+      "observation_id": "P2P-015",
+      "surface": "`omg_next_phase` result text and persisted state",
+      "requirement_ids": ["R018"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/workflow-tools.ts",
+        "literals": ["No omg-autopilot state found. Start with /omg-autopilot.", "OMG Autopilot workflow complete.", "phase_started_at"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-016",
+      "surface": "autopilot phase table exposed by `omg_get_phase_info`",
+      "requirement_ids": ["R017"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/workflow-tools.ts",
+        "literals": ["expansion", "planning", "execution", "qa", "validation", "cleanup"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_tool_schemas.ToolSchemaParityTest"]}
+    },
+    {
+      "observation_id": "P2P-017",
+      "surface": "state file read-modify-write ordering",
+      "requirement_ids": ["R003"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/state-tools.ts",
+        "literals": ["...existing", "...parsed.data", "updated_at"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-018",
+      "surface": "`omg_read_memory` result text",
+      "requirement_ids": ["R021"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/memory-tools.ts",
+        "literals": ["total", "entries", "category", "updated_at"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-019",
+      "surface": "bin:mcp-gitlab",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["package.json"]},
+      "target": {"kind": "file_digest", "paths": ["package.json"]}
+    },
+    {
+      "observation_id": "P2P-020",
+      "surface": "`omg_read_state` result text",
+      "requirement_ids": ["R009"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "locations": [
+          {
+            "path": "mcp-server/src/state-tools.ts",
+            "literals": ["No state found", "active: false", "getStatePath"]
+          },
+          {
+            "path": "mcp-server/src/utils.ts",
+            "literals": ["Invalid mode name"]
+          }
+        ]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_contract.EnvelopeTest"]}
+    },
+    {
+      "observation_id": "P2P-021",
+      "surface": "ported test suite `mcp-server/tests/`",
+      "requirement_ids": ["R039"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/test/run-tests.mjs",
+        "literals": ["validateMode", "safeJsonParse", "generateId", "getStatePath"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_run_tests"]}
+    },
+    {
+      "observation_id": "P2P-022",
+      "surface": "protected public artifacts",
+      "requirement_ids": ["R037"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/index.ts",
+        "literals": ["omg-workflow", "1.0.0"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_tool_schemas.ToolSchemaParityTest"]}
+    },
+    {
+      "observation_id": "P2P-023",
+      "surface": "`tools/list` result of the stdio server",
+      "requirement_ids": ["R004"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/index.ts",
+        "literals": ["registerStateTools", "registerPrdTools", "registerWorkflowTools", "registerMemoryTools", "registerModelRouter"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_stdio_server.ToolsListTest"]}
+    },
+    {
+      "observation_id": "P2P-024",
+      "surface": "`omg_get_phase_info` result text",
+      "requirement_ids": ["R020"],
+      "projection": "canonical",
+      "canonical_value": {"result": "PASS"},
+      "source": {
+        "kind": "source_literals",
+        "path": "mcp-server/src/workflow-tools.ts",
+        "literals": ["Invalid phase:", "Valid: 0-5.", "phases"]
+      },
+      "target": {"kind": "target_unittest", "tests": ["tests.test_tool_schemas.ToolSchemaParityTest"]}
+    },
+    {
+      "observation_id": "P2P-001",
+      "surface": "test:test/utils/version-check.test.ts#should detect newer patch, minor, and major versions",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["test/utils/version-check.test.ts"]},
+      "target": {"kind": "file_digest", "paths": ["test/utils/version-check.test.ts"]}
+    },
+    {
+      "observation_id": "P2P-003",
+      "surface": "test:schemas.ts#Return pipelines updated before the specified date",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["schemas.ts"]},
+      "target": {"kind": "file_digest", "paths": ["schemas.ts"]}
+    },
+    {
+      "observation_id": "P2P-006",
+      "surface": "test:test/stateless/codec.test.ts#decodeSecret",
+      "requirement_ids": ["R002"],
+      "projection": "sha256",
+      "source": {"kind": "file_digest", "paths": ["test/stateless/codec.test.ts"]},
+      "target": {"kind": "file_digest", "paths": ["test/stateless/codec.test.ts"]}
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+// Command serie-core exposes the migrated non-UI serie core as a small CLI.
+package main
+
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/lusingander/serie/core"
+)
+
+type optionalInt struct {
+	value int
+	set   bool
+}
+
+func (o *optionalInt) String() string {
+	if !o.set {
+		return ""
+	}
+	return strconv.Itoa(o.value)
+}
+
+func (o *optionalInt) Set(value string) error {
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return err
+	}
+	if n < 0 {
+		return fmt.Errorf("max-count must not be negative")
+	}
+	o.value = n
+	o.set = true
+	return nil
+}
+
+type optionalOrder struct {
+	value core.SortCommit
+	set   bool
+}
+
+func (o *optionalOrder) String() string {
+	if !o.set {
+		return ""
+	}
+	if o.value == core.SortTopological {
+		return "topo"
+	}
+	return "chrono"
+}
+
+func (o *optionalOrder) Set(value string) error {
+	switch value {
+	case "chrono":
+		o.value = core.SortChronological
+	case "topo":
+		o.value = core.SortTopological
+	default:
+		return fmt.Errorf("invalid order %q (expected chrono or topo)", value)
+	}
+	o.set = true
+	return nil
+}
+
+type optionalBool struct {
+	value bool
+	set   bool
+}
+
+func (o *optionalBool) String() string {
+	if !o.set {
+		return "false"
+	}
+	return strconv.FormatBool(o.value)
+}
+
+func (o *optionalBool) Set(value string) error {
+	v, err := strconv.ParseBool(value)
+	if err != nil {
+		return err
+	}
+	o.value = v
+	o.set = true
+	return nil
+}
+
+// IsBoolFlag lets --mailmap be used without an explicit value.
+func (o *optionalBool) IsBoolFlag() bool { return true }
+
+type cliOptions struct {
+	maxCount optionalInt
+	order    optionalOrder
+	mailmap  optionalBool
+	path     string
+}
+
+// reorderArgs allows the optional repository path to appear before or after
+// flags, which is friendlier for a CLI whose path argument is optional.
+func reorderArgs(args []string) []string {
+	flags := make([]string, 0, len(args))
+	positional := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			positional = append(positional, args[i+1:]...)
+			break
+		}
+		if arg == "-n" || arg == "--max-count" || arg == "-o" || arg == "--order" {
+			flags = append(flags, arg)
+			if i+1 < len(args) {
+				i++
+				flags = append(flags, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+			continue
+		}
+		positional = append(positional, arg)
+	}
+	return append(flags, positional...)
+}
+
+func parseFlags(args []string, output io.Writer) (cliOptions, error) {
+	var opts cliOptions
+	fs := flag.NewFlagSet("serie-core", flag.ContinueOnError)
+	fs.SetOutput(output)
+	fs.Var(&opts.maxCount, "n", "Maximum number of commits to load")
+	fs.Var(&opts.maxCount, "max-count", "Maximum number of commits to load")
+	fs.Var(&opts.order, "o", "Commit ordering algorithm (chrono or topo)")
+	fs.Var(&opts.order, "order", "Commit ordering algorithm (chrono or topo)")
+	fs.Var(&opts.mailmap, "mailmap", "Resolve identities through .mailmap")
+	if err := fs.Parse(reorderArgs(args)); err != nil {
+		return cliOptions{}, err
+	}
+	rest := fs.Args()
+	if len(rest) > 1 {
+		return cliOptions{}, fmt.Errorf("too many arguments")
+	}
+	opts.path = "."
+	if len(rest) == 1 {
+		opts.path = rest[0]
+	}
+	return opts, nil
+}
+
+func resolveOptions(cli cliOptions, config core.Config) (string, core.SortCommit, *int, bool) {
+	order := config.Order
+	if cli.order.set {
+		order = cli.order.value
+	}
+	mailmap := config.Mailmap
+	if cli.mailmap.set {
+		mailmap = cli.mailmap.value
+	}
+	var maxCount *int
+	if cli.maxCount.set {
+		n := cli.maxCount.value
+		maxCount = &n
+	}
+	return cli.path, order, maxCount, mailmap
+}
+
+type jsonResult struct {
+	Commits      []*core.Commit                    `json:"commits"`
+	CommitPosMap map[core.CommitHash]core.Position `json:"commit_pos_map"`
+	Edges        [][]core.Edge                     `json:"edges"`
+	MaxPosX      int                               `json:"max_pos_x"`
+	AllRefs      []core.Ref                        `json:"all_refs"`
+	Head         core.Head                         `json:"head"`
+}
+
+func writeJSONResult(w io.Writer, graph *core.Graph, refs []core.Ref, head core.Head) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(jsonResult{
+		Commits:      graph.Commits,
+		CommitPosMap: graph.CommitPosMap,
+		Edges:        graph.Edges,
+		MaxPosX:      graph.MaxPosX,
+		AllRefs:      refs,
+		Head:         head,
+	})
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
+	opts, err := parseFlags(args, stderr)
+	if err != nil {
+		return err
+	}
+	config, err := core.LoadConfig()
+	if err != nil {
+		return err
+	}
+	path, order, maxCount, mailmap := resolveOptions(opts, config)
+	repository, err := core.Load(path, order, maxCount, mailmap)
+	if err != nil {
+		return err
+	}
+	graph := core.CalcGraph(repository)
+	return writeJSONResult(stdout, graph, repository.AllRefs(), repository.Head())
+}
+
+func main() {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}

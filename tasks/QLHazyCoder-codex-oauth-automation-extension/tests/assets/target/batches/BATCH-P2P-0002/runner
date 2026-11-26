@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPORT="${1:-${P2P_REPORT:-/logs/result.json}}"
+exec python3 "$DIR/p2p_probe.py" --repo "${REPO_ROOT:-/input/target}" --side target --out "$REPORT"

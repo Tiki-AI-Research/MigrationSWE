@@ -1,0 +1,224 @@
+{
+  "schema_version": "migration-contract-cases:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "migration": {
+    "category": "language",
+    "source": "Rust",
+    "target": "Go"
+  },
+  "verdict_rule": "source and target must each report status PASS and their normalized values must be equal",
+  "cases": [
+    {
+      "observation_id": "CONTRACT-001",
+      "requirement_ids": ["R002"],
+      "surface": "taws root command flag set",
+      "probe": "cli",
+      "commands": [
+        {"argv": ["--log-level", "off", "--readonly", "--help"], "capture": "exit_only"},
+        {"argv": ["--bogus"], "capture": "exit_only"},
+        {"argv": ["--log-level", "bogus"], "capture": "exit_only"}
+      ],
+      "expected": {"help_exits": 0, "unknown_flag_exits_nonzero": true, "invalid_log_level_exits_nonzero": true}
+    },
+    {
+      "observation_id": "CONTRACT-002",
+      "requirement_ids": ["R003"],
+      "surface": "taws subcommand tree (completion, list-profiles, list-regions)",
+      "probe": "cli",
+      "commands": [
+        {"argv": ["completion", "bash"], "capture": "exit_only"},
+        {"argv": ["completion", "zsh"], "capture": "exit_only"},
+        {"argv": ["completion", "fish"], "capture": "exit_only"},
+        {"argv": ["completion", "powershell"], "capture": "exit_only"},
+        {"argv": ["completion", "elvish"], "capture": "exit_and_stdout_nonempty"},
+        {"argv": ["list-regions"], "capture": "line_count"},
+        {"argv": ["list-profiles"], "capture": "line_count"}
+      ],
+      "expected": {
+        "completion_shells_ok": ["bash", "fish", "powershell", "zsh"],
+        "completion_fallback_ok": true,
+        "list_regions_nonempty": true,
+        "list_profiles_nonempty": true
+      }
+    },
+    {
+      "observation_id": "CONTRACT-003",
+      "requirement_ids": ["R004"],
+      "surface": "YAML preferences document at taws/config.yaml",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["config::test_default_config", "config::test_serialize_deserialize"]},
+      "target": {"tests": ["TestDefaultConfig", "TestSerializeDeserialize"]}
+    },
+    {
+      "observation_id": "CONTRACT-004",
+      "requirement_ids": ["R005"],
+      "surface": "configuration loader error handling",
+      "probe": "mixed",
+      "fixture": "bad-config/config.yaml",
+      "expected": {"invalid_yaml": "defaults_no_panic", "missing_file": "defaults_warning"},
+      "source": {"tests": []},
+      "target": {"tests": ["TestLoadInvalidDoesNotPanic", "TestLoadMissingFileLogsWarningAndUsesDefaults"]}
+    },
+    {
+      "observation_id": "CONTRACT-005",
+      "requirement_ids": ["R006"],
+      "surface": "recently-used-region ordering",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["config::test_add_recent_region"]},
+      "target": {"tests": ["TestAddRecentRegion"]}
+    },
+    {
+      "observation_id": "CONTRACT-006",
+      "requirement_ids": ["R008"],
+      "surface": "directly addressable resource key set",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::registry::test_registry_loads_successfully", "resource::registry::test_get_all_resource_keys"]},
+      "target": {"tests": ["TestRegistryLoadsSuccessfully", "TestGetAllResourceKeys"]}
+    },
+    {
+      "observation_id": "CONTRACT-007",
+      "requirement_ids": ["R010"],
+      "surface": "AWS protocol dispatch (query, json, rest-json, rest-xml)",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::protocol::test_api_protocol_deserialize", "resource::handlers::query::test_parse_ec2_response", "resource::handlers::json::test_parse_dynamodb_response", "resource::handlers::rest_json::test_parse_lambda_functions_response", "resource::handlers::rest_xml::test_parse_s3_list_buckets"]},
+      "target": {"tests": ["TestAPIProtocolDeserialize", "TestParseEC2Response", "TestJSONParseDynamoDBResponse", "TestRESTJSONParseLambdaFunctionsResponse", "TestParseS3ListBuckets"]}
+    },
+    {
+      "observation_id": "CONTRACT-008",
+      "requirement_ids": ["R011"],
+      "surface": "request construction from api_config/action_configs/describe_config",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::dispatch::test_resolve_static_param_template_replaces_all_placeholders", "resource::dispatch::test_resolve_static_param_template_keeps_plain_text", "resource::dispatch::test_extract_param_variants"]},
+      "target": {"tests": ["TestResolveStaticParamTemplateReplacesAllPlaceholders", "TestResolveStaticParamTemplateKeepsPlainText", "TestExtractParamVariants"]}
+    },
+    {
+      "observation_id": "CONTRACT-009",
+      "requirement_ids": ["R012"],
+      "surface": "pagination configuration handling",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::handlers::json::test_parse_with_pagination"]},
+      "target": {"tests": ["TestJSONParseWithPagination"]}
+    },
+    {
+      "observation_id": "CONTRACT-010",
+      "requirement_ids": ["R013"],
+      "surface": "AWS credential resolution chain",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["aws::credentials::test_parse_ini_file", "aws::credentials::test_parse_credential_source", "aws::credentials::test_parse_ini_file_with_role_arn"]},
+      "target": {"tests": ["TestParseINIFile", "TestParseCredentialSource", "TestParseINIFileWithRoleArn"]}
+    },
+    {
+      "observation_id": "CONTRACT-011",
+      "requirement_ids": ["R014"],
+      "surface": "AWS override environment variables",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["aws::credentials::test_get_login_cache_dir_env_override", "aws::credentials::test_parse_ini_file_with_credential_source", "aws::tls::test_load_ca_certificates_not_set"]},
+      "target": {"tests": ["TestGetLoginCacheDirEnvOverride", "TestParseINIFileWithCredentialSource"]}
+    },
+    {
+      "observation_id": "CONTRACT-012",
+      "requirement_ids": ["R015"],
+      "surface": "list-profiles and list-regions output",
+      "probe": "cli",
+      "commands": [
+        {"argv": ["list-profiles"], "capture": "sorted_lines"},
+        {"argv": ["list-regions"], "capture": "first_lines", "limit": 5}
+      ],
+      "expected": {"list_profiles_contains": ["default"], "list_regions_first": ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]}
+    },
+    {
+      "observation_id": "CONTRACT-013",
+      "requirement_ids": ["R016"],
+      "surface": "list, describe and action operation results",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::field_mapper::test_build_response", "resource::field_mapper::test_apply_field_mappings"]},
+      "target": {"tests": ["TestBuildResponse", "TestApplyFieldMappings"]}
+    },
+    {
+      "observation_id": "CONTRACT-014",
+      "requirement_ids": ["R017"],
+      "surface": "taws startup with bad preferences file",
+      "probe": "mixed",
+      "fixture": "bad-config/config.yaml",
+      "expected": {"invalid_yaml": "starts_defaults", "missing_file": "starts_defaults"},
+      "source": {"tests": []},
+      "target": {"tests": ["TestLoadInvalidDoesNotPanic", "TestLoadMissingFileLogsWarningAndUsesDefaults"]}
+    },
+    {
+      "observation_id": "CONTRACT-015",
+      "requirement_ids": ["R018"],
+      "surface": "--readonly write suppression",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": []},
+      "target": {"tests": ["TestReadOnlyBlocksMutatingActions"]}
+    },
+    {
+      "observation_id": "CONTRACT-016",
+      "requirement_ids": ["R019"],
+      "surface": "custom endpoint URL resolution",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": []},
+      "target": {"tests": ["TestNewHTTPClientHonorsEndpointEnvOverride", "TestNewHTTPClientExplicitEndpointWinsOverEnv"]}
+    },
+    {
+      "observation_id": "CONTRACT-017",
+      "requirement_ids": ["R020"],
+      "surface": "next-page loadability and max_results",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["resource::handlers::json::test_parse_with_pagination"]},
+      "target": {"tests": ["TestJSONParseWithPagination"]}
+    },
+    {
+      "observation_id": "CONTRACT-018",
+      "requirement_ids": ["R021"],
+      "surface": "SSO / console-login requirement reporting",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": ["aws::credentials::test_credentials_error_sso_vs_console_login", "aws::credentials::test_parse_ini_file_with_login_session"]},
+      "target": {"tests": ["TestCredentialsErrorSSOVsConsoleLogin", "TestParseINIFileWithLoginSession"]}
+    },
+    {
+      "observation_id": "CONTRACT-019",
+      "requirement_ids": ["R022"],
+      "surface": "SSM session exit reporting",
+      "probe": "tests",
+      "expected": "pass",
+      "source": {"tests": []},
+      "target": {"tests": ["TestReportSSMExitReports254Hint", "TestReportSSMExitReportsOtherCodes"]}
+    },
+    {
+      "observation_id": "CONTRACT-020",
+      "requirement_ids": ["R023"],
+      "surface": "retained public CLI/config/aws/resource capabilities",
+      "probe": "composite",
+      "expected": "pass",
+      "source": {"tests": ["config::test_serialize_deserialize", "resource::registry::test_get_all_resource_keys"]},
+      "target": {"tests": ["TestSerializeDeserialize", "TestGetAllResourceKeys"]},
+      "commands": [
+        {"argv": ["--version"], "capture": "stdout"},
+        {"argv": ["completion", "bash"], "capture": "exit_only"}
+      ]
+    },
+    {
+      "observation_id": "CONTRACT-021",
+      "requirement_ids": ["R030"],
+      "surface": "ported public test suite",
+      "probe": "suite",
+      "expected": "pass",
+      "source": {"suite": "cargo test"},
+      "target": {"suite": "go test ./..."}
+    }
+  ]
+}

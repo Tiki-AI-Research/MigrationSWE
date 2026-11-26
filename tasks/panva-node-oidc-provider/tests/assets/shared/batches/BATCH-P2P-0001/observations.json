@@ -1,0 +1,503 @@
+{
+  "schema_version": "migration-p2p-corpus:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "relation": "equal_after_normalization",
+  "normalization": [
+    "strip volatile headers (date, etag, set-cookie values)",
+    "compare parsed JSON with stable key order",
+    "trim trailing whitespace in text bodies"
+  ],
+  "observation_count": 24,
+  "observations": [
+    {
+      "id": "P2P-007",
+      "surface": "test:test/core/basic/code.authorization.test.js#interaction check no session & max_age combo",
+      "input_class": "boundary",
+      "scenario": "boundary",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-03736"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/core/basic/code.authorization.test.js",
+        "title": "interaction check no session & max_age combo"
+      }
+    },
+    {
+      "id": "P2P-017",
+      "surface": "test:test/userinfo/bearer.test.js#bad Authorization header format (not bearer)",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-08116"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/userinfo/bearer.test.js",
+        "title": "bad Authorization header format (not bearer)"
+      }
+    },
+    {
+      "id": "P2P-005",
+      "surface": "test:test/configuration/custom_client_metadata.test.js#should not allow customization to remove redirect_uris when response_types need them",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-03542"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/configuration/custom_client_metadata.test.js",
+        "title": "should not allow customization to remove redirect_uris when response_types need them"
+      }
+    },
+    {
+      "id": "P2P-008",
+      "surface": "test:test/discovery/oauth_authorization_server.test.js#does not populate ctx.oidc.entities",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-04482"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/discovery/oauth_authorization_server.test.js",
+        "title": "does not populate ctx.oidc.entities"
+      }
+    },
+    {
+      "id": "P2P-009",
+      "surface": "route-name resolution and exposed router fields",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00148"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "resolve route name `discovery` to the first well-known registration and assert the request exposes params plus the router, routerName, routerPath, _matchedRoute and _matchedRouteName fields."
+      }
+    },
+    {
+      "id": "P2P-010",
+      "surface": "secure/proxy detection for request.protocol and request.secure",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00134"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "request.protocol and request.secure follow trustProxy resolution for direct and proxied requests."
+      }
+    },
+    {
+      "id": "P2P-011",
+      "surface": "public capabilities and their contracts",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00149"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the named exports, constructor/configuration schema, adapter persistence contract, provider events and cookie names/signing contracts."
+      }
+    },
+    {
+      "id": "P2P-012",
+      "surface": "delegation of migrated responsibilities to a Koa runtime",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00151"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert no migration-scope production module spawns, RPCs, dlopens or otherwise delegates request handling to a Koa runtime."
+      }
+    },
+    {
+      "id": "P2P-013",
+      "surface": "production imports of Koa in the migration scope",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00150"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert no migration-scope production module imports or calls Koa to serve a request."
+      }
+    },
+    {
+      "id": "P2P-014",
+      "surface": "CORS preflight OPTIONS responses",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00140"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "preflight OPTIONS carrying Access-Control-Request-Method to the listed endpoints returns 204 with Access-Control-Allow-Origin, Access-Control-Allow-Methods and Access-Control-Max-Age."
+      }
+    },
+    {
+      "id": "P2P-015",
+      "surface": "CORS response headers emitted per endpoint profile",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00131"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the open, challenge, userinfo, client, clientWithDPoP and credential profiles emit Access-Control-Allow-Origin plus the profile-specific Access-Control-Expose-Headers."
+      }
+    },
+    {
+      "id": "P2P-016",
+      "surface": "request-body parsing for urlencoded and JSON bodies",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00143"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert application/x-www-form-urlencoded and application/json bodies yield the same ctx.oidc.body values."
+      }
+    },
+    {
+      "id": "P2P-018",
+      "surface": "session and interaction persistence timing",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00130"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert a touched session is upserted exactly once before the response and an untouched session is not persisted."
+      }
+    },
+    {
+      "id": "P2P-019",
+      "surface": "rejection of unsupported content types on body endpoints",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00145"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert a body endpoint receiving a present unsupported Content-Type keeps its `only <cty> content-type bodies are supported on <method> <path>` rejection."
+      }
+    },
+    {
+      "id": "P2P-020",
+      "surface": "HEAD routing to GET handlers",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00147"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert HEAD /jwks and HEAD /auth route to the GET handler and return the same status and headers with no body."
+      }
+    },
+    {
+      "id": "P2P-021",
+      "surface": "rejection of unparseable request bodies",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00144"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert an unparseable body yields 400 with error exactly `failed to parse the request body`."
+      }
+    },
+    {
+      "id": "P2P-022",
+      "surface": "mounting under a path prefix",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00156"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert provider.callback() serves correctly when mounted under the /oidc prefix through Express, Fastify and Hapi hosts."
+      }
+    },
+    {
+      "id": "P2P-023",
+      "surface": "response mode serialization for query, fragment, form_post, jwt and web_message",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00142"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the query, fragment, form_post, jwt and web_message response modes keep their serialization and parameter placement."
+      }
+    },
+    {
+      "id": "P2P-024",
+      "surface": "request-body reading on body-consuming endpoints",
+      "input_class": "valid",
+      "scenario": "normal",
+      "projection": "observable-result",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-00132"
+      ],
+      "probe": {
+        "kind": "behavior",
+        "description": "assert the raw body bytes reach the token, introspection, revocation, registration, device, PAR, CIBA, credential, challenge and interaction readers."
+      }
+    },
+    {
+      "id": "P2P-001",
+      "surface": "test:test/interaction/interaction.test.js#should abort an interaction when given an error result object (no description)",
+      "input_class": "invalid",
+      "scenario": "error",
+      "projection": "exception",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-06062"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/interaction/interaction.test.js",
+        "title": "should abort an interaction when given an error result object (no description)"
+      }
+    },
+    {
+      "id": "P2P-003",
+      "surface": "test:test/helpers/runtime_params.test.js#reads enabled features and extra parameters for each authorization request",
+      "input_class": "parameterized",
+      "scenario": "combination",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-05899"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/helpers/runtime_params.test.js",
+        "title": "reads enabled features and extra parameters for each authorization request"
+      }
+    },
+    {
+      "id": "P2P-004",
+      "surface": "test:test/request/jwt_request.test.js#can contain claims parameter as JSON",
+      "input_class": "valid",
+      "scenario": "serialization",
+      "projection": "serialized-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-07403"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/request/jwt_request.test.js",
+        "title": "can contain claims parameter as JSON"
+      }
+    },
+    {
+      "id": "P2P-006",
+      "surface": "test:test/registration_management/registration_management.test.js#Client Delete Request",
+      "input_class": "valid-sequence",
+      "scenario": "lifecycle",
+      "projection": "state-transition",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-07285"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/registration_management/registration_management.test.js",
+        "title": "Client Delete Request"
+      }
+    },
+    {
+      "id": "P2P-002",
+      "surface": "test:test/jwt/jsonwebtoken.test.js#does not verify none with a key",
+      "input_class": "boundary",
+      "scenario": "boundary",
+      "projection": "return-value",
+      "relation": "equal_after_normalization",
+      "normalized_value": {
+        "result": "PASS"
+      },
+      "source_expectation": "PASS",
+      "target_expectation": "PASS",
+      "evidence_refs": [
+        "EVIDENCE-06273"
+      ],
+      "probe": {
+        "kind": "mocha",
+        "file": "test/jwt/jsonwebtoken.test.js",
+        "title": "does not verify none with a key"
+      }
+    }
+  ]
+}

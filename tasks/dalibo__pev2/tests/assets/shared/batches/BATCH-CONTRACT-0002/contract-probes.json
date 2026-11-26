@@ -1,0 +1,71 @@
+{
+  "schema_version": "migration-contract-probes:v1",
+  "batch_id": "BATCH-CONTRACT-0002",
+  "probes": [
+    {
+      "observation_id": "CONTRACT-033",
+      "requirement_id": "R033",
+      "surface": "node-type field extraction",
+      "source_entry": "src/interfaces.ts:class Node constructor(type?: string)",
+      "target_entry": "pev2_core::parse_node_type(type_str: &str) -> Node",
+      "fixture": "fixtures/batches/BATCH-CONTRACT-0002/node-type-cases.json",
+      "normalization": "for each case keep the present keys of [Node Type, Relation Name, Alias, Index Name, Scan Direction, Join Type, Partial Mode, Strategy, Parallel Aware, Async Capable, Disabled, Planned Partitions, CTE Name, Function Name], compare the per-case objects, then compare the whole map",
+      "relation": "equal_after_normalization"
+    },
+    {
+      "observation_id": "CONTRACT-034",
+      "requirement_id": "R034",
+      "surface": "public capability preservation",
+      "source_entry": "src/services/plan-service.ts (PlanService.fromSource/createPlan/fromText/fromJson/cleanupSource/splitIntoLines) and src/services/help-service.ts (findNodeById/findNodeBySubplanName/shouldShowProp/splitBalanced)",
+      "target_entry": "pev2_core::{from_source, create_plan, from_text, from_json, cleanup_source, split_into_lines, split_balanced, find_node_by_id, find_node_by_subplan_name, should_show_prop}",
+      "normalization": "canonicalize both sides to the sorted list of the ten capability ids below and require it to equal the full expected set",
+      "canonical_capabilities": [
+        "cleanup_source",
+        "create_plan",
+        "find_node_by_id",
+        "find_node_by_subplan_name",
+        "from_json",
+        "from_source",
+        "from_text",
+        "should_show_prop",
+        "split_balanced",
+        "split_into_lines"
+      ],
+      "relation": "equal_after_normalization"
+    },
+    {
+      "observation_id": "CONTRACT-035",
+      "requirement_id": "R038",
+      "surface": "protected tests and fixtures",
+      "source_entry": "src/services/__tests__/** (Vitest specs, from-text plan/expect fixtures), src/__tests__/**, tests/e2e/** (Playwright snapshots)",
+      "target_entry": "same repository paths",
+      "normalization": "sha256 over the sorted sequence of '<relpath>\\n<sha256(file)>\\n' for every regular file below the three protected roots",
+      "expected_digest": "4aa3eae77db8ec73e1a65616f58791750906c0c608254c182db4dff58de754c8",
+      "relation": "equal_after_normalization"
+    },
+    {
+      "observation_id": "CONTRACT-036",
+      "requirement_id": "R039",
+      "surface": "no weakened checks / genuine parsing",
+      "source_entry": "src/services/plan-service.ts:fromSource/createPlan",
+      "target_entry": "pev2_core::from_source + pev2_core::create_plan_envelope",
+      "fixture": "fixtures/batches/BATCH-CONTRACT-0002/genuine-plan.txt",
+      "query_input": "SELECT  a     b",
+      "normalization": "parse the novel EXPLAIN text, normalize planQuery whitespace, and keep [Node Type, Plan Rows, Total Cost, isAnalyze, maxEstimateFactor, query]",
+      "relation": "equal_after_normalization"
+    },
+    {
+      "observation_id": "CONTRACT-037",
+      "requirement_id": "R040",
+      "surface": "deliverable confined to /workspace/repo",
+      "source_entry": "/workspace/repo (repository root)",
+      "target_entry": "/workspace/repo (repository root)",
+      "normalization": "report the absolute repository root and whether the base commit 6d14a4f65b7400b9a877d6ec583f07f364f2267d is reachable; keep [repo_root, base_commit_present]",
+      "expected": {
+        "repo_root": "/workspace/repo",
+        "base_commit_present": true
+      },
+      "relation": "equal_after_normalization"
+    }
+  ]
+}

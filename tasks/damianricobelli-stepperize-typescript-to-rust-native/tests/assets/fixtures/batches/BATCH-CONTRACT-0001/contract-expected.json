@@ -1,0 +1,49 @@
+{
+  "schema_version": "migration-contract-expected:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "sides": ["source", "target"],
+  "relation": "equal_after_normalization",
+  "expected": {
+    "CONTRACT-002": ["first", "second", "third"],
+    "CONTRACT-003": {
+      "get(second)": { "id": "second", "label": "Step 2" },
+      "get(missing)": null
+    },
+    "CONTRACT-004": {
+      "at(0)": { "id": "first", "label": "Step 1" },
+      "at(9)": null
+    },
+    "CONTRACT-005": { "indexOf(third)": 2, "indexOf(missing)": -1 },
+    "CONTRACT-006": { "has(second)": true, "has(missing)": false },
+    "CONTRACT-007": {
+      "first()": { "id": "first", "label": "Step 1" },
+      "last()": { "id": "third", "label": "Step 3" },
+      "first(empty)": null,
+      "last(empty)": null
+    },
+    "CONTRACT-008": {
+      "next(first)": { "id": "second", "label": "Step 2" },
+      "prev(third)": { "id": "second", "label": "Step 2" },
+      "neighbors(second)": { "prev": { "id": "first", "label": "Step 1" }, "next": { "id": "third", "label": "Step 3" } },
+      "neighbors(first)": { "prev": null, "next": { "id": "second", "label": "Step 2" } },
+      "next(missing)": null,
+      "prev(missing)": null
+    },
+    "CONTRACT-009": { "getInitialStepIndex(second)": 1, "getInitialStepIndex(none)": 0, "getInitialStepIndex(missing)": 0 },
+    "CONTRACT-010": { "parseStep(second)": "second", "unknown": null, "null": null, "undefined": null, "number": null },
+    "CONTRACT-011": { "equal_to_input": true, "distinct_instance": true, "absent": {} },
+    "CONTRACT-012": { "success": true, "data": { "anything": true } },
+    "CONTRACT-013": { "success": true, "data": "Ada" },
+    "CONTRACT-014": { "success": false, "first_issue_message": "Required" },
+    "CONTRACT-015": { "error": { "type": "not_found", "wording": "Step \"missing\" not found." } },
+    "CONTRACT-016": { "sync": { "success": true, "data": "Ada" }, "async": { "success": true, "data": "Ada" } },
+    "CONTRACT-017": { "first": "previous", "second": "active", "third": "upcoming" },
+    "CONTRACT-018": { "first": "previous", "second": "active", "third": "upcoming" },
+    "CONTRACT-019": "Step 2",
+    "CONTRACT-020": { "error": { "type": "not_found", "wording": "Step \"missing\" not found." } },
+    "CONTRACT-021": { "error": { "type": "no_handler", "wording": "No match handler found for step \"third\"." } },
+    "CONTRACT-022": { "operations_present": ["createStepMap", "getInitialStepIndex", "parseStep", "getInitialData", "validateStep", "getStepStatus", "getStepStatuses", "matchStep"] },
+    "CONTRACT-023": { "named_exports": true, "error_wording": true, "standard_schema_boundary": true, "reference_test_unmodified": true },
+    "CONTRACT-024": { "assertions_removed": 0, "comparisons_weakened": 0, "hardcoded_inputs": 0 }
+  }
+}

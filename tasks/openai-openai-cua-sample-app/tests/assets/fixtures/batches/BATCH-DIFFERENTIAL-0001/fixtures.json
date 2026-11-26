@@ -1,0 +1,52 @@
+{
+  "schema_version": "differential-fixtures:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "description": "Deterministic fixtures seeded into the runner dataRoot for the shared-case-corpus. Both the source (Fastify) and target (Express) runners are driven with the same fixture bytes so their normalized projections can be compared.",
+  "scenario": {
+    "id": "fixture-scenario",
+    "labId": "paint",
+    "category": "creativity",
+    "title": "Fixture",
+    "description": "Synthetic HTTP test",
+    "defaultPrompt": "Complete fixture.",
+    "tags": ["fixture"]
+  },
+  "runs": {
+    "completed-run": {
+      "replay_version": 3,
+      "run": { "id": "test-run", "scenarioId": "fixture-scenario", "status": "completed" },
+      "events": [
+        { "sequence": 1, "type": "run_started" },
+        { "sequence": 2, "type": "run_completed" }
+      ]
+    },
+    "running-run": {
+      "replay_version": 3,
+      "run": { "id": "streaming-run", "scenarioId": "fixture-scenario", "status": "running" },
+      "events": [
+        { "sequence": 1, "type": "run_started" }
+      ]
+    },
+    "unsupported-replay-run": {
+      "replay_version": 2,
+      "run": { "id": "historical-run", "scenarioId": "fixture-scenario" },
+      "preserved": "untouched"
+    }
+  },
+  "screenshots": [
+    {
+      "run_id": "completed-run",
+      "name": "step-1.png",
+      "content_type": "image/png",
+      "bytes": "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63fac fffff0f0000050001a5f64540000000049454e44ae426082"
+    }
+  ],
+  "origins": {
+    "allowed": ["http://localhost:3000", "http://127.0.0.1:3000"],
+    "denied": ["http://evil.example"]
+  },
+  "replay_versions": {
+    "supported": 3,
+    "unsupported": [1, 2, 99]
+  }
+}

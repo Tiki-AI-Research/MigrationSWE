@@ -1,0 +1,965 @@
+diff --git a/tests/shared/batches/BATCH-F2P-0001/__init__.py b/tests/shared/batches/BATCH-F2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/__init__.py
+diff --git a/tests/shared/batches/BATCH-F2P-0001/conftest.py b/tests/shared/batches/BATCH-F2P-0001/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/conftest.py
+@@ -0,0 +1,27 @@
++"""Shared fixtures for the shiv click 6.7 -> 8.1.7 migration F2P batch."""
++
++from pathlib import Path
++
++import pytest
++
++
++def _find_shiv_repo_root():
++    for candidate in Path(__file__).resolve().parents:
++        setup_cfg = candidate / "setup.cfg"
++        try:
++            text = setup_cfg.read_text(encoding="utf-8")
++        except OSError:
++            continue
++        if "name = shiv" in text:
++            return candidate
++    return None
++
++
++@pytest.fixture
++def shiv_repo_root():
++    """Absolute path to the shiv project root under test."""
++
++    root = _find_shiv_repo_root()
++    if root is None:
++        pytest.skip("could not locate the shiv project root")
++    return root
+diff --git a/tests/shared/batches/BATCH-F2P-0001/test_click_dependency.py b/tests/shared/batches/BATCH-F2P-0001/test_click_dependency.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-F2P-0001/test_click_dependency.py
+@@ -0,0 +1,120 @@
++"""Fail-to-pass checks for observation F2P-001.
++
++The shiv project must declare and install click 8.1.7 and must no longer
++reference the legacy click 6.7 requirement.
++"""
++
++import configparser
++import os
++
++from importlib import metadata
++from pathlib import Path
++
++from packaging.requirements import Requirement
++from packaging.version import Version
++
++
++TARGET_CLICK_VERSION = Version("8.1.7")
++LEGACY_CLICK_VERSION = "6.7"
++
++
++def _candidate_repo_roots():
++    env_root = os.environ.get("SHIV_REPO_ROOT")
++    if env_root:
++        yield Path(env_root)
++    yield from Path(__file__).resolve().parents
++    yield Path.cwd()
++    yield Path("/workspace/repo")
++
++
++def _find_project_root():
++    seen = set()
++    for candidate in _candidate_repo_roots():
++        try:
++            key = str(candidate.resolve())
++        except OSError:
++            continue
++        if key in seen:
++            continue
++        seen.add(key)
++        setup_cfg = candidate / "setup.cfg"
++        try:
++            text = setup_cfg.read_text(encoding="utf-8")
++        except OSError:
++            continue
++        if "name = shiv" in text:
++            return candidate
++    return None
++
++
++def _click_requirement_from_text(text):
++    for line in text.splitlines():
++        line = line.strip()
++        if not line.lower().startswith("click"):
++            continue
++        try:
++            parsed = Requirement(line)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return line
++    return None
++
++
++def _click_requirement_from_setup_cfg(path):
++    parser = configparser.ConfigParser()
++    parser.read(str(path))
++    raw = parser.get("options", "install_requires", fallback="")
++    return _click_requirement_from_text(raw)
++
++
++def _declared_click_requirement():
++    try:
++        requirements = metadata.requires("shiv") or []
++    except metadata.PackageNotFoundError:
++        requirements = []
++
++    for entry in requirements:
++        try:
++            parsed = Requirement(entry)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return entry
++
++    root = _find_project_root()
++    if root is not None:
++        return _click_requirement_from_setup_cfg(root / "setup.cfg")
++
++    return None
++
++
++def _installed_click_version():
++    try:
++        return metadata.version("click")
++    except metadata.PackageNotFoundError:
++        return None
++
++
++def test_click_dependency_upgraded_to_8_1_7():
++    requirement = _declared_click_requirement()
++    assert requirement is not None, "shiv must declare a click dependency"
++
++    assert LEGACY_CLICK_VERSION not in requirement, (
++        "shiv must no longer declare the legacy click 6.7 requirement: {!r}".format(requirement)
++    )
++
++    parsed = Requirement(requirement)
++    lower_bounds = [
++        Version(spec.version) for spec in parsed.specifier if spec.operator in (">=", "==", "~=")
++    ]
++    assert lower_bounds, "click requirement must pin a minimum version: {!r}".format(requirement)
++    assert min(lower_bounds) >= TARGET_CLICK_VERSION, (
++        "click requirement must require at least 8.1.7: {!r}".format(requirement)
++    )
++
++    installed = _installed_click_version()
++    if installed is not None:
++        assert Version(installed) == TARGET_CLICK_VERSION, (
++            "installed click must be 8.1.7, found {!r}".format(installed)
++        )
+diff --git a/tests/shared/batches/BATCH-P2P-0001/__init__.py b/tests/shared/batches/BATCH-P2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0001/__init__.py
+diff --git a/tests/shared/batches/BATCH-P2P-0001/conftest.py b/tests/shared/batches/BATCH-P2P-0001/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/batches/BATCH-P2P-0001/conftest.py
+@@ -0,0 +1,93 @@
++"""Shared fixtures for the BATCH-P2P-0001 public-API contract tests.
++
++The fixtures deliberately avoid importing ``shiv`` at collection time so the
++same module can be consumed by both the source (click 6.7) and the target
++(click 8.1.7) test trees.
++"""
++
++import os
++
++from contextlib import contextmanager
++from pathlib import Path
++
++import pytest
++
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++FIXTURES_ROOT = REPO_ROOT / "fixtures" / "batches" / "BATCH-P2P-0001"
++
++
++@pytest.fixture
++def repo_root():
++    """Absolute path to the asset repository root."""
++
++    return REPO_ROOT
++
++
++@pytest.fixture
++def fixtures_root():
++    """Absolute path to this batch's fixtures directory."""
++
++    return FIXTURES_ROOT
++
++
++@pytest.fixture
++def package_location():
++    """The installable ``hello`` fixture package used by the CLI tests."""
++
++    return FIXTURES_ROOT / "package"
++
++
++@pytest.fixture
++def shiv_root(monkeypatch, tmp_path):
++    """Point shiv's extraction root at an isolated temporary directory."""
++
++    monkeypatch.setenv("SHIV_ROOT", str(tmp_path))
++    return tmp_path
++
++
++@pytest.fixture
++def runner():
++    """Invoke the ``shiv`` console command through click's test runner."""
++
++    from click.testing import CliRunner
++
++    from shiv.cli import main as shiv_main
++
++    def invoke(args, env=None):
++        return CliRunner().invoke(shiv_main, list(args), env=env)
++
++    return invoke
++
++
++@pytest.fixture
++def info_runner():
++    """Invoke the ``shiv-info`` console command through click's test runner."""
++
++    from click.testing import CliRunner
++
++    from shiv.info import main as info_main
++
++    def invoke(args):
++        return CliRunner().invoke(info_main, list(args))
++
++    return invoke
++
++
++@pytest.fixture
++def env_var():
++    """Context manager that temporarily sets an environment variable."""
++
++    @contextmanager
++    def _env_var(key, value):
++        previous = os.environ.get(key)
++        os.environ[key] = value
++        try:
++            yield
++        finally:
++            if previous is None:
++                os.environ.pop(key, None)
++            else:
++                os.environ[key] = previous
++
++    return _env_var
+diff --git a/tests/shared/integration/__init__.py b/tests/shared/integration/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/__init__.py
+@@ -0,0 +1,1 @@
++"""Integration assets shared by the source and target test trees."""
+diff --git a/tests/shared/integration/conftest.py b/tests/shared/integration/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/conftest.py
+@@ -0,0 +1,57 @@
++"""Shared fixtures for the BATCH-INTEGRATION-0001 integration tests.
++
++The integration suite deliberately imports ``shiv`` lazily through the target
++runner registry so that collection never fails on a tree where the migrated
++package is not importable.
++"""
++
++import importlib
++
++from pathlib import Path
++
++import pytest
++
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++
++
++@pytest.fixture
++def repo_root():
++    """Absolute path to the asset repository root."""
++
++    return REPO_ROOT
++
++
++@pytest.fixture
++def package_location():
++    """The installable ``hello`` fixture package used by integration tests."""
++
++    return REPO_ROOT / "fixtures" / "integration" / "package"
++
++
++@pytest.fixture
++def shiv_root(monkeypatch, tmp_path):
++    """Point shiv's extraction root at an isolated temporary directory."""
++
++    monkeypatch.setenv("SHIV_ROOT", str(tmp_path))
++    return tmp_path
++
++
++def _target_registry():
++    return importlib.import_module("target.runner_registry")
++
++
++@pytest.fixture
++def runner():
++    """Invoke the ``shiv`` console command through the target registry."""
++
++    registry = _target_registry()
++    return lambda args, env=None: registry.invoke("shiv", args, env=env)
++
++
++@pytest.fixture
++def info_runner():
++    """Invoke the ``shiv-info`` console command through the target registry."""
++
++    registry = _target_registry()
++    return lambda args: registry.invoke("shiv-info", args)
+diff --git a/tests/shared/integration/test_runner_registry_integration.py b/tests/shared/integration/test_runner_registry_integration.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/integration/test_runner_registry_integration.py
+@@ -0,0 +1,100 @@
++"""Integration contract tests for the shiv click 6.7 -> click 8.1.7 migration.
++
++These checks wire the source and target test trees together and verify that the
++shared runner registry contract, the shared fixtures, and the end-to-end pyz
++build/run behavior are preserved by the migration.  The suite is expected to
++pass on both trees and does not assert anything click-version specific.
++"""
++
++import importlib
++import json
++import subprocess
++import sys
++
++from pathlib import Path
++
++import pytest
++
++
++SOURCE_REGISTRY = "source.runner_registry"
++TARGET_REGISTRY = "target.runner_registry"
++
++
++def _load_registry(module_name):
++    try:
++        return importlib.import_module(module_name)
++    except Exception as exc:  # pragma: no cover - depends on the checkout layout
++        pytest.skip("cannot import {!r}: {}".format(module_name, exc))
++
++
++class TestRunnerRegistryIntegration:
++    # The source and target trees must register the same public commands.
++    def test_source_and_target_registries_expose_same_commands(self):
++        source = _load_registry(SOURCE_REGISTRY)
++        target = _load_registry(TARGET_REGISTRY)
++
++        assert set(source.RUNNERS) == set(target.RUNNERS)
++        assert set(source.RUNNERS) == {"shiv", "shiv-info"}
++
++    # Both registries must expose an ``invoke`` entry point with the same shape.
++    def test_source_and_target_registries_expose_invoke(self):
++        source = _load_registry(SOURCE_REGISTRY)
++        target = _load_registry(TARGET_REGISTRY)
++
++        assert callable(source.invoke)
++        assert callable(target.invoke)
++
++    # The shared integration package must be importable from both trees.
++    def test_shared_imports_resolve(self):
++        shared = importlib.import_module("shared.integration")
++        assert shared is not None
++
++
++class TestEndToEndIntegration:
++    # Build a pyz from the integration fixture package and execute it.
++    def test_built_zipapp_executes(self, runner, shiv_root, tmp_path, package_location):
++        output_file = Path(tmp_path) / "integration.pyz"
++
++        result = runner(
++            [
++                "-e",
++                "hello:main",
++                "-o",
++                str(output_file),
++                "--site-packages",
++                str(package_location),
++            ]
++        )
++
++        assert result.exit_code == 0, result.output
++        assert output_file.exists()
++
++        proc = subprocess.run(
++            [sys.executable, str(output_file)],
++            stdout=subprocess.PIPE,
++            stderr=subprocess.PIPE,
++        )
++
++        assert proc.returncode == 0, proc.stderr.decode()
++        assert proc.stdout.decode().strip() == "hello world"
++
++    # shiv-info must accept the built pyz and emit a JSON document.
++    def test_shiv_info_json_round_trip(self, runner, info_runner, shiv_root, tmp_path, package_location):
++        output_file = Path(tmp_path) / "integration-info.pyz"
++
++        build = runner(
++            [
++                "-e",
++                "hello:main",
++                "-o",
++                str(output_file),
++                "--site-packages",
++                str(package_location),
++            ]
++        )
++        assert build.exit_code == 0, build.output
++
++        info = info_runner([str(output_file), "--json"])
++
++        assert info.exit_code == 0, info.output
++        assert "build_id" in json.loads(info.output)
+diff --git a/tests/shared/skeleton/__init__.py b/tests/shared/skeleton/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/skeleton/__init__.py
+diff --git a/tests/shared/skeleton/conftest.py b/tests/shared/skeleton/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/shared/skeleton/conftest.py
+@@ -0,0 +1,72 @@
++"""Shared test scaffolding for the shiv click 6.7 -> 8.1.7 migration.
++
++This skeleton module intentionally avoids importing ``shiv`` at collection
++time so that the same fixtures can be consumed by both the ``source`` and
++``target`` test suites while the migration is in progress.
++"""
++
++import os
++
++from contextlib import contextmanager
++from pathlib import Path
++
++import pytest
++
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++FIXTURES_ROOT = REPO_ROOT / "fixtures" / "skeleton"
++
++
++@pytest.fixture
++def repo_root():
++    """Absolute path to the asset repository root."""
++
++    return REPO_ROOT
++
++
++@pytest.fixture
++def fixtures_root():
++    """Absolute path to the skeleton fixtures directory."""
++
++    return FIXTURES_ROOT
++
++
++@pytest.fixture
++def package_location():
++    """The installable ``hello`` fixture package used by CLI tests."""
++
++    return FIXTURES_ROOT / "package"
++
++
++@pytest.fixture
++def zip_location():
++    """A pre-built zipapp fixture, when one is present."""
++
++    return FIXTURES_ROOT / "test.zip"
++
++
++@pytest.fixture
++def shiv_root(monkeypatch, tmp_path):
++    """Point shiv's extraction root at an isolated temporary directory."""
++
++    monkeypatch.setenv("SHIV_ROOT", str(tmp_path))
++    return tmp_path
++
++
++@pytest.fixture
++def env_var():
++    """Context manager that temporarily sets an environment variable."""
++
++    @contextmanager
++    def _env_var(key, value):
++        previous = os.environ.get(key)
++        os.environ[key] = value
++        try:
++            yield
++        finally:
++            if previous is None:
++                os.environ.pop(key, None)
++            else:
++                os.environ[key] = previous
++
++    return _env_var
+diff --git a/tests/source/__init__.py b/tests/source/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/__init__.py
+@@ -0,0 +1,1 @@
++"""Source-side (click 6.7) test tree for the shiv migration assets."""
+diff --git a/tests/source/batches/BATCH-F2P-0001/__init__.py b/tests/source/batches/BATCH-F2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0001/__init__.py
+diff --git a/tests/source/batches/BATCH-F2P-0001/test_click_dependency.py b/tests/source/batches/BATCH-F2P-0001/test_click_dependency.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-F2P-0001/test_click_dependency.py
+@@ -0,0 +1,120 @@
++"""Fail-to-pass checks for observation F2P-001.
++
++The shiv project must declare and install click 8.1.7 and must no longer
++reference the legacy click 6.7 requirement.
++"""
++
++import configparser
++import os
++
++from importlib import metadata
++from pathlib import Path
++
++from packaging.requirements import Requirement
++from packaging.version import Version
++
++
++TARGET_CLICK_VERSION = Version("8.1.7")
++LEGACY_CLICK_VERSION = "6.7"
++
++
++def _candidate_repo_roots():
++    env_root = os.environ.get("SHIV_REPO_ROOT")
++    if env_root:
++        yield Path(env_root)
++    yield from Path(__file__).resolve().parents
++    yield Path.cwd()
++    yield Path("/workspace/repo")
++
++
++def _find_project_root():
++    seen = set()
++    for candidate in _candidate_repo_roots():
++        try:
++            key = str(candidate.resolve())
++        except OSError:
++            continue
++        if key in seen:
++            continue
++        seen.add(key)
++        setup_cfg = candidate / "setup.cfg"
++        try:
++            text = setup_cfg.read_text(encoding="utf-8")
++        except OSError:
++            continue
++        if "name = shiv" in text:
++            return candidate
++    return None
++
++
++def _click_requirement_from_text(text):
++    for line in text.splitlines():
++        line = line.strip()
++        if not line.lower().startswith("click"):
++            continue
++        try:
++            parsed = Requirement(line)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return line
++    return None
++
++
++def _click_requirement_from_setup_cfg(path):
++    parser = configparser.ConfigParser()
++    parser.read(str(path))
++    raw = parser.get("options", "install_requires", fallback="")
++    return _click_requirement_from_text(raw)
++
++
++def _declared_click_requirement():
++    try:
++        requirements = metadata.requires("shiv") or []
++    except metadata.PackageNotFoundError:
++        requirements = []
++
++    for entry in requirements:
++        try:
++            parsed = Requirement(entry)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return entry
++
++    root = _find_project_root()
++    if root is not None:
++        return _click_requirement_from_setup_cfg(root / "setup.cfg")
++
++    return None
++
++
++def _installed_click_version():
++    try:
++        return metadata.version("click")
++    except metadata.PackageNotFoundError:
++        return None
++
++
++def test_click_dependency_upgraded_to_8_1_7():
++    requirement = _declared_click_requirement()
++    assert requirement is not None, "shiv must declare a click dependency"
++
++    assert LEGACY_CLICK_VERSION not in requirement, (
++        "shiv must no longer declare the legacy click 6.7 requirement: {!r}".format(requirement)
++    )
++
++    parsed = Requirement(requirement)
++    lower_bounds = [
++        Version(spec.version) for spec in parsed.specifier if spec.operator in (">=", "==", "~=")
++    ]
++    assert lower_bounds, "click requirement must pin a minimum version: {!r}".format(requirement)
++    assert min(lower_bounds) >= TARGET_CLICK_VERSION, (
++        "click requirement must require at least 8.1.7: {!r}".format(requirement)
++    )
++
++    installed = _installed_click_version()
++    if installed is not None:
++        assert Version(installed) == TARGET_CLICK_VERSION, (
++            "installed click must be 8.1.7, found {!r}".format(installed)
++        )
+diff --git a/tests/source/batches/BATCH-P2P-0001/__init__.py b/tests/source/batches/BATCH-P2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/batches/BATCH-P2P-0001/__init__.py
+diff --git a/tests/source/conftest.py b/tests/source/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/conftest.py
+@@ -0,0 +1,19 @@
++"""Source test-tree runner fixtures (click 6.7)."""
++
++import pytest
++
++from source.runner_registry import invoke
++
++
++@pytest.fixture
++def runner():
++    """Invoke the ``shiv`` console command against the source tree."""
++
++    return lambda args, env=None: invoke("shiv", args, env=env)
++
++
++@pytest.fixture
++def info_runner():
++    """Invoke the ``shiv-info`` console command against the source tree."""
++
++    return lambda args: invoke("shiv-info", args)
+diff --git a/tests/source/run.sh b/tests/source/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/source/run.sh
+@@ -0,0 +1,3 @@
++#!/bin/sh
++set -eu
++exit 0
+diff --git a/tests/source/runner_registry.py b/tests/source/runner_registry.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/runner_registry.py
+@@ -0,0 +1,25 @@
++"""Runner registry for the source (click 6.7) test tree.
++
++The registry exposes the public ``shiv`` console commands as callables so the
++integration tests can compare the source and target test trees without
++importing click internals directly.  Importing this module must never fail at
++collection time on a tree where ``shiv`` is not installed; callers are expected
++to skip when the import raises.
++"""
++
++from click.testing import CliRunner
++
++from shiv.cli import main as shiv_main
++from shiv.info import main as shiv_info_main
++
++
++RUNNERS = {
++    "shiv": shiv_main,
++    "shiv-info": shiv_info_main,
++}
++
++
++def invoke(name, args, env=None):
++    """Invoke a registered shiv command and return the click result."""
++
++    return CliRunner().invoke(RUNNERS[name], list(args), env=env)
+diff --git a/tests/source/skeleton/__init__.py b/tests/source/skeleton/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/source/skeleton/__init__.py
+diff --git a/tests/target/__init__.py b/tests/target/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/__init__.py
+@@ -0,0 +1,1 @@
++"""Target-side (click 8.1.7) test tree for the shiv migration assets."""
+diff --git a/tests/target/batches/BATCH-F2P-0001/__init__.py b/tests/target/batches/BATCH-F2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/__init__.py
+diff --git a/tests/target/batches/BATCH-F2P-0001/test_click_dependency.py b/tests/target/batches/BATCH-F2P-0001/test_click_dependency.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-F2P-0001/test_click_dependency.py
+@@ -0,0 +1,120 @@
++"""Fail-to-pass checks for observation F2P-001.
++
++The shiv project must declare and install click 8.1.7 and must no longer
++reference the legacy click 6.7 requirement.
++"""
++
++import configparser
++import os
++
++from importlib import metadata
++from pathlib import Path
++
++from packaging.requirements import Requirement
++from packaging.version import Version
++
++
++TARGET_CLICK_VERSION = Version("8.1.7")
++LEGACY_CLICK_VERSION = "6.7"
++
++
++def _candidate_repo_roots():
++    env_root = os.environ.get("SHIV_REPO_ROOT")
++    if env_root:
++        yield Path(env_root)
++    yield from Path(__file__).resolve().parents
++    yield Path.cwd()
++    yield Path("/workspace/repo")
++
++
++def _find_project_root():
++    seen = set()
++    for candidate in _candidate_repo_roots():
++        try:
++            key = str(candidate.resolve())
++        except OSError:
++            continue
++        if key in seen:
++            continue
++        seen.add(key)
++        setup_cfg = candidate / "setup.cfg"
++        try:
++            text = setup_cfg.read_text(encoding="utf-8")
++        except OSError:
++            continue
++        if "name = shiv" in text:
++            return candidate
++    return None
++
++
++def _click_requirement_from_text(text):
++    for line in text.splitlines():
++        line = line.strip()
++        if not line.lower().startswith("click"):
++            continue
++        try:
++            parsed = Requirement(line)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return line
++    return None
++
++
++def _click_requirement_from_setup_cfg(path):
++    parser = configparser.ConfigParser()
++    parser.read(str(path))
++    raw = parser.get("options", "install_requires", fallback="")
++    return _click_requirement_from_text(raw)
++
++
++def _declared_click_requirement():
++    try:
++        requirements = metadata.requires("shiv") or []
++    except metadata.PackageNotFoundError:
++        requirements = []
++
++    for entry in requirements:
++        try:
++            parsed = Requirement(entry)
++        except ValueError:
++            continue
++        if parsed.name.lower() == "click":
++            return entry
++
++    root = _find_project_root()
++    if root is not None:
++        return _click_requirement_from_setup_cfg(root / "setup.cfg")
++
++    return None
++
++
++def _installed_click_version():
++    try:
++        return metadata.version("click")
++    except metadata.PackageNotFoundError:
++        return None
++
++
++def test_click_dependency_upgraded_to_8_1_7():
++    requirement = _declared_click_requirement()
++    assert requirement is not None, "shiv must declare a click dependency"
++
++    assert LEGACY_CLICK_VERSION not in requirement, (
++        "shiv must no longer declare the legacy click 6.7 requirement: {!r}".format(requirement)
++    )
++
++    parsed = Requirement(requirement)
++    lower_bounds = [
++        Version(spec.version) for spec in parsed.specifier if spec.operator in (">=", "==", "~=")
++    ]
++    assert lower_bounds, "click requirement must pin a minimum version: {!r}".format(requirement)
++    assert min(lower_bounds) >= TARGET_CLICK_VERSION, (
++        "click requirement must require at least 8.1.7: {!r}".format(requirement)
++    )
++
++    installed = _installed_click_version()
++    if installed is not None:
++        assert Version(installed) == TARGET_CLICK_VERSION, (
++            "installed click must be 8.1.7, found {!r}".format(installed)
++        )
+diff --git a/tests/target/batches/BATCH-P2P-0001/__init__.py b/tests/target/batches/BATCH-P2P-0001/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/batches/BATCH-P2P-0001/__init__.py
+diff --git a/tests/target/conftest.py b/tests/target/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/conftest.py
+@@ -0,0 +1,19 @@
++"""Target test-tree runner fixtures (click 8.1.7)."""
++
++import pytest
++
++from target.runner_registry import invoke
++
++
++@pytest.fixture
++def runner():
++    """Invoke the ``shiv`` console command against the target tree."""
++
++    return lambda args, env=None: invoke("shiv", args, env=env)
++
++
++@pytest.fixture
++def info_runner():
++    """Invoke the ``shiv-info`` console command against the target tree."""
++
++    return lambda args: invoke("shiv-info", args)
+diff --git a/tests/target/run.sh b/tests/target/run.sh
+new file mode 100644
+--- /dev/null
++++ b/tests/target/run.sh
+@@ -0,0 +1,3 @@
++#!/bin/sh
++set -eu
++exit 0
+diff --git a/tests/target/runner_registry.py b/tests/target/runner_registry.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/runner_registry.py
+@@ -0,0 +1,24 @@
++"""Runner registry for the target (click 8.1.7) test tree.
++
++The registry mirrors ``source.runner_registry`` so the integration tests can
++assert that the public runner surface is preserved across the migration.
++Importing this module must never fail at collection time on a tree where
++``shiv`` is not installed; callers are expected to skip when the import raises.
++"""
++
++from click.testing import CliRunner
++
++from shiv.cli import main as shiv_main
++from shiv.info import main as shiv_info_main
++
++
++RUNNERS = {
++    "shiv": shiv_main,
++    "shiv-info": shiv_info_main,
++}
++
++
++def invoke(name, args, env=None):
++    """Invoke a registered shiv command and return the click result."""
++
++    return CliRunner().invoke(RUNNERS[name], list(args), env=env)
+diff --git a/tests/target/skeleton/__init__.py b/tests/target/skeleton/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/target/skeleton/__init__.py
+diff --git a/tests/fixtures/batches/BATCH-P2P-0001/package/setup.py b/tests/fixtures/batches/BATCH-P2P-0001/package/setup.py
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/batches/BATCH-P2P-0001/package/setup.py
+@@ -0,0 +1,8 @@
++from setuptools import setup
++
++setup(
++    name="hello",
++    packages=["hello"],
++    package_data={"": ["script.sh"]},
++    entry_points={"console_scripts": ["hello = hello:main"]},
++)
+diff --git a/tests/fixtures/integration/package/setup.py b/tests/fixtures/integration/package/setup.py
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/integration/package/setup.py
+@@ -0,0 +1,8 @@
++from setuptools import setup
++
++setup(
++    name="hello",
++    packages=["hello"],
++    package_data={"": ["script.sh"]},
++    entry_points={"console_scripts": ["hello = hello:main"]},
++)
+diff --git a/tests/fixtures/skeleton/package/setup.py b/tests/fixtures/skeleton/package/setup.py
+new file mode 100644
+--- /dev/null
++++ b/tests/fixtures/skeleton/package/setup.py
+@@ -0,0 +1,8 @@
++from setuptools import setup
++
++setup(
++    name="hello",
++    packages=["hello"],
++    package_data={"": ["script.sh"]},
++    entry_points={"console_scripts": ["hello = hello:main"]},
++)

@@ -1,0 +1,40 @@
+{
+  "corpus_version": "migration-asset-fragment:v2",
+  "batch_id": "BATCH-DIFFERENTIAL-0002",
+  "family": "shared-case-corpus",
+  "input_class": "declared",
+  "requests": [
+    { "id": "DIFF-033", "method": "GET", "path": "/webcam/stream", "stream": true },
+    { "id": "DIFF-034", "method": "GET", "path": "/webcam/resolution" },
+    { "id": "DIFF-035", "method": "GET", "path": "/console", "stream": true },
+    { "id": "DIFF-036", "method": "SIGNAL", "signal": "SIGINT" },
+    { "id": "DIFF-037", "method": "STARTUP", "mismatch_version": true },
+    { "id": "DIFF-038", "method": "LISTEN", "ports": ["env", "default"] },
+    { "id": "DIFF-039", "method": "GET", "path": "/start" },
+    { "id": "DIFF-039", "method": "GET", "path": "/recording/start" },
+    { "id": "DIFF-039", "method": "GET", "path": "/recording/stop" },
+    { "id": "DIFF-039", "method": "POST", "path": "/counter/areas", "content_type": "application/json", "body": { "countingAreas": {} } },
+    { "id": "DIFF-039", "method": "POST", "path": "/ui", "content_type": "application/json", "body": { "counterEnabled": true, "pathfinderEnabled": false } },
+    { "id": "DIFF-040", "method": "GET", "path": "/config" },
+    { "id": "DIFF-040", "method": "GET", "path": "/status" },
+    { "id": "DIFF-040", "method": "GET", "path": "/ui" },
+    { "id": "DIFF-040", "method": "GET", "path": "/counter/areas" },
+    { "id": "DIFF-040", "method": "GET", "path": "/files" },
+    { "id": "DIFF-041", "method": "GET", "path": "/config" },
+    { "id": "DIFF-042", "method": "REPO", "glob": "spec/**/*.spec.js" },
+    { "id": "DIFF-043", "method": "REPO", "glob": "server.js" }
+  ],
+  "upstream": {
+    "webcam_mjpeg": {
+      "content_type": "multipart/x-mixed-replace",
+      "frames": ["FRAME-ALPHA-BYTES", "FRAME-BETA-BYTES"]
+    }
+  },
+  "out_of_scope_files": [
+    "server/utils/configHelper.js",
+    "server/db/MongoDbManager.js",
+    "server/processes/YoloDarknet.js",
+    "server/tracker/Tracker.js",
+    "config.json"
+  ]
+}

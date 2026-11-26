@@ -1,0 +1,459 @@
+{
+  "schema_version": "migration-asset-f2p-probe-results:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "repo_root": "/input/target",
+  "target_technology": {
+    "name": "Hono",
+    "version": "4.13.7"
+  },
+  "source_technology": {
+    "name": "Express",
+    "version": "5.2.1"
+  },
+  "generated_at": "2026-10-25T20:03:58.533Z",
+  "predicates": {
+    "static_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "loginStatus": 200,
+        "loginContentType": "text/html; charset=utf-8",
+        "loginBytesMatch": true,
+        "cssStatus": 200,
+        "cssBytesMatch": true
+      }
+    },
+    "json_body_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      }
+    },
+    "raw_body_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "rawStatus": 200,
+        "bytesPreserved": true,
+        "oversizedStatus": 413
+      }
+    },
+    "sse_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "eventCount": 2,
+        "firstEventOk": true,
+        "headersOk": true,
+        "contentType": "text/event-stream",
+        "cacheControl": "no-cache, no-transform",
+        "xAccelBuffering": "no"
+      }
+    },
+    "ws_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "unauthorizedStatus": 401,
+        "authorizedOpened": true,
+        "echoed": true
+      }
+    },
+    "health_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      }
+    },
+    "proxy_hops_hono": {
+      "pass": true,
+      "targetTech": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "trustProxyOne": "198.51.100.7",
+        "trustProxyZero": "127.0.0.1"
+      }
+    }
+  },
+  "observations": [
+    {
+      "observation_id": "F2P-001",
+      "predicate": "static_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "loginStatus": 200,
+        "loginContentType": "text/html; charset=utf-8",
+        "loginBytesMatch": true,
+        "cssStatus": 200,
+        "cssBytesMatch": true
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-002",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-003",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-004",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-005",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-006",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-007",
+      "predicate": "raw_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "rawStatus": 200,
+        "bytesPreserved": true,
+        "oversizedStatus": 413
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-008",
+      "predicate": "static_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "loginStatus": 200,
+        "loginContentType": "text/html; charset=utf-8",
+        "loginBytesMatch": true,
+        "cssStatus": 200,
+        "cssBytesMatch": true
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-009",
+      "predicate": "sse_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "eventCount": 2,
+        "firstEventOk": true,
+        "headersOk": true,
+        "contentType": "text/event-stream",
+        "cacheControl": "no-cache, no-transform",
+        "xAccelBuffering": "no"
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-010",
+      "predicate": "ws_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "unauthorizedStatus": 401,
+        "authorizedOpened": true,
+        "echoed": true
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-011",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-012",
+      "predicate": "raw_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "rawStatus": 200,
+        "bytesPreserved": true,
+        "oversizedStatus": 413
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-013",
+      "predicate": "proxy_hops_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "trustProxyOne": "198.51.100.7",
+        "trustProxyZero": "127.0.0.1"
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-014",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-015",
+      "predicate": "proxy_hops_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "trustProxyOne": "198.51.100.7",
+        "trustProxyZero": "127.0.0.1"
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-016",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-017",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-018",
+      "predicate": "raw_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "rawStatus": 200,
+        "bytesPreserved": true,
+        "oversizedStatus": 413
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-019",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-020",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-021",
+      "predicate": "ws_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "unauthorizedStatus": 401,
+        "authorizedOpened": true,
+        "echoed": true
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-022",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-023",
+      "predicate": "health_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 1,
+        "status": 200,
+        "body": {
+          "status": "healthy",
+          "gateway": "running"
+        }
+      },
+      "error": null
+    },
+    {
+      "observation_id": "F2P-024",
+      "predicate": "json_body_hono",
+      "status": "PASS",
+      "target_technology_used": true,
+      "detail": {
+        "honoFetchCalls": 2,
+        "jsonMiddlewareRuns": 2,
+        "loginStatus": 200,
+        "loginBody": {
+          "ok": true
+        },
+        "oversizedStatus": 413,
+        "handlerCalled": false
+      },
+      "error": null
+    }
+  ]
+}

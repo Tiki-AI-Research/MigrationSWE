@@ -1,0 +1,18 @@
+{
+  "batch_id": "BATCH-P2P-0002",
+  "kind": "malformed-payload-fixtures",
+  "parse": [
+    { "name": "not-json", "payload": "definitely not json" },
+    { "name": "empty-object", "payload": "{}" },
+    { "name": "out-of-range-view-index", "payload": "[[\"Uint8Array\",99]]" },
+    { "name": "unknown-type", "payload": "[[\"NotAType\",0]]" }
+  ],
+  "unflatten": [
+    { "name": "empty-array", "value": [] },
+    { "name": "sparse-invalid-length", "value": [[-7, 1.5]] },
+    { "name": "sparse-index-out-of-range", "value": [[-7, 3, 5, 0]] },
+    { "name": "boxed-non-bigint", "value": [["Object", 5]] },
+    { "name": "null-proto-pollution", "value": [["null", "__proto__", 1]] },
+    { "name": "object-payload-proto", "value": [{ "__proto__": 1 }] }
+  ]
+}

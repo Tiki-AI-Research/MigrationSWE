@@ -1,0 +1,183 @@
+{
+  "schema_version": "migration-corpus:v1",
+  "batch_id": "BATCH-F2P-0003",
+  "migration": {
+    "source": "Rust",
+    "target": "Go"
+  },
+  "shared": true,
+  "cases": [
+    {
+      "id": "F2P-050",
+      "requirement_ids": ["R107"],
+      "operation": "build-tags",
+      "input": ["go build -tags nostd ./...", "go build -tags noalloc ./..."],
+      "expected": {
+        "nostd_excludes": ["Unique", "Duplicates", "Counts", "IntoGroupingMap"],
+        "noalloc_excludes": ["Iproduct", "Combinations", "Permutations", "Powerset", "Sorted"]
+      }
+    },
+    {
+      "id": "F2P-049",
+      "requirement_ids": ["R108"],
+      "operation": "Interleave/InterleaveShortest",
+      "input": [[1, 2], [-1, -2]],
+      "expected": [1, -1, 2, -2],
+      "shortest_input": [[1, 2, 3], [-1, -2]],
+      "shortest_expected": [1, -1, 2, -2, 3]
+    },
+    {
+      "id": "F2P-052",
+      "requirement_ids": ["R108"],
+      "operation": "Interleave/InterleaveShortest",
+      "shortest_input": [[1, 2, 3], [-1, -2]],
+      "shortest_expected": [1, -1, 2, -2, 3]
+    },
+    {
+      "id": "F2P-053",
+      "requirement_ids": ["R104"],
+      "operation": "EitherOrBoth",
+      "input": {"Both": [1, "a"], "Left": [1]},
+      "expected": {"IsBoth": true, "Left": [1, true], "Right": ["a", true], "JustRight": ["", false]}
+    },
+    {
+      "id": "F2P-054",
+      "requirement_ids": ["R113"],
+      "operation": "PositionMax/PositionMin/PositionMinMax/MinmaxByKey",
+      "input": [1, 1, -1, -1],
+      "expected": {"PositionMax": 1, "PositionMin": 2, "PositionMinMax": {"min": 2, "max": 1}}
+    },
+    {
+      "id": "F2P-072",
+      "requirement_ids": ["R025"],
+      "operation": "CGO_ENABLED=0 go build ./...",
+      "expected": "success with no Rust subprocess/RPC/FFI/cgo/dynamic loading"
+    },
+    {
+      "id": "F2P-070",
+      "requirement_ids": ["R024"],
+      "operation": "Go free-function execution path",
+      "expected": "runs from Go logic with no Rust import, link, call or subprocess"
+    },
+    {
+      "id": "F2P-051",
+      "requirement_ids": ["R024"],
+      "operation": "Izip/Iproduct/ChainConcatenates",
+      "izip": {"input": [[1, 2, 3], [10, 20]], "expected": [[1, 10], [2, 20]]},
+      "iproduct": {"input": [[1, 2], [10, 20]], "expected": [[1, 10], [1, 20], [2, 10], [2, 20]]},
+      "chain_concatenates": {"input": [[1], [2, 3], [4]], "expected": [1, 2, 3, 4]}
+    },
+    {
+      "id": "F2P-055",
+      "requirement_ids": ["R108"],
+      "operation": "laziness/FormatWith one-shot",
+      "expected": {"map_calls_before": 0, "map_calls_after": 3, "second_format": "panic"}
+    },
+    {
+      "id": "F2P-056",
+      "requirement_ids": ["R105"],
+      "operation": "Merge/KMerge and panics",
+      "merge": {"input": [[0, 3, 6, 9], [0, 5, 10]], "expected": [0, 0, 3, 5, 6, 9, 10]},
+      "kmerge": {"input": [[0, 2, 4], [1, 3, 5], [6, 7]], "expected": [0, 1, 2, 3, 4, 5, 6, 7]}
+    },
+    {
+      "id": "F2P-057",
+      "requirement_ids": ["R108"],
+      "operation": "Dedup",
+      "input": [1, 1, 2, 2, 2, 3, 1],
+      "expected": [1, 2, 3, 1]
+    },
+    {
+      "id": "F2P-058",
+      "requirement_ids": ["R108"],
+      "operation": "Dedup",
+      "input": [1, 1, 2, 2, 2, 3, 1],
+      "expected": [1, 2, 3, 1]
+    },
+    {
+      "id": "F2P-059",
+      "requirement_ids": ["R108"],
+      "operation": "iterator protocol",
+      "expected": {"Iterate": [1, 2, 4, 8], "Intersperse.SizeHint": [5, 5], "Map.NextBack": 3, "fused": true}
+    },
+    {
+      "id": "F2P-060",
+      "requirement_ids": ["R103"],
+      "operation": "AllEqualValue/ExactlyOne",
+      "expected": {
+        "zero": "got zero elements when all elements were expected to be equal",
+        "unequal": "got different elements when all elements were expected to be equal",
+        "restore": [2, 3, 4]
+      }
+    },
+    {
+      "id": "F2P-061",
+      "requirement_ids": ["R104"],
+      "operation": "EitherOrBoth",
+      "expected": {"Both.IsBoth": true, "Left.JustRight": ["", false]}
+    },
+    {
+      "id": "F2P-062",
+      "requirement_ids": ["R113"],
+      "operation": "PositionMax/PositionMin/PositionMinMax/MinmaxByKey",
+      "input": [1, 1, -1, -1],
+      "expected": {"PositionMax": 1, "PositionMin": 2, "PositionMinMax": {"min": 2, "max": 1}}
+    },
+    {
+      "id": "F2P-063",
+      "requirement_ids": ["R115"],
+      "operation": "size-hint arithmetic",
+      "expected": {
+        "SubScalar(Hint(1,2),5)": [0, 0],
+        "Mul(Hint(3,-1),Hint(0,0))": [0, 0],
+        "Mul(Hint(3,4),Hint(3,4))": [9, 16]
+      }
+    },
+    {
+      "id": "F2P-064",
+      "requirement_ids": ["R108"],
+      "operation": "iterator protocol",
+      "expected": {"Iterate": [1, 2, 4, 8], "Intersperse.SizeHint": [5, 5], "fused": true}
+    },
+    {
+      "id": "F2P-065",
+      "requirement_ids": ["R102"],
+      "operation": "SizeHint/RepeatN",
+      "expected": {"Hint(3,3).IsExact": true, "RepeatIter.SizeHint": ["MaxInt", -1], "RepeatN": [7, 7, 7]}
+    },
+    {
+      "id": "F2P-066",
+      "requirement_ids": ["R112"],
+      "operation": "ProcessResults",
+      "input": [[1, "ok"], ["err"], [3, "ok"]],
+      "expected": {"result": [1], "error": "propagated"},
+      "all_ok": {"input": [1, 2], "expected": [1, 2], "error": null}
+    },
+    {
+      "id": "F2P-067",
+      "requirement_ids": ["R108"],
+      "operation": "laziness/FormatWith one-shot",
+      "expected": {"map_calls_before": 0, "map_calls_after": 3, "second_format": "panic"}
+    },
+    {
+      "id": "F2P-068",
+      "requirement_ids": ["R108"],
+      "operation": "Interleave/InterleaveShortest",
+      "shortest_input": [[1, 2, 3], [-1, -2]],
+      "shortest_expected": [1, -1, 2, -2, 3]
+    },
+    {
+      "id": "F2P-069",
+      "requirement_ids": ["R105"],
+      "operation": "ZipEq/Chunks panics",
+      "expected": {"ZipEq_unequal": "panic", "Chunks_zero": "panic"}
+    },
+    {
+      "id": "F2P-071",
+      "requirement_ids": ["R114"],
+      "operation": "ExactlyOne restore",
+      "input": [2, 3, 4],
+      "expected": {"error": "got at least 2 elements when exactly one was expected", "restored": [2, 3, 4]}
+    }
+  ]
+}

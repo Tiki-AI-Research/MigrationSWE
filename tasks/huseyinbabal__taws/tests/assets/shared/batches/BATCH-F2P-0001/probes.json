@@ -1,0 +1,712 @@
+{
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "role": "shared-observation-probes",
+  "schema_version": "migration-asset-probes:v2",
+  "migration": {
+    "category": "language",
+    "source": {
+      "name": "Rust",
+      "version": "2021"
+    },
+    "target": {
+      "name": "Go",
+      "version": "1.23.0"
+    }
+  },
+  "invocation": {
+    "entrypoint": "shared/batches/BATCH-F2P-0001/harness.sh",
+    "usage": "harness.sh <repo-root> <report-path>",
+    "timeout_policy": "every probe command is wrapped in an explicit `timeout`; the harness never waits unbounded",
+    "default_timeout_sec": 900,
+    "network": "disabled; all probes use loopback mock servers or pure computation"
+  },
+  "notes": [
+    "The same semantic predicate is executed against source and target; results are computed from the observation, never hardcoded per role.",
+    "Source (Rust) must fail each Go target-postcondition; target (Go 1.23.0) must satisfy it.",
+    "The harness emits exactly one record per owned observation id (24 total)."
+  ],
+  "probes": [
+    {
+      "observation_id": "F2P-001",
+      "requirement_ids": [
+        "R001",
+        "R034"
+      ],
+      "surface": "src/main.rs::runtime entry",
+      "semantic_predicate": "the declared runtime entry is the Go taws CLI and its migrated subsystems run in-process",
+      "target_technology_assertion": "execution path is Go 1.23.0 built by `go build ./...`; binary prints `taws 1.3.0-rc.8`",
+      "steps": [
+        {
+          "timeout_sec": 900,
+          "cmd": "cd {repo} && go build ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 900,
+          "cmd": "cd {repo} && go build -o /tmp/batch-f2p-taws .",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws --version",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": "taws 1.3.0-rc.8\n"
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-002",
+      "requirement_ids": [
+        "R041"
+      ],
+      "surface": "src/resource/handlers::request construction",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises query request construction",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-003",
+      "requirement_ids": [
+        "R031"
+      ],
+      "surface": "hidden evaluation asset paths",
+      "semantic_predicate": "the Go migration working tree contains no path under a hidden evaluation/verifier asset directory",
+      "target_technology_assertion": "migration implemented in Go without touching hidden evaluation assets",
+      "steps": [
+        {
+          "timeout_sec": 60,
+          "cmd": "test -f {repo}/go.mod",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && git status --porcelain",
+          "expect": {
+            "exit_code": 0,
+            "stdout_not_matches": "(^|/)(tests|verifier)/|verifier"
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-004",
+      "requirement_ids": [
+        "R032"
+      ],
+      "surface": "repository working tree vs baseline commit",
+      "semantic_predicate": "migration additions/deletions are present as uncommitted working-tree changes",
+      "target_technology_assertion": "the Go migration exists in the working tree rather than committed elsewhere",
+      "steps": [
+        {
+          "timeout_sec": 60,
+          "cmd": "test -f {repo}/go.mod",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && git status --porcelain",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-005",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "src/aws/http.rs::endpoint override resolution",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises endpoint override resolution",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-006",
+      "requirement_ids": [
+        "R025"
+      ],
+      "surface": "process/FFI boundary of the migrated Go binary",
+      "semantic_predicate": "no subprocess/RPC/FFI/dynamic-loading call into a Rust binary or library",
+      "target_technology_assertion": "AWS protocol work is in-process Go; only pre-existing external commands remain",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go list -deps ./...",
+          "expect": {
+            "exit_code": 0,
+            "stdout_not_matches": "cargo|\\.rs$"
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-008",
+      "requirement_ids": [
+        "R028"
+      ],
+      "surface": "TUI and migrated responsibility separation",
+      "semantic_predicate": "no Go production package binds to the retained Rust TUI",
+      "target_technology_assertion": "migrated responsibilities satisfied only by Go packages",
+      "steps": [
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIn --include=*.go -e 'src/ui' -e 'src/app' -e 'app\\.rs' -e 'event\\.rs' main.go internal || true",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": ""
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-009",
+      "requirement_ids": [
+        "R003",
+        "R034",
+        "R035"
+      ],
+      "surface": "src/main.rs::taws subcommand tree",
+      "semantic_predicate": "completion generates shell-specific scripts and hidden list-* subcommands print one entry per line",
+      "target_technology_assertion": "subcommand tree implemented by Go cobra with custom completion",
+      "steps": [
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws completion bash",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true,
+            "stdout_contains": "complete "
+          }
+        },
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws completion elvish",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        },
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws list-regions",
+          "expect": {
+            "exit_code": 0,
+            "stdout_line_count_min": 1
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-010",
+      "requirement_ids": [
+        "R046"
+      ],
+      "surface": "src/resource/dispatch.rs::read-only action guard",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises the read-only guard",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-011",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "src/aws/tls.rs::custom CA bundle loading",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises custom CA bundle loading",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-013",
+      "requirement_ids": [
+        "R050"
+      ],
+      "surface": "src/main.rs::SSM session exit code reporting",
+      "semantic_predicate": "a non-zero `aws ssm start-session` exit prints the code and 254 adds the not-connected hint",
+      "target_technology_assertion": "exit reporting implemented by the Go main package",
+      "steps": [
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -q 'SSM session exited with code' main.go",
+          "expect": {
+            "exit_code": 0
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-014",
+      "requirement_ids": [
+        "R033"
+      ],
+      "surface": "src/main.rs::cobra root flag validation",
+      "semantic_predicate": "`taws --log-level bogus` exits 2 and reports the allowed values",
+      "target_technology_assertion": "flag validation in Go cobra PersistentPreRunE",
+      "steps": [
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws --log-level bogus",
+          "expect": {
+            "exit_code": 2,
+            "stderr_or_stdout_contains": "[possible values: off, error, warn, info, debug, trace]"
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-015",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "src/resources::directly addressable resource key set",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises the resource-key set and the catalog is unchanged",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-016",
+      "requirement_ids": [
+        "R029"
+      ],
+      "surface": "src/aws/console_login.rs::runtime entry",
+      "semantic_predicate": "exec.Command call sites are limited to `aws ssm start-session`, `aws login`, `credential_process`",
+      "target_technology_assertion": "external commands remain external and never invoke the Rust implementation",
+      "steps": [
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIn --include=*.go 'exec.Command' main.go internal",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include=*.go -e 'cargo' -e 'rustc' main.go internal || true",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": ""
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-018",
+      "requirement_ids": [
+        "R027"
+      ],
+      "surface": "src/resource/registry.rs::runtime entry",
+      "semantic_predicate": "the catalog is go:embed-backed and no src/resources/*.json byte changes",
+      "target_technology_assertion": "catalog embedded into the Go binary, not read from an external Rust path",
+      "steps": [
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIn 'go:embed' --include=*.go .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && git diff --exit-code d1cbf6e450eced9a7947cf810764ec79599c7793 -- src/resources",
+          "expect": {
+            "exit_code": 0
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-021",
+      "requirement_ids": [
+        "R007"
+      ],
+      "surface": "src/resources::registry schema decoding",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises registry schema decoding",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-024",
+      "requirement_ids": [
+        "R040"
+      ],
+      "surface": "src/resource/handlers::JSON protocol request building",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises JSON protocol request building",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-012",
+      "requirement_ids": [
+        "R001",
+        "R047"
+      ],
+      "surface": "src/aws/client.rs::AWS credential resolution chain",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises the credential chain",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-007",
+      "requirement_ids": [
+        "R041"
+      ],
+      "surface": "src/aws/http.rs::request construction",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises AWS request construction",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-017",
+      "requirement_ids": [
+        "R034"
+      ],
+      "surface": "src/main.rs::version flag output",
+      "semantic_predicate": "`taws --version` and `taws -V` print exactly `taws 1.3.0-rc.8`",
+      "target_technology_assertion": "version wired through a custom Go cobra version template",
+      "steps": [
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws --version",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": "taws 1.3.0-rc.8\n"
+          }
+        },
+        {
+          "timeout_sec": 30,
+          "cmd": "/tmp/batch-f2p-taws -V",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": "taws 1.3.0-rc.8\n"
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-019",
+      "requirement_ids": [
+        "R027"
+      ],
+      "surface": "src/resource/registry.rs::directly addressable resource key set",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises requires_parent filtering and the catalog is unchanged",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-020",
+      "requirement_ids": [
+        "R028"
+      ],
+      "surface": "src/main.rs::runtime entry",
+      "semantic_predicate": "no Go production package imports or invokes the retained Rust TUI",
+      "target_technology_assertion": "CLI/config/aws/resource responsibilities satisfied only by Go packages",
+      "steps": [
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIn --include=*.go -e 'src/ui' -e 'src/app' main.go internal || true",
+          "expect": {
+            "exit_code": 0,
+            "stdout_equals": ""
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-022",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "src/aws/http.rs::AWS protocol dispatch",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises endpoint override precedence",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-023",
+      "requirement_ids": [
+        "R027"
+      ],
+      "surface": "src/resources::directly addressable resource key set",
+      "semantic_predicate": "the migrated module carries a ported behavioural test suite that passes",
+      "target_technology_assertion": "the ported Go behavioural suite exercises resource keys/required fields and the catalog is unchanged",
+      "steps": [
+        {
+          "timeout_sec": 600,
+          "cmd": "cd {repo} && go test -count=1 ./...",
+          "expect": {
+            "exit_code": 0
+          }
+        },
+        {
+          "timeout_sec": 120,
+          "cmd": "cd {repo} && grep -RIl --include='*_test.go' --exclude-dir=vendor 'func Test' .",
+          "expect": {
+            "exit_code": 0,
+            "stdout_nonempty": true
+          }
+        }
+      ]
+    },
+    {
+      "observation_id": "F2P-025",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/aws/http.rs::query protocol + SigV4",
+      "semantic_predicate": "a non-interactive list builds an AWS query request signed with SigV4 and parses the response",
+      "target_technology_assertion": "the query protocol action/version parameters are sent and the request carries an AWS4-HMAC-SHA256 signature scoped to the target region and service",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-026",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/aws/http.rs::json protocol",
+      "semantic_predicate": "a non-interactive list sends the JSON protocol action target header and parses the JSON response",
+      "target_technology_assertion": "the X-Amz-Target header carries the configured action target and the response items are returned",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-027",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/aws/http.rs::rest-json protocol",
+      "semantic_predicate": "a non-interactive list issues the configured REST path with the configured method for a rest-json service",
+      "target_technology_assertion": "the request method/path match the resource api_config and the JSON response items are returned",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-028",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/aws/http.rs::rest-xml protocol",
+      "semantic_predicate": "a non-interactive list issues the configured REST path for a rest-xml service",
+      "target_technology_assertion": "the request method/path match the resource api_config and the XML response items are returned",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-029",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/resource/dispatch.rs::pagination",
+      "semantic_predicate": "the pagination input/output token contract advances and resets across pages",
+      "target_technology_assertion": "an output token is reported and, when supplied back, is sent as the configured input token",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-030",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/resource/dispatch.rs::read-only action guard",
+      "semantic_predicate": "a write action is refused under --readonly and is issued otherwise",
+      "target_technology_assertion": "no request is sent in read-only mode; the write request is sent without the flag",
+      "steps": []
+    },
+    {
+      "observation_id": "F2P-031",
+      "requirement_ids": [
+        "R073"
+      ],
+      "surface": "src/aws/http.rs::endpoint override precedence",
+      "semantic_predicate": "--endpoint-url overrides AWS_ENDPOINT_URL, which is honored when the flag is absent",
+      "target_technology_assertion": "service requests target the flag endpoint when set, otherwise the environment endpoint",
+      "steps": []
+    }
+  ]
+}

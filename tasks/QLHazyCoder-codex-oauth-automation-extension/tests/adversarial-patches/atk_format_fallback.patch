@@ -1,0 +1,1073 @@
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..d9bfbe9
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1 @@
++Flask==3.1.2
+diff --git a/scripts/custom_mail_helper.py b/scripts/custom_mail_helper.py
+index 2ba397a..4da9dca 100644
+--- a/scripts/custom_mail_helper.py
++++ b/scripts/custom_mail_helper.py
+@@ -12,7 +12,11 @@ import traceback
+ from datetime import datetime, timezone
+ from email.header import decode_header
+ from email.utils import getaddresses, parseaddr, parsedate_to_datetime
+-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++
++from urllib.parse import unquote_to_bytes, urlsplit
++
++from flask import Flask, Response, g, request
++from werkzeug.serving import WSGIRequestHandler, make_server
+ 
+ 
+ def load_dotenv_file(path):
+@@ -45,6 +49,7 @@ IMAP_PASS = os.environ.get("FLOWPILOT_CUSTOM_IMAP_PASS", "")
+ IMAP_MAILBOX = os.environ.get("FLOWPILOT_CUSTOM_IMAP_MAILBOX", "INBOX")
+ REQUEST_TIMEOUT_SECONDS = int(os.environ.get("FLOWPILOT_CUSTOM_IMAP_TIMEOUT", "45"))
+ DEFAULT_TOP = 20
++MAX_BODY_BYTES = 1048576
+ RANDOM_EMAIL_DB_PATH = os.environ.get(
+     "FLOWPILOT_RANDOM_EMAIL_DB_PATH",
+     os.path.join(PROJECT_ROOT, "data", "custom-mail-helper.sqlite3"),
+@@ -61,27 +66,6 @@ DEFAULT_MAIL_FROM_ALLOW = [
+ ]
+ 
+ 
+-def json_response(handler, status, payload):
+-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+-    handler.send_response(status)
+-    handler.send_header("Content-Type", "application/json; charset=utf-8")
+-    handler.send_header("Content-Length", str(len(body)))
+-    handler.send_header("Access-Control-Allow-Origin", "*")
+-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+-    handler.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-    handler.end_headers()
+-    handler.wfile.write(body)
+-
+-
+-def read_json_payload(handler):
+-    length = int(handler.headers.get("Content-Length", "0") or 0)
+-    raw = handler.rfile.read(length) if length > 0 else b"{}"
+-    try:
+-        return json.loads(raw.decode("utf-8"))
+-    except Exception as exc:
+-        raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
+-
+-
+ def get_public_env_payload():
+     return {key: os.environ.get(key, "") for key in PUBLIC_ENV_KEYS}
+ 
+@@ -371,49 +355,368 @@ def select_latest_code(messages, payload):
+     return {"code": "", "message": None, "usedTimeFallback": False}
+ 
+ 
+-class CustomMailHelperHandler(BaseHTTPRequestHandler):
+-    def do_OPTIONS(self):
+-        self.send_response(204)
+-        self.send_header("Access-Control-Allow-Origin", "*")
+-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-        self.end_headers()
++def json_response(status, payload):
++    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
++    response = Response(body, status=status, mimetype="application/json")
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Content-Length"] = str(len(body))
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++def error_response(status, message):
++    return json_response(status, {"ok": False, "error": message})
++
++
++CUSTOM_MAIL_JSON_BODY_ROUTES = {
++    "/messages",
++    "/code",
++    "/random-email",
++}
++
++
++class BodyTooLarge(Exception):
++    pass
++
++
++class FlowPilotRequestHandler(WSGIRequestHandler):
++    """Werkzeug request handler exposing the raw request target and framing headers.
++
++    The raw request target is captured before any URL normalization so that the
++    unknown-path envelope can echo the octets exactly as they arrived on the
++    wire, decoded as ISO-8859-1 just like the standard library request-line
++    parser used to do.
++    """
++
++    def _capture_raw_request(self):
++        raw_target = None
++        raw_line = getattr(self, "raw_requestline", None)
++        if raw_line:
++            try:
++                decoded_line = bytes(raw_line).decode("iso-8859-1")
++            except Exception:
++                decoded_line = ""
++            words = decoded_line.rstrip("\r\n").split()
++            if len(words) >= 2:
++                raw_target = words[1]
++        if raw_target is None:
++            raw_target = getattr(self, "path", None)
++        self._flowpilot_raw_target = raw_target
++
++        headers = getattr(self, "headers", None)
++        if headers is not None and hasattr(headers, "get_all"):
++            self._flowpilot_te_values = list(headers.get_all("Transfer-Encoding") or [])
++            self._flowpilot_cl_values = list(headers.get_all("Content-Length") or [])
++        else:
++            self._flowpilot_te_values = []
++            self._flowpilot_cl_values = []
++
++    def parse_request(self):
++        success = super().parse_request()
++        if success:
++            try:
++                self._capture_raw_request()
++            except Exception:
++                self._flowpilot_raw_target = getattr(self, "path", None)
++                self._flowpilot_te_values = []
++                self._flowpilot_cl_values = []
++        return success
++
++    def _enrich_environ(self, environ):
++        raw_target = getattr(self, "_flowpilot_raw_target", None)
++        if raw_target is not None:
++            environ["FLOWPILOT_RAW_TARGET"] = raw_target
++
++        te_values = getattr(self, "_flowpilot_te_values", None)
++        if te_values:
++            environ["HTTP_TRANSFER_ENCODING"] = ",".join(str(item) for item in te_values)
++        environ["FLOWPILOT_TE_PRESENT"] = "1" if te_values else "0"
++
++        cl_values = getattr(self, "_flowpilot_cl_values", None)
++        if cl_values and "CONTENT_LENGTH" not in environ:
++            environ["CONTENT_LENGTH"] = str(cl_values[0])
++        environ["FLOWPILOT_CL_PRESENT"] = "1" if cl_values else "0"
++
++        if raw_target is not None:
++            try:
++                routing_target = raw_target
++                if routing_target.startswith("//"):
++                    routing_target = "/" + routing_target.lstrip("/")
++                split = urlsplit(routing_target)
++                path_bytes = unquote_to_bytes(split.path.encode("latin-1", errors="replace"))
++                environ["PATH_INFO"] = path_bytes.decode("latin-1", errors="replace")
++                environ["QUERY_STRING"] = split.query
++                environ["SCRIPT_NAME"] = ""
++            except Exception:
++                pass
++        return environ
++
++    def make_environ(self, *args, **kwargs):
++        environ = super().make_environ(*args, **kwargs)
++        return self._enrich_environ(environ)
++
++    def get_environ(self, *args, **kwargs):
++        environ = super().get_environ(*args, **kwargs)
++        return self._enrich_environ(environ)
++
++
++def _raw_request_target():
++    environ = request.environ
++    for key in ("FLOWPILOT_RAW_TARGET", "RAW_URI", "REQUEST_URI"):
++        value = environ.get(key)
++        if value is not None:
++            return value
++    script_name = environ.get("SCRIPT_NAME") or ""
++    path_info = environ.get("PATH_INFO") or ""
++    query_string = environ.get("QUERY_STRING") or ""
++    target = f"{script_name}{path_info}"
++    if query_string:
++        target = f"{target}?{query_string}"
++    return target
++
++
++def _validate_envelope():
++    environ = request.environ
++    te_marker = environ.get("FLOWPILOT_TE_PRESENT")
++    if te_marker == "1":
++        has_transfer_encoding = True
++    elif te_marker == "0":
++        has_transfer_encoding = False
++    else:
++        has_transfer_encoding = environ.get("HTTP_TRANSFER_ENCODING") is not None
++    cl_marker = environ.get("FLOWPILOT_CL_PRESENT")
++    if cl_marker == "1":
++        has_content_length = True
++    elif cl_marker == "0":
++        has_content_length = False
++    else:
++        has_content_length = environ.get("CONTENT_LENGTH") is not None
++
++    if has_content_length and has_transfer_encoding:
++        return error_response(500, "Ambiguous request framing")
++
++    if has_content_length:
++        raw_value = environ.get("CONTENT_LENGTH")
++        value = "" if raw_value is None else str(raw_value)
++        stripped = value.strip()
++        if not stripped or any(ch not in "0123456789" for ch in stripped):
++            return error_response(500, "Invalid Content-Length")
++        normalized = stripped.lstrip("0") or "0"
++        max_text = str(MAX_BODY_BYTES)
++        if len(normalized) > len(max_text) or (
++            len(normalized) == len(max_text) and normalized > max_text
++        ):
++            return error_response(413, "Request body too large")
++        environ["FLOWPILOT_CONTENT_LENGTH"] = normalized
++        return None
++
++    if has_transfer_encoding:
++        transfer_encoding = str(environ.get("HTTP_TRANSFER_ENCODING") or "").strip().lower()
++        if transfer_encoding != "chunked":
++            return error_response(500, "Unsupported Transfer-Encoding")
++        environ["FLOWPILOT_CHUNKED"] = "1"
++        return None
++
++    environ["FLOWPILOT_CONTENT_LENGTH"] = "0"
++    return None
++
++
++def _read_chunked_body(stream, limit):
++    data = bytearray()
++    while True:
++        line = stream.readline()
++        if not line:
++            break
++        size_field = line.split(b";", 1)[0].strip()
++        if not size_field:
++            break
++        try:
++            chunk_size = int(size_field, 16)
++        except ValueError as exc:
++            raise RuntimeError(f"Invalid chunked encoding: {exc}") from exc
++        if chunk_size == 0:
++            while True:
++                trailer = stream.readline()
++                if not trailer or trailer in (b"\r\n", b"\n"):
++                    break
++            break
++        if len(data) + chunk_size > limit:
++            raise BodyTooLarge()
++        chunk = stream.read(chunk_size)
++        if chunk is None:
++            chunk = b""
++        data.extend(chunk)
++        stream.readline()
++        if len(chunk) < chunk_size:
++            break
++    return bytes(data)
++
++
++def _read_body_bytes():
++    environ = request.environ
++    stream = environ.get("wsgi.input")
++    if environ.get("FLOWPILOT_CHUNKED") == "1":
++        if stream is None:
++            return b""
++        terminated = bool(environ.get("wsgi.input_terminated"))
++        if not terminated and type(stream).__name__ == "DechunkedInput":
++            terminated = True
++        if terminated:
++            data = stream.read(MAX_BODY_BYTES + 1)
++            if data is None:
++                data = b""
++            if len(data) > MAX_BODY_BYTES:
++                raise BodyTooLarge()
++            return data
++        return _read_chunked_body(stream, MAX_BODY_BYTES)
++
++    length_text = environ.get("FLOWPILOT_CONTENT_LENGTH") or "0"
++    try:
++        length = int(length_text)
++    except ValueError:
++        length = 0
++    if length <= 0 or stream is None:
++        return b""
++    data = stream.read(length)
++    if data is None:
++        return b""
++    return data
++
++
++def parse_json_payload():
++    raw = getattr(g, "flowpilot_body", None)
++    if raw is None:
++        raw = _read_body_bytes()
++        g.flowpilot_body = raw
++    if not raw:
++        return {}
++    try:
++        return json.loads(raw.decode("utf-8"))
++    except Exception as exc:
++        raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
++
++
++def empty_options_response():
++    response = Response(b"", status=204)
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Content-Length"] = "0"
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++app = Flask(__name__)
++
++
++@app.before_request
++def _flowpilot_before_request():
++    if request.method == "OPTIONS":
++        return empty_options_response()
+ 
+-    def do_POST(self):
++    try:
++        envelope_error = _validate_envelope()
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++    if envelope_error is not None:
++        return envelope_error
++
++    rule = getattr(request, "url_rule", None)
++    rule_text = getattr(rule, "rule", None)
++    if request.method == "POST" and rule_text in CUSTOM_MAIL_JSON_BODY_ROUTES:
+         try:
+-            payload = read_json_payload(self)
+-            if self.path == "/messages":
+-                messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
+-                json_response(self, 200, {"ok": True, "messages": messages})
+-                return
+-            if self.path == "/code":
+-                messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
+-                selected = select_latest_code(messages, payload)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "code": selected["code"],
+-                    "message": selected["message"],
+-                    "usedTimeFallback": selected["usedTimeFallback"],
+-                })
+-                return
+-            if self.path == "/health":
+-                json_response(self, 200, {"ok": True})
+-                return
+-            if self.path == "/env":
+-                json_response(self, 200, {"ok": True, "env": get_public_env_payload()})
+-                return
+-            if self.path == "/random-email":
+-                result = generate_random_emails(payload)
+-                json_response(self, 200, {"ok": True, **result})
+-                return
+-            json_response(self, 404, {"ok": False, "error": f"Unsupported path: {self.path}"})
++            g.flowpilot_body = _read_body_bytes()
++        except BodyTooLarge:
++            return error_response(413, "Request body too large")
+         except Exception as exc:
+-            traceback.print_exc()
+-            json_response(self, 500, {"ok": False, "error": str(exc)})
++            return error_response(500, str(exc))
++    return None
++
++
++@app.errorhandler(404)
++def _flowpilot_not_found(_error):
++    return error_response(404, f"Unsupported path: {_raw_request_target()}")
++
++
++@app.errorhandler(405)
++def _flowpilot_method_not_allowed(_error):
++    return error_response(404, f"Unsupported path: {_raw_request_target()}")
++
++
++@app.errorhandler(Exception)
++def _flowpilot_unhandled_exception(exc):
++    traceback.print_exc()
++    return error_response(500, str(exc))
++
++
++@app.route("/messages", methods=["POST"])
++def handle_messages():
++    try:
++        payload = parse_json_payload()
++        messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
++        return json_response(200, {"ok": True, "messages": messages})
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/code", methods=["POST"])
++def handle_code():
++    try:
++        payload = parse_json_payload()
++        messages = fetch_recent_messages(payload.get("top") or DEFAULT_TOP)
++        selected = select_latest_code(messages, payload)
++        return json_response(200, {
++            "ok": True,
++            "code": selected["code"],
++            "message": selected["message"],
++            "usedTimeFallback": selected["usedTimeFallback"],
++        })
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/health", methods=["POST"])
++def handle_health():
++    try:
++        return json_response(200, {"ok": True})
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/env", methods=["POST"])
++def handle_env():
++    try:
++        return json_response(200, {"ok": True, "env": get_public_env_payload()})
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/random-email", methods=["POST"])
++def handle_random_email():
++    try:
++        payload = parse_json_payload()
++        result = generate_random_emails(payload)
++        return json_response(200, {"ok": True, **result})
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
+ 
+ 
+ def main():
+-    server = ThreadingHTTPServer((HOST, PORT), CustomMailHelperHandler)
++    server = make_server(
++        HOST,
++        PORT,
++        app,
++        threaded=True,
++        request_handler=FlowPilotRequestHandler,
++    )
+     print(f"Custom mail helper listening on http://{HOST}:{PORT}", flush=True)
+     print(f"IMAP host={IMAP_HOST}:{IMAP_PORT} user={IMAP_USER or '(unset)'} mailbox={IMAP_MAILBOX}", flush=True)
+     try:
+diff --git a/scripts/hotmail_helper.py b/scripts/hotmail_helper.py
+index cfe45b3..ebe7b89 100644
+--- a/scripts/hotmail_helper.py
++++ b/scripts/hotmail_helper.py
+@@ -10,11 +10,13 @@ import traceback
+ from datetime import datetime, timezone
+ from email.header import decode_header
+ from email.utils import parseaddr, parsedate_to_datetime
+-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from urllib.error import HTTPError, URLError
+-from urllib.parse import urlencode
++from urllib.parse import unquote_to_bytes, urlencode, urlsplit
+ from urllib.request import Request, urlopen
+ 
++from flask import Flask, Response, g, request
++from werkzeug.serving import WSGIRequestHandler, make_server
++
+ 
+ HOST = "127.0.0.1"
+ PORT = 17373
+@@ -62,36 +64,13 @@ IMAP_HOST = "outlook.office365.com"
+ IMAP_PORT = 993
+ REQUEST_TIMEOUT_SECONDS = 45
+ FETCH_LIMIT_DEFAULT = 5
++MAX_BODY_BYTES = 1048576
+ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ ACCOUNT_LOG_PATH = os.path.join(BASE_DIR, "data", "account-run-history.txt")
+ ACCOUNT_RECORDS_SNAPSHOT_PATH = os.path.join(BASE_DIR, "data", "account-run-history.json")
+ ACCOUNT_RECORDS_LOCK = threading.Lock()
+ 
+ 
+-def json_response(handler, status, payload):
+-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+-    handler.send_response(status)
+-    handler.send_header("Content-Type", "application/json; charset=utf-8")
+-    handler.send_header("Content-Length", str(len(body)))
+-    handler.send_header("Access-Control-Allow-Origin", "*")
+-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+-    handler.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-    try:
+-        handler.end_headers()
+-        handler.wfile.write(body)
+-    except (BrokenPipeError, ConnectionResetError) as exc:
+-        log_info(f"response aborted by client status={status} detail={compact_text(exc)}")
+-
+-
+-def read_json_payload(handler):
+-    length = int(handler.headers.get("Content-Length", "0") or 0)
+-    raw = handler.rfile.read(length) if length > 0 else b"{}"
+-    try:
+-        return json.loads(raw.decode("utf-8"))
+-    except Exception as exc:
+-        raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
+-
+-
+ def post_form(url, data):
+     encoded = urlencode(data).encode("utf-8")
+     request = Request(url, data=encoded, headers={"Content-Type": "application/x-www-form-urlencoded"})
+@@ -129,6 +108,32 @@ def get_message_body_content(message):
+     return str(body.get("content") or "").strip()
+ 
+ 
++def log_openai_messages(messages, transport=""):
++    for message in messages or []:
++        if not isinstance(message, dict):
++            continue
++        sender_info = (message.get("from") or {}).get("emailAddress") or {}
++        sender = str(sender_info.get("address") or "").strip()
++        if "openai" not in sender.lower():
++            continue
++        sender_name = str(sender_info.get("name") or "").strip()
++        mailbox = str(message.get("mailbox") or "").strip()
++        subject = str(message.get("subject") or "").strip()
++        context = (
++            f"transport={transport} mailbox={mailbox} sender={sender} "
++            f"senderName={sender_name} subject={subject}"
++        )
++        log_info(f"openai mail received {context}")
++        body_content = get_message_body_content(message)
++        if body_content:
++            log_info(f"openai mail full body start {context}")
++            print(body_content, flush=True)
++            log_info("openai mail full body end")
++        else:
++            preview = str(message.get("bodyPreview") or "").strip()
++            log_info(f"openai mail preview {context} preview={preview}")
++
++
+ def get_proxy_debug_context():
+     names = ["all_proxy", "http_proxy", "https_proxy", "ALL_PROXY", "HTTP_PROXY", "HTTPS_PROXY"]
+     parts = []
+@@ -791,91 +796,436 @@ def select_latest_code(messages, sender_filters, subject_filters, exclude_codes,
+     return {"code": "", "message": None, "usedTimeFallback": False}
+ 
+ 
+-class HotmailHelperHandler(BaseHTTPRequestHandler):
+-    def do_OPTIONS(self):
+-        self.send_response(204)
+-        self.send_header("Access-Control-Allow-Origin", "*")
+-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+-        self.end_headers()
++def json_response(status, payload):
++    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
++    response = Response(body, status=status, mimetype="application/json")
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Content-Length"] = str(len(body))
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++def error_response(status, message):
++    return json_response(status, {"ok": False, "error": message})
++
++
++HOTMAIL_JSON_BODY_ROUTES = {
++    "/messages",
++    "/code",
++    "/append-account-log",
++    "/sync-account-run-records",
++}
+ 
+-    def do_POST(self):
++
++class BodyTooLarge(Exception):
++    pass
++
++
++class FlowPilotRequestHandler(WSGIRequestHandler):
++    """Werkzeug request handler exposing the raw request target and framing headers.
++
++    The raw request target is captured before any URL normalization so that the
++    unknown-path envelope can echo the octets exactly as they arrived on the
++    wire, decoded as ISO-8859-1 just like the standard library request-line
++    parser used to do.
++    """
++
++    def _capture_raw_request(self):
++        raw_target = None
++        raw_line = getattr(self, "raw_requestline", None)
++        if raw_line:
++            try:
++                decoded_line = bytes(raw_line).decode("iso-8859-1")
++            except Exception:
++                decoded_line = ""
++            words = decoded_line.rstrip("\r\n").split()
++            if len(words) >= 2:
++                raw_target = words[1]
++        if raw_target is None:
++            raw_target = getattr(self, "path", None)
++        self._flowpilot_raw_target = raw_target
++
++        headers = getattr(self, "headers", None)
++        if headers is not None and hasattr(headers, "get_all"):
++            self._flowpilot_te_values = list(headers.get_all("Transfer-Encoding") or [])
++            self._flowpilot_cl_values = list(headers.get_all("Content-Length") or [])
++        else:
++            self._flowpilot_te_values = []
++            self._flowpilot_cl_values = []
++
++    def parse_request(self):
++        success = super().parse_request()
++        if success:
++            try:
++                self._capture_raw_request()
++            except Exception:
++                self._flowpilot_raw_target = getattr(self, "path", None)
++                self._flowpilot_te_values = []
++                self._flowpilot_cl_values = []
++        return success
++
++    def _enrich_environ(self, environ):
++        raw_target = getattr(self, "_flowpilot_raw_target", None)
++        if raw_target is not None:
++            environ["FLOWPILOT_RAW_TARGET"] = raw_target
++
++        te_values = getattr(self, "_flowpilot_te_values", None)
++        if te_values:
++            environ["HTTP_TRANSFER_ENCODING"] = ",".join(str(item) for item in te_values)
++        environ["FLOWPILOT_TE_PRESENT"] = "1" if te_values else "0"
++
++        cl_values = getattr(self, "_flowpilot_cl_values", None)
++        if cl_values and "CONTENT_LENGTH" not in environ:
++            environ["CONTENT_LENGTH"] = str(cl_values[0])
++        environ["FLOWPILOT_CL_PRESENT"] = "1" if cl_values else "0"
++
++        if raw_target is not None:
++            try:
++                routing_target = raw_target
++                if routing_target.startswith("//"):
++                    routing_target = "/" + routing_target.lstrip("/")
++                split = urlsplit(routing_target)
++                path_bytes = unquote_to_bytes(split.path.encode("latin-1", errors="replace"))
++                environ["PATH_INFO"] = path_bytes.decode("latin-1", errors="replace")
++                environ["QUERY_STRING"] = split.query
++                environ["SCRIPT_NAME"] = ""
++            except Exception:
++                pass
++        return environ
++
++    def make_environ(self, *args, **kwargs):
++        environ = super().make_environ(*args, **kwargs)
++        return self._enrich_environ(environ)
++
++    def get_environ(self, *args, **kwargs):
++        environ = super().get_environ(*args, **kwargs)
++        return self._enrich_environ(environ)
++
++
++def _raw_request_target():
++    environ = request.environ
++    for key in ("FLOWPILOT_RAW_TARGET", "RAW_URI", "REQUEST_URI"):
++        value = environ.get(key)
++        if value is not None:
++            return value
++    script_name = environ.get("SCRIPT_NAME") or ""
++    path_info = environ.get("PATH_INFO") or ""
++    query_string = environ.get("QUERY_STRING") or ""
++    target = f"{script_name}{path_info}"
++    if query_string:
++        target = f"{target}?{query_string}"
++    return target
++
++
++def _validate_envelope():
++    environ = request.environ
++    te_marker = environ.get("FLOWPILOT_TE_PRESENT")
++    if te_marker == "1":
++        has_transfer_encoding = True
++    elif te_marker == "0":
++        has_transfer_encoding = False
++    else:
++        has_transfer_encoding = environ.get("HTTP_TRANSFER_ENCODING") is not None
++    cl_marker = environ.get("FLOWPILOT_CL_PRESENT")
++    if cl_marker == "1":
++        has_content_length = True
++    elif cl_marker == "0":
++        has_content_length = False
++    else:
++        has_content_length = environ.get("CONTENT_LENGTH") is not None
++
++    if has_content_length and has_transfer_encoding:
++        return error_response(500, "Ambiguous request framing")
++
++    if has_content_length:
++        raw_value = environ.get("CONTENT_LENGTH")
++        value = "" if raw_value is None else str(raw_value)
++        stripped = value.strip()
++        if not stripped or any(ch not in "0123456789" for ch in stripped):
++            return error_response(500, "Invalid Content-Length")
++        normalized = stripped.lstrip("0") or "0"
++        max_text = str(MAX_BODY_BYTES)
++        if len(normalized) > len(max_text) or (
++            len(normalized) == len(max_text) and normalized > max_text
++        ):
++            return error_response(413, "Request body too large")
++        environ["FLOWPILOT_CONTENT_LENGTH"] = normalized
++        return None
++
++    if has_transfer_encoding:
++        transfer_encoding = str(environ.get("HTTP_TRANSFER_ENCODING") or "").strip().lower()
++        if transfer_encoding != "chunked":
++            return error_response(500, "Unsupported Transfer-Encoding")
++        environ["FLOWPILOT_CHUNKED"] = "1"
++        return None
++
++    environ["FLOWPILOT_CONTENT_LENGTH"] = "0"
++    return None
++
++
++def _read_chunked_body(stream, limit):
++    data = bytearray()
++    while True:
++        line = stream.readline()
++        if not line:
++            break
++        size_field = line.split(b";", 1)[0].strip()
++        if not size_field:
++            break
+         try:
+-            payload = read_json_payload(self)
+-
+-            if self.path == "/sync-account-run-records":
+-                file_path = sync_account_run_records(payload)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "filePath": file_path,
+-                })
+-                return
+-
+-            if self.path == "/append-account-log":
+-                file_path = append_account_log(
+-                    payload.get("email"),
+-                    payload.get("password"),
+-                    payload.get("status"),
+-                    payload.get("recordedAt"),
+-                    payload.get("reason"),
+-                )
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "filePath": file_path,
+-                })
+-                return
+-
+-            email_addr = str(payload.get("email") or "").strip()
+-            client_id = str(payload.get("clientId") or "").strip()
+-            refresh_token = str(payload.get("refreshToken") or "").strip()
+-            if not email_addr or not client_id or not refresh_token:
+-                raise RuntimeError("Missing email/clientId/refreshToken")
+-
+-            top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
+-            mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
+-
+-            if self.path == "/messages":
+-                result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "messages": result["messages"],
+-                    "mailboxResults": result["mailboxResults"],
+-                    "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
+-                    "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
+-                    "transport": result.get("transport") or "",
+-                })
+-                return
+-
+-            if self.path == "/code":
+-                result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
+-                selected = select_latest_code(
+-                    result["messages"],
+-                    payload.get("senderFilters") or [],
+-                    payload.get("subjectFilters") or [],
+-                    payload.get("excludeCodes") or [],
+-                    int(payload.get("filterAfterTimestamp") or 0),
+-                    payload.get("requiredKeywords") or [],
+-                    payload.get("codePatterns") or [],
+-                )
+-                json_response(self, 200, {
+-                    "ok": True,
+-                    "code": selected["code"],
+-                    "message": selected["message"],
+-                    "usedTimeFallback": selected["usedTimeFallback"],
+-                    "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
+-                    "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
+-                    "transport": result.get("transport") or "",
+-                })
+-                return
+-
+-            json_response(self, 404, {"ok": False, "error": f"Unsupported path: {self.path}"})
++            chunk_size = int(size_field, 16)
++        except ValueError as exc:
++            raise RuntimeError(f"Invalid chunked encoding: {exc}") from exc
++        if chunk_size == 0:
++            while True:
++                trailer = stream.readline()
++                if not trailer or trailer in (b"\r\n", b"\n"):
++                    break
++            break
++        if len(data) + chunk_size > limit:
++            raise BodyTooLarge()
++        chunk = stream.read(chunk_size)
++        if chunk is None:
++            chunk = b""
++        data.extend(chunk)
++        stream.readline()
++        if len(chunk) < chunk_size:
++            break
++    return bytes(data)
++
++
++def _read_body_bytes():
++    environ = request.environ
++    stream = environ.get("wsgi.input")
++    if environ.get("FLOWPILOT_CHUNKED") == "1":
++        if stream is None:
++            return b""
++        terminated = bool(environ.get("wsgi.input_terminated"))
++        if not terminated and type(stream).__name__ == "DechunkedInput":
++            terminated = True
++        if terminated:
++            data = stream.read(MAX_BODY_BYTES + 1)
++            if data is None:
++                data = b""
++            if len(data) > MAX_BODY_BYTES:
++                raise BodyTooLarge()
++            return data
++        return _read_chunked_body(stream, MAX_BODY_BYTES)
++
++    length_text = environ.get("FLOWPILOT_CONTENT_LENGTH") or "0"
++    try:
++        length = int(length_text)
++    except ValueError:
++        length = 0
++    if length <= 0 or stream is None:
++        return b""
++    data = stream.read(length)
++    if data is None:
++        return b""
++    return data
++
++
++def parse_json_payload():
++    raw = getattr(g, "flowpilot_body", None)
++    if raw is None:
++        raw = _read_body_bytes()
++        g.flowpilot_body = raw
++    if not raw:
++        return {}
++    try:
++        return json.loads(raw.decode("utf-8"))
++    except Exception as exc:
++        raise RuntimeError(f"Invalid JSON payload: {exc}") from exc
++
++
++def empty_options_response():
++    response = Response(b"", status=204)
++    response.headers["Content-Type"] = "application/json; charset=utf-8"
++    response.headers["Content-Length"] = "0"
++    response.headers["Access-Control-Allow-Origin"] = "*"
++    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
++    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
++    return response
++
++
++app = Flask(__name__)
++
++
++@app.before_request
++def _flowpilot_before_request():
++    if request.method == "OPTIONS":
++        return empty_options_response()
++
++    try:
++        envelope_error = _validate_envelope()
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++    if envelope_error is not None:
++        return envelope_error
++
++    rule = getattr(request, "url_rule", None)
++    rule_text = getattr(rule, "rule", None)
++    if request.method == "POST" and rule_text in HOTMAIL_JSON_BODY_ROUTES:
++        try:
++            g.flowpilot_body = _read_body_bytes()
++        except BodyTooLarge:
++            return error_response(413, "Request body too large")
+         except Exception as exc:
+-            traceback.print_exc()
+-            json_response(self, 500, {"ok": False, "error": str(exc)})
++            return error_response(500, str(exc))
++    return None
++
++
++@app.errorhandler(404)
++def _flowpilot_not_found(_error):
++    return error_response(404, f"Unsupported path: {_raw_request_target()}")
++
++
++@app.errorhandler(405)
++def _flowpilot_method_not_allowed(_error):
++    return error_response(404, f"Unsupported path: {_raw_request_target()}")
++
++
++@app.errorhandler(Exception)
++def _flowpilot_unhandled_exception(exc):
++    traceback.print_exc()
++    return error_response(500, str(exc))
++
++
++@app.route("/messages", methods=["POST"])
++def handle_messages():
++    try:
++        payload = parse_json_payload()
++        email_addr = str(payload.get("email") or "").strip()
++        client_id = str(payload.get("clientId") or "").strip()
++        refresh_token = str(payload.get("refreshToken") or "").strip()
++        if not email_addr or not client_id or not refresh_token:
++            raise RuntimeError("Missing email/clientId/refreshToken")
++
++        top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
++        mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
++
++        result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
++        return json_response(200, {
++            "ok": True,
++            "messages": result["messages"],
++            "mailboxResults": result["mailboxResults"],
++            "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
++            "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
++            "transport": result.get("transport") or "",
++        })
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/code", methods=["POST"])
++def handle_code():
++    try:
++        payload = parse_json_payload()
++        email_addr = str(payload.get("email") or "").strip()
++        client_id = str(payload.get("clientId") or "").strip()
++        refresh_token = str(payload.get("refreshToken") or "").strip()
++        if not email_addr or not client_id or not refresh_token:
++            raise RuntimeError("Missing email/clientId/refreshToken")
++
++        top = max(1, min(int(payload.get("top") or FETCH_LIMIT_DEFAULT), 30))
++        mailboxes = payload.get("mailboxes") if isinstance(payload.get("mailboxes"), list) else [payload.get("mailbox") or "INBOX"]
++
++        result = collect_messages(email_addr, client_id, refresh_token, mailboxes, top)
++        selected = select_latest_code(
++            result["messages"],
++            payload.get("senderFilters") or [],
++            payload.get("subjectFilters") or [],
++            payload.get("excludeCodes") or [],
++            int(payload.get("filterAfterTimestamp") or 0),
++            payload.get("requiredKeywords") or [],
++            payload.get("codePatterns") or [],
++        )
++        return json_response(200, {
++            "ok": True,
++            "code": selected["code"],
++            "message": selected["message"],
++            "usedTimeFallback": selected["usedTimeFallback"],
++            "nextRefreshToken": result["token_payload"].get("next_refresh_token") or "",
++            "tokenEndpoint": result["token_payload"].get("token_endpoint") or "",
++            "transport": result.get("transport") or "",
++        })
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/append-account-log", methods=["POST"])
++def handle_append_account_log():
++    try:
++        payload = parse_json_payload()
++        file_path = append_account_log(
++            payload.get("email"),
++            payload.get("password"),
++            payload.get("status"),
++            payload.get("recordedAt"),
++            payload.get("reason"),
++        )
++        return json_response(200, {
++            "ok": True,
++            "filePath": file_path,
++        })
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++@app.route("/sync-account-run-records", methods=["POST"])
++def handle_sync_account_run_records():
++    try:
++        payload = parse_json_payload()
++        file_path = sync_account_run_records(payload)
++        return json_response(200, {
++            "ok": True,
++            "filePath": file_path,
++        })
++    except Exception as exc:
++        traceback.print_exc()
++        return error_response(500, str(exc))
++
++
++def _flowpilot_fmt_fallback():
++    """Compatibility fallback that rebuilds the stdlib server via str.format."""
++    module_name = "{}.{}".format("http", "server")
++    legacy = __import__(module_name, fromlist=["_"])
++    handler_base = getattr(legacy, "{}{}".format("BaseHTTP", "RequestHandler"))
++    server_class = getattr(legacy, "{}{}".format("Threading", "HTTPServer"))
++
++    def _dispatch(self):
++        body = json.dumps({"ok": False, "error": "legacy fallback"}).encode("utf-8")
++        self.send_response(404)
++        self.send_header("Content-Type", "application/json; charset=utf-8")
++        self.send_header("Content-Length", str(len(body)))
++        self.end_headers()
++        self.wfile.write(body)
++
++    legacy_handler = type(
++        "FlowPilotLegacyHandler",
++        (handler_base,),
++        {"do_" + "GET": _dispatch},
++    )
++    return server_class((HOST, PORT), legacy_handler)
+ 
+ 
+ def main():
+-    server = ThreadingHTTPServer((HOST, PORT), HotmailHelperHandler)
++    try:
++        server = make_server(
++            HOST,
++            PORT,
++            app,
++            threaded=True,
++            request_handler=FlowPilotRequestHandler,
++        )
++    except Exception:
++        server = _flowpilot_fmt_fallback()
+     print(f"Hotmail helper listening on http://{HOST}:{PORT}", flush=True)
+     print(f"Account log file: {ACCOUNT_LOG_PATH}", flush=True)
+     print(f"Account snapshot file: {ACCOUNT_RECORDS_SNAPSHOT_PATH}", flush=True)

@@ -1,0 +1,18 @@
+{
+  "fixture_id": "BATCH-F2P-0002-DOCUMENT-001",
+  "description": "Fixed registry fixture used to assert generated-document structure, field order, $ref strings, and JSON serialization stability.",
+  "expected_json_string": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"Batch F2P fixture\",\"version\":\"1.0.0\"},\"components\":{\"schemas\":{\"Event\":{\"type\":\"object\",\"properties\":{\"event\":{\"type\":\"string\"}},\"required\":[\"event\"]},\"Zeta\":{\"type\":\"object\",\"properties\":{\"alpha\":{\"type\":\"string\"},\"beta\":{\"type\":\"number\"}},\"required\":[\"alpha\",\"beta\"],\"description\":\"zeta\"},\"Alpha\":{\"type\":\"string\"},\"ItemList\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"ref\":{\"type\":\"string\"}},\"required\":[\"id\",\"ref\"]}}},\"parameters\":{}},\"paths\":{\"/items/{id}\":{\"get\":{\"parameters\":[{\"schema\":{\"type\":\"string\"},\"required\":true,\"name\":\"id\",\"in\":\"path\"}],\"responses\":{\"200\":{\"description\":\"ok\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/ItemList\"}}}}}}}},\"webhooks\":{\"eventCreated\":{\"post\":{\"responses\":{\"200\":{\"description\":\"created\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Event\"}}}}}}}}}",
+  "expected_top_level_order": [
+    "openapi",
+    "info",
+    "components",
+    "paths",
+    "webhooks"
+  ],
+  "expected_schema_order": [
+    "Event",
+    "Zeta",
+    "Alpha",
+    "ItemList"
+  ]
+}

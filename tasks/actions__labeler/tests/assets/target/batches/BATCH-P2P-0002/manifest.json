@@ -1,0 +1,166 @@
+{
+  "schema": "migration-side-manifest:v1",
+  "batch_id": "BATCH-P2P-0002",
+  "side": "target",
+  "kind": "P2P",
+  "language": "Go",
+  "probe_root": "/input/target",
+  "depends_on_batch": "BATCH-SKELETON-0001",
+  "runner": "target/runner",
+  "build_command": [
+    "timeout",
+    "300",
+    "go",
+    "build",
+    "./..."
+  ],
+  "test_command": [
+    "timeout",
+    "300",
+    "go",
+    "test",
+    "-count=1",
+    "./batches/BATCH-P2P-0002/..."
+  ],
+  "harness_script": "batches/BATCH-P2P-0002/run_target_tests.sh",
+  "long_running_commands_require_timeout": true,
+  "timeout_seconds": 300,
+  "exclude_privileged_or_blocking_cases": true,
+  "executable_projection": {
+    "kind": "go-test",
+    "package": "./batches/BATCH-P2P-0002",
+    "source": "batches/BATCH-P2P-0002/p2p_behavior_test.go",
+    "normalize": "exit_status"
+  },
+  "observation_ids": [
+    "P2P-030",
+    "P2P-034",
+    "P2P-028",
+    "P2P-032",
+    "P2P-035",
+    "P2P-025",
+    "P2P-026",
+    "P2P-027",
+    "P2P-029",
+    "P2P-031",
+    "P2P-033",
+    "P2P-036",
+    "P2P-037",
+    "P2P-038"
+  ],
+  "probes": [
+    {
+      "observation_id": "P2P-030",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestInvalidDecimalLimitFails",
+      "projection": "exception",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-034",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestMultipleMatchConfigs",
+      "projection": "return-value",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-028",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestPublicCapabilitiesEndToEnd",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-032",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestEmptyChangedFilesArray",
+      "projection": "return-value",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-035",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestActionYMLOutputsPreserved",
+      "projection": "observable-result",
+      "normalize": "identifier_set",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-025",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestUnconfiguredLabelsPreserved",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-026",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestGlobAndBranchSemantics",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-027",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestActionYMLInputsPreserved",
+      "projection": "observable-result",
+      "normalize": "identifier_set",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-029",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestAddLabelsServerErrorRecovery",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-031",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestBulkRemovalFailure",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-033",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestFullConfigSchemaAccepted",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-036",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestPRNumberEscape",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-037",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestNoChangedFilesSkipped",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    },
+    {
+      "observation_id": "P2P-038",
+      "package": "./batches/BATCH-P2P-0002",
+      "test": "TestLabelCapAt100",
+      "projection": "observable-result",
+      "normalize": "exit_status",
+      "expectation": "PASS"
+    }
+  ],
+  "behavior_contract_revision": "labeler-behavior-v4"
+}

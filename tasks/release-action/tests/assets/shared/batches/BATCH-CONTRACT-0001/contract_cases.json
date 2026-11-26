@@ -1,0 +1,286 @@
+{
+  "schema": "contract-cases:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "comparison": "equal_after_normalization",
+  "cases": [
+    {
+      "id": "CONTRACT-001",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "Public action capabilities: release create/update, artifact glob/upload, release-asset deletion, output reporting, error formatting",
+      "entry": "action.perform",
+      "expected": "{\"create\":1,\"destroy\":1,\"upload\":1,\"outputs\":\"id=7\"}"
+    },
+    {
+      "id": "CONTRACT-002",
+      "requirement_ids": [
+        "R002"
+      ],
+      "surface": "Action input consumption and output reporting by action.yml name",
+      "entry": "inputs/outputs names",
+      "expected": "[\"assets\",\"html_url\",\"id\",\"tarball_url\",\"upload_url\",\"zipball_url\"]"
+    },
+    {
+      "id": "CONTRACT-003",
+      "requirement_ids": [
+        "R004"
+      ],
+      "surface": "action.yml input schema",
+      "entry": "action.yml inputs",
+      "expected": "[\"allowUpdates\",\"artifact\",\"artifactContentType\",\"artifactErrorsFailBuild\",\"artifacts\",\"body\",\"bodyFile\",\"commit\",\"discussionCategory\",\"draft\",\"generateReleaseNotes\",\"generateReleaseNotesPreviousTag\",\"immutableCreate\",\"makeLatest\",\"name\",\"omitBody\",\"omitBodyDuringUpdate\",\"omitDraftDuringUpdate\",\"omitName\",\"omitNameDuringUpdate\",\"omitPrereleaseDuringUpdate\",\"owner\",\"prerelease\",\"removeArtifacts\",\"replacesArtifacts\",\"repo\",\"skipIfReleaseExists\",\"tag\",\"token\",\"updateOnlyUnreleased\"]"
+    },
+    {
+      "id": "CONTRACT-004",
+      "requirement_ids": [
+        "R005"
+      ],
+      "surface": "action.yml output schema",
+      "entry": "action.yml outputs",
+      "expected": "[\"assets\",\"html_url\",\"id\",\"tarball_url\",\"upload_url\",\"zipball_url\"]"
+    },
+    {
+      "id": "CONTRACT-005",
+      "requirement_ids": [
+        "R006"
+      ],
+      "surface": "GitHub REST request selection and parameter mapping",
+      "entry": "releases REST client",
+      "expected": "[\"DELETE /repos/o/r/releases/assets/5\",\"GET /repos/o/r/releases\",\"GET /repos/o/r/releases/1/assets\",\"GET /repos/o/r/releases/tags/v1\",\"PATCH /repos/o/r/releases/1\",\"POST /repos/o/r/releases\",\"POST /repos/o/r/releases/generate-notes\",\"POST /upload\"]"
+    },
+    {
+      "id": "CONTRACT-006",
+      "requirement_ids": [
+        "R007"
+      ],
+      "surface": "tag input resolution against the git ref",
+      "entry": "inputs.tag",
+      "expected": "{\"ref\":\"refs/tags/v1.2.3\",\"tag\":\"v1.2.3\"}; non-tag ref -> error \"No tag found in ref or input!\""
+    },
+    {
+      "id": "CONTRACT-007",
+      "requirement_ids": [
+        "R008"
+      ],
+      "surface": "token input handling",
+      "entry": "inputs.token",
+      "expected": "missing -> error \"Input required and not supplied: token\"; supplied -> token"
+    },
+    {
+      "id": "CONTRACT-008",
+      "requirement_ids": [
+        "R009"
+      ],
+      "surface": "artifacts/artifact/artifactContentType input handling",
+      "entry": "inputs.artifacts",
+      "expected": "artifact fallback used; content type \"raw\""
+    },
+    {
+      "id": "CONTRACT-009",
+      "requirement_ids": [
+        "R010"
+      ],
+      "surface": "owner/repo input defaulting",
+      "entry": "inputs.owner/repo",
+      "expected": "empty -> context owner/repo; supplied -> supplied"
+    },
+    {
+      "id": "CONTRACT-010",
+      "requirement_ids": [
+        "R011"
+      ],
+      "surface": "makeLatest input coercion",
+      "entry": "inputs.makeLatest",
+      "expected": "legacy|true|false forwarded; other -> absent"
+    },
+    {
+      "id": "CONTRACT-011",
+      "requirement_ids": [
+        "R012"
+      ],
+      "surface": "input trimming and boolean coercion",
+      "entry": "inputs boolean flags",
+      "expected": "trimmed; exact true only; skipIfReleaseExists accepts true/True/TRUE/false/False/FALSE else error"
+    },
+    {
+      "id": "CONTRACT-012",
+      "requirement_ids": [
+        "R013"
+      ],
+      "surface": "allowUpdates create/update decision",
+      "entry": "action.createOrUpdateRelease",
+      "expected": "allowUpdates+found -> update; 404+no draft -> create; allowUpdates=false -> create"
+    },
+    {
+      "id": "CONTRACT-013",
+      "requirement_ids": [
+        "R014"
+      ],
+      "surface": "release lookup failure handling",
+      "entry": "action.createOrUpdateRelease",
+      "expected": "non-404 lookup error propagated, no create"
+    },
+    {
+      "id": "CONTRACT-014",
+      "requirement_ids": [
+        "R015"
+      ],
+      "surface": "skipIfReleaseExists short-circuit",
+      "entry": "skipper.shouldSkip",
+      "expected": "non-draft exists -> skip; lookup error -> continue"
+    },
+    {
+      "id": "CONTRACT-015",
+      "requirement_ids": [
+        "R016"
+      ],
+      "surface": "updateOnlyUnreleased validation",
+      "entry": "releaseValidator",
+      "expected": "published release -> error; draft/prerelease -> ok"
+    },
+    {
+      "id": "CONTRACT-016",
+      "requirement_ids": [
+        "R017"
+      ],
+      "surface": "artifact input string parsing",
+      "entry": "artifactSplitPattern/normalizePath/expandTilde",
+      "expected": "split on comma/newline; left trim; normalize; leading ~ expansion"
+    },
+    {
+      "id": "CONTRACT-017",
+      "requirement_ids": [
+        "R018"
+      ],
+      "surface": "artifact glob validation",
+      "entry": "artifactGlobber/artifactPathValidator",
+      "expected": "unmatched/directory -> error when errorsFailBuild else warn+skip; directories never uploaded"
+    },
+    {
+      "id": "CONTRACT-018",
+      "requirement_ids": [
+        "R019"
+      ],
+      "surface": "artifact metadata derivation",
+      "entry": "artifact",
+      "expected": "name=basename; contentLength=file size"
+    },
+    {
+      "id": "CONTRACT-019",
+      "requirement_ids": [
+        "R020"
+      ],
+      "surface": "artifact replacement/removal",
+      "entry": "uploader/destroyer",
+      "expected": "replacesArtifacts deletes matching; removeArtifacts deletes all"
+    },
+    {
+      "id": "CONTRACT-020",
+      "requirement_ids": [
+        "R021"
+      ],
+      "surface": "artifact upload retry/failure policy",
+      "entry": "uploader",
+      "expected": "5xx retried 3 times (4 attempts); non-retried fails when errorsFailBuild else warn+skip"
+    },
+    {
+      "id": "CONTRACT-021",
+      "requirement_ids": [
+        "R022"
+      ],
+      "surface": "assets output membership",
+      "entry": "uploader",
+      "expected": "skipped artifact absent from assets map"
+    },
+    {
+      "id": "CONTRACT-022",
+      "requirement_ids": [
+        "R023"
+      ],
+      "surface": "release and asset outputs",
+      "entry": "outputs",
+      "expected": "id/html_url/upload_url from response; null tarball/zipball -> \"\"; assets JSON without HTML escaping"
+    },
+    {
+      "id": "CONTRACT-023",
+      "requirement_ids": [
+        "R024"
+      ],
+      "surface": "release name and body resolution",
+      "entry": "inputs",
+      "expected": "name defaults to tag; body > bodyFile > empty"
+    },
+    {
+      "id": "CONTRACT-024",
+      "requirement_ids": [
+        "R025"
+      ],
+      "surface": "generated release notes composition",
+      "entry": "action.combineBodyWithReleaseNotes",
+      "expected": "body\\nnotes or notes; update honors omitBodyDuringUpdate"
+    },
+    {
+      "id": "CONTRACT-025",
+      "requirement_ids": [
+        "R026"
+      ],
+      "surface": "update omit flags",
+      "entry": "inputs",
+      "expected": "omitBody/omitName/omitBodyDuringUpdate/omitNameDuringUpdate/omitDraftDuringUpdate/omitPrereleaseDuringUpdate drop the field"
+    },
+    {
+      "id": "CONTRACT-026",
+      "requirement_ids": [
+        "R027"
+      ],
+      "surface": "immutableCreate publish flow",
+      "entry": "action",
+      "expected": "create draft, upload, publish with draft=false omitting body/commit; outputs from publish response"
+    },
+    {
+      "id": "CONTRACT-027",
+      "requirement_ids": [
+        "R028"
+      ],
+      "surface": "GitHub error message formatting",
+      "entry": "githubError.toString",
+      "expected": "Error <status>: <message>[\\nErrors:\\n- <detail>...][\\n404 remediation]"
+    },
+    {
+      "id": "CONTRACT-028",
+      "requirement_ids": [
+        "R031"
+      ],
+      "surface": "Public action capability set",
+      "entry": "releases interface",
+      "expected": "Create,Update,GetByTag,GenerateReleaseNotes,ListReleases,ListArtifactsForRelease,DeleteArtifact,UploadArtifact"
+    },
+    {
+      "id": "CONTRACT-029",
+      "requirement_ids": [
+        "R032"
+      ],
+      "surface": "action.yml definitions and REST mapping",
+      "entry": "action.yml",
+      "expected": "inputs/outputs/branding byte-equivalent except runs; sha256(normalized)=029ef1c67cf10d843469053175471e3a7e91f6cbcc50c35cf1cd2ed7e55dc9df"
+    },
+    {
+      "id": "CONTRACT-030",
+      "requirement_ids": [
+        "R035"
+      ],
+      "surface": "Test and validation integrity",
+      "entry": "test suite",
+      "expected": "no t.Skip/t.SkipNow/t.Skipf; at least one Test function"
+    },
+    {
+      "id": "CONTRACT-031",
+      "requirement_ids": [
+        "R036"
+      ],
+      "surface": "Protected action.yml interface and REST mapping",
+      "entry": "action.yml + inputs/outputs",
+      "expected": "every declared input consumed; output names match written output names"
+    }
+  ]
+}

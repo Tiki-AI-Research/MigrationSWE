@@ -1,0 +1,53 @@
+{
+  "schema_version": "migration-fixtures:v1",
+  "batch_id": "BATCH-DIFFERENTIAL-0001",
+  "basic_auth_credential_encoding": {
+    "client_id": "a b",
+    "client_secret": "c:d",
+    "urlencoded_client_id": "a+b",
+    "urlencoded_client_secret": "c%3Ad",
+    "authorization_header": "Basic YStiOmMlM0Fk",
+    "naive_authorization_header": "Basic YSBiOmM6ZA=="
+  },
+  "authorization_url": {
+    "auth_url": "https://auth.example/authorize",
+    "client_id": "client",
+    "state": "xyz",
+    "default_code_query": "response_type=code&client_id=client&state=xyz",
+    "with_scope_query": "response_type=code&client_id=client&state=xyz&scope=a+b"
+  },
+  "token_response_complete": {
+    "json": "{\"access_token\":\"at\",\"token_type\":\"bearer\",\"expires_in\":3600,\"refresh_token\":\"rt\",\"scope\":\"a b c\"}",
+    "expires_in": 3600,
+    "scope_count": 3
+  },
+  "standard_error_response": {
+    "error": "invalid_grant",
+    "error_description": "bad",
+    "error_uri": "u",
+    "serialized": "{\"error\":\"invalid_grant\",\"error_description\":\"bad\",\"error_uri\":\"u\"}"
+  },
+  "device_polling": {
+    "interval_seconds": 5,
+    "slow_down_increment_seconds": 5,
+    "max_backoff_seconds": 10,
+    "sequence": [
+      "authorization_pending",
+      "slow_down",
+      "transport_error",
+      "success"
+    ],
+    "sleep_seconds": [
+      5,
+      10,
+      10
+    ]
+  },
+  "revocation": {
+    "token": "access_token_123",
+    "token_type_hint": "access_token",
+    "body": "token=access_token_123&token_type_hint=access_token",
+    "https_url": "https://revocation/url",
+    "insecure_url": "http://revocation/url"
+  }
+}

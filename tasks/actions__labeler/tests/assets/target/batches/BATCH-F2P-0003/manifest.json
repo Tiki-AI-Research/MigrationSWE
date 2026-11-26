@@ -1,0 +1,459 @@
+{
+  "schema": "migration-side-manifest:v2",
+  "batch_id": "BATCH-F2P-0003",
+  "side": "target",
+  "language": "Go",
+  "technology": {
+    "name": "Go",
+    "version": "1.24.0",
+    "binary_source": "cmd/labeler/main.go",
+    "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+    "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+  },
+  "probe": {
+    "type": "script",
+    "path": "target/batches/BATCH-F2P-0003/probe.sh",
+    "timeout_seconds": 300
+  },
+  "harness_timeout_seconds": 300,
+  "observations": [
+    {
+      "id": "F2P-057",
+      "requirement_ids": [
+        "R042"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P057_GoModDependencyPolicy",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P057_GoModDependencyPolicy",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "package-lock.json::repository change surface"
+    },
+    {
+      "id": "F2P-068",
+      "requirement_ids": [
+        "R038"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P068_AllLabelsOrdering",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P068_AllLabelsOrdering",
+          "./target/batches/BATCH-F2P-0003/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "behavior_case": "F2P-068",
+      "surface": "src/labeler.ts::changed-files-labels-limit gating"
+    },
+    {
+      "id": "F2P-069",
+      "requirement_ids": [
+        "R043"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P069_ActionRuntimeIsDocker",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P069_ActionRuntimeIsDocker",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "action.yml::dependency manifest"
+    },
+    {
+      "id": "F2P-070",
+      "requirement_ids": [
+        "R002"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P070_GoBinaryIsEntrypoint",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P070_GoBinaryIsEntrypoint",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "dist/index.js::runtime entry"
+    },
+    {
+      "id": "F2P-071",
+      "requirement_ids": [
+        "R028"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P071_NoTypeScriptOrActionsImports",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P071_NoTypeScriptOrActionsImports",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "migrated production source dependency graph"
+    },
+    {
+      "id": "F2P-072",
+      "requirement_ids": [
+        "R029"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "go_test",
+        "package": "github.com/actions/labeler/target/batches/BATCH-F2P-0003",
+        "test": "TestF2P072_NoSubprocessDelegation",
+        "command": [
+          "timeout",
+          "300",
+          "go",
+          "test",
+          "-count=1",
+          "-run",
+          "TestF2P072_NoSubprocessDelegation",
+          "./target/batches/BATCH-F2P-0003-static/"
+        ]
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "migrated production runtime dependencies"
+    },
+    {
+      "id": "F2P-052",
+      "requirement_ids": [
+        "R039"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "removal-error"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout_seconds": 300
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "behavior_case": "removal-error",
+      "surface": "src/labeler.ts::bulk label removal failure"
+    },
+    {
+      "id": "F2P-054",
+      "requirement_ids": [
+        "R041"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-invalid"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout_seconds": 300
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "behavior_case": "source-file-parser",
+      "surface": "changed-files rule schema and empty blocks"
+    },
+    {
+      "id": "F2P-058",
+      "requirement_ids": [
+        "R045"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "command",
+        "command": [
+          "go",
+          "test",
+          "-run",
+          "^TestGoPublicSurface$",
+          "./target/contracts/surface/"
+        ],
+        "materialize": [
+          {
+            "from": "target/contracts",
+            "to": "target/contracts"
+          }
+        ],
+        "timeout_seconds": 300
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "surface": "declared Go packages and exported identifiers"
+    },
+    {
+      "id": "F2P-060",
+      "requirement_ids": [
+        "R040"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "source-inputs"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout_seconds": 300
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "behavior_case": "source-inputs",
+      "surface": "src/get-inputs/get-inputs.ts::pr-number input parsing"
+    },
+    {
+      "id": "F2P-063",
+      "requirement_ids": [
+        "R044"
+      ],
+      "status": "PASS",
+      "technology": {
+        "name": "Go",
+        "version": "1.24.0",
+        "binary_source": "cmd/labeler/main.go",
+        "runtime_declaration": "action.yml runs.using=docker image=Dockerfile",
+        "assertion": "the behavior is implemented and executed by the Go 1.24.0 toolchain built from cmd/labeler/main.go; no Node.js or TypeScript runtime participates"
+      },
+      "target_probe": {
+        "type": "command",
+        "command": [
+          "timeout",
+          "300",
+          "python3",
+          "blackbox/labeler_blackbox.py",
+          "--case",
+          "config-invalid"
+        ],
+        "materialize": [
+          {
+            "from": "target/blackbox",
+            "to": "blackbox"
+          }
+        ],
+        "timeout_seconds": 300
+      },
+      "source_probe": {
+        "type": "source_technology_check",
+        "script": "source/batches/BATCH-F2P-0003/probe.sh",
+        "expectation": "FAIL",
+        "observed_status": "FAIL"
+      },
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "behavior_case": "config-unknown",
+      "surface": "unknown configuration option handling"
+    }
+  ],
+  "behavior_contract_revision": "labeler-behavior-v4"
+}

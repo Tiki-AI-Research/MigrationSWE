@@ -1,0 +1,220 @@
+diff --git a/tasks/tests/assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs b/tasks/tests/assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs
+--- a/tasks/tests/assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs
++++ b/tasks/tests/assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs
+@@ -26,6 +26,12 @@
+ 
+ export function stableStringify(value) {
+   return JSON.stringify(stable(value));
++}
++
++export function observeOutput(value) {
++  // Serialize before sorting so object member order remains observable.
++  const serialized = JSON.stringify(value);
++  return { value: stable(value), serialized };
+ }
+ 
+ function plain(value) {
+@@ -621,7 +627,7 @@
+   const results = {};
+   for (const id of OBSERVATION_IDS) {
+     try {
+-      results[id] = { pass: true, normalized: stable(cases[id]()) };
++      results[id] = { pass: true, normalized: observeOutput(cases[id]()) };
+     } catch (error) {
+       results[id] = {
+         pass: false,
+diff --git a/tasks/tests/assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs b/tasks/tests/assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+--- a/tasks/tests/assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
++++ b/tasks/tests/assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs
+@@ -83,16 +83,32 @@
+   }
+ }
+ 
++let generatedOutputs = null;
++
++function captureGenerated(value) {
++  // Capture business output before canonicalize or diagnostic key sorting.
++  if (generatedOutputs) generatedOutputs.push(JSON.stringify(value));
++  return value;
++}
++
+ function runCheck(name, action) {
++  const previousOutputs = generatedOutputs;
++  const outputs = [];
++  generatedOutputs = outputs;
+   try {
+     const value = action();
+-    return { name, ok: true, value: canonicalize(value) };
++    return {
++      name, ok: true, value: canonicalize(value),
++      ...(outputs.length ? { serializedOutputs: outputs } : {}),
++    };
+   } catch (error) {
+     return {
+       name,
+       ok: false,
+       error: error && error.message ? error.message : String(error),
+     };
++  } finally {
++    generatedOutputs = previousOutputs;
+   }
+ }
+ 
+@@ -114,7 +130,7 @@
+ function generateComponents(version, schemas, options) {
+   const definitions = schemas.map(schema => ({ type: 'schema', schema }));
+   const generator = new library[version](definitions, options);
+-  return generator.generateComponents().components;
++  return captureGenerated(generator.generateComponents()).components;
+ }
+ 
+ function captureError(action) {
+@@ -301,8 +317,8 @@
+         openapi: version === 'OpenApiGeneratorV3' ? '3.0.0' : version === 'OpenApiGeneratorV31' ? '3.1.0' : '3.2.0',
+         info: { title: 'capabilities', version: '1.0.0' },
+       };
+-      const document = generator.generateDocument(config);
+-      const components = generator.generateComponents();
++      const document = captureGenerated(generator.generateDocument(config));
++      const components = captureGenerated(generator.generateComponents());
+       result[version] = {
+         hasPaths: Object.prototype.hasOwnProperty.call(document, 'paths'),
+         hasWebhooks: Object.prototype.hasOwnProperty.call(document, 'webhooks'),
+@@ -338,9 +354,9 @@
+     sortedRegistry.register('Zulu', zod.object({ z: zod.string() }));
+     sortedRegistry.register('Alpha', zod.object({ a: zod.string() }));
+     sortedRegistry.register('Mike', zod.object({ m: zod.string() }));
+-    const sorted = new library.OpenApiGeneratorV3(sortedRegistry.definitions, {
++    const sorted = captureGenerated(new library.OpenApiGeneratorV3(sortedRegistry.definitions, {
+       sortComponents: 'alphabetically',
+-    }).generateComponents().components.schemas;
++    }).generateComponents()).components.schemas;
+ 
+     equal(Object.keys(preferredOneOf), ['oneOf'], 'generator unionPreferredType oneOf');
+     equal(Object.keys(preferredAnyOf), ['anyOf'], 'generator unionPreferredType anyOf');
+@@ -612,10 +628,10 @@
+     for (const version of ['OpenApiGeneratorV3', 'OpenApiGeneratorV31', 'OpenApiGeneratorV32']) {
+       const openapi = version === 'OpenApiGeneratorV3' ? '3.0.0' : version === 'OpenApiGeneratorV31' ? '3.1.0' : '3.2.0';
+       const generator = new library[version](definitions);
+-      documents[version] = generator.generateDocument({
++      documents[version] = captureGenerated(generator.generateDocument({
+         openapi,
+         info: { title: 'artifact', version: '1.0.0' },
+-      });
++      }));
+     }
+ 
+     const unknown = captureError(() =>
+diff --git a/tasks/tests/verifier/selfcheck.py b/tasks/tests/verifier/selfcheck.py
+--- a/tasks/tests/verifier/selfcheck.py
++++ b/tasks/tests/verifier/selfcheck.py
+@@ -721,6 +721,8 @@
+         ("DIFF-013", ("components", "schemas", "BigInt", "pattern"), "^/d+$"),
+     ):
+         before = by_id[identifier]["value"]["value"]
++        if "serialized" in before and "value" in before:
++            before = before["value"]
+         after = deepcopy(before)
+         node = after
+         for key in path[:-1]:
+@@ -736,6 +738,92 @@
+                 failures.append(f"behavior[baseline-{identifier}] fixture value/order changed")
+ 
+ 
++def _check_probe_order_evidence(failures: list[str]) -> None:
++    from verifier.observation_adapter import GenericObservationAdapter
++
++    script = r"""
++import fs from 'node:fs';
++import { pathToFileURL } from 'node:url';
++const root = process.argv[1];
++const { observeOutput } = await import(pathToFileURL(
++  `${root}/assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs`
++));
++const source = { components: { schemas: { X: { pattern: '^x$', type: 'string' } } } };
++const target = { components: { schemas: { X: { type: 'string', pattern: '^x$' } } } };
++const text = fs.readFileSync(
++  `${root}/assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs`, 'utf8'
++);
++const start = text.indexOf('function canonicalize(');
++const end = text.indexOf('const checksByObservation =');
++if (start < 0 || end <= start) throw new Error('probe helper boundary missing');
++const { runCheck, captureGenerated } = new Function(
++  `${text.slice(start, end)}\nreturn { runCheck, captureGenerated };`
++)();
++const run = value => runCheck('generated-order', () => {
++  captureGenerated(value);
++  return { schemaNames: ['X'] };
++});
++const before = run(source), after = run(target);
++if (!before.serializedOutputs?.length || !after.serializedOutputs?.length)
++  throw new Error('raw generated output evidence missing');
++const diagnostic = runCheck('diagnostic', () => ({ assertions: 2 }));
++if ('serializedOutputs' in diagnostic)
++  throw new Error('diagnostic counts leaked into business output evidence');
++process.stdout.write(JSON.stringify([
++  [observeOutput(source), observeOutput(target)], [before, after],
++  [observeOutput(source), observeOutput(source)],
++]));
++"""
++    try:
++        output = subprocess.run(
++            ["node", "--input-type=module", "-e", script, str(_TESTS_ROOT)],
++            capture_output=True, text=True, check=True, timeout=30,
++        )
++        pairs = json.loads(output.stdout)
++    except (OSError, ValueError, subprocess.SubprocessError) as exc:
++        failures.append(f"probe-order-evidence: {exc}")
++        return
++    policy = json.loads((_TESTS_ROOT / "config.json").read_text())["normalization_policy"]
++    adapter = GenericObservationAdapter()
++    for label, (before, after), expected in zip(
++        ("first-producer-order", "second-producer-order", "unchanged-producer-control"),
++        pairs, ("FAIL", "FAIL", "PASS"),
++    ):
++        left = {"id": "order", "value": {"type": "json", "value": before}}
++        right = {"id": "order", "value": {"type": "json", "value": after}}
++        actual = adapter.compare(left, right, policy).status
++        if actual != expected:
++            failures.append(f"probe-order-evidence[{label}] expected {expected} got {actual}")
++
++    baseline = json.loads((_TESTS_ROOT / "assets/source-baseline-outputs.json").read_text())
++    by_id = {row["id"]: row["value"]["value"] for row in baseline["observations"]}
++    fixture = json.loads((_TESTS_ROOT / "assets/fixtures/batches/BATCH-DIFFERENTIAL-0001/expected.json").read_text())
++    for identifier, expected in fixture["expected"].items():
++        saved = by_id[identifier]
++        if not isinstance(saved, dict) or set(saved) != {"value", "serialized"}:
++            failures.append(f"order-baseline[{identifier}] raw output evidence missing")
++        elif json.dumps(saved) != json.dumps(expected):
++            failures.append(f"order-baseline[{identifier}] source fixture differs")
++        else:
++            try:
++                json.loads(saved["serialized"])
++            except (TypeError, ValueError):
++                failures.append(f"order-baseline[{identifier}] raw output is not serialized JSON")
++    for identifier in ("DIFF-033", "DIFF-034", "DIFF-036"):
++        if not any(row.get("serializedOutputs") for row in by_id[identifier]["checks"]):
++            failures.append(f"order-baseline[{identifier}] generated output evidence missing")
++    provenance = baseline.get("order_baseline_provenance", {})
++    if provenance.get("zod_version") != "4.0.5" or not str(provenance.get("node_version", "")).startswith("v24."):
++        failures.append("order-baseline: trusted source runtime provenance missing")
++    for name, relative in (
++        ("source_bundle_sha256", "assets/build-deps/repo/base-repo.bundle"),
++        ("first_probe_sha256", "assets/shared/batches/BATCH-DIFFERENTIAL-0001/cases.mjs"),
++        ("second_probe_sha256", "assets/target/batches/BATCH-DIFFERENTIAL-0002/probe.mjs"),
++    ):
++        if provenance.get(name) != _digest(_TESTS_ROOT / relative):
++            failures.append(f"order-baseline: source provenance differs for {relative}")
++
++
+ def run_selfcheck() -> tuple[bool, list[str]]:
+     failures: list[str] = []
+     _check_test_integrity(failures)
+@@ -748,6 +836,7 @@
+     _check_native_execution_failures(failures)
+     _check_differential_gating(failures)
+     _check_behavior_comparison(failures)
++    _check_probe_order_evidence(failures)
+     _check_harness_assets(failures)
+     return (not failures), failures
+ 

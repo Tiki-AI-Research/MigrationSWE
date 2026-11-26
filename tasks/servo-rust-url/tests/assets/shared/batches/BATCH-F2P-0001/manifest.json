@@ -1,0 +1,60 @@
+{
+  "schema_version": "migration-asset-probe:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "kind": "F2P",
+  "migration": {
+    "category": "language",
+    "source": {"name": "Rust", "version": "2018"},
+    "target": {"name": "Go", "version": "1.23.0"}
+  },
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "owned_paths": [
+    "shared/batches/BATCH-F2P-0001",
+    "source/batches/BATCH-F2P-0001",
+    "target/batches/BATCH-F2P-0001",
+    "fixtures/batches/BATCH-F2P-0001",
+    "fragments/BATCH-F2P-0001.json"
+  ],
+  "probe_entrypoints": {
+    "source": "source/batches/BATCH-F2P-0001/probe.sh /input/source source",
+    "target": "target/batches/BATCH-F2P-0001/probe.sh /input/target target",
+    "policy": "target/batches/BATCH-F2P-0001/policy_check.sh /input/source /input/target"
+  },
+  "environment": {
+    "GOPROXY": "off",
+    "GOTOOLCHAIN": "local",
+    "CGO_ENABLED": "0",
+    "PATH_prepend": ["stub cargo that exits 1", "stub rustc that exits 1"]
+  },
+  "observations": [
+    {"id": "F2P-001", "requirement_ids": ["R105"], "projection": "target-entry-identity", "surface": "url/src/lib.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-002", "requirement_ids": ["R020"], "projection": "dependency-declaration", "surface": "data-url/Cargo.toml::dependency manifest", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-003", "requirement_ids": ["R001"], "projection": "target-condition", "surface": "Go module build and runtime", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-004", "requirement_ids": ["R019"], "projection": "dependency-declaration", "surface": "data-url/Cargo.toml::dependency manifest", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-005", "requirement_ids": ["R105"], "projection": "target-condition", "surface": "url.QueryPairsMut keeps the fragment", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-006", "requirement_ids": ["R112"], "projection": "target-entry-identity", "surface": "idna/src/punycode.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-007", "requirement_ids": ["R111"], "projection": "target-condition", "surface": "DomainToASCII vs DomainToASCIIStrict", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-008", "requirement_ids": ["R020"], "projection": "dependency-declaration", "surface": "Cargo.toml::dependency manifest", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-009", "requirement_ids": ["R020"], "projection": "target-condition", "surface": "Go runtime delegation channels", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-010", "requirement_ids": ["R104"], "projection": "target-entry-identity", "surface": "url/src/path_segments.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-011", "requirement_ids": ["R106"], "projection": "target-execution-path", "surface": "url/src/host.rs::url.ParseHost IPv6", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-012", "requirement_ids": ["R022"], "projection": "target-condition", "surface": "Repository change set relative to baseline", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-013", "requirement_ids": ["R022"], "projection": "dependency-execution", "surface": "url/tests/wpt.rs::url.Parse and accessors", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-014", "requirement_ids": ["R101"], "projection": "target-condition", "surface": "url.URL.Fragment comma-ok presence", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-015", "requirement_ids": ["R109"], "projection": "target-execution-path", "surface": "percent_encoding::PercentEncode/Add", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-016", "requirement_ids": ["R104"], "projection": "target-execution-path", "surface": "url.URL.PathSegmentsMut", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-017", "requirement_ids": ["R025"], "projection": "dependency-execution", "surface": "url/tests/wpt.rs::url.Parse and accessors", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-018", "requirement_ids": ["R111"], "projection": "target-entry-identity", "surface": "idna/src/lib.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-019", "requirement_ids": ["R110"], "projection": "target-execution-path", "surface": "percent_encoding::DecodeUTF8/UTF8Error", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-020", "requirement_ids": ["R026"], "projection": "dependency-execution", "surface": "url/tests/unit.rs::url.Parse and accessors", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-021", "requirement_ids": ["R102"], "projection": "target-entry-identity", "surface": "url/src/lib.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-022", "requirement_ids": ["R102"], "projection": "target-execution-path", "surface": "url.Parse invalid-IPv6 error identity", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-023", "requirement_ids": ["R110"], "projection": "target-entry-identity", "surface": "percent_encoding/src/lib.rs::runtime entry", "source_status": "FAIL", "target_status": "PASS"},
+    {"id": "F2P-024", "requirement_ids": ["R110"], "projection": "target-execution-path", "surface": "percent_encoding::DecodeUTF8/UTF8Error", "source_status": "FAIL", "target_status": "PASS"}
+  ],
+  "recorded": {
+    "target_runtime": "PASS for F2P-001..F2P-024 (runtime postconditions) executed against /input/target",
+    "target_policy": "PASS for F2P-012/F2P-013: diff of /input/source vs /input/target adds only go.mod and .go files under url/ idna/ percentencoding/ formurlencoded/ internal/; protected inputs byte-identical; no source file modified",
+    "source_runtime": "FAIL for all runtime postconditions: the Go packages do not exist under /input/source, so the shared semantic predicate cannot resolve github.com/servo/rust-url"
+  }
+}

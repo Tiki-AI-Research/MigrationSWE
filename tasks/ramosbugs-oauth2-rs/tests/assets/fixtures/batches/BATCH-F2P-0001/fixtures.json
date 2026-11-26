@@ -1,0 +1,112 @@
+{
+  "schema_version": "migration-f2p-fixtures:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "migration": {
+    "category": "language",
+    "source": "Rust 2021",
+    "target": "Go 1.22"
+  },
+  "scenarios": [
+    {
+      "observation_id": "F2P-001",
+      "name": "client_credentials_parity",
+      "request": {
+        "method": "POST",
+        "url": "https://example.com/token",
+        "header": {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": "Basic YWFhOmJiYg=="
+        },
+        "body": "grant_type=client_credentials"
+      },
+      "response": {
+        "status": 200,
+        "header": {"Content-Type": "application/json"},
+        "body": "{\"access_token\":\"12/34\",\"token_type\":\"bearer\",\"scope\":\"read write\"}"
+      }
+    },
+    {
+      "observation_id": "F2P-002",
+      "name": "unexpected_content_type",
+      "response": {
+        "status": 200,
+        "header": {"Content-Type": "text/plain"},
+        "body": "broken json"
+      }
+    },
+    {
+      "observation_id": "F2P-003",
+      "name": "space_delimited_scope",
+      "response": {
+        "status": 200,
+        "header": {"Content-Type": "application/json"},
+        "body": "{\"access_token\":\"t\",\"token_type\":\"bearer\",\"scope\":\"a b c\"}"
+      }
+    },
+    {
+      "observation_id": "F2P-006",
+      "name": "non_200_error_mapping",
+      "responses": [
+        {"status": 400, "body": "{\"error\":\"invalid_request\",\"error_description\":\"x\"}"},
+        {"status": 400, "body": "not json"},
+        {"status": 400, "body": ""}
+      ]
+    },
+    {
+      "observation_id": "F2P-011",
+      "name": "authorization_url_ordering",
+      "auth_url": "https://auth.example/authorize",
+      "client_id": "client",
+      "state": "xyz",
+      "raw_query": "response_type=code&client_id=client&state=xyz",
+      "raw_query_with_scope": "response_type=code&client_id=client&state=xyz&scope=a+b"
+    },
+    {
+      "observation_id": "F2P-012",
+      "name": "authorization_url_param_set",
+      "raw_query": "response_type=code&client_id=client&state=xyz&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&redirect_uri=https%3A%2F%2Flocalhost%2Fredirect&foo=bar"
+    },
+    {
+      "observation_id": "F2P-014",
+      "name": "insecure_revocation_url",
+      "revocation_url": "http://revocation/url",
+      "expected_configuration_error_kind": "ConfigurationInsecureURL",
+      "expected_client_calls": 0
+    },
+    {
+      "observation_id": "F2P-015",
+      "name": "introspection_audience",
+      "responses": [
+        {"body": "{\"active\":true,\"aud\":\"one\"}", "expected_aud": ["one"]},
+        {"body": "{\"active\":true,\"aud\":[\"one\",\"two\"]}", "expected_aud": ["one", "two"]}
+      ]
+    },
+    {
+      "observation_id": "F2P-016",
+      "name": "revocation_ignores_body",
+      "response": {"status": 200, "body": "{\"access_token\":\"must-be-ignored\"}"}
+    },
+    {
+      "observation_id": "F2P-017",
+      "name": "ordered_error_serialization",
+      "input": {"error": "invalid_grant", "error_description": "bad", "error_uri": "u"},
+      "expected": "{\"error\":\"invalid_grant\",\"error_description\":\"bad\",\"error_uri\":\"u\"}"
+    },
+    {
+      "observation_id": "F2P-018",
+      "name": "case_insensitive_token_type",
+      "input": "{\"access_token\":\"t\",\"token_type\":\"BEARER\"}",
+      "expected_token_type": "bearer"
+    },
+    {
+      "observation_id": "F2P-024",
+      "name": "full_token_deserialization",
+      "response": {
+        "status": 200,
+        "header": {"Content-Type": "application/json"},
+        "body": "{\"access_token\":\"12/34\",\"token_type\":\"bearer\",\"scope\":\"read write\",\"expires_in\":3600,\"refresh_token\":\"foobar\"}"
+      }
+    }
+  ]
+}

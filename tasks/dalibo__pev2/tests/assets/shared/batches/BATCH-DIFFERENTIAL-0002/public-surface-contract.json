@@ -1,0 +1,21 @@
+{
+  "schema": "migration-shared-corpus:v1",
+  "corpus_id": "BATCH-DIFFERENTIAL-0002-public-surface",
+  "family": "shared-case-corpus",
+  "requirement_ids": ["R034"],
+  "observation_ids": ["DIFF-034"],
+  "description": "Public capabilities that must remain callable after the migration. Keys are the TypeScript public surface; values are the Rust target surface that must expose the same capability.",
+  "surfaces": [
+    {"surface": "PlanService.fromSource", "target": "pev2_core::from_source", "requirement_ids": ["R003"]},
+    {"surface": "PlanService.createPlan", "target": "pev2_core::create_plan", "requirement_ids": ["R004"]},
+    {"surface": "PlanService.fromText", "target": "pev2_core::from_text", "requirement_ids": ["R005"]},
+    {"surface": "PlanService.fromJson", "target": "pev2_core::from_json", "requirement_ids": ["R006"]},
+    {"surface": "PlanService.cleanupSource", "target": "pev2_core::cleanup_source", "requirement_ids": ["R007"]},
+    {"surface": "PlanService.splitIntoLines", "target": "pev2_core::split_into_lines", "requirement_ids": ["R007"]},
+    {"surface": "splitBalanced", "target": "pev2_core::split_balanced", "requirement_ids": ["R010"]},
+    {"surface": "findNodeById", "target": "pev2_core::find_node_by_id", "requirement_ids": ["R011"]},
+    {"surface": "findNodeBySubplanName", "target": "pev2_core::find_node_by_subplan_name", "requirement_ids": ["R011"]},
+    {"surface": "shouldShowProp", "target": "pev2_core::should_show_prop", "requirement_ids": ["R011"]},
+    {"surface": "Node constructor", "target": "pev2_core::parse_node_type", "requirement_ids": ["R033"]}
+  ]
+}

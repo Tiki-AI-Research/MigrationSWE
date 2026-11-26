@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SIDE="${1:?usage: runner <source|target> [report]}"
+REPORT="${2:-${P2P_REPORT:-/logs/result.json}}"
+case "$SIDE" in
+  source) REPO="${P2P_REPO:-/input/source}" ;;
+  target) REPO="${P2P_REPO:-/input/target}" ;;
+  *) echo "unknown side: $SIDE" >&2; exit 2 ;;
+esac
+exec python3 "$DIR/p2p_probe.py" --repo "$REPO" --side "$SIDE" --out "$REPORT"

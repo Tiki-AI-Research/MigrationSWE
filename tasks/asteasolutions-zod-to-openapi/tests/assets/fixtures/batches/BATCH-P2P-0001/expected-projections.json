@@ -1,0 +1,596 @@
+{
+  "schema_version": "migration-p2p-expected:v1",
+  "batch_id": "BATCH-P2P-0001",
+  "normalization": "json-stable",
+  "observations": {
+    "P2P-008": {
+      "status": "PASS",
+      "value": {
+        "constructor": "ConflictError",
+        "message": "Conflicting names for parameter",
+        "isError": false
+      }
+    },
+    "P2P-016": {
+      "status": "PASS",
+      "value": {
+        "openapi": "3.2.0",
+        "v31": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "v32": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    "P2P-001": {
+      "status": "PASS",
+      "value": {
+        "v3": "{\"openapi\":\"3.0.0\",\"info\":{\"version\":\"1.0.0\",\"title\":\"P2P preservation\"},\"components\":{\"schemas\":{\"Raw\":{\"type\":\"string\"},\"Pet\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}},\"required\":[\"id\"]},\"Filter\":{\"type\":\"string\"}},\"parameters\":{\"Filter\":{\"schema\":{\"$ref\":\"#/components/schemas/Filter\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}}},\"paths\":{\"/pets\":{\"get\":{\"parameters\":[{\"schema\":{\"type\":\"string\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}],\"responses\":{\"200\":{\"description\":\"OK\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Pet\"}}}}}}}}}",
+        "v31": "{\"openapi\":\"3.1.0\",\"info\":{\"version\":\"1.0.0\",\"title\":\"P2P preservation\"},\"components\":{\"schemas\":{\"Raw\":{\"type\":\"string\"},\"Pet\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}},\"required\":[\"id\"]},\"Filter\":{\"type\":\"string\"}},\"parameters\":{\"Filter\":{\"schema\":{\"$ref\":\"#/components/schemas/Filter\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}}},\"paths\":{\"/pets\":{\"get\":{\"parameters\":[{\"schema\":{\"type\":\"string\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}],\"responses\":{\"200\":{\"description\":\"OK\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Pet\"}}}}}}}},\"webhooks\":{\"petCreated\":{\"post\":{\"responses\":{\"200\":{\"description\":\"OK\"}}}}}}",
+        "v32": "{\"openapi\":\"3.2.0\",\"info\":{\"version\":\"1.0.0\",\"title\":\"P2P preservation\"},\"components\":{\"schemas\":{\"Raw\":{\"type\":\"string\"},\"Pet\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}},\"required\":[\"id\"]},\"Filter\":{\"type\":\"string\"}},\"parameters\":{\"Filter\":{\"schema\":{\"$ref\":\"#/components/schemas/Filter\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}}},\"paths\":{\"/pets\":{\"get\":{\"parameters\":[{\"schema\":{\"type\":\"string\"},\"required\":true,\"name\":\"filter\",\"in\":\"query\"}],\"responses\":{\"200\":{\"description\":\"OK\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Pet\"}}}}}}}},\"webhooks\":{\"petCreated\":{\"post\":{\"responses\":{\"200\":{\"description\":\"OK\"}}}}}}"
+      }
+    },
+    "P2P-002": {
+      "status": "PASS",
+      "value": {
+        "augmented": true,
+        "metadata": {
+          "description": "d"
+        },
+        "refId": "Ref"
+      }
+    },
+    "P2P-003": {
+      "status": "PASS",
+      "value": {
+        "Base": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "dog",
+                "cat"
+              ]
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "Other": {
+          "type": "object",
+          "properties": {
+            "pick": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "pick"
+          ]
+        }
+      }
+    },
+    "P2P-004": {
+      "status": "PASS",
+      "value": {
+        "WithDefault": {
+          "type": "string",
+          "default": "x"
+        },
+        "WithPrefault": {
+          "type": "string",
+          "default": "prefaulted"
+        },
+        "Refined": {
+          "type": "number",
+          "example": 42
+        },
+        "Transformed": {
+          "type": "number",
+          "example": 42
+        },
+        "Piped": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "Lazy": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key"
+          ]
+        }
+      }
+    },
+    "P2P-007": {
+      "status": "PASS",
+      "value": {
+        "exports": [
+          "OpenAPIRegistry",
+          "OpenApiGeneratorV3",
+          "OpenApiGeneratorV31",
+          "OpenApiGeneratorV32",
+          "extendZodWithOpenApi",
+          "getOpenApiMetadata",
+          "getRefId",
+          "zodToOpenAPIRegistry"
+        ],
+        "registryMethods": [
+          "register",
+          "registerParameter",
+          "registerPath",
+          "registerWebhook",
+          "registerComponent"
+        ],
+        "generators": [
+          "OpenApiGeneratorV3",
+          "OpenApiGeneratorV31",
+          "OpenApiGeneratorV32"
+        ]
+      }
+    },
+    "P2P-011": {
+      "status": "PASS",
+      "value": {
+        "main": "dist/index.cjs",
+        "module": "dist/index.mjs",
+        "types": "dist/index.d.ts",
+        "sourceExtensions": [
+          ".ts"
+        ],
+        "forbiddenDependencies": []
+      }
+    },
+    "P2P-012": {
+      "status": "PASS",
+      "value": {
+        "refId": "referenceName",
+        "metadata": {
+          "param": {
+            "name": "actualName"
+          }
+        }
+      }
+    },
+    "P2P-014": {
+      "status": "PASS",
+      "value": {
+        "registrationOrder": {
+          "schemas": [
+            "Zeta",
+            "Alpha",
+            "Beta"
+          ],
+          "parameters": [
+            "Beta"
+          ]
+        },
+        "alphabetical": {
+          "schemas": [
+            "Alpha",
+            "Beta",
+            "Zeta"
+          ],
+          "parameters": [
+            "Beta"
+          ]
+        }
+      }
+    },
+    "P2P-017": {
+      "status": "PASS",
+      "value": {
+        "serialized": "{\"openapi\":\"3.0.0\",\"info\":{\"version\":\"1.0.0\",\"title\":\"P2P preservation\"},\"components\":{\"schemas\":{\"Pet\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"}},\"required\":[\"id\"]}},\"parameters\":{}},\"paths\":{\"/pets/{id}\":{\"get\":{\"parameters\":[{\"schema\":{\"type\":\"string\"},\"required\":true,\"name\":\"id\",\"in\":\"path\"}],\"responses\":{\"200\":{\"description\":\"OK\",\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Pet\"}}}}}}}}}"
+      }
+    },
+    "P2P-020": {
+      "status": "PASS",
+      "value": {
+        "mixed": {
+          "constructor": "ZodToOpenAPIError",
+          "message": "Enum has mixed string and number values, please specify the OpenAPI type manually",
+          "isError": false
+        },
+        "conflict": {
+          "constructor": "ConflictError",
+          "message": "Conflicting names for parameter",
+          "isError": false
+        },
+        "missing": {
+          "constructor": "MissingParameterDataError",
+          "message": "Missing parameter data, please specify `in` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+          "isError": false
+        },
+        "unknown": {
+          "constructor": "UnknownZodTypeError",
+          "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`.",
+          "isError": false
+        }
+      }
+    },
+    "P2P-023": {
+      "status": "PASS",
+      "value": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Some parameter"
+            },
+            "required": false,
+            "description": "Some parameter",
+            "name": "test",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "P2P-024": {
+      "status": "PASS",
+      "value": {
+        "order": [
+          "schema",
+          "parameter",
+          "component",
+          "route",
+          "webhook"
+        ]
+      }
+    },
+    "P2P-005": {
+      "status": "PASS",
+      "value": {
+        "exampleIndex": "e7b0b11152cf6273ef413b1daf7e0c1c79ae34260c00858ef82f28f90bc891ee",
+        "exampleDocs": "6ae4470da20eb3ab3731d5145f5fa3cd9497b0609ed77d378ffa1c97bd58ffa1"
+      }
+    },
+    "P2P-006": {
+      "status": "PASS",
+      "value": {
+        "documentKeys": [
+          "components",
+          "info",
+          "openapi",
+          "paths",
+          "webhooks"
+        ],
+        "components": {
+          "schemas": {
+            "Item": {
+              "type": "string"
+            }
+          },
+          "parameters": {}
+        }
+      }
+    },
+    "P2P-009": {
+      "status": "PASS",
+      "value": {
+        "v3": {
+          "String": {
+            "type": "string"
+          },
+          "Test": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/String"
+                  },
+                  {
+                    "nullable": true
+                  }
+                ]
+              }
+            },
+            "required": [
+              "key"
+            ]
+          }
+        },
+        "v31": {
+          "String": {
+            "type": "string"
+          },
+          "Test": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/String"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "key"
+            ]
+          }
+        }
+      }
+    },
+    "P2P-010": {
+      "status": "PASS",
+      "value": {
+        "schemas": {
+          "NullableEnum": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "option1",
+              "option2",
+              null
+            ]
+          },
+          "NumericEnum": {
+            "type": "integer",
+            "enum": [
+              1,
+              42
+            ]
+          },
+          "StringEnum": {
+            "type": "string",
+            "enum": [
+              "Option",
+              "Another"
+            ]
+          }
+        },
+        "mixedError": {
+          "constructor": "ZodToOpenAPIError",
+          "message": "Enum has mixed string and number values, please specify the OpenAPI type manually",
+          "isError": false
+        }
+      }
+    },
+    "P2P-013": {
+      "status": "PASS",
+      "value": {
+        "unknown": {
+          "constructor": "UnknownZodTypeError",
+          "message": "Unknown zod object type, please specify `type` and other OpenAPI props using `schema.openapi`.",
+          "isError": false
+        },
+        "missingName": {
+          "constructor": "MissingParameterDataError",
+          "message": "Missing parameter data, please specify `name` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+          "isError": false
+        },
+        "missingLocation": {
+          "constructor": "MissingParameterDataError",
+          "message": "Missing parameter data, please specify `in` and other OpenAPI parameter props using the `param` field of `schema.openapi`",
+          "isError": false
+        },
+        "conflict": {
+          "constructor": "ConflictError",
+          "message": "Conflicting names for parameter",
+          "isError": false
+        }
+      }
+    },
+    "P2P-015": {
+      "status": "PASS",
+      "value": {
+        "exports": [
+          "OpenAPIRegistry",
+          "OpenApiGeneratorV3",
+          "OpenApiGeneratorV31",
+          "OpenApiGeneratorV32",
+          "extendZodWithOpenApi",
+          "getOpenApiMetadata",
+          "getRefId",
+          "zodToOpenAPIRegistry"
+        ]
+      }
+    },
+    "P2P-018": {
+      "status": "PASS",
+      "value": {
+        "summary": "A short summary",
+        "content": {
+          "prefixEncoding": [
+            {
+              "contentType": "text/plain"
+            }
+          ],
+          "itemEncoding": {
+            "contentType": "image/png"
+          },
+          "itemSchema": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "value"
+            ]
+          }
+        },
+        "method": "query"
+      }
+    },
+    "P2P-019": {
+      "status": "PASS",
+      "value": {
+        "v3": {
+          "openapi": "3.0.0",
+          "hasWebhooks": false
+        },
+        "v31": {
+          "openapi": "3.1.0",
+          "webhooks": [
+            "happened"
+          ]
+        },
+        "v32": {
+          "openapi": "3.2.0",
+          "webhooks": [
+            "happened"
+          ]
+        }
+      }
+    },
+    "P2P-021": {
+      "status": "PASS",
+      "value": {
+        "Integer": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "Email": {
+          "type": "string",
+          "format": "email"
+        },
+        "Catchall": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "Record": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "Intersection": {
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "a"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "b": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "b"
+              ]
+            }
+          ]
+        },
+        "Literal": {
+          "type": "string",
+          "enum": [
+            "fixed"
+          ]
+        },
+        "Template": {
+          "type": "string",
+          "pattern": "^id-.*-end$"
+        },
+        "Date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "BigInt": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "Array": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "Union": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    "P2P-022": {
+      "status": "PASS",
+      "value": {
+        "generatorOption": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "schemaOption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "role": "Executable state-preservation checks for the Superstruct 2.0.2 to Zod 3.23.8 configuration-validation migration.",
+  "dependency_batch_ids": ["BATCH-SKELETON-0001"],
+  "migration": {
+    "category": "backend_framework",
+    "source": { "name": "Superstruct", "version": "2.0.2" },
+    "target": { "name": "Zod", "version": "3.23.8" }
+  },
+  "surface": {
+    "shared": "shared/batches/BATCH-P2P-0001",
+    "source": "source/batches/BATCH-P2P-0001",
+    "target": "target/batches/BATCH-P2P-0001",
+    "fixtures": "fixtures/batches/BATCH-P2P-0001"
+  },
+  "harness": {
+    "source_entry": "source/runner",
+    "target_entry": "target/runner.js",
+    "created_by": "INTEGRATION",
+    "note": "This batch only declares probe specifications and fixtures; the live harness entries are created by the INTEGRATION batch."
+  },
+  "projection": {
+    "relation": "equal_after_normalization",
+    "normalization": "The repository ships no test runner, so both sides emit the same stable status wrapper instead of a side-specific value: {\"result\": \"PASS\"}.",
+    "value": { "result": "PASS" }
+  },
+  "observations": [
+    "P2P-001", "P2P-002", "P2P-003", "P2P-004", "P2P-005",
+    "P2P-006", "P2P-007", "P2P-008", "P2P-009", "P2P-010",
+    "P2P-011", "P2P-012", "P2P-013", "P2P-014", "P2P-015",
+    "P2P-016", "P2P-017", "P2P-018", "P2P-019"
+  ],
+  "state_checks": [],
+  "note": "P2P batch: no state_checks are produced; behavior is compared as an observable-result projection that must be equal after normalization on the source and target sides."
+}

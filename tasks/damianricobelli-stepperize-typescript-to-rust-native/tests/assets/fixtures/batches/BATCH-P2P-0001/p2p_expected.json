@@ -1,0 +1,239 @@
+{
+  "batch_id": "BATCH-P2P-0001",
+  "kind": "P2P",
+  "note": "Stable common projection per observation. Each side executes its own repository tests (source: vitest; target: cargo test for the migrated core behavior plus vitest for the retained out-of-scope packages) and reports the raw PASS/FAIL; the normalized projections below must match.",
+  "observations": [
+    {
+      "id": "P2P-009",
+      "projection": {
+        "ids": [
+          "first",
+          "second",
+          "third"
+        ]
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-011",
+      "projection": {
+        "copy_equal": true,
+        "input_unchanged": true,
+        "absent_empty": true
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-012",
+      "projection": {
+        "next_first": "second",
+        "prev_third": "second",
+        "neighbors_second": {
+          "prev": "first",
+          "next": "third"
+        },
+        "neighbors_first": {
+          "prev": null,
+          "next": "second"
+        },
+        "unknown": null
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-013",
+      "projection": {
+        "first": "previous",
+        "second": "active",
+        "third": "upcoming"
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-014",
+      "projection": {
+        "result": "Step 2"
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-016",
+      "projection": {
+        "exports": [
+          "createStepMap",
+          "getInitialStepIndex",
+          "parseStep",
+          "getInitialData",
+          "validateStep",
+          "getStepStatus",
+          "getStepStatuses",
+          "matchStep"
+        ]
+      },
+      "source_runner": "suite",
+      "target_runner": "build"
+    },
+    {
+      "id": "P2P-018",
+      "projection": {
+        "success": true,
+        "data": "Ada"
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-019",
+      "projection": {
+        "error": "not_found",
+        "display": "Step \"missing\" not found."
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-021",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "suite",
+      "target_runner": "suite"
+    },
+    {
+      "id": "P2P-022",
+      "projection": {
+        "sync": "Ada",
+        "async": "Ada"
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-024",
+      "projection": {
+        "at0": "first",
+        "at9": null
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-003",
+      "projection": {
+        "has_second": true,
+        "has_missing": false
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-006",
+      "projection": {
+        "error": "no_handler",
+        "display": "No match handler found for step \"third\"."
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-005",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-010",
+      "projection": {
+        "unknown": null,
+        "null": null,
+        "undefined": null,
+        "number": null
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-017",
+      "projection": {
+        "ids": [
+          "first",
+          "second",
+          "third"
+        ]
+      },
+      "source_runner": "vitest",
+      "target_runner": "cargo"
+    },
+    {
+      "id": "P2P-001",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-002",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-004",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-007",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-008",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-015",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-020",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    },
+    {
+      "id": "P2P-023",
+      "projection": {
+        "result": "PASS"
+      },
+      "source_runner": "vitest",
+      "target_runner": "vitest"
+    }
+  ]
+}

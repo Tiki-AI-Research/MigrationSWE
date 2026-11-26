@@ -1,0 +1,96 @@
+{
+  "schema": "migration-side-contract:v1",
+  "batch_id": "BATCH-CONTRACT-0001",
+  "side": "target",
+  "language": "Go",
+  "probe_root": "/input/target",
+  "entrypoint": {
+    "runner": "target/runner",
+    "created_by": "INTEGRATION",
+    "status": "pending"
+  },
+  "public_surface": {
+    "action_yml": {
+      "path": "action.yml",
+      "runs_using": "docker",
+      "runs_image": "Dockerfile"
+    },
+    "binary": "cmd/labeler/main.go",
+    "inputs": [
+      "repo-token",
+      "configuration-path",
+      "sync-labels",
+      "dot",
+      "pr-number"
+    ],
+    "outputs": [
+      "new-labels",
+      "all-labels"
+    ],
+    "config_schema": [
+      "changed-files",
+      "head-branch",
+      "base-branch",
+      "any",
+      "all",
+      "changed-files-labels-limit",
+      "max-files-changed"
+    ],
+    "api_calls": [
+      "issues.addLabels",
+      "pulls.listFiles",
+      "pulls.get",
+      "repos.getContent",
+      "removeLabelsFromLabelable"
+    ],
+    "modules": [
+      "internal/config",
+      "internal/inputs",
+      "internal/labeler",
+      "internal/minimatch",
+      "internal/match",
+      "internal/githubapi",
+      "internal/core",
+      "internal/utils",
+      "internal/event"
+    ],
+    "declared_dependencies": [
+      "github.com/dlclark/regexp2",
+      "gopkg.in/yaml.v3"
+    ]
+  },
+  "contract_status_required": "PASS",
+  "observations": [
+    "CONTRACT-001",
+    "CONTRACT-002",
+    "CONTRACT-003",
+    "CONTRACT-004",
+    "CONTRACT-005",
+    "CONTRACT-006",
+    "CONTRACT-007",
+    "CONTRACT-008",
+    "CONTRACT-009",
+    "CONTRACT-010",
+    "CONTRACT-011",
+    "CONTRACT-012",
+    "CONTRACT-013",
+    "CONTRACT-014",
+    "CONTRACT-015",
+    "CONTRACT-016",
+    "CONTRACT-017",
+    "CONTRACT-018",
+    "CONTRACT-019",
+    "CONTRACT-020",
+    "CONTRACT-021",
+    "CONTRACT-022",
+    "CONTRACT-023",
+    "CONTRACT-024",
+    "CONTRACT-025",
+    "CONTRACT-026",
+    "CONTRACT-027"
+  ],
+  "reserved_for": [
+    "INTEGRATION"
+  ],
+  "behavior_contract_revision": "labeler-behavior-v4"
+}

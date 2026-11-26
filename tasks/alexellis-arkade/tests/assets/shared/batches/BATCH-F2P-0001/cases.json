@@ -1,0 +1,344 @@
+{
+  "schema_version": "migration-f2p-cases:v1",
+  "batch_id": "BATCH-F2P-0001",
+  "probe": "probe.py",
+  "invocation": [
+    "python3",
+    "probe.py",
+    "<repo-dir>",
+    "<arkade-binary>",
+    "<source|target>"
+  ],
+  "in_scope_files": [
+    "main.go",
+    "cmd/get.go",
+    "cmd/install.go",
+    "cmd/info.go",
+    "cmd/update.go",
+    "cmd/uninstall.go",
+    "cmd/version.go",
+    "cmd/search.go",
+    "cmd/completion.go",
+    "cmd/release.go",
+    "cmd/chart/chart.go",
+    "cmd/system/system.go",
+    "cmd/system/install.go",
+    "cmd/oci/oci.go",
+    "cmd/oci/install.go",
+    "cmd/apps/argocd_app.go"
+  ],
+  "cases": [
+    {
+      "id": "F2P-001",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R048"
+      ],
+      "surface": "arkade install app dispatch, guidance, unknown-app and tool-hint errors",
+      "source_path": "cmd/install.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Start or instantiate this entry and inspect its actual target technology identity/version. Scope: cmd/install.go; surface: runtime entry. Behavior: InstallCLI and its statically mounted app children expose the persistent install flags, dispatch known apps and their aliases to the catalogue, preserve the guidance/unknown-app/print-table outputs, and keep the app catalogue unchanged.. Required postcondition: `arkade install kubectl` exits non-zero and writes `no such app. kubectl is available as a tool, run \"arkade get kubectl\" to get it` to stderr, while `arkade install does-not-exist` writes `no such app: does-not-exist, run \"arkade install --help\" for a list of apps`; Kong's generic unexpected-argument error must be translated back to the historical Cobra messages.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-002",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R056"
+      ],
+      "surface": "arkade root command tree and hidden release aliases",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Start or instantiate this entry and inspect its actual target technology identity/version. Scope: main.go; surface: runtime entry. Behavior: main.go calls cmd.Run, which builds the Kong root grammar with all migrated commands, a hidden default root node for the no-subcommand case, and passthrough leaves for out-of-scope Cobra commands; parse and handler errors reach stderr with a non-zero exit.. Required postcondition: `arkade --help` exits 0 and does not contain `Create a GitHub release`; `arkade r --help` and `arkade rel --help` both exit 0 and show the release usage, so hiding the command does not disable its aliases.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-003",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R055"
+      ],
+      "surface": "arkade no-argument logo, version and root usage",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: no change to download/checksum/archive/Helm/Kubernetes side effects. Behavior: The existing pkg/get, pkg/archive, pkg/helm and pkg/k8s handler behavior is untouched: downloads, checksum verification, archive extraction, Helm execution and Kubernetes resource changes produce the same observable effects.. Required postcondition: `arkade` with no arguments exits 0 and prints the ASCII logo, a `Version:` line and root usage that includes `install`, `get` and `completion`; a Kong grammar without the hidden default root node exits with a missing-command error instead.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-004",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R040"
+      ],
+      "surface": "in-scope production command construction without Cobra",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "In `main.go` and each in-scope `cmd` production file, command construction and dispatch use Kong types; a search for `github.com/spf13/cobra` in those production files returns no matches, whereas a Cobra-backed facade leaves matches and fails this check.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-005",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "arkade get help, parsing and tool listing",
+      "source_path": "cmd/get.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: exit statuses for parse, handler and success paths. Behavior: Unknown commands and unknown flags exit non-zero; a handler-returned error such as `arkade get --parallel 0 helm` exits non-zero; successful commands such as `arkade version` and `arkade get --format list` exit zero.. Required postcondition: `arkade get --help` and `arkade get --format list` must be resolved by Kong's parser from the Kong root grammar: help is rendered and the get node is selected from the Kong model, so a root that still builds a Cobra tree fails to expose that node and cannot pass the command-tree, flag-scoping and completion checks.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-006",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R058"
+      ],
+      "surface": "install app catalogue and canonical alias resolution",
+      "source_path": "cmd/install.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/install.go; surface: tool catalog, app catalog and supported platforms unchanged. Behavior: Every tool name in `arkade get --format list`, every app name in `arkade install --print-table`, and the supported OS/architecture set are identical before and after the migration.. Required postcondition: `arkade install nginx-ingress --help`, `arkade install gatekeeper --help`, `arkade install binfmt --help`, `arkade install sealed-secret --help` and `arkade install nfs-client-provisioner --help` each exit 0 and show their canonical app usage, mapping those aliases to catalogue keys `ingress-nginx`, `opa-gatekeeper`, `qemu-static`, `sealed-secret` and `nfs-provisioner`.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-008",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "install persistent flags on app children and local print-table flag",
+      "source_path": "cmd/install.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/install.go; surface: tool catalog, app catalog and supported platforms unchanged. Behavior: Every tool name in `arkade get --format list`, every app name in `arkade install --print-table`, and the supported OS/architecture set are identical before and after the migration.. Required postcondition: `arkade install argocd --help` exits 0 and its usage lists both `--kubeconfig` and `--wait`, while `arkade install --help` lists `--print-table`; leaving these fields only on the outer Kong node without exposing them to app children fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-009",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "legacy Cobra commands mounted as Kong leaves",
+      "source_path": "cmd/chart/chart.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: no change to download/checksum/archive/Helm/Kubernetes side effects. Behavior: The existing pkg/get, pkg/archive, pkg/helm and pkg/k8s handler behavior is untouched: downloads, checksum verification, archive extraction, Helm execution and Kubernetes resource changes produce the same observable effects.. Required postcondition: `arkade chart verify --help`, `arkade docker upgrade --help`, `arkade gha bump --help`, `arkade oci publish --help`, `arkade oci login --help`, `arkade fstail --help` and `arkade system install go --help` all exit 0 and show their Cobra flag usage, proving the legacy commands are mounted as Kong leaves that forward remaining arguments to the existing commands.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-010",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "top-level d alias resolution to get",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: stdout/stderr routing. Behavior: Invalid invocations write their error and usage text to stderr, while normal listings and command output such as `arkade get --format list` and `arkade version --json` are written to stdout.. Required postcondition: `arkade d` with no further arguments exits 0 and prints the get tool catalogue containing `kubectl` and `helm`, proving the `d` alias resolves to `get` rather than to the later-registered `docker` command.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-012",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R029"
+      ],
+      "surface": "release hidden from root help while release aliases stay available",
+      "source_path": "cmd/release.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: existing test behavioral assertions. Behavior: No existing check is deleted, skipped, weakened or hardcoded; tests that constructed Cobra commands may be adapted to Kong construction, but assertions such as the invalid-architecture error and app table rendering remain.. Required postcondition: `arkade --help` does not list `release`, while `arkade release --help`, `arkade rel --help` and `arkade r --help` all exit zero and show release usage; Kong must mark the command hidden without disabling its aliases.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-013",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R061"
+      ],
+      "surface": "system install aliases, registry flags and legacy Go installer",
+      "source_path": "cmd/system/install.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/system/install.go; surface: system install paths, flags and external side effects. Behavior: `arkade system install` and every system subcommand keep their installation paths, flags and external command side effects; the Kong layer only dispatches to the existing handlers.. Required postcondition: `arkade s i registry --help` exits 0 and lists `--bind-addr`, `--docker-password`, `--remote-url`, `--storage`, `--tls` and `--type` with their defaults, while `arkade system install go --help` still exposes the legacy Go installer flags, proving the `s`/`i` aliases and both Kong and legacy children are mounted.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-014",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R037"
+      ],
+      "surface": "shell completion generated from the migrated command model",
+      "source_path": "cmd/completion.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/completion.go; surface: completion shells, errors and no-argument guidance. Behavior: `arkade completion bash`, `zsh`, `fish` and `powershell` emit completion for the real root tree including aliases and subcommands; an unsupported shell returns an error; no argument prints the existing completion usage guidance.. Required postcondition: `arkade completion bash` is generated by walking the Kong command model and contains post-migration command/alias/flag tokens such as `install`, `download`, `delete`, `pwsh` and `--print-table`; it must not be a copy of the old Cobra completion tree.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-017",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R057"
+      ],
+      "surface": "Kong parse errors and handler errors on stderr with non-zero exit",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: out-of-scope Cobra commands and app installers. Behavior: Every out-of-scope Cobra command (for example `arkade chart verify`, `arkade docker gen`, `arkade fstail`, `arkade gha bump`, `arkade oci publish`, `arkade oci login`, `arkade system install go`) remains reachable from the Kong root with its current aliases, flags and handler behavior.. Required postcondition: `arkade not-a-command` and `arkade get --nope` both exit non-zero, write their error text to stderr and nothing to stdout; `arkade version --json` exits zero and writes JSON to stdout, proving Kong parse errors and handler errors propagate through `cmd.Run`/`main` while normal output stays on stdout.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-018",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R041"
+      ],
+      "surface": "in-process dispatch with no Cobra subprocess or RPC bridge",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: main.go; surface: existing test behavioral assertions. Behavior: No existing check is deleted, skipped, weakened or hardcoded; tests that constructed Cobra commands may be adapted to Kong construction, but assertions such as the invalid-architecture error and app table rendering remain.. Required postcondition: Running migrated commands such as `arkade get --format list` executes the handler in-process; the in-scope files contain no subprocess/RPC/FFI/dynamic-loading bridge to a Cobra runtime, and `arkade --help` exposes no hidden Cobra wrapper command.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-020",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R051"
+      ],
+      "surface": "get flag scoping excludes install persistent flags",
+      "source_path": "cmd/get.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/get_test.go; surface: interrupt and SIGTERM cleanup during downloads. Behavior: Sending SIGINT or SIGTERM during `arkade get` still restores the terminal (cursor and alternate screen) and exits non-zero, matching the current signal path.. Required postcondition: `arkade get --help` does not list `--kubeconfig` or `--wait`, and `arkade get helm --kubeconfig=/tmp/k` exits non-zero with an unknown-flag error, proving install's persistent flags are not global Kong flags.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-007",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R040"
+      ],
+      "surface": "public capability retention and Cobra dependency removal",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this entry/behavior and trace loaded/executed dependencies to verify the declared dependency policy. Scope: main.go; surface: public capability and contract retention. Behavior: No required public capability or contract is removed or narrowed outside the stated Kong migration; all documented commands, aliases, flags, outputs and errors continue to exist.. Required postcondition: In `main.go` and each in-scope `cmd` production file, command construction and dispatch use Kong types; a search for `github.com/spf13/cobra` in those production files returns no matches, whereas a Cobra-backed facade leaves matches and fails this check.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-011",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R001"
+      ],
+      "surface": "top-level d alias resolves to the get node",
+      "source_path": "cmd/get.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: top-level `d` alias resolution. Behavior: `arkade d` resolves to `get` and produces the get tool-list behavior, while `arkade docker` resolves to the docker command, matching the original registration order in which get precedes docker.. Required postcondition: `arkade get --help` and `arkade get --format list` must be resolved by Kong's parser from the Kong root grammar: help is rendered and the get node is selected from the Kong model, so a root that still builds a Cobra tree fails to expose that node and cannot pass the command-tree, flag-scoping and completion checks.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-015",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "flag name, shorthand, default and scope contract across commands",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: flag contract across every command and subcommand. Behavior: For every existing command and subcommand, the flag name, shorthand, value type, default value, repeatability, persistence and command scope are unchanged, so the same flag spellings parse and produce the same values.. Required postcondition: `arkade chart verify --help`, `arkade docker upgrade --help`, `arkade gha bump --help`, `arkade oci publish --help`, `arkade oci login --help`, `arkade fstail --help` and `arkade system install go --help` all exit 0 and show their Cobra flag usage, proving the legacy commands are mounted as Kong leaves that forward remaining arguments to the existing commands.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-016",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R049"
+      ],
+      "surface": "install app subcommand availability and flag inheritance",
+      "source_path": "cmd/install.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/install.go; surface: install app subcommand availability and catalog. Behavior: All current app subcommands and their existing aliases under `arkade install` remain available and dispatch to their installers; the set of tool and app catalog names is unchanged.. Required postcondition: `arkade install argocd --help` exits 0 and its usage lists both `--kubeconfig` and `--wait`, while `arkade install --help` lists `--print-table`; leaving these fields only on the outer Kong node without exposing them to app children fails.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-019",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R059"
+      ],
+      "surface": "help availability for root, top-level and nested commands",
+      "source_path": "cmd/chart/chart.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/chart/chart.go; surface: help availability for root and every command. Behavior: `arkade --help` and `--help` on every top-level command and nested subcommand exit zero and print that command's usage; byte-for-byte help text is not required.. Required postcondition: `arkade chart verify --help`, `arkade docker upgrade --help`, `arkade gha bump --help`, `arkade oci publish --help`, `arkade oci login --help`, `arkade fstail --help` and `arkade system install go --help` all exit 0 and show their Cobra flag usage, proving the legacy commands are mounted as Kong leaves that forward remaining arguments to the existing commands.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-023",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R061"
+      ],
+      "surface": "system registry install flags and legacy Go installer flags",
+      "source_path": "cmd/system/registry.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: cmd/system/registry.go; surface: system install paths, flags and external side effects. Behavior: `arkade system install` and every system subcommand keep their installation paths, flags and external command side effects; the Kong layer only dispatches to the existing handlers.. Required postcondition: `arkade s i registry --help` exits 0 and lists `--bind-addr`, `--docker-password`, `--remote-url`, `--storage`, `--tls` and `--type` with their defaults, while `arkade system install go --help` still exposes the legacy Go installer flags, proving the `s`/`i` aliases and both Kong and legacy children are mounted.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-024",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R047"
+      ],
+      "surface": "out-of-scope Cobra commands mounted under the Kong root",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: out-of-scope Cobra commands mounted under Kong. Behavior: Out-of-scope Cobra commands and app installers remain mounted as Kong children and keep their aliases and flags; for example `arkade chart verify --help`, `arkade oci publish --help` and `arkade system install go --help` show the same Cobra flag usage as before.. Required postcondition: `arkade d` with no further arguments exits 0 and prints the get tool catalogue containing `kubectl` and `helm`, proving the `d` alias resolves to `get` rather than to the later-registered `docker` command.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-021",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R056"
+      ],
+      "surface": "release hidden from root help while r and rel aliases remain valid",
+      "source_path": "cmd/release.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: no change to download/checksum/archive/Helm/Kubernetes side effects. Behavior: The existing pkg/get, pkg/archive, pkg/helm and pkg/k8s handler behavior is untouched: downloads, checksum verification, archive extraction, Helm execution and Kubernetes resource changes produce the same observable effects.. Required postcondition: `arkade --help` exits 0 and does not contain `Create a GitHub release`; `arkade r --help` and `arkade rel --help` both exit 0 and show the release usage, so hiding the command does not disable its aliases.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    },
+    {
+      "id": "F2P-022",
+      "kind": "F2P",
+      "requirement_ids": [
+        "R057"
+      ],
+      "surface": "public command, alias, flag, output and error contract retention",
+      "source_path": "main.go",
+      "source_expectation": "FAIL",
+      "target_expectation": "PASS",
+      "atomic_claim": "Execute this concrete behavior and verify the handling path uses the required target technology. Scope: main.go; surface: public capability and contract retention. Behavior: No required public capability or contract is removed or narrowed outside the stated Kong migration; all documented commands, aliases, flags, outputs and errors continue to exist.. Required postcondition: `arkade not-a-command` and `arkade get --nope` both exit non-zero, write their error text to stderr and nothing to stdout; `arkade version --json` exits zero and writes JSON to stdout, proving Kong parse errors and handler errors propagate through `cmd.Run`/`main` while normal output stays on stdout.. Use the same semantic predicate in both environments; source must fail the target condition, target must satisfy it. A missing target capability is a semantic failure; an unrelated setup or execution error is not.",
+      "probe": "shared/batches/BATCH-F2P-0001/probe.py"
+    }
+  ]
+}

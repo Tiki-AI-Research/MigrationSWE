@@ -1,0 +1,60 @@
+diff --git a/feincms/admin/filters.py b/feincms/admin/filters.py
+index 7ae5bdc..b7c16af 100644
+--- a/feincms/admin/filters.py
++++ b/feincms/admin/filters.py
+@@ -6,7 +6,6 @@
+ 
+ from operator import itemgetter
+ 
+-import django
+ from django.contrib.admin.filters import ChoicesFieldListFilter
+ from django.db.models import Count
+ from django.utils.encoding import smart_str
+@@ -55,11 +54,7 @@ class ParentFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+@@ -103,11 +98,7 @@ class CategoryFieldListFilter(ChoicesFieldListFilter):
+             "display": _("All"),
+         }
+ 
+-        # Pre Django 5 lookup_val would be a scalar, now it can do multiple
+-        # selections and thus is a list. Deal with that.
+         lookup_vals = self.lookup_val
+-        if lookup_vals is not None and django.VERSION < (5,):
+-            lookup_vals = [lookup_vals]
+ 
+         for pk, title in self.lookup_choices:
+             yield {
+diff --git a/feincms/extensions/datepublisher.py b/feincms/extensions/datepublisher.py
+index 2f2dc00..fa7300d 100644
+--- a/feincms/extensions/datepublisher.py
++++ b/feincms/extensions/datepublisher.py
+@@ -10,7 +10,6 @@ the page's manager to determine which entries are to be considered active.
+ 
+ from datetime import datetime
+ 
+-import django
+ from django.db import models
+ from django.db.models import Q
+ from django.utils import timezone
+@@ -56,10 +55,7 @@ def granular_now(n=None, default_tz=None):
+ 
+     rounded_minute = (n.minute // 5) * 5
+     d = datetime(n.year, n.month, n.day, n.hour, rounded_minute)
+-    if django.VERSION < (5,):
+-        return timezone.make_aware(d, default_tz, is_dst=True)
+-    else:
+-        return timezone.make_aware(d, default_tz)
++    return timezone.make_aware(d, default_tz)
+ 
+ 
+ # ------------------------------------------------------------------------
